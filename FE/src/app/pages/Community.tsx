@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
 import { communityPosts as defaultPosts } from "../data/products";
-import { CommunityUploadModal } from "../components/CommunityUploadModal";
 import { useAuth } from "../context/AuthContext";
+import { CommunityUploadModal } from "../components/CommunityUploadModal";
 
 interface UserPost {
   id: string;
@@ -14,12 +14,28 @@ interface UserPost {
   tags?: string[];
 }
 
+interface CommunityPost {
+  id: string;
+  username: string;
+  image: string;
+  caption: string;
+  likes: number;
+  project: string;
+  tags?: string[];
+}
+
+type Post = UserPost | CommunityPost;
+
+function hasTags(post: Post): post is Post & { tags: string[] } {
+  return "tags" in post && Array.isArray(post.tags) && post.tags.length > 0;
+}
+
 export function Community() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const { user } = useAuth();
 
-  const allPosts = [...userPosts, ...defaultPosts];
+  const allPosts: Post[] = [...userPosts, ...defaultPosts];
 
   const handleUploadSubmit = (post: {
     image: string;
@@ -86,7 +102,7 @@ export function Community() {
                   <span className="font-medium">@{post.username}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">{post.caption}</p>
-                {"tags" in post && post.tags && post.tags.length > 0 && (
+                {hasTags(post) && (
                   <div className="flex flex-wrap gap-1 mb-3">
                     {post.tags.map((tag, idx) => (
                       <span
@@ -147,6 +163,12 @@ export function Community() {
           </div>
         </div>
       </div>
+
+      <CommunityUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSubmit={handleUploadSubmit}
+      />
     </div>
   );
 }

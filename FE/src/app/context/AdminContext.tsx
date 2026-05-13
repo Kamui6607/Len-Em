@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Product } from "../data/products";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 
 export interface AdminUser {
   id: string;

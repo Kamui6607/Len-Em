@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Plus, Search, Edit2, Trash2, Eye } from "lucide-react";
-import { useAdmin, AdminUser } from "../../context/AdminContext";
-import { motion, AnimatePresence } from "motion/react";
+import { Plus, Search, Edit2, Trash2 } from "lucide-react";
+import { useAdmin } from "../../context/AdminContext";
+import type { AdminUser } from "../../context/AdminContext";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "motion/react";
 
 export function AdminUsers() {
   const { users, createUser, updateUser, deleteUser, logActivity } = useAdmin();
@@ -90,24 +91,12 @@ export function AdminUsers() {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Name
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Email
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Phone
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Role
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Last Login
-                </th>
-                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Actions
-                </th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Email</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Phone</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Role</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Last Login</th>
+                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -139,9 +128,7 @@ export function AdminUsers() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-muted-foreground text-sm">
-                    {user.lastLogin
-                      ? new Date(user.lastLogin).toLocaleString()
-                      : "Never"}
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
@@ -276,9 +263,7 @@ function UserFormModal({ title, user, onClose, onSubmit }: UserFormModalProps) {
               <label className="block mb-2 text-sm">Role</label>
               <select
                 value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value as "admin" | "staff" | "user" })
-                }
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as "admin" | "staff" | "user" })}
                 className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="user">User</option>

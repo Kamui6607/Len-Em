@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Users, Package, ShoppingCart, Activity, TrendingUp, DollarSign } from "lucide-react";
 import { useAdmin } from "../../context/AdminContext";
 import { products } from "../../data/products";

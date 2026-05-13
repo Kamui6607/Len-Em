@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { products } from "../data/products";
 import { ProductCard } from "../components/ProductCard";
 

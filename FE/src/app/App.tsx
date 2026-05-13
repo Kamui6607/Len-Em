@@ -66,10 +66,11 @@ function AppContent({
       <motion.div
         className="min-h-screen bg-background flex flex-col"
         animate={{
-          scale: authPanelOpen && !isDashboard ? 0.95 : 1,
-          filter: authPanelOpen && !isDashboard ? "blur(4px)" : "blur(0px)",
+          scale: authPanelOpen && !isDashboard ? 0.97 : 1,
+          filter: authPanelOpen && !isDashboard ? "blur(3px)" : "blur(0px)",
         }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        style={{ willChange: authPanelOpen ? "transform, filter" : "auto" }}
       >
         {/* Show navigation only on store pages */}
         {!isDashboard && (
