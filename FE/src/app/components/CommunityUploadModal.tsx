@@ -1,8 +1,7 @@
 import { useState, useRef } from "react";
-import { X, Upload, Image as ImageIcon, Tag } from "lucide-react";
+import { X, ImageIcon, Upload, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
 
 interface CommunityUploadModalProps {
   isOpen: boolean;
@@ -15,18 +14,13 @@ interface CommunityUploadModalProps {
   }) => void;
 }
 
-export function CommunityUploadModal({
-  isOpen,
-  onClose,
-  onSubmit,
-}: CommunityUploadModalProps) {
+export function CommunityUploadModal({ isOpen, onClose, onSubmit }: CommunityUploadModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user } = useAuth();
 
   const handleFileChange = (file: File) => {
     if (file && file.type.startsWith("image/")) {
