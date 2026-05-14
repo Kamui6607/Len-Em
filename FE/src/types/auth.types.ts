@@ -3,7 +3,7 @@
 // ============================================================
 
 /** User roles supported by the platform */
-export type UserRole = "admin" | "staff" | "customer";
+export type UserRole = "admin" | "staff" | "user";
 
 /** User profile returned from backend after login/profile fetch */
 export interface User {
@@ -25,6 +25,13 @@ export interface User {
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+}
+
+/** Decoded JWT payload extracted from the access token */
+export interface DecodedToken {
+  userId: string;
+  role: "admin" | "staff" | "user";
+  exp: number;
 }
 
 // ---- API Request DTOs ----
