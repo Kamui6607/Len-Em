@@ -64,7 +64,7 @@ async function attemptTokenRefresh(): Promise<string | null> {
 
 // ---- Store ----
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   // ---- Initial state ----
   user: null,
   accessToken: tokenStorage.getAccess(),
