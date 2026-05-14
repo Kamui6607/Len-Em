@@ -557,7 +557,7 @@ export function Navigation({
         <div className={`nav-bar${scrolled ? " scrolled" : ""}`}>
           <div className="nav-inner">
             {/* LOGO */}
-            <Link to="/" className="nav-logo">
+            <Link to="/shop" className="nav-logo">
               <div className="nav-logo-icon">
                 <img
                   src="/yarn-shop-2-removebg-preview.svg"
