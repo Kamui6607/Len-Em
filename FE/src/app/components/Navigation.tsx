@@ -19,24 +19,38 @@ const NAV_LINKS = [
   { label: "Learn", href: "/learn", protected: false },
 ];
 
-export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
+export function Navigation({
+  cartCount,
+  onSignIn,
+  onSignUp,
+}: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
   const { isAuthenticated } = useAuth();
   const { favorites } = useFavorites();
+
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) setIsMobileMenuOpen(false);
+      if (window.innerWidth >= 768) {
+        setIsMobileMenuOpen(false);
+      }
     };
+
     window.addEventListener("resize", handleResize);
+
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -49,13 +63,18 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
         setIsMobileMenuOpen(false);
       }
     };
-    if (isMobileMenuOpen)
+
+    if (isMobileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
+
     return () => {
       document.body.style.overflow = "";
     };
@@ -64,7 +83,7 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap');
 
         .nav-root {
           position: sticky;
@@ -73,24 +92,36 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
           font-family: 'DM Sans', sans-serif;
         }
 
-        /* ── Navbar bar ── */
         .nav-bar {
           background: rgba(255, 249, 245, 0.88);
           backdrop-filter: blur(16px) saturate(1.6);
           -webkit-backdrop-filter: blur(16px) saturate(1.6);
           border-bottom: 1px solid rgba(236, 180, 160, 0.22);
-          transition: box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+
+          transition:
+            box-shadow 0.3s ease,
+            border-color 0.3s ease,
+            background 0.3s ease;
         }
+
         .nav-bar.scrolled {
-          box-shadow: 0 4px 32px rgba(200, 120, 90, 0.1), 0 1px 0 rgba(236, 180, 160, 0.3);
+          box-shadow:
+            0 4px 32px rgba(200, 120, 90, 0.1),
+            0 1px 0 rgba(236, 180, 160, 0.3);
+
           border-bottom-color: rgba(236, 180, 160, 0.4);
         }
+
         .dark .nav-bar {
           background: rgba(22, 16, 14, 0.9);
           border-bottom-color: rgba(160, 90, 70, 0.2);
         }
+
         .dark .nav-bar.scrolled {
-          box-shadow: 0 4px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(160, 90, 70, 0.3);
+          box-shadow:
+            0 4px 32px rgba(0, 0, 0, 0.45),
+            0 1px 0 rgba(160, 90, 70, 0.3);
+
           border-bottom-color: rgba(160, 90, 70, 0.35);
         }
 
@@ -98,321 +129,466 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
           max-width: 1200px;
           margin: 0 auto;
           padding: 0 24px;
+
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 64px;
+
+          height: 72px;
         }
 
-        /* ── Logo ── */
+        /* ───────────────── Logo ───────────────── */
+
         .nav-logo {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 14px;
+
           text-decoration: none;
           flex-shrink: 0;
+
+          transition: transform 0.25s ease;
         }
+
+        .nav-logo:hover {
+          transform: translateY(-1px);
+        }
+
         .nav-logo-icon {
-          width: 36px;
-          height: 36px;
-          background: linear-gradient(135deg, #E8997A, #D4756A);
-          border-radius: 10px;
+          width: 56px;
+          height: 56px;
+
+          border-radius: 50%;
+          overflow: hidden;
+          position: relative;
+
+          background:
+            linear-gradient(
+              135deg,
+              rgba(255,255,255,0.9),
+              rgba(255,245,240,0.85)
+            );
+
+          border: 2px solid rgba(232, 153, 122, 0.25);
+
+          box-shadow:
+            0 4px 18px rgba(212, 117, 106, 0.22),
+            0 2px 6px rgba(0,0,0,0.04);
+
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 18px;
-          box-shadow: 0 2px 8px rgba(212, 117, 106, 0.35);
-          transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+
+          transition:
+            transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+            box-shadow 0.35s ease,
+            border-color 0.3s ease;
         }
+
+        .nav-logo-icon::before {
+          content: "";
+          position: absolute;
+          inset: -3px;
+
+          border-radius: 50%;
+
+          background:
+            linear-gradient(
+              135deg,
+              rgba(232,153,122,0.35),
+              rgba(212,117,106,0.15),
+              rgba(255,192,203,0.28)
+            );
+
+          z-index: -1;
+          opacity: 0;
+
+          transition: opacity 0.3s ease;
+        }
+
         .nav-logo:hover .nav-logo-icon {
-          transform: rotate(-6deg) scale(1.08);
-          box-shadow: 0 4px 16px rgba(212, 117, 106, 0.45);
+          transform:
+            rotate(-5deg)
+            scale(1.08);
+
+          box-shadow:
+            0 10px 28px rgba(212,117,106,0.35),
+            0 4px 10px rgba(0,0,0,0.08);
+
+          border-color: rgba(232, 153, 122, 0.5);
         }
+
+        .nav-logo:hover .nav-logo-icon::before {
+          opacity: 1;
+        }
+
+        .nav-logo-img {
+          width: 100%;
+          height: 100%;
+
+          object-fit: cover;
+
+          transition:
+            transform 0.4s ease,
+            filter 0.3s ease;
+        }
+
+        .nav-logo:hover .nav-logo-img {
+          transform: scale(1.06);
+        }
+
         .nav-logo-text {
           font-family: 'Playfair Display', serif;
-          font-size: 1.25rem;
-          font-weight: 500;
-          color: #2A1A14;
-          letter-spacing: -0.01em;
-          line-height: 1;
-          transition: color 0.3s;
-        }
-        .dark .nav-logo-text { color: #F5EDE8; }
+          font-size: 1.4rem;
+          font-weight: 600;
 
-        /* ── Desktop links ── */
+          color: #2A1A14;
+
+          letter-spacing: -0.02em;
+          line-height: 1;
+
+          transition:
+            color 0.3s ease,
+            transform 0.25s ease;
+        }
+
+        .nav-logo:hover .nav-logo-text {
+          color: #C1604E;
+        }
+
+        .dark .nav-logo-text {
+          color: #F5EDE8;
+        }
+
+        .dark .nav-logo:hover .nav-logo-text {
+          color: #F0C4B0;
+        }
+
+        .dark .nav-logo-icon {
+          background:
+            linear-gradient(
+              135deg,
+              rgba(35,25,22,0.95),
+              rgba(28,18,16,0.9)
+            );
+
+          border-color: rgba(232,153,122,0.18);
+
+          box-shadow:
+            0 6px 22px rgba(0,0,0,0.45);
+        }
+
+        /* ───────────────── Desktop Links ───────────────── */
+
         .nav-links {
           display: none;
           align-items: center;
           gap: 4px;
         }
-        @media (min-width: 768px) { .nav-links { display: flex; } }
+
+        @media (min-width: 768px) {
+          .nav-links {
+            display: flex;
+          }
+        }
 
         .nav-link {
           position: relative;
+
           display: inline-flex;
           align-items: center;
-          padding: 7px 14px;
+
+          padding: 8px 14px;
+
           border-radius: 10px;
-          font-size: 0.875rem;
+
+          font-size: 0.9rem;
           font-weight: 400;
+
           color: #5A3E35;
+
           text-decoration: none;
-          border: none;
           background: transparent;
+          border: none;
+
           cursor: pointer;
-          letter-spacing: 0.01em;
-          transition: color 0.18s, background 0.18s;
-          font-family: 'DM Sans', sans-serif;
+
+          transition:
+            color 0.18s,
+            background 0.18s;
         }
+
         .nav-link::after {
           content: '';
+
           position: absolute;
+
           bottom: 4px;
           left: 14px;
           right: 14px;
+
           height: 1.5px;
-          background: linear-gradient(90deg, #E8997A, #D4756A);
+
+          background:
+            linear-gradient(
+              90deg,
+              #E8997A,
+              #D4756A
+            );
+
           border-radius: 2px;
+
           transform: scaleX(0);
           transform-origin: left;
-          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .nav-link:hover { color: #C1604E; background: rgba(232, 153, 122, 0.08); }
-        .nav-link:hover::after { transform: scaleX(1); }
-        .dark .nav-link { color: #C8A99A; }
-        .dark .nav-link:hover { color: #F0C4B0; background: rgba(232, 153, 122, 0.1); }
 
-        /* ── Actions ── */
-        .nav-actions { display: flex; align-items: center; gap: 6px; }
+          transition:
+            transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .nav-link:hover {
+          color: #C1604E;
+          background: rgba(232, 153, 122, 0.08);
+        }
+
+        .nav-link:hover::after {
+          transform: scaleX(1);
+        }
+
+        .dark .nav-link {
+          color: #C8A99A;
+        }
+
+        .dark .nav-link:hover {
+          color: #F0C4B0;
+          background: rgba(232, 153, 122, 0.1);
+        }
+
+        /* ───────────────── Actions ───────────────── */
+
+        .nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
 
         .nav-icon-btn {
           position: relative;
+
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 38px;
-          height: 38px;
-          border-radius: 11px;
+
+          width: 40px;
+          height: 40px;
+
+          border-radius: 12px;
+
           color: #5A3E35;
+
           background: transparent;
           border: none;
+
           cursor: pointer;
-          transition: color 0.18s, background 0.18s, transform 0.15s;
+
+          transition:
+            color 0.18s,
+            background 0.18s,
+            transform 0.15s;
+
           text-decoration: none;
         }
-        .nav-icon-btn:hover { color: #C1604E; background: rgba(232, 153, 122, 0.1); transform: translateY(-1px); }
-        .dark .nav-icon-btn { color: #C8A99A; }
-        .dark .nav-icon-btn:hover { color: #F0C4B0; background: rgba(232, 153, 122, 0.12); }
+
+        .nav-icon-btn:hover {
+          color: #C1604E;
+          background: rgba(232, 153, 122, 0.1);
+          transform: translateY(-1px);
+        }
+
+        .dark .nav-icon-btn {
+          color: #C8A99A;
+        }
+
+        .dark .nav-icon-btn:hover {
+          color: #F0C4B0;
+          background: rgba(232, 153, 122, 0.12);
+        }
 
         .nav-badge {
           position: absolute;
-          top: 2px; right: 2px;
-          min-width: 17px; height: 17px;
+
+          top: 2px;
+          right: 2px;
+
+          min-width: 17px;
+          height: 17px;
+
           padding: 0 4px;
-          background: linear-gradient(135deg, #E8997A, #C1604E);
+
+          background:
+            linear-gradient(
+              135deg,
+              #E8997A,
+              #C1604E
+            );
+
           color: white;
-          font-size: 10px; font-weight: 600;
+
+          font-size: 10px;
+          font-weight: 600;
+
           border-radius: 999px;
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 1px 4px rgba(193, 96, 78, 0.5);
-          line-height: 1;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .nav-divider {
-          width: 1px; height: 22px;
+          width: 1px;
+          height: 22px;
+
           background: rgba(232, 153, 122, 0.25);
+
           margin: 0 2px;
-          transition: background 0.3s;
         }
-        .dark .nav-divider { background: rgba(160, 90, 70, 0.25); }
 
-        .btn-signin {
-          display: none;
-          padding: 8px 16px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.85rem; font-weight: 500;
-          color: #5A3E35;
-          background: transparent;
-          border: 1.5px solid rgba(232, 153, 122, 0.3);
-          border-radius: 10px;
-          cursor: pointer;
-          letter-spacing: 0.01em;
-          transition: all 0.18s;
+        .dark .nav-divider {
+          background: rgba(160, 90, 70, 0.25);
         }
-        .btn-signin:hover { border-color: rgba(193, 96, 78, 0.5); background: rgba(232, 153, 122, 0.06); color: #C1604E; }
-        @media (min-width: 640px) { .btn-signin { display: flex; align-items: center; } }
-        .dark .btn-signin { color: #C8A99A; border-color: rgba(232, 153, 122, 0.2); }
-        .dark .btn-signin:hover { color: #F0C4B0; border-color: rgba(232, 153, 122, 0.45); background: rgba(232, 153, 122, 0.08); }
 
+        .btn-signin,
         .btn-signup {
           display: none;
-          padding: 8px 18px;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.85rem; font-weight: 500;
-          color: white;
-          background: linear-gradient(135deg, #E8997A, #C1604E);
-          border: none; border-radius: 10px;
+        }
+
+        @media (min-width: 640px) {
+          .btn-signin,
+          .btn-signup {
+            display: flex;
+            align-items: center;
+          }
+        }
+
+        .btn-signin {
+          padding: 8px 16px;
+
+          font-size: 0.85rem;
+          font-weight: 500;
+
+          color: #5A3E35;
+
+          background: transparent;
+
+          border: 1.5px solid rgba(232, 153, 122, 0.3);
+          border-radius: 10px;
+
           cursor: pointer;
-          letter-spacing: 0.01em;
-          box-shadow: 0 2px 10px rgba(193, 96, 78, 0.3);
+
           transition: all 0.18s;
         }
-        .btn-signup:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(193, 96, 78, 0.4); }
-        .btn-signup:active { transform: translateY(0); }
-        @media (min-width: 640px) { .btn-signup { display: flex; align-items: center; } }
-        .dark .btn-signup { box-shadow: 0 2px 14px rgba(193, 96, 78, 0.5); }
-        .dark .btn-signup:hover { box-shadow: 0 4px 22px rgba(193, 96, 78, 0.65); }
+
+        .btn-signin:hover {
+          border-color: rgba(193, 96, 78, 0.5);
+          background: rgba(232, 153, 122, 0.06);
+          color: #C1604E;
+        }
+
+        .btn-signup {
+          padding: 8px 18px;
+
+          font-size: 0.85rem;
+          font-weight: 500;
+
+          color: white;
+
+          background:
+            linear-gradient(
+              135deg,
+              #E8997A,
+              #C1604E
+            );
+
+          border: none;
+          border-radius: 10px;
+
+          cursor: pointer;
+
+          box-shadow:
+            0 2px 10px rgba(193, 96, 78, 0.3);
+
+          transition: all 0.18s;
+        }
+
+        .btn-signup:hover {
+          transform: translateY(-1px);
+
+          box-shadow:
+            0 4px 18px rgba(193, 96, 78, 0.4);
+        }
+
+        /* mobile button */
 
         .nav-hamburger {
-          display: flex; align-items: center; justify-content: center;
-          width: 38px; height: 38px;
-          border-radius: 11px;
-          color: #5A3E35;
-          background: transparent; border: none;
-          cursor: pointer;
-          transition: color 0.18s, background 0.18s;
-        }
-        .nav-hamburger:hover { color: #C1604E; background: rgba(232, 153, 122, 0.1); }
-        @media (min-width: 768px) { .nav-hamburger { display: none; } }
-        .dark .nav-hamburger { color: #C8A99A; }
-        .dark .nav-hamburger:hover { color: #F0C4B0; background: rgba(232, 153, 122, 0.1); }
+          display: flex;
+          align-items: center;
+          justify-content: center;
 
-        /* ── Mobile overlay ── */
-        .mobile-overlay {
-          position: fixed; inset: 0; z-index: 30;
-          background: rgba(20, 10, 8, 0.5);
-          backdrop-filter: blur(2px);
-          animation: overlayIn 0.2s ease both;
-        }
-        @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+          width: 40px;
+          height: 40px;
 
-        /* ── Mobile drawer ── */
-        .mobile-drawer {
-          position: fixed; top: 0; right: 0; z-index: 50;
-          height: 100%; width: 288px;
-          background: #FFF9F5;
-          border-left: 1px solid rgba(232, 153, 122, 0.18);
-          box-shadow: -8px 0 40px rgba(150, 80, 60, 0.14);
-          transform: translateX(100%);
-          transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s, border-color 0.3s;
-          display: flex; flex-direction: column;
-        }
-        .mobile-drawer.open { transform: translateX(0); }
-        @media (min-width: 768px) { .mobile-drawer { display: none; } }
-        .dark .mobile-drawer {
-          background: #1A110E;
-          border-left-color: rgba(160, 90, 70, 0.18);
-          box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
-        }
-
-        .drawer-header {
-          padding: 20px 20px 16px;
-          border-bottom: 1px solid rgba(232, 153, 122, 0.13);
-          display: flex; align-items: center; justify-content: space-between;
-          transition: border-color 0.3s;
-        }
-        .dark .drawer-header { border-bottom-color: rgba(160, 90, 70, 0.15); }
-
-        .drawer-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 1.1rem; font-style: italic;
-          color: #2A1A14;
-          transition: color 0.3s;
-        }
-        .dark .drawer-title { color: #F5EDE8; }
-
-        .drawer-close {
-          width: 34px; height: 34px;
-          display: flex; align-items: center; justify-content: center;
-          border-radius: 9px; border: none; background: transparent;
-          color: #8A6860;
-          cursor: pointer;
-          transition: background 0.15s, color 0.15s;
-        }
-        .drawer-close:hover { background: rgba(232, 153, 122, 0.1); color: #C1604E; }
-        .dark .drawer-close { color: #7A5E58; }
-        .dark .drawer-close:hover { background: rgba(232, 153, 122, 0.1); color: #F0C4B0; }
-
-        .drawer-body { flex: 1; padding: 12px; overflow-y: auto; }
-
-        .drawer-link {
-          display: flex; align-items: center;
-          padding: 12px 14px;
           border-radius: 12px;
-          font-size: 0.95rem; font-weight: 400;
-          color: #5A3E35;
-          text-decoration: none; border: none; background: transparent;
-          cursor: pointer; width: 100%; text-align: left;
-          font-family: 'DM Sans', sans-serif;
-          letter-spacing: 0.01em;
-          transition: background 0.15s, color 0.15s;
-          margin-bottom: 2px;
-        }
-        .drawer-link:hover { background: rgba(232, 153, 122, 0.1); color: #C1604E; }
-        .dark .drawer-link { color: #C8A99A; }
-        .dark .drawer-link:hover { color: #F0C4B0; background: rgba(232, 153, 122, 0.1); }
 
-        .drawer-footer {
-          padding: 16px;
-          border-top: 1px solid rgba(232, 153, 122, 0.13);
-          display: flex; flex-direction: column; gap: 8px;
-          transition: border-color 0.3s;
-        }
-        .dark .drawer-footer { border-top-color: rgba(160, 90, 70, 0.15); }
-
-        .drawer-btn-signin {
-          width: 100%; padding: 12px;
-          border-radius: 12px;
-          border: 1.5px solid rgba(232, 153, 122, 0.32);
           background: transparent;
-          color: #5A3E35;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.9rem; font-weight: 500;
-          cursor: pointer; transition: all 0.18s; letter-spacing: 0.01em;
-        }
-        .drawer-btn-signin:hover { border-color: #C1604E; color: #C1604E; }
-        .dark .drawer-btn-signin { color: #C8A99A; border-color: rgba(232, 153, 122, 0.2); }
-        .dark .drawer-btn-signin:hover { color: #F0C4B0; border-color: rgba(232, 153, 122, 0.45); }
+          border: none;
 
-        .drawer-btn-signup {
-          width: 100%; padding: 12px;
-          border-radius: 12px; border: none;
-          background: linear-gradient(135deg, #E8997A, #C1604E);
-          color: white;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.9rem; font-weight: 500;
+          color: #5A3E35;
+
           cursor: pointer;
-          box-shadow: 0 2px 12px rgba(193, 96, 78, 0.35);
-          letter-spacing: 0.01em;
-          transition: box-shadow 0.18s, transform 0.18s;
         }
-        .drawer-btn-signup:hover { box-shadow: 0 4px 20px rgba(193, 96, 78, 0.5); transform: translateY(-1px); }
-        .dark .drawer-btn-signup { box-shadow: 0 2px 16px rgba(193, 96, 78, 0.5); }
-        .dark .drawer-btn-signup:hover { box-shadow: 0 4px 24px rgba(193, 96, 78, 0.65); }
+
+        @media (min-width: 768px) {
+          .nav-hamburger {
+            display: none;
+          }
+        }
       `}</style>
 
       <nav className="nav-root">
         <div className={`nav-bar${scrolled ? " scrolled" : ""}`}>
           <div className="nav-inner">
+            {/* LOGO */}
             <Link to="/" className="nav-logo">
-              <div className="nav-logo-icon">🧶</div>
-              <span className="nav-logo-text">CozyStitch</span>
+              <div className="nav-logo-icon">
+                <img
+                  src="/yarn-shop-2-removebg-preview.svg"
+                  alt="Yarn Shop"
+                  className="nav-logo-img"
+                />
+              </div>
+
+              <span className="nav-logo-text">Yarn Shop</span>
             </Link>
 
+            {/* LINKS */}
             <div className="nav-links">
               {NAV_LINKS.map(({ label, href, protected: isProtected }) =>
                 isProtected && !isAuthenticated ? (
-                  <button key={label} className="nav-link" onClick={onSignIn}>
+                  <button
+                    key={label}
+                    className="nav-link"
+                    onClick={onSignIn}
+                  >
                     {label}
                   </button>
                 ) : (
                   <Link key={label} to={href} className="nav-link">
                     {label}
                   </Link>
-                ),
+                )
               )}
             </div>
 
+            {/* ACTIONS */}
             <div className="nav-actions">
               {isAuthenticated && (
                 <Link
@@ -421,16 +597,26 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
                   aria-label="Favourites"
                 >
                   <Heart size={18} />
+
                   {favorites.length > 0 && (
-                    <span className="nav-badge">{favorites.length}</span>
+                    <span className="nav-badge">
+                      {favorites.length}
+                    </span>
                   )}
                 </Link>
               )}
 
-              <Link to="/cart" className="nav-icon-btn" aria-label="Cart">
+              <Link
+                to="/cart"
+                className="nav-icon-btn"
+                aria-label="Cart"
+              >
                 <ShoppingCart size={18} />
+
                 {cartCount > 0 && (
-                  <span className="nav-badge">{cartCount}</span>
+                  <span className="nav-badge">
+                    {cartCount}
+                  </span>
                 )}
               </Link>
 
@@ -443,11 +629,20 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
               ) : (
                 <>
                   <div className="nav-divider" />
+
                   <ThemeToggle size="sm" />
-                  <button className="btn-signin" onClick={onSignIn}>
+
+                  <button
+                    className="btn-signin"
+                    onClick={onSignIn}
+                  >
                     Sign In
                   </button>
-                  <button className="btn-signup" onClick={onSignUp}>
+
+                  <button
+                    className="btn-signup"
+                    onClick={onSignUp}
+                  >
                     Sign Up
                   </button>
                 </>
@@ -455,86 +650,18 @@ export function Navigation({ cartCount, onSignIn, onSignUp }: NavigationProps) {
 
               <button
                 className="nav-hamburger"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                onClick={() =>
+                  setIsMobileMenuOpen(!isMobileMenuOpen)
+                }
               >
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                {isMobileMenuOpen ? (
+                  <X size={20} />
+                ) : (
+                  <Menu size={20} />
+                )}
               </button>
             </div>
           </div>
-        </div>
-
-        {isMobileMenuOpen && (
-          <div
-            className="mobile-overlay"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-
-        <div
-          ref={mobileMenuRef}
-          className={`mobile-drawer${isMobileMenuOpen ? " open" : ""}`}
-          aria-hidden={!isMobileMenuOpen}
-        >
-          <div className="drawer-header">
-            <span className="drawer-title">Menu</span>
-            <button
-              className="drawer-close"
-              onClick={() => setIsMobileMenuOpen(false)}
-              aria-label="Close menu"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="drawer-body">
-            {NAV_LINKS.map(({ label, href, protected: isProtected }) =>
-              isProtected && !isAuthenticated ? (
-                <button
-                  key={label}
-                  className="drawer-link"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onSignIn();
-                  }}
-                >
-                  {label}
-                </button>
-              ) : (
-                <Link
-                  key={label}
-                  to={href}
-                  className="drawer-link"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {label}
-                </Link>
-              ),
-            )}
-          </div>
-
-          {!isAuthenticated && (
-            <div className="drawer-footer">
-              <button
-                className="drawer-btn-signin"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onSignIn();
-                }}
-              >
-                Sign In
-              </button>
-              <button
-                className="drawer-btn-signup"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onSignUp();
-                }}
-              >
-                Sign Up
-              </button>
-            </div>
-          )}
         </div>
       </nav>
     </>
