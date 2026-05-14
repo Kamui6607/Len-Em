@@ -23,7 +23,10 @@ export interface Order {
     price: number;
   }[];
   total: number;
-  paymentMethod: "bank" | "cash";
+  deliveryFee?: number;
+  fulfillment?: string;
+  address?: string;
+  paymentMethod: string;
   paymentStatus: "pending" | "confirmed" | "cancelled";
   createdAt: string;
   confirmedAt?: string;
