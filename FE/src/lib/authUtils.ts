@@ -47,15 +47,17 @@ export function getDecodedToken(): DecodedToken | null {
 
 /**
  * Get the user's role from the decoded JWT.
+ * The JWT payload contains `role` (matches DecodedToken interface).
  */
 export function getUserRole(): UserRole | null {
   const decoded = getDecodedToken();
-  return decoded?.role ?? null;
+  if (!decoded) return null;
+  // decoded.role is "admin" | "staff" | "user" per the JWT contract
+  return decoded.role as UserRole ?? null;
 }
 
 /**
- * Check whether the access token is expired (server-time independent).
- * Relies on the `exp` claim embedded in the JWT.
+ * Check whether the access token is expired.
  */
 export function isTokenExpired(): boolean {
   const decoded = getDecodedToken();
@@ -64,7 +66,7 @@ export function isTokenExpired(): boolean {
 }
 
 /**
- * Fully log out: clear token storage, remove cached user, redirect.
+ * Fully log out: clear token storage, remove cached user.
  */
 export function logout(): void {
   tokenStorage.clear();
@@ -74,8 +76,7 @@ export function logout(): void {
 // ---- Role-based helpers ----
 
 /**
- * Check if the decoded token's role satisfies at least one of the
- * required roles.
+ * Check if the decoded token's role satisfies at least one of the required roles.
  */
 export function canAccess(requiredRoles: UserRole[]): boolean {
   const role = getUserRole();
@@ -83,24 +84,18 @@ export function canAccess(requiredRoles: UserRole[]): boolean {
   return requiredRoles.includes(role);
 }
 
-/**
- * Returns `true` if the current user has the "admin" role.
- */
+/** Returns `true` if the current user has the "admin" role. */
 export function isAdmin(): boolean {
   return getUserRole() === "admin";
 }
 
-/**
- * Returns `true` if the current user has "admin" or "staff" role.
- */
+/** Returns `true` if the current user has "admin" or "staff" role. */
 export function isStaff(): boolean {
   const role = getUserRole();
   return role === "admin" || role === "staff";
 }
 
-/**
- * Returns `true` if the user is authenticated (any role).
- */
+/** Returns `true` if the user is authenticated (any role). */
 export function isUser(): boolean {
   return isAuthenticated();
 }

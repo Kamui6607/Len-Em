@@ -32,13 +32,22 @@ function buildUserFromToken(decoded: DecodedToken): User {
 }
 
 /**
- * Attempt to refresh the access token.
- * This is a stub — no backend call yet, but the hook is ready.
- * Returns the new access token, or null if refresh failed.
+ * Refresh the access token by calling the backend /auth/refresh endpoint.
+ * Returns the new access token string, or null if refresh failed.
  */
 async function refreshAccessToken(): Promise<string | null> {
-  // TODO: wire up a real /auth/refresh call when the endpoint is ready
-  return null;
+  const refreshToken = tokenStorage.getRefresh();
+  if (!refreshToken) return null;
+
+  try {
+    const { data } = await authService.refreshToken(refreshToken);
+    const tokens = data.data;
+    tokenStorage.setAccess(tokens.accessToken);
+    tokenStorage.setRefresh(tokens.refreshToken);
+    return tokens.accessToken;
+  } catch {
+    return null;
+  }
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -46,24 +55,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: tokenStorage.getAccess(),
   refreshToken: tokenStorage.getRefresh(),
-  isAuthenticated: !!tokenStorage.getAccess() && (() => {
-    const token = tokenStorage.getAccess();
-    if (!token) return false;
-    try {
-      const decoded = jwtDecode<DecodedToken>(token);
-      return decoded.exp * 1000 > Date.now();
-    } catch {
-      return false;
-    }
-  })(),
+  isAuthenticated:
+    !!tokenStorage.getAccess() &&
+    (() => {
+      const token = tokenStorage.getAccess();
+      if (!token) return false;
+      try {
+        const decoded = jwtDecode<DecodedToken>(token);
+        return decoded.exp * 1000 > Date.now();
+      } catch {
+        return false;
+      }
+    })(),
   isLoading: true, // true until initialize() completes
 
   // ---- Actions ----
 
   /**
    * Initialize auth state on app mount.
-   * Checks for existing tokens, validates them, and restores state
-   * from the JWT payload without an extra API call.
+   * Validates existing tokens and restores state from JWT payload.
    */
   initialize: async () => {
     const accessToken = tokenStorage.getAccess();
@@ -97,23 +107,22 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
           return;
         }
-        // Refresh succeeded — decode new token
         const newDecoded = jwtDecode<DecodedToken>(newAccessToken);
         const user = buildUserFromToken(newDecoded);
         set({
           user,
           accessToken: newAccessToken,
+          refreshToken: tokenStorage.getRefresh(),
           isAuthenticated: true,
           isLoading: false,
         });
         return;
       }
 
-      // Token is still valid — restore from JWT
+      // Token still valid — restore from JWT
       const user = buildUserFromToken(decoded);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
-      // Malformed token — clear everything
       tokenStorage.clear();
       set({
         user: null,
@@ -127,12 +136,22 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   /**
    * Login with email/username + password.
-   * Stores tokens in localStorage and builds user from the JWT.
+   *
+   * The API accepts either `email` or `username` — we detect which one
+   * the user typed and send only the relevant field.
    */
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true });
     try {
-      const { data } = await authService.login(credentials);
+      // Build the minimal payload: send email OR username, never both
+      const payload: LoginRequest = { password: credentials.password };
+      if (credentials.email) {
+        payload.email = credentials.email;
+      } else if (credentials.username) {
+        payload.username = credentials.username;
+      }
+
+      const { data } = await authService.login(payload);
       const tokens = data.data;
 
       tokenStorage.setAccess(tokens.accessToken);
@@ -154,14 +173,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       toast.success("Login successful!");
     } catch (error) {
       set({ isLoading: false });
-      // Toast is handled by axiosClient interceptor
       throw error;
     }
   },
 
   /**
    * Register a new account.
-   * Stores tokens in localStorage and sets user data.
    */
   register: async (data: RegisterRequest) => {
     set({ isLoading: true });
@@ -172,7 +189,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       tokenStorage.setAccess(tokens.accessToken);
       tokenStorage.setRefresh(tokens.refreshToken);
 
-      // Fetch user profile
       const userResponse = await authService.getCurrentUser();
       const user = userResponse.data.data;
 
@@ -194,10 +210,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   /**
    * Logout — clears tokens and user state.
-   * Attempts server-side logout, but clears state regardless.
    */
   logout: () => {
-    // Attempt server logout (fire & forget)
     try {
       authService.logout();
     } catch {
@@ -216,17 +230,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     toast.success("You've been signed out. Come back soon!");
   },
 
-  /**
-   * Set user data (e.g., after profile update).
-   */
   setUser: (user: User) => {
     set({ user });
     localStorage.setItem("cozyStitch_user", JSON.stringify(user));
   },
 
-  /**
-   * Set tokens (e.g., after refresh).
-   */
   setTokens: (tokens: { accessToken: string; refreshToken: string }) => {
     tokenStorage.setAccess(tokens.accessToken);
     tokenStorage.setRefresh(tokens.refreshToken);
