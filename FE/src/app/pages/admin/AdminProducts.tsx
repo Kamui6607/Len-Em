@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { products } from "../../data/products";
+import { products, getBasePrice } from "../../data/products";
 
 export function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,7 +49,10 @@ export function AdminProducts() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product) => {
+                const price = getBasePrice(product);
+                const totalStock = product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0;
+                return (
                 <tr key={product.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -65,11 +68,12 @@ export function AdminProducts() {
                     <span className="capitalize">{product.category}</span>
                   </td>
                   <td className="px-6 py-4 text-primary font-semibold">
-                    ${product.price.toFixed(2)}
+                    ${price.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4 text-secondary">In Stock</td>
+                  <td className="px-6 py-4 text-secondary">{totalStock} in stock</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

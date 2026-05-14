@@ -26,7 +26,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
       productId: item.productId,
       productName: product?.name || "Unknown",
       quantity: item.quantity,
-      price: product?.price || 0,
+      price: product?.variants?.[0]?.price ?? 0,
     };
   });
 

@@ -15,10 +15,14 @@ interface CartProps {
 
 export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
   const navigate = useNavigate();
-  const cartProducts = cartItems.map((item) => ({
-    ...products.find((p) => p.id === item.productId)!,
-    quantity: item.quantity,
-  }));
+  const cartProducts = cartItems.map((item) => {
+    const product = products.find((p) => p.id === item.productId)!;
+    return {
+      ...product,
+      quantity: item.quantity,
+      price: product.variants?.[0]?.price ?? 0,
+    };
+  });
 
   const subtotal = cartProducts.reduce(
     (sum, item) => sum + item.price * item.quantity,
