@@ -1,29 +1,23 @@
 // ============================================================
-// Role Guard Helper Functions — pure logic, no React, no UI
+// Role Guard Helpers — pure logic, no React, no UI
 // ============================================================
-//
-// Usage in route components:
-//   if (!canAccessAdminRoute()) redirect("/")
-//   if (!canAccessStaffRoute()) redirect("/")
-//   if (!canAccessUserRoute()) redirect("/login")
-//
+// USAGE: replace FE/src/lib/roleGuard.ts with this file
 // ============================================================
 
 import { getUserRole, isAuthenticated } from "./authUtils";
 import type { UserRole } from "../types/auth.types";
 
 /**
- * Check if current user can access admin-only routes.
- * Allowed: admin
+ * Admin-only routes.
+ * Allowed roles: admin
  */
 export function canAccessAdminRoute(): boolean {
-  if (!isAuthenticated()) return false;
-  return getUserRole() === "admin";
+  return isAuthenticated() && getUserRole() === "admin";
 }
 
 /**
- * Check if current user can access staff routes.
- * Allowed: admin, staff
+ * Staff-level routes.
+ * Allowed roles: admin, staff
  */
 export function canAccessStaffRoute(): boolean {
   if (!isAuthenticated()) return false;
@@ -32,18 +26,17 @@ export function canAccessStaffRoute(): boolean {
 }
 
 /**
- * Check if current user can access regular user routes.
- * Allowed: any authenticated user (admin, staff, user)
+ * Regular user routes — any authenticated user.
+ * Allowed roles: admin, staff, user
  */
 export function canAccessUserRoute(): boolean {
   return isAuthenticated();
 }
 
 /**
- * Generic role check — pass any combination of allowed roles.
- * Returns true if the current user's role is in the allowed list.
+ * Generic check — pass any combination of roles.
  *
- * Example:
+ * @example
  *   canAccessRoute(["admin", "staff"]) // same as canAccessStaffRoute()
  */
 export function canAccessRoute(allowedRoles: UserRole[]): boolean {
@@ -54,8 +47,7 @@ export function canAccessRoute(allowedRoles: UserRole[]): boolean {
 }
 
 /**
- * Determine the default redirect path for a given role after login.
- * Returns the path the user should be sent to.
+ * Returns the default dashboard path for a given role after login.
  */
 export function getDefaultRouteForRole(role: UserRole | null): string {
   switch (role) {
@@ -70,8 +62,7 @@ export function getDefaultRouteForRole(role: UserRole | null): string {
 }
 
 /**
- * Get the redirect path for an unauthenticated user
- * trying to access a protected route.
+ * Redirect path when an unauthenticated user hits a protected route.
  */
 export function getUnauthorizedRedirect(): string {
   return "/";
