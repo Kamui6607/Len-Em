@@ -1,51 +1,54 @@
+// ============================================================
+// Axios Client — JWT injection + silent token refresh
+// ============================================================
+// USAGE: replace FE/src/lib/axiosClient.ts with this file
+// ============================================================
+
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 
-// ============================================================
-// Axios Client with JWT & Refresh Token Interceptors
-// ============================================================
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+// ---- Token storage (localStorage wrappers) ----
 
-const axiosClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: 15000,
-});
-
-// ---- Token storage helpers ----
 const TOKEN_KEY = "cozyStitch_accessToken";
 const REFRESH_KEY = "cozyStitch_refreshToken";
 
 export const tokenStorage = {
-  getAccess: () => localStorage.getItem(TOKEN_KEY),
-  setAccess: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  getRefresh: () => localStorage.getItem(REFRESH_KEY),
-  setRefresh: (token: string) => localStorage.setItem(REFRESH_KEY, token),
-  clear: () => {
+  getAccess: (): string | null => localStorage.getItem(TOKEN_KEY),
+  setAccess: (token: string): void => localStorage.setItem(TOKEN_KEY, token),
+  getRefresh: (): string | null => localStorage.getItem(REFRESH_KEY),
+  setRefresh: (token: string): void => localStorage.setItem(REFRESH_KEY, token),
+  clear: (): void => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
   },
 };
 
-// Prevent multiple concurrent refresh calls
+// ---- Axios instance ----
+
+const axiosClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+  timeout: 15_000,
+});
+
+// ---- Refresh-queue state ----
+
 let isRefreshing = false;
-let failedQueue: Array<{
+let pendingQueue: Array<{
   resolve: (token: string) => void;
-  reject: (error: unknown) => void;
+  reject: (err: unknown) => void;
 }> = [];
 
-function processQueue(error: unknown, token: string | null) {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else if (token) prom.resolve(token);
-  });
-  failedQueue = [];
+function flushQueue(error: unknown, token: string | null): void {
+  pendingQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token!)));
+  pendingQueue = [];
 }
 
-// ---- Request Interceptor: attach JWT ----
+// ---- Request interceptor: attach Bearer token ----
+
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenStorage.getAccess();
@@ -54,35 +57,33 @@ axiosClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
-// ---- Response Interceptor: handle 401 + refresh ----
+// ---- Response interceptor: handle 401 + silent refresh ----
+
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
+    const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // If not 401 or already retried, reject
-    if (error.response?.status !== 401 || originalRequest._retry) {
-      return handleError(error);
+    if (error.response?.status !== 401 || original._retry) {
+      return handleAxiosError(error);
     }
 
-    // Attempt token refresh
     if (isRefreshing) {
+      // Queue subsequent 401s until refresh completes
       return new Promise<string>((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      }).then((token) => {
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-        }
-        return axiosClient(originalRequest);
+        pendingQueue.push({ resolve, reject });
+      }).then((newToken) => {
+        if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
+        return axiosClient(original);
       });
     }
 
-    originalRequest._retry = true;
+    original._retry = true;
     isRefreshing = true;
 
     const refreshToken = tokenStorage.getRefresh();
@@ -96,29 +97,33 @@ axiosClient.interceptors.response.use(
       const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
         refreshToken,
       });
-      const newAccessToken = data.data?.accessToken || data.accessToken;
-      const newRefreshToken = data.data?.refreshToken || data.refreshToken;
+
+      // Support both { data: { accessToken } } and { accessToken } response shapes
+      const newAccessToken: string =
+        data.data?.accessToken ?? data.accessToken;
+      const newRefreshToken: string | undefined =
+        data.data?.refreshToken ?? data.refreshToken;
 
       tokenStorage.setAccess(newAccessToken);
       if (newRefreshToken) tokenStorage.setRefresh(newRefreshToken);
 
-      processQueue(null, newAccessToken);
-      if (originalRequest.headers) {
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      }
-      return axiosClient(originalRequest);
+      flushQueue(null, newAccessToken);
+      if (original.headers)
+        original.headers.Authorization = `Bearer ${newAccessToken}`;
+      return axiosClient(original);
     } catch (refreshError) {
-      processQueue(refreshError, null);
+      flushQueue(refreshError, null);
       forceLogout();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
-// ---- Error handling ----
-function handleError(error: AxiosError) {
+// ---- Error handler ----
+
+function handleAxiosError(error: AxiosError): Promise<never> {
   const status = error.response?.status;
   const data = error.response?.data as Record<string, unknown> | undefined;
   const message =
@@ -127,9 +132,8 @@ function handleError(error: AxiosError) {
     error.message ||
     "Something went wrong";
 
-  // Toast for user-facing errors (skip 401 — handled by interceptor)
   if (status && status !== 401) {
-    const statusMessages: Record<number, string> = {
+    const mapped: Record<number, string> = {
       400: "Invalid input. Please check your data.",
       403: "You don't have permission to do that.",
       404: "Resource not found.",
@@ -137,7 +141,7 @@ function handleError(error: AxiosError) {
       429: "Too many requests. Please slow down.",
       500: "Server error. Please try again later.",
     };
-    toast.error(statusMessages[status] || message);
+    toast.error(mapped[status] ?? message);
   }
 
   if (!status) {
@@ -147,12 +151,12 @@ function handleError(error: AxiosError) {
   return Promise.reject(error);
 }
 
-function forceLogout() {
+function forceLogout(): void {
   tokenStorage.clear();
   localStorage.removeItem("cozyStitch_user");
-  // Redirect to home — the auth store will handle state reset
+  toast.error("Session expired. Please sign in again.");
   window.location.href = "/";
-  toast.error("Session expired. Please log in again.");
 }
 
 export default axiosClient;
+export { API_BASE_URL };

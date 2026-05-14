@@ -1,3 +1,9 @@
+// ============================================================
+// Zustand Auth Store
+// ============================================================
+// USAGE: replace FE/src/store/auth.store.ts with this file
+// ============================================================
+
 import { create } from "zustand";
 import { jwtDecode } from "jwt-decode";
 import { authService } from "../services/auth.service";
@@ -7,38 +13,44 @@ import type {
   LoginRequest,
   RegisterRequest,
   User,
-  UserRole,
   DecodedToken,
 } from "../types/auth.types";
 import { toast } from "sonner";
 
-// ============================================================
-// Zustand Auth Store
-// ============================================================
+// ---- Helpers ----
 
-/** Build a minimal User object from the decoded JWT payload. */
-function buildUserFromToken(decoded: DecodedToken): User {
+function safeDecode(token: string): DecodedToken | null {
+  try {
+    return jwtDecode<DecodedToken>(token);
+  } catch {
+    return null;
+  }
+}
+
+function isTokenValid(token: string): boolean {
+  const decoded = safeDecode(token);
+  if (!decoded) return false;
+  return decoded.exp * 1000 > Date.now();
+}
+
+/**
+ * Build a minimal User shell from JWT payload.
+ * The store will attempt to enrich this with a /auth/me call when possible.
+ */
+function buildUserFromToken(decoded: DecodedToken): Partial<User> {
   return {
     id: decoded.userId,
-    email: "",
-    username: "",
-    fullName: "",
-    phone: "",
-    address: "",
-    gender: "OTHER",
-    dateOfBirth: "",
-    roleId: decoded.role as UserRole,
+    roleId: decoded.role,
   };
 }
 
 /**
- * Refresh the access token by calling the backend /auth/refresh endpoint.
- * Returns the new access token string, or null if refresh failed.
+ * Attempt to silently refresh the access token.
+ * Returns the new access token on success, null on failure.
  */
-async function refreshAccessToken(): Promise<string | null> {
+async function attemptTokenRefresh(): Promise<string | null> {
   const refreshToken = tokenStorage.getRefresh();
   if (!refreshToken) return null;
-
   try {
     const { data } = await authService.refreshToken(refreshToken);
     const tokens = data.data;
@@ -50,36 +62,63 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+// ---- Store ----
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   // ---- Initial state ----
   user: null,
   accessToken: tokenStorage.getAccess(),
   refreshToken: tokenStorage.getRefresh(),
-  isAuthenticated:
-    !!tokenStorage.getAccess() &&
-    (() => {
-      const token = tokenStorage.getAccess();
-      if (!token) return false;
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        return decoded.exp * 1000 > Date.now();
-      } catch {
-        return false;
-      }
-    })(),
-  isLoading: true, // true until initialize() completes
+  isAuthenticated: false, // resolved properly in initialize()
+  isLoading: true,
 
-  // ---- Actions ----
-
+  // ---- initialize ----
   /**
-   * Initialize auth state on app mount.
-   * Validates existing tokens and restores state from JWT payload.
+   * Call once on app mount (e.g. in App.tsx useEffect).
+   * Validates existing tokens, refreshes if expired, restores user state.
    */
   initialize: async () => {
     const accessToken = tokenStorage.getAccess();
     const refreshToken = tokenStorage.getRefresh();
 
-    if (!accessToken || !refreshToken) {
+    // No tokens at all → unauthenticated
+    if (!accessToken && !refreshToken) {
+      set({ isAuthenticated: false, isLoading: false, user: null });
+      return;
+    }
+
+    // Try to use existing access token
+    if (accessToken && isTokenValid(accessToken)) {
+      const decoded = safeDecode(accessToken);
+      if (!decoded) {
+        tokenStorage.clear();
+        set({ isAuthenticated: false, isLoading: false, user: null });
+        return;
+      }
+
+      // Attempt to fetch full user profile; fall back to JWT payload
+      let user: User | null = null;
+      try {
+        const resp = await authService.getCurrentUser();
+        user = resp.data.data;
+      } catch {
+        user = buildUserFromToken(decoded) as User;
+      }
+
+      set({
+        user,
+        accessToken,
+        refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return;
+    }
+
+    // Access token expired or missing — try refresh
+    const newAccessToken = await attemptTokenRefresh();
+    if (!newAccessToken) {
+      tokenStorage.clear();
       set({
         user: null,
         accessToken: null,
@@ -90,60 +129,41 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
 
-    try {
-      const decoded = jwtDecode<DecodedToken>(accessToken);
-
-      // Token expired — try refresh
-      if (decoded.exp * 1000 <= Date.now()) {
-        const newAccessToken = await refreshAccessToken();
-        if (!newAccessToken) {
-          tokenStorage.clear();
-          set({
-            user: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
-          return;
-        }
-        const newDecoded = jwtDecode<DecodedToken>(newAccessToken);
-        const user = buildUserFromToken(newDecoded);
-        set({
-          user,
-          accessToken: newAccessToken,
-          refreshToken: tokenStorage.getRefresh(),
-          isAuthenticated: true,
-          isLoading: false,
-        });
-        return;
-      }
-
-      // Token still valid — restore from JWT
-      const user = buildUserFromToken(decoded);
-      set({ user, isAuthenticated: true, isLoading: false });
-    } catch {
+    const decoded = safeDecode(newAccessToken);
+    if (!decoded) {
       tokenStorage.clear();
-      set({
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
+      set({ user: null, isAuthenticated: false, isLoading: false });
+      return;
     }
+
+    let user: User | null = null;
+    try {
+      const resp = await authService.getCurrentUser();
+      user = resp.data.data;
+    } catch {
+      user = buildUserFromToken(decoded) as User;
+    }
+
+    set({
+      user,
+      accessToken: newAccessToken,
+      refreshToken: tokenStorage.getRefresh(),
+      isAuthenticated: true,
+      isLoading: false,
+    });
   },
 
+  // ---- login ----
   /**
-   * Login with email/username + password.
+   * POST /auth/login
    *
-   * The API accepts either `email` or `username` — we detect which one
-   * the user typed and send only the relevant field.
+   * Detects whether the identifier is an email or username and sends
+   * only the relevant field (backend accepts either, not both required).
    */
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true });
     try {
-      // Build the minimal payload: send email OR username, never both
+      // Build minimal payload
       const payload: LoginRequest = { password: credentials.password };
       if (credentials.email) {
         payload.email = credentials.email;
@@ -157,9 +177,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       tokenStorage.setAccess(tokens.accessToken);
       tokenStorage.setRefresh(tokens.refreshToken);
 
-      // Decode JWT to extract user info — no extra /auth/me call
-      const decoded = jwtDecode<DecodedToken>(tokens.accessToken);
-      const user = buildUserFromToken(decoded);
+      // Decode JWT for role / userId immediately
+      const decoded = safeDecode(tokens.accessToken);
+      if (!decoded) throw new Error("Invalid token received from server");
+
+      // Enrich with full profile if backend supports /auth/me
+      let user: User | null = null;
+      try {
+        const resp = await authService.getCurrentUser();
+        user = resp.data.data;
+      } catch {
+        // /auth/me may not be implemented yet — fall back to JWT payload
+        user = buildUserFromToken(decoded) as User;
+      }
 
       set({
         user,
@@ -169,17 +199,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
 
+      // Persist for page refreshes (used by non-Zustand parts of the app)
       localStorage.setItem("cozyStitch_user", JSON.stringify(user));
-      toast.success("Login successful!");
+      toast.success("Welcome back!");
     } catch (error) {
       set({ isLoading: false });
-      throw error;
+      throw error; // let the UI handle the error message
     }
   },
 
-  /**
-   * Register a new account.
-   */
+  // ---- register ----
   register: async (data: RegisterRequest) => {
     set({ isLoading: true });
     try {
@@ -189,8 +218,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       tokenStorage.setAccess(tokens.accessToken);
       tokenStorage.setRefresh(tokens.refreshToken);
 
-      const userResponse = await authService.getCurrentUser();
-      const user = userResponse.data.data;
+      let user: User | null = null;
+      try {
+        const resp = await authService.getCurrentUser();
+        user = resp.data.data;
+      } catch {
+        const decoded = safeDecode(tokens.accessToken);
+        if (decoded) user = buildUserFromToken(decoded) as User;
+      }
 
       set({
         user,
@@ -208,16 +243,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  /**
-   * Logout — clears tokens and user state.
-   */
+  // ---- logout ----
   logout: () => {
-    try {
-      authService.logout();
-    } catch {
-      // Ignore server errors on logout
-    }
-
+    // Best-effort server-side token invalidation
+    authService.logout().catch(() => {});
     tokenStorage.clear();
     localStorage.removeItem("cozyStitch_user");
     set({
@@ -227,7 +256,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
       isLoading: false,
     });
-    toast.success("You've been signed out. Come back soon!");
+    toast.success("Signed out. See you soon!");
   },
 
   setUser: (user: User) => {
@@ -235,7 +264,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem("cozyStitch_user", JSON.stringify(user));
   },
 
-  setTokens: (tokens: { accessToken: string; refreshToken: string }) => {
+  setTokens: (tokens) => {
     tokenStorage.setAccess(tokens.accessToken);
     tokenStorage.setRefresh(tokens.refreshToken);
     set({

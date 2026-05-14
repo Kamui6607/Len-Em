@@ -2,10 +2,8 @@
 // Auth Types — mirrors backend API contracts
 // ============================================================
 
-/** User roles supported by the platform */
 export type UserRole = "admin" | "staff" | "user";
 
-/** User profile returned from backend after login/profile fetch */
 export interface User {
   id: string;
   email: string;
@@ -21,20 +19,20 @@ export interface User {
   updatedAt?: string;
 }
 
-/** JWT token pair returned on login/register/refresh */
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
 
-/** Decoded JWT payload extracted from the access token */
+/** Decoded JWT payload — must match what the backend signs */
 export interface DecodedToken {
   userId: string;
-  role: "admin" | "staff" | "user";
+  role: UserRole;
   exp: number;
+  iat?: number;
 }
 
-// ---- API Request DTOs ----
+// ---- Request DTOs ----
 
 export interface LoginRequest {
   username?: string;
@@ -54,7 +52,7 @@ export interface RegisterRequest {
   roleId: UserRole;
 }
 
-// ---- API Response DTOs ----
+// ---- Response DTOs ----
 
 export interface ApiResponse<T> {
   status: "success" | "error";
@@ -77,11 +75,10 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  // Actions
+  initialize: () => Promise<void>;
   login: (credentials: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
   setTokens: (tokens: AuthTokens) => void;
-  initialize: () => Promise<void>;
 }

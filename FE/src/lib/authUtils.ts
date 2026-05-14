@@ -1,43 +1,19 @@
 // ============================================================
 // Auth Utility Functions — pure helpers, no React, no UI
 // ============================================================
+// USAGE: replace FE/src/lib/authUtils.ts with this file
+// ============================================================
 
 import { jwtDecode } from "jwt-decode";
 import { tokenStorage } from "./axiosClient";
 import type { DecodedToken, UserRole } from "../types/auth.types";
 
-const STORAGE_USER_KEY = "cozyStitch_user";
-
 // ---- Token helpers ----
 
 /**
- * Check if the user has a valid (non-expired) access token.
+ * Decode JWT without throwing — returns null on any error.
  */
-export function isAuthenticated(): boolean {
-  const token = tokenStorage.getAccess();
-  if (!token) return false;
-  try {
-    const decoded = jwtDecode<DecodedToken>(token);
-    return decoded.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get the current access token from storage.
- */
-export function getAccessToken(): string | null {
-  return tokenStorage.getAccess();
-}
-
-/**
- * Decode the JWT access token and return its payload.
- * Returns `null` if token is missing or malformed.
- */
-export function getDecodedToken(): DecodedToken | null {
-  const token = tokenStorage.getAccess();
-  if (!token) return null;
+function safeDecode(token: string): DecodedToken | null {
   try {
     return jwtDecode<DecodedToken>(token);
   } catch {
@@ -46,18 +22,49 @@ export function getDecodedToken(): DecodedToken | null {
 }
 
 /**
- * Get the user's role from the decoded JWT.
- * The JWT payload contains `role` (matches DecodedToken interface).
+ * Returns true if a valid, non-expired access token exists.
  */
-export function getUserRole(): UserRole | null {
-  const decoded = getDecodedToken();
-  if (!decoded) return null;
-  // decoded.role is "admin" | "staff" | "user" per the JWT contract
-  return decoded.role as UserRole ?? null;
+export function isAuthenticated(): boolean {
+  const token = tokenStorage.getAccess();
+  if (!token) return false;
+  const decoded = safeDecode(token);
+  if (!decoded) return false;
+  return decoded.exp * 1000 > Date.now();
 }
 
 /**
- * Check whether the access token is expired.
+ * Returns the raw access token string, or null if absent.
+ */
+export function getAccessToken(): string | null {
+  return tokenStorage.getAccess();
+}
+
+/**
+ * Returns the raw refresh token string, or null if absent.
+ */
+export function getRefreshToken(): string | null {
+  return tokenStorage.getRefresh();
+}
+
+/**
+ * Decodes and returns the JWT payload, or null on failure.
+ */
+export function getDecodedToken(): DecodedToken | null {
+  const token = tokenStorage.getAccess();
+  if (!token) return null;
+  return safeDecode(token);
+}
+
+/**
+ * Returns the role embedded in the JWT, or null if unavailable.
+ */
+export function getUserRole(): UserRole | null {
+  const decoded = getDecodedToken();
+  return decoded?.role ?? null;
+}
+
+/**
+ * Returns true when the access token is expired (or missing).
  */
 export function isTokenExpired(): boolean {
   const decoded = getDecodedToken();
@@ -66,36 +73,47 @@ export function isTokenExpired(): boolean {
 }
 
 /**
- * Fully log out: clear token storage, remove cached user.
+ * Returns the number of seconds until the token expires.
+ * Returns 0 if already expired or token is missing.
+ */
+export function getTokenTtlSeconds(): number {
+  const decoded = getDecodedToken();
+  if (!decoded) return 0;
+  const remaining = decoded.exp * 1000 - Date.now();
+  return remaining > 0 ? Math.floor(remaining / 1000) : 0;
+}
+
+/**
+ * Clears both tokens and removes the cached user from localStorage.
  */
 export function logout(): void {
   tokenStorage.clear();
-  localStorage.removeItem(STORAGE_USER_KEY);
+  localStorage.removeItem("cozyStitch_user");
 }
 
-// ---- Role-based helpers ----
+// ---- Role-based access helpers ----
 
 /**
- * Check if the decoded token's role satisfies at least one of the required roles.
+ * Returns true if the current user's role is in the allowedRoles list.
  */
-export function canAccess(requiredRoles: UserRole[]): boolean {
+export function canAccess(allowedRoles: UserRole[]): boolean {
   const role = getUserRole();
   if (!role) return false;
-  return requiredRoles.includes(role);
+  return allowedRoles.includes(role);
 }
 
-/** Returns `true` if the current user has the "admin" role. */
+/** Admin only. */
 export function isAdmin(): boolean {
   return getUserRole() === "admin";
 }
 
-/** Returns `true` if the current user has "admin" or "staff" role. */
+/** Admin or staff. */
 export function isStaff(): boolean {
   const role = getUserRole();
   return role === "admin" || role === "staff";
 }
 
-/** Returns `true` if the user is authenticated (any role). */
+/** Any authenticated user (any role). */
 export function isUser(): boolean {
   return isAuthenticated();
 }
