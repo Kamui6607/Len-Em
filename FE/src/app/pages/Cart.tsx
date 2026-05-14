@@ -16,27 +16,29 @@ interface CartProps {
 export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
   const navigate = useNavigate();
   const cartProducts = cartItems
-  .map((item) => {
-    const product = products.find((p) => p.id === item.productId);
+    .map((item) => {
+      const product = products.find(
+        (p) => String(p.id) === String(item.productId),
+      );
 
-    if (!product) return null;
+      if (!product) return null;
 
-    return {
-      ...product,
-      quantity: item.quantity,
-      price: product.variants?.[0]?.price ?? 0,
-    };
-  })
-  .filter((item): item is NonNullable<typeof item> => item !== null);
+      return {
+        ...product,
+        quantity: item.quantity,
+        price: product.variants?.[0]?.price ?? 0,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const subtotal = cartProducts.reduce(
     (sum, item) => sum + item.price * item.quantity,
-    0
+    0,
   );
   const shipping = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + shipping;
 
-  if (cartItems.length === 0) {
+  if (cartProducts.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center max-w-md">
@@ -102,7 +104,10 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() =>
-                          onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))
+                          onUpdateQuantity(
+                            item.id,
+                            Math.max(1, item.quantity - 1),
+                          )
                         }
                         className="w-8 h-8 rounded-full border border-border hover:bg-muted transition-colors flex items-center justify-center"
                       >
@@ -110,7 +115,9 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                        onClick={() =>
+                          onUpdateQuantity(item.id, item.quantity + 1)
+                        }
                         className="w-8 h-8 rounded-full border border-border hover:bg-muted transition-colors flex items-center justify-center"
                       >
                         <Plus className="w-4 h-4" />
@@ -137,7 +144,9 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
+                  <span>
+                    {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                  </span>
                 </div>
                 {subtotal < 50 && subtotal > 0 && (
                   <p className="text-xs text-muted-foreground">
