@@ -15,14 +15,19 @@ interface CartProps {
 
 export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
   const navigate = useNavigate();
-  const cartProducts = cartItems.map((item) => {
-    const product = products.find((p) => p.id === item.productId)!;
+  const cartProducts = cartItems
+  .map((item) => {
+    const product = products.find((p) => p.id === item.productId);
+
+    if (!product) return null;
+
     return {
       ...product,
       quantity: item.quantity,
       price: product.variants?.[0]?.price ?? 0,
     };
-  });
+  })
+  .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const subtotal = cartProducts.reduce(
     (sum, item) => sum + item.price * item.quantity,
