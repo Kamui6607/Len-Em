@@ -24,12 +24,30 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-/** Decoded JWT payload — must match what the backend signs */
+/**
+ * Decoded JWT payload — matches the backend's JWT structure.
+ * The backend sends: userId (ObjectId), roleName (string like "Admin"),
+ * roleId (ObjectId), fullName (string), deviceId, jti, iat, exp.
+ */
 export interface DecodedToken {
   userId: string;
-  role: UserRole;
+  roleName: string; // "Admin" | "Staff" | "User"
+  roleId: string;   // MongoDB ObjectId reference
+  fullName: string;
+  deviceId?: string;
+  jti?: string;
   exp: number;
   iat?: number;
+}
+
+/** Maps backend roleName to our UserRole type */
+export function mapRoleNameToUserRole(roleName: string): UserRole {
+  const roleMap: Record<string, UserRole> = {
+    Admin: "admin",
+    Staff: "staff",
+    User: "user",
+  };
+  return roleMap[roleName] || "user";
 }
 
 // ---- Request DTOs ----

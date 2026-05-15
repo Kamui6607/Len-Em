@@ -57,10 +57,18 @@ export function getDecodedToken(): DecodedToken | null {
 
 /**
  * Returns the role embedded in the JWT, or null if unavailable.
+ * Backend stores the role as roleName (string like "Admin", "Staff", "User").
  */
 export function getUserRole(): UserRole | null {
   const decoded = getDecodedToken();
-  return decoded?.role ?? null;
+  if (!decoded) return null;
+  // decoded.roleName is the backend field (e.g. "Admin", "Staff", "User")
+  const roleMap: Record<string, UserRole> = {
+    Admin: "admin",
+    Staff: "staff",
+    User: "user",
+  };
+  return roleMap[decoded.roleName] ?? null;
 }
 
 /**

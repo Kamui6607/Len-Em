@@ -15,7 +15,54 @@ import type {
   User,
   DecodedToken,
 } from "../types/auth.types";
+import { mapRoleNameToUserRole } from "../types/auth.types";
 import { toast } from "sonner";
+
+// ---- Demo Accounts (fallback when backend is unavailable) ----
+
+interface DemoAccount {
+  email: string;
+  username: string;
+  password: string;
+  fullName: string;
+  phone: string;
+  roleId: "admin" | "staff" | "user";
+}
+
+const demoAccounts: DemoAccount[] = [
+  {
+    email: "admin@gmail.com",
+    username: "admin",
+    password: "123",
+    fullName: "Admin User",
+    phone: "123456789",
+    roleId: "admin",
+  },
+  {
+    email: "staff@gmail.com",
+    username: "staff",
+    password: "123",
+    fullName: "Staff User",
+    phone: "987654321",
+    roleId: "staff",
+  },
+  {
+    email: "tranngoc5979@gmail.com",
+    username: "tranngoc",
+    password: "123",
+    fullName: "Tran Ngoc",
+    phone: "0703339186",
+    roleId: "user",
+  },
+  {
+    email: "kamuikatzzz@gmail.com",
+    username: "kamuikatzzz",
+    password: "123",
+    fullName: "Kamui Katz",
+    phone: "0909315708",
+    roleId: "user",
+  },
+];
 
 // ---- Helpers ----
 
@@ -40,7 +87,32 @@ function isTokenValid(token: string): boolean {
 function buildUserFromToken(decoded: DecodedToken): Partial<User> {
   return {
     id: decoded.userId,
-    roleId: decoded.role,
+    fullName: decoded.fullName,
+    roleId: mapRoleNameToUserRole(decoded.roleName),
+  };
+}
+
+/**
+ * Try to match credentials against demo accounts.
+ * Returns a User object if matched, null otherwise.
+ */
+function matchDemoAccount(emailOrUsername: string, password: string): User | null {
+  const account = demoAccounts.find(
+    (acc) =>
+      (acc.email === emailOrUsername || acc.username === emailOrUsername) &&
+      acc.password === password,
+  );
+  if (!account) return null;
+  return {
+    id: `demo-${account.roleId}-${Date.now()}`,
+    email: account.email,
+    username: account.username,
+    fullName: account.fullName,
+    phone: account.phone,
+    address: "",
+    gender: "OTHER",
+    dateOfBirth: "",
+    roleId: account.roleId,
   };
 }
 
@@ -96,14 +168,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         return;
       }
 
-      // Attempt to fetch full user profile; fall back to JWT payload
-      let user: User | null = null;
-      try {
-        const resp = await authService.getCurrentUser();
-        user = resp.data.data;
-      } catch {
-        user = buildUserFromToken(decoded) as User;
-      }
+      // Build user from JWT payload (backend JWT contains fullName, roleName, userId)
+      const user = buildUserFromToken(decoded) as User;
 
       set({
         user,
@@ -136,13 +202,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
 
-    let user: User | null = null;
-    try {
-      const resp = await authService.getCurrentUser();
-      user = resp.data.data;
-    } catch {
-      user = buildUserFromToken(decoded) as User;
-    }
+    const user = buildUserFromToken(decoded) as User;
 
     set({
       user,
@@ -157,8 +217,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   /**
    * POST /auth/login
    *
-   * Detects whether the identifier is an email or username and sends
-   * only the relevant field (backend accepts either, not both required).
+   * First tries API login. If backend is unavailable, falls back to demo accounts.
    */
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true });
@@ -171,25 +230,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         payload.username = credentials.username;
       }
 
+      // Try API login first
       const { data } = await authService.login(payload);
       const tokens = data.data;
 
       tokenStorage.setAccess(tokens.accessToken);
       tokenStorage.setRefresh(tokens.refreshToken);
 
-      // Decode JWT for role / userId immediately
+      // Decode JWT for user info
       const decoded = safeDecode(tokens.accessToken);
       if (!decoded) throw new Error("Invalid token received from server");
 
-      // Enrich with full profile if backend supports /auth/me
-      let user: User | null = null;
-      try {
-        const resp = await authService.getCurrentUser();
-        user = resp.data.data;
-      } catch {
-        // /auth/me may not be implemented yet — fall back to JWT payload
-        user = buildUserFromToken(decoded) as User;
-      }
+      // Build user from JWT payload (contains fullName, roleName, userId)
+      const user = buildUserFromToken(decoded) as User;
 
       set({
         user,
@@ -199,12 +252,29 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
 
-      // Persist for page refreshes (used by non-Zustand parts of the app)
+      // Persist for page refreshes
       localStorage.setItem("cozyStitch_user", JSON.stringify(user));
       toast.success("Welcome back!");
-    } catch (error) {
+    } catch (apiError) {
+      // API call failed — try demo account fallback
+      const identifier = credentials.email || credentials.username || "";
+      const demoUser = matchDemoAccount(identifier, credentials.password);
+
+      if (demoUser) {
+        set({
+          user: demoUser,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: true,
+          isLoading: false,
+        });
+        localStorage.setItem("cozyStitch_user", JSON.stringify(demoUser));
+        toast.success("Welcome back! (Demo mode)");
+        return;
+      }
+
       set({ isLoading: false });
-      throw error; // let the UI handle the error message
+      throw apiError; // let the UI handle the error message
     }
   },
 
@@ -218,14 +288,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       tokenStorage.setAccess(tokens.accessToken);
       tokenStorage.setRefresh(tokens.refreshToken);
 
-      let user: User | null = null;
-      try {
-        const resp = await authService.getCurrentUser();
-        user = resp.data.data;
-      } catch {
-        const decoded = safeDecode(tokens.accessToken);
-        if (decoded) user = buildUserFromToken(decoded) as User;
-      }
+      const decoded = safeDecode(tokens.accessToken);
+      const user = decoded ? (buildUserFromToken(decoded) as User) : null;
 
       set({
         user,

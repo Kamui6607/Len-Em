@@ -5,7 +5,6 @@ import type { Product } from "../data/products";
 import { getBasePrice } from "../data/products";
 import { useFavorites } from "../context/FavoritesContext";
 import { motion } from "motion/react";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface ProductCardProps {
   product: Product;
@@ -38,7 +37,7 @@ export const ProductCard = memo(function ProductCard({ product }: ProductCardPro
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="w-full h-full"
           >
-            <ImageWithFallback
+            <img
               src={product.image}
               alt={product.name}
               className="w-full h-full object-cover"

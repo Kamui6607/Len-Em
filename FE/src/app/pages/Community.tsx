@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
 import { communityPosts as defaultPosts } from "../data/products";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { CommunityUploadModal } from "../components/CommunityUploadModal";
 
 interface UserPost {
@@ -45,7 +45,7 @@ export function Community() {
   }) => {
     const newPost: UserPost = {
       id: `user-${Date.now()}`,
-      username: user?.name.toLowerCase().replace(" ", "_") || "anonymous",
+      username: user?.fullName.toLowerCase().replace(/\s+/g, "_") || "anonymous",
       image: post.image,
       caption: post.description || post.title,
       likes: 0,

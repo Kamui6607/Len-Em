@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Users, Package, ShoppingCart, CheckCircle } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../hooks/useAuth";
 import { useAdmin } from "../../context/AdminContext";
 import { products } from "../../data/products";
 import { DashboardShell } from "../../components/dashboard/DashboardShell";
@@ -17,13 +17,13 @@ export function StaffPage() {
   const { users, orders, confirmPayment, logActivity } = useAdmin();
 
   const handleConfirmCashPayment = (orderId: string) => {
-    confirmPayment(orderId, user?.name || "Staff");
+    confirmPayment(orderId, user?.fullName || "Staff");
     const order = orders.find((o) => o.id === orderId);
     if (order) {
       logActivity({
         type: "payment_confirmed",
         userId: user?.email || "staff",
-        userName: user?.name || "Staff",
+        userName: user?.fullName || "Staff",
         description: `Confirmed cash payment for order ${orderId} at store`,
       });
     }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Check, Banknote, QrCode, DollarSign, ShoppingBag, Truck } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
 import { products } from "../data/products";
 
@@ -114,7 +114,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
     logActivity({
       type: "purchase",
       userId: user?.email || "guest",
-      userName: user?.name || name.trim() || "Guest",
+      userName: user?.fullName || name.trim() || "Guest",
       description: `Đơn ${orderId} — ${getPaymentMethodLabel()} — ${formatPrice(grandTotal)}`,
     });
 

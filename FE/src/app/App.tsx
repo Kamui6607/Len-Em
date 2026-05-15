@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter } from "react-router";
 import { Toaster } from "sonner";
-import { AuthProvider } from "./context/AuthContext";
+import { useAuthStore } from "../store/auth.store";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AdminProvider } from "./context/AdminContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { AuthPanel } from "./components/AuthPanel";
 import { AppRouter } from "../routes/AppRouter";
 
 export interface CartItem {
@@ -15,8 +14,11 @@ export interface CartItem {
 
 export default function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [authPanelOpen, setAuthPanelOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const initialize = useAuthStore((s) => s.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   const handleAddToCart = (productId: string) => {
     setCartItems((prev) => {
@@ -50,47 +52,23 @@ export default function App() {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleOpenSignIn = () => {
-    setAuthMode("signin");
-    setAuthPanelOpen(true);
-  };
-
-  const handleOpenSignUp = () => {
-    setAuthMode("signup");
-    setAuthPanelOpen(true);
-  };
-
-  const handleCloseAuth = () => {
-    setAuthPanelOpen(false);
-  };
-
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AdminProvider>
-          <FavoritesProvider>
-            <Toaster position="top-right" richColors />
-            <BrowserRouter>
-              <AppRouter
-                cartItems={cartItems}
-                authPanelOpen={authPanelOpen}
-                onAddToCart={handleAddToCart}
-                onUpdateQuantity={handleUpdateQuantity}
-                onRemoveItem={handleRemoveItem}
-                onClearCart={handleClearCart}
-                cartCount={cartCount}
-                onOpenSignIn={handleOpenSignIn}
-                onOpenSignUp={handleOpenSignUp}
-              />
-              <AuthPanel
-                isOpen={authPanelOpen}
-                onClose={handleCloseAuth}
-                initialMode={authMode}
-              />
-            </BrowserRouter>
-          </FavoritesProvider>
-        </AdminProvider>
-      </AuthProvider>
+      <AdminProvider>
+        <FavoritesProvider>
+          <Toaster position="top-right" richColors />
+          <BrowserRouter>
+            <AppRouter
+              cartItems={cartItems}
+              onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              cartCount={cartCount}
+            />
+          </BrowserRouter>
+        </FavoritesProvider>
+      </AdminProvider>
     </ThemeProvider>
   );
 }
