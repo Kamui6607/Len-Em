@@ -1,20 +1,19 @@
 import { useNavigate } from "react-router";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { useEffect, useRef, useState, useCallback } from "react";
 
 interface HomeProps {
-  onSignIn?: () => void;
   isAuthOpen?: boolean;
 }
 
 const SLIDES = [
-  { id: "hero", label: "Hero — Find Your Cozy Corner" },
+  { id: "hero", label: "Hero — Learn to Crochet Your Way" },
   { id: "features", label: "Features — What We Offer" },
   { id: "why", label: "Why CozyStitch" },
-  { id: "cta", label: "CTA — Start Your Cozy Era" },
+  { id: "cta", label: "CTA — Start Now" },
 ];
 
-export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
+export function Home({ isAuthOpen = false }: HomeProps) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -128,10 +127,9 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
     };
   }, []);
 
-  // Auth-gated navigation helper
   const requireAuth = (path: string) => {
     if (isAuthenticated) navigate(path);
-    else if (onSignIn) onSignIn();
+    else navigate("/auth/login");
   };
 
   const handleGetStarted = () => requireAuth("/shop");
@@ -164,23 +162,15 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         }
 
         .home-wrapper {
-          position: relative;
-          width: 100%;
-          height: 100vh;
-          overflow: hidden;
-          background: var(--cream);
+          position: relative; width: 100%; height: 100vh;
+          overflow: hidden; background: var(--cream);
           font-family: 'DM Sans', sans-serif;
         }
 
-        /* ── Slide panels ── */
         .slide {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          will-change: transform, opacity;
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden; will-change: transform, opacity;
         }
 
         @keyframes enterFromBottom {
@@ -207,7 +197,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         .anim-exit-top     { animation: exitToTop       0.88s cubic-bezier(0.16,1,0.3,1) forwards; }
         .anim-exit-bottom  { animation: exitToBottom    1.05s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
 
-        /* ── Stagger helpers ── */
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(36px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -229,14 +218,12 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         .fl { animation: fadeLeft  0.75s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
         .fr { animation: fadeRight 0.75s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
 
-        /* ── Decorative ── */
         @keyframes floatY {
           0%,100% { transform: translateY(0); }
           50%      { transform: translateY(-14px); }
         }
         @keyframes rotateSlow { to { transform: rotate(360deg); } }
 
-        /* ── Shimmer text ── */
         @keyframes shimmer {
           0%   { background-position: -200% center; }
           100% { background-position: 200% center; }
@@ -252,7 +239,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           animation: shimmer 5s linear infinite;
         }
 
-        /* ── NEW: Shimmer button animations ── */
         @keyframes btnShimmer {
           0%   { background-position: -200% center; }
           100% { background-position: 200% center; }
@@ -270,7 +256,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           50%       { box-shadow: 0 0 0 10px rgba(253,248,242,0); }
         }
 
-        /* ── NEW: Extra background decorations ── */
         @keyframes driftX {
           0%,100% { transform: translateX(0) translateY(0); }
           33%      { transform: translateX(12px) translateY(-8px); }
@@ -284,25 +269,13 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           0%,100% { opacity: 0; transform: rotate(0deg) scale(0.5); }
           50%      { opacity: 0.7; transform: rotate(180deg) scale(1); }
         }
-        @keyframes waveFloat {
-          0%,100% { transform: translateY(0) rotate(0deg); }
-          50%      { transform: translateY(-20px) rotate(3deg); }
-        }
 
-        /* Star/sparkle decorations */
-        .star {
-          position: absolute;
-          pointer-events: none;
-          font-style: normal;
-        }
+        .star { position: absolute; pointer-events: none; font-style: normal; }
         .star-twinkle { animation: twinkle var(--dur, 3s) ease-in-out infinite; }
         .star-sparkle  { animation: sparkle var(--dur, 4s) ease-in-out infinite; }
 
-        /* Mesh grid overlay */
         .mesh-grid {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
+          position: absolute; inset: 0; pointer-events: none;
           background-image:
             linear-gradient(rgba(242,167,178,0.06) 1px, transparent 1px),
             linear-gradient(90deg, rgba(242,167,178,0.06) 1px, transparent 1px);
@@ -321,31 +294,12 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           background-size: 56px 56px;
         }
 
-        /* Floating yarn ball shapes */
-        .yarn-shape {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-        }
+        .blob { position: absolute; border-radius: 50%; pointer-events: none; }
+        .ring { position: absolute; border-radius: 50%; pointer-events: none; }
 
-        .blob {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-        }
-        .ring {
-          position: absolute;
-          border-radius: 50%;
-          pointer-events: none;
-        }
-
-        /* ── Progress bar ── */
         .pbar-wrap {
-          position: absolute;
-          top: 0; left: 0; right: 0; height: 2px;
-          background: rgba(242,167,178,0.15);
-          z-index: 200;
-          pointer-events: none;
+          position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          background: rgba(242,167,178,0.15); z-index: 200; pointer-events: none;
         }
         .pbar {
           height: 100%;
@@ -355,126 +309,79 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
         }
 
-        /* ── Dot nav ── */
         .dot-nav {
           position: absolute; right: 28px; top: 50%;
           transform: translateY(-50%);
-          display: flex; flex-direction: column; gap: 10px;
-          z-index: 50;
+          display: flex; flex-direction: column; gap: 10px; z-index: 50;
           transition: opacity 0.35s cubic-bezier(0.16,1,0.3,1),
                       transform 0.35s cubic-bezier(0.16,1,0.3,1);
         }
-        .dot-nav.auth-open {
-          opacity: 0;
-          pointer-events: none;
-          transform: translateY(-50%) translateX(14px);
-        }
+        .dot-nav.auth-open { opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(14px); }
         .dot {
-          width: 8px; height: 8px;
-          border-radius: 50%;
-          background: rgba(42,34,32,0.22);
-          border: none; cursor: pointer; padding: 0;
+          width: 8px; height: 8px; border-radius: 50%;
+          background: rgba(42,34,32,0.22); border: none; cursor: pointer; padding: 0;
           transition: background 0.3s, transform 0.3s, height 0.35s;
         }
-        .dot.active {
-          background: var(--ink);
-          height: 24px;
-          border-radius: 4px;
-          transform: none;
-        }
+        .dot.active { background: var(--ink); height: 24px; border-radius: 4px; transform: none; }
         .dot.dark-slide { background: rgba(253,248,242,0.3); }
         .dot.dark-slide.active { background: var(--cream); }
 
-        /* ── Counter ── */
         .counter {
           position: absolute; bottom: 28px; left: 50%;
           transform: translateX(-50%);
           font-family: 'DM Sans', sans-serif;
-          font-size: 0.72rem; letter-spacing: 0.16em;
-          color: var(--muted);
-          z-index: 200;
-          display: flex; align-items: center; gap: 10px;
+          font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted);
+          z-index: 200; display: flex; align-items: center; gap: 10px;
           transition: color 0.4s, opacity 0.35s cubic-bezier(0.16,1,0.3,1),
                       transform 0.35s cubic-bezier(0.16,1,0.3,1);
           pointer-events: none;
         }
         .counter.on-dark { color: rgba(253,248,242,0.4); }
-        .counter.auth-open {
-          opacity: 0;
-          transform: translateX(-50%) translateY(8px);
-        }
+        .counter.auth-open { opacity: 0; transform: translateX(-50%) translateY(8px); }
 
-        /* ── Base button ── */
         .btn {
           display: inline-flex; align-items: center; gap: 8px;
-          font-family: 'DM Sans', sans-serif;
-          font-weight: 500; font-size: 0.95rem;
-          padding: 14px 36px;
-          border-radius: 100px; border: none; cursor: pointer;
+          font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.95rem;
+          padding: 14px 36px; border-radius: 100px; border: none; cursor: pointer;
           transition: transform 0.25s, box-shadow 0.25s;
           letter-spacing: 0.01em; text-decoration: none;
           position: relative; overflow: hidden;
         }
-
-        /* Shimmer overlay on hover — all buttons */
         .btn::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(105deg,
-            transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%
-          );
-          background-size: 200% 100%;
-          background-position: -100% 0;
-          border-radius: inherit;
-          transition: background-position 0s;
-          pointer-events: none;
+          content: ''; position: absolute; inset: 0;
+          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%);
+          background-size: 200% 100%; background-position: -100% 0;
+          border-radius: inherit; transition: background-position 0s; pointer-events: none;
         }
-        .btn:hover::after {
-          background-position: 200% 0;
-          transition: background-position 0.55s ease;
-        }
+        .btn:hover::after { background-position: 200% 0; transition: background-position 0.55s ease; }
 
-        /* Slide 0 — Hero: rose→lavender gradient */
-        .btn-hero {
-          background: linear-gradient(135deg, var(--ink) 0%, #3d2e2b 100%);
-          color: var(--cream);
-        }
+        .btn-hero { background: linear-gradient(135deg, var(--ink) 0%, #3d2e2b 100%); color: var(--cream); }
         .btn-hero:hover {
           transform: translateY(-3px);
           box-shadow: 0 14px 36px rgba(42,34,32,0.25), 0 0 0 1px rgba(242,167,178,0.3);
           animation: btnPulse 2s ease-in-out infinite;
         }
 
-        /* Slide 1 — Features: soft lavender-rose */
         .btn-features {
-          background: transparent;
-          color: var(--ink);
+          background: transparent; color: var(--ink);
           border: 1.5px solid rgba(42,34,32,0.18);
           background-image: linear-gradient(135deg, rgba(249,221,226,0.4), rgba(196,181,224,0.3));
         }
         .btn-features:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 30px rgba(196,181,224,0.35);
+          transform: translateY(-2px); box-shadow: 0 10px 30px rgba(196,181,224,0.35);
           border-color: rgba(196,181,224,0.6);
           background-image: linear-gradient(135deg, rgba(249,221,226,0.7), rgba(196,181,224,0.55));
         }
 
-        /* Slide 2 — Why: sage green */
-        .btn-why {
-          background: linear-gradient(135deg, var(--ink) 0%, #233d33 100%);
-          color: var(--cream);
-        }
+        .btn-why { background: linear-gradient(135deg, var(--ink) 0%, #233d33 100%); color: var(--cream); }
         .btn-why:hover {
           transform: translateY(-3px);
           box-shadow: 0 14px 36px rgba(42,34,32,0.22), 0 0 0 1px rgba(111,160,138,0.4);
           animation: btnGlowGreen 2s ease-in-out infinite;
         }
 
-        /* Slide 3 — CTA dark: cream warm */
         .btn-cta-primary {
-          background: var(--cream);
-          color: var(--ink);
+          background: var(--cream); color: var(--ink);
           background-image: linear-gradient(135deg, #FDF8F2 0%, #F9DDE2 100%);
         }
         .btn-cta-primary:hover {
@@ -484,24 +391,18 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         }
 
         .btn-ghost-light {
-          background: transparent;
-          color: var(--cream);
+          background: transparent; color: var(--cream);
           border: 1.5px solid rgba(253,248,242,0.22);
         }
         .btn-ghost-light:hover {
-          background: rgba(253,248,242,0.08);
-          transform: translateY(-2px);
+          background: rgba(253,248,242,0.08); transform: translateY(-2px);
           border-color: rgba(253,248,242,0.5);
         }
 
-        /* ── Auth-gated link style ── */
         .home-link {
-          font-family: 'DM Sans', sans-serif;
-          color: var(--muted); text-decoration: none;
-          font-size: 0.92rem; font-weight: 400;
-          position: relative; padding-bottom: 2px;
+          font-family: 'DM Sans', sans-serif; color: var(--muted); text-decoration: none;
+          font-size: 0.92rem; font-weight: 400; position: relative; padding-bottom: 2px;
           background: none; border: none; cursor: pointer;
-          font-size: 0.92rem;
         }
         .home-link::after {
           content: ''; position: absolute; bottom: 0; left: 0;
@@ -511,7 +412,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         .home-link:hover { color: var(--ink); }
         .home-link:hover::after { width: 100%; }
 
-        /* ── Typography ── */
         .hero-title {
           font-family: 'Playfair Display', serif;
           font-size: clamp(2.6rem, 7vw, 5.5rem);
@@ -524,11 +424,9 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         }
         .label {
           font-size: 0.72rem; font-weight: 500;
-          letter-spacing: 0.18em; text-transform: uppercase;
-          color: var(--rose);
+          letter-spacing: 0.18em; text-transform: uppercase; color: var(--rose);
         }
 
-        /* ── Feature card ── */
         .feat-card {
           background: white; border-radius: 28px; padding: 28px 24px;
           border: 1.5px solid rgba(242,167,178,0.18);
@@ -536,7 +434,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         }
         .feat-card:hover { transform: translateY(-10px); box-shadow: 0 28px 64px rgba(242,167,178,0.2); }
 
-        /* ── Why card ── */
         .why-card {
           background: white; border-radius: 22px; padding: 22px 18px;
           border: 1.5px solid rgba(196,181,224,0.22);
@@ -544,7 +441,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
         }
         .why-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(196,181,224,0.18); }
 
-        /* ── Stat pill ── */
         .pill {
           display: inline-flex; align-items: center; gap: 8px;
           background: white; border: 1.5px solid var(--blush);
@@ -552,35 +448,28 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           font-size: 0.85rem; font-weight: 500; color: var(--ink);
         }
 
-        /* ── Scroll hint ── */
         @keyframes bounce {
           0%,100% { transform: translateX(-50%) translateY(0); }
           50%      { transform: translateX(-50%) translateY(6px); }
         }
         .scroll-hint {
-          position: absolute; bottom: 28px; left: 50%;
-          transform: translateX(-50%);
+          position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
           display: flex; flex-direction: column; align-items: center; gap: 6px;
           animation: bounce 2.2s ease-in-out infinite;
           opacity: 0.4; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--ink);
-          pointer-events: none;
-          z-index: 5;
+          pointer-events: none; z-index: 5;
         }
 
-        /* ── Testimonial card ── */
         .testi {
           background: rgba(255,255,255,0.07);
           border: 1px solid rgba(255,255,255,0.1);
           border-radius: 20px; padding: 20px 24px;
-          max-width: 270px; text-align: left;
+          max-width: 200px; text-align: center;
         }
 
         .slide-content {
-          max-width: 1200px;
-          width: 100%;
-          padding: 0 48px;
-          position: relative;
-          z-index: 1;
+          max-width: 1200px; width: 100%; padding: 0 48px;
+          position: relative; z-index: 1;
         }
 
         @media (max-width: 768px) {
@@ -591,7 +480,7 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
       `}</style>
 
       <div ref={containerRef} className="home-wrapper">
-        {/* ── Progress bar ── */}
+        {/* Progress bar */}
         <div className="pbar-wrap">
           <div
             className="pbar"
@@ -599,10 +488,10 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
           />
         </div>
 
-        {/* ── Dot nav — improved aria-labels ── */}
+        {/* Dot nav */}
         <nav
           className={`dot-nav${isAuthOpen ? " auth-open" : ""}`}
-          aria-label="Điều hướng trang"
+          aria-label="Page navigation"
           aria-hidden={isAuthOpen}
         >
           {SLIDES.map((s, i) => (
@@ -610,14 +499,14 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               key={s.id}
               className={`dot ${i === activeSlide ? "active" : ""} ${activeSlide === 3 ? "dark-slide" : ""}`}
               onClick={() => goTo(i)}
-              aria-label={`Đến trang ${i + 1}: ${s.label}`}
+              aria-label={`Go to slide ${i + 1}: ${s.label}`}
               aria-current={i === activeSlide ? "true" : undefined}
               title={s.label}
             />
           ))}
         </nav>
 
-        {/* ── Counter ── */}
+        {/* Counter */}
         <div
           className={`counter${activeSlide === 3 ? " on-dark" : ""}${isAuthOpen ? " auth-open" : ""}`}
           aria-hidden="true"
@@ -658,10 +547,8 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
             }`}
             style={{ background: "var(--cream)" }}
           >
-            {/* Mesh grid */}
             <div className="mesh-grid" />
 
-            {/* Blobs */}
             <div
               className="blob"
               style={{
@@ -704,7 +591,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               }}
             />
 
-            {/* Rings */}
             <div
               className="ring"
               style={{
@@ -727,7 +613,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 animation: "rotateSlow 14s linear infinite reverse",
               }}
             />
-            {/* Extra ring */}
             <div
               className="ring"
               style={{
@@ -741,7 +626,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               }}
             />
 
-            {/* Floating dots */}
             {[
               {
                 s: 60,
@@ -802,7 +686,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               />
             ))}
 
-            {/* ✦ Sparkle stars */}
             {[
               { x: "30%", y: "12%", size: 10, dur: "2.8s", del: "0s" },
               { x: "68%", y: "34%", size: 8, dur: "3.5s", del: "1.1s" },
@@ -819,7 +702,7 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     top: sp.y,
                     fontSize: sp.size,
                     color: i % 2 === 0 ? "var(--rose)" : "var(--lavender)",
-                    "--dur": sp.dur,
+                    ["--dur" as string]: sp.dur,
                     animationDelay: sp.del,
                   } as React.CSSProperties
                 }
@@ -834,16 +717,16 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   className={`label ${heroIn ? "s1" : ""}`}
                   style={{ opacity: heroIn ? undefined : 0 }}
                 >
-                  ✦ Craft your calm
+                  ✦ Crochet — unwind on your own terms
                 </div>
 
                 <h1
                   className={`hero-title ${heroIn ? "s2" : ""}`}
                   style={{ marginTop: 18, opacity: heroIn ? undefined : 0 }}
                 >
-                  Find Your
+                  Learn to Crochet
                   <br />
-                  <span className="shimmer-text">Cozy Corner</span>
+                  <span className="shimmer-text">Your Way</span>
                 </h1>
 
                 <p
@@ -855,12 +738,12 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     color: "var(--muted)",
                     lineHeight: 1.75,
                     fontWeight: 300,
-                    maxWidth: 440,
+                    maxWidth: 460,
                   }}
                 >
-                  Handcrafted yarn, beginner-friendly kits, and a community that{" "}
-                  <em>gets it</em>. Because crocheting isn't just a hobby — it's
-                  your escape from the chaos.
+                  From your first skein to a finished project — CozyStitch
+                  brings you quality materials, step-by-step guidance, and a
+                  community so you can crochet entirely at your own pace.
                 </p>
 
                 <div
@@ -874,16 +757,14 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     flexWrap: "wrap",
                   }}
                 >
-                  {/* Primary CTA — shimmer ink button */}
                   <button className="btn btn-hero" onClick={handleGetStarted}>
-                    Get Started →
+                    Explore now →
                   </button>
-                  {/* Auth-gated links */}
                   <button className="home-link" onClick={handleBrowseKits}>
                     Browse DIY Kits
                   </button>
                   <button className="home-link" onClick={handleCommunity}>
-                    Join Community
+                    Community
                   </button>
                 </div>
 
@@ -898,9 +779,9 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   }}
                 >
                   {[
-                    { dot: "var(--rose)", label: "12k+ crafters" },
-                    { dot: "var(--sage-d)", label: "200+ patterns" },
-                    { dot: "var(--lavender)", label: "Eco-friendly" },
+                    { dot: "var(--rose)", label: "200+ products" },
+                    { dot: "var(--sage-d)", label: "Step-by-step guides" },
+                    { dot: "var(--lavender)", label: "Nationwide shipping" },
                   ].map((s) => (
                     <span key={s.label} className="pill">
                       <span
@@ -961,7 +842,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
             }`}
             style={{ background: "white" }}
           >
-            {/* Lavender grid */}
             <div className="mesh-grid mesh-grid-lavender" />
 
             <div
@@ -990,7 +870,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 animation: "driftX 10s ease-in-out infinite reverse",
               }}
             />
-            {/* Extra lavender blob */}
             <div
               className="blob"
               style={{
@@ -1004,7 +883,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               }}
             />
 
-            {/* Sparkles on white bg */}
             {[
               {
                 x: "6%",
@@ -1048,7 +926,7 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     top: sp.y,
                     fontSize: sp.size,
                     color: sp.c,
-                    "--dur": sp.dur,
+                    ["--dur" as string]: sp.dur,
                     animationDelay: sp.del,
                   } as React.CSSProperties
                 }
@@ -1057,7 +935,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               </div>
             ))}
 
-            {/* Floating rings */}
             <div
               className="ring"
               style={{
@@ -1075,9 +952,9 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 What we offer
               </div>
               <h2 className="display-h s2" style={{ marginBottom: 44 }}>
-                Crafted with{" "}
+                Everything you need to{" "}
                 <em style={{ color: "var(--rose)", fontStyle: "italic" }}>
-                  intention
+                  get started
                 </em>
               </h2>
 
@@ -1090,25 +967,25 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               >
                 {[
                   {
-                    emoji: "✨",
+                    emoji: "🧶",
                     cls: "s3",
                     bg: "linear-gradient(135deg,#F9DDE2,#F2A7B2)",
-                    title: "Beginner-Friendly",
-                    desc: "Never crocheted before? Kits include everything you need plus easy video tutorials.",
+                    title: "Made for beginners",
+                    desc: "Never crocheted before? Our kits come with yarn, hooks, and video walkthroughs for every stitch. Open the box and start right away.",
                   },
                   {
-                    emoji: "🫶",
+                    emoji: "🌿",
                     cls: "s4",
                     bg: "linear-gradient(135deg,#EDE5F7,#C4B5E0)",
-                    title: "Stress-Relief Approved",
-                    desc: "Join thousands who found their calm in crochet's rhythm. Basically meditation with yarn.",
+                    title: "Actually de-stresses",
+                    desc: "The steady rhythm of crochet pulls you away from screens and back to the present. Many people pick it up after class or work — and notice the difference.",
                   },
                   {
-                    emoji: "🌸",
+                    emoji: "💬",
                     cls: "s5",
                     bg: "linear-gradient(135deg,#D4EDE3,#A8C5B5)",
-                    title: "Creative Community",
-                    desc: "Share your makes, get inspired, and connect with fellow Gen Z crafters.",
+                    title: "A real community",
+                    desc: "Share your finished pieces, ask technique questions, get feedback from people who get it. No judgment — just good vibes.",
                   },
                 ].map((f) => (
                   <div key={f.title} className={`feat-card ${f.cls}`}>
@@ -1160,7 +1037,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   justifyContent: "flex-end",
                 }}
               >
-                {/* Features slide button — lavender-blush gradient */}
                 <button className="btn btn-features" onClick={() => goTo(2)}>
                   Why CozyStitch? →
                 </button>
@@ -1185,7 +1061,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
             }`}
             style={{ background: "var(--cream)" }}
           >
-            {/* Rose grid */}
             <div className="mesh-grid" />
 
             <div
@@ -1214,7 +1089,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 animation: "driftX 12s ease-in-out infinite reverse",
               }}
             />
-            {/* sage accent */}
             <div
               className="blob"
               style={{
@@ -1228,7 +1102,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               }}
             />
 
-            {/* Sparkles */}
             {[
               {
                 x: "5%",
@@ -1272,7 +1145,7 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     top: sp.y,
                     fontSize: sp.size,
                     color: sp.c,
-                    "--dur": sp.dur,
+                    ["--dur" as string]: sp.dur,
                     animationDelay: sp.del,
                   } as React.CSSProperties
                 }
@@ -1281,7 +1154,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               </div>
             ))}
 
-            {/* Rings */}
             <div
               className="ring"
               style={{
@@ -1321,7 +1193,7 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   </div>
                   <h2 className="display-h" style={{ marginBottom: 18 }}>
                     More than a<br />
-                    <span style={{ color: "var(--rose)" }}>craft store.</span>
+                    <span style={{ color: "var(--rose)" }}>yarn shop.</span>
                   </h2>
                   <p
                     style={{
@@ -1333,9 +1205,10 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                       maxWidth: 400,
                     }}
                   >
-                    We're building a space where Gen Z can slow down, create
-                    something with their hands, and actually enjoy the process.
-                    No pressure, no perfection.
+                    CozyStitch was built by people who were also complete
+                    beginners once. We know the feeling of not knowing where to
+                    start — so everything here is designed to be as approachable
+                    as possible.
                   </p>
 
                   <div
@@ -1347,8 +1220,8 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     }}
                   >
                     {[
-                      { num: "12k+", label: "Crafters" },
-                      { num: "200+", label: "Patterns" },
+                      { num: "200+", label: "Products" },
+                      { num: "50+", label: "Tutorials" },
                       { num: "4.9★", label: "Rating" },
                     ].map((s) => (
                       <div
@@ -1385,13 +1258,12 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     ))}
                   </div>
 
-                  {/* Why slide — sage-tinted ink button */}
                   <button className="btn btn-why" onClick={handleGetStarted}>
-                    Start Crafting
+                    Start crocheting
                   </button>
                 </div>
 
-                {/* Right: 2×2 */}
+                {/* Right 2×2 */}
                 <div
                   style={{
                     display: "grid",
@@ -1402,26 +1274,26 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   {[
                     {
                       emoji: "🎨",
-                      title: "Curated for You",
-                      desc: "Pastels, modern patterns, Instagram-worthy results.",
+                      title: "Curated materials",
+                      desc: "Soft cotton, acrylic in trending colors — chosen to work in warm climates and on sensitive skin.",
                       d: "0.20s",
                     },
                     {
                       emoji: "📚",
-                      title: "Learn at Your Pace",
-                      desc: "Step-by-step tutorials made by real people.",
+                      title: "Learn at your pace",
+                      desc: "Detailed video tutorials you can rewatch any time, no pressure, no deadlines.",
                       d: "0.32s",
                     },
                     {
                       emoji: "💬",
-                      title: "Join the Community",
-                      desc: "Share WIPs and celebrate finished projects.",
+                      title: "Ask — get answered",
+                      desc: "An active community group every day. Stuck on a stitch? Just ask.",
                       d: "0.44s",
                     },
                     {
                       emoji: "🌱",
-                      title: "Sustainable Choices",
-                      desc: "Eco-friendly materials and ethical sourcing.",
+                      title: "Safe & skin-friendly",
+                      desc: "We prioritize non-irritating materials, safe for beginners and sensitive skin alike.",
                       d: "0.56s",
                     },
                   ].map((item) => (
@@ -1478,7 +1350,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
             }`}
             style={{ background: "var(--ink)" }}
           >
-            {/* Dark mesh */}
             <div className="mesh-grid mesh-grid-dark" />
 
             <div
@@ -1521,7 +1392,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 filter: "blur(60px)",
               }}
             />
-            {/* Extra butter blob */}
             <div
               className="blob"
               style={{
@@ -1557,7 +1427,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 animation: "rotateSlow 16s linear infinite reverse",
               }}
             />
-            {/* Extra ring */}
             <div
               className="ring"
               style={{
@@ -1571,7 +1440,6 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
               }}
             />
 
-            {/* Sparkles on dark */}
             {[
               {
                 x: "8%",
@@ -1623,7 +1491,7 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                     top: sp.y,
                     fontSize: sp.size,
                     color: sp.c,
-                    "--dur": sp.dur,
+                    ["--dur" as string]: sp.dur,
                     animationDelay: sp.del,
                   } as React.CSSProperties
                 }
@@ -1680,25 +1548,26 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   marginBottom: 18,
                 }}
               >
-                Your cozy era
+                Your crochet journey
                 <br />
-                starts <span className="shimmer-text">here.</span>
+                <span className="shimmer-text">starts here.</span>
               </h2>
 
               <p
                 className="s3"
                 style={{
-                  color: "rgba(253,248,242,0.5)",
+                  color: "rgba(253,248,242,0.55)",
                   fontSize: "0.97rem",
                   fontWeight: 300,
-                  lineHeight: 1.75,
+                  lineHeight: 1.8,
                   marginBottom: 36,
+                  maxWidth: 520,
+                  margin: "0 auto 36px",
                 }}
               >
-                Join 12,000+ crafters who traded doom-scrolling for
-                stitch-counting.
-                <br />
-                No experience needed — just curiosity and good vibes.
+                CozyStitch is where you find materials, follow tutorials, and
+                track your project progress. No prior experience needed — just
+                show up and start.
               </p>
 
               <div
@@ -1711,14 +1580,12 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                   marginBottom: 44,
                 }}
               >
-                {/* CTA slide — warm cream-blush gradient */}
                 <button
                   className="btn btn-cta-primary"
                   onClick={handleGetStarted}
                 >
-                  Shop Now →
+                  Shop now →
                 </button>
-                {/* Auth-gated Browse Kits on dark slide */}
                 <button
                   className="btn btn-ghost-light"
                   onClick={handleBrowseKits}
@@ -1737,36 +1604,27 @@ export function Home({ onSignIn, isAuthOpen = false }: HomeProps) {
                 }}
               >
                 {[
+                  { icon: "📦", text: "Order online — delivered to your door" },
                   {
-                    q: `"Finally a hobby that actually calms me down"`,
-                    name: "— Linh, 22",
+                    icon: "🎬",
+                    text: "Video tutorial included with every kit",
                   },
-                  {
-                    q: `"Ordered Friday, finished my first kit by Sunday"`,
-                    name: "— Minh, 19",
-                  },
-                ].map((t) => (
-                  <div key={t.name} className="testi">
+                  { icon: "💬", text: "Technique support via community" },
+                ].map((item) => (
+                  <div key={item.text} className="testi">
+                    <div style={{ fontSize: "1.5rem", marginBottom: 10 }}>
+                      {item.icon}
+                    </div>
                     <p
                       style={{
-                        color: "rgba(253,248,242,0.7)",
+                        color: "rgba(253,248,242,0.75)",
                         fontSize: "0.85rem",
-                        lineHeight: 1.62,
-                        fontWeight: 300,
-                        fontStyle: "italic",
-                        marginBottom: 8,
+                        fontWeight: 400,
+                        lineHeight: 1.6,
+                        margin: 0,
                       }}
                     >
-                      {t.q}
-                    </p>
-                    <p
-                      style={{
-                        color: "var(--rose)",
-                        fontSize: "0.74rem",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {t.name}
+                      {item.text}
                     </p>
                   </div>
                 ))}

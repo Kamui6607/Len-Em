@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router";
 import { LogOut, User, Settings, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../hooks/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import {
   DropdownMenu,
@@ -21,25 +21,26 @@ export function DashboardUserMenu() {
   if (!user) return null;
 
   const roleBadgeClass =
-    user.role === "admin"
+    user.roleId === "admin"
       ? "bg-destructive/10 text-destructive"
-      : user.role === "staff"
+      : user.roleId === "staff"
       ? "bg-secondary/20 text-secondary-foreground"
       : "bg-primary/10 text-primary";
 
   const roleLabel =
-    user.role === "admin"
+    user.roleId === "admin"
       ? "Administrator"
-      : user.role === "staff"
+      : user.roleId === "staff"
       ? "Staff Member"
       : "Member";
+
+  const avatarUrl = user
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=E09F7D&color=fff`
+    : "";
 
   const handleLogout = () => {
     signOut();
     navigate("/");
-    toast.success("Signed out", {
-      description: "Come back soon for more cozy crafting!",
-    });
   };
 
   return (
@@ -48,8 +49,8 @@ export function DashboardUserMenu() {
         <button className="flex items-center gap-2 hover:opacity-80 transition-opacity outline-none">
           <div className="relative">
             <img
-              src={user.avatar}
-              alt={user.name}
+              src={avatarUrl}
+              alt={user.fullName}
               className="w-8 h-8 rounded-full border-2 border-border object-cover"
             />
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-card" />
@@ -62,12 +63,12 @@ export function DashboardUserMenu() {
         <DropdownMenuLabel className="p-0">
           <div className="flex items-center gap-3 px-2 py-3">
             <img
-              src={user.avatar}
-              alt={user.name}
+              src={avatarUrl}
+              alt={user.fullName}
               className="w-10 h-10 rounded-full border-2 border-border object-cover shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{user.name}</p>
+              <p className="text-sm font-semibold truncate">{user.fullName}</p>
               <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               <span
                 className={`inline-flex items-center mt-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${roleBadgeClass}`}

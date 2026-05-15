@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router";
-import { ProtectedRoute } from "../app/components/ProtectedRoute";
-import { RoleProtectedRoute } from "../app/components/RoleProtectedRoute";
+import { RequireAuth } from "../components/auth/RequireAuth";
+import { RequireRole } from "../components/auth/RequireRole";
 import { StoreLayout } from "../app/components/layout/StoreLayout";
 import { LoadingFallback } from "../app/components/LoadingFallback";
 import type { CartItem } from "../app/App";
@@ -52,37 +52,26 @@ const StaffPage = lazy(() =>
     default: m.StaffPage,
   })),
 );
+const LoginPage = lazy(() =>
+  import("../pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
+);
 
 interface AppRouterProps {
   cartItems: CartItem[];
-  authPanelOpen: boolean;
   onAddToCart: (productId: string) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
   cartCount: number;
-  onOpenSignIn: () => void;
-  onOpenSignUp: () => void;
 }
 
 function StoreOutlet({
-  authPanelOpen,
   cartCount,
-  onOpenSignIn,
-  onOpenSignUp,
 }: {
-  authPanelOpen: boolean;
   cartCount: number;
-  onOpenSignIn: () => void;
-  onOpenSignUp: () => void;
 }) {
   return (
-    <StoreLayout
-      cartCount={cartCount}
-      authPanelOpen={authPanelOpen}
-      onOpenSignIn={onOpenSignIn}
-      onOpenSignUp={onOpenSignUp}
-    >
+    <StoreLayout cartCount={cartCount}>
       <Suspense fallback={<LoadingFallback />}>
         <Outlet />
       </Suspense>
@@ -92,14 +81,11 @@ function StoreOutlet({
 
 export function AppRouter({
   cartItems,
-  authPanelOpen,
   onAddToCart,
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
   cartCount,
-  onOpenSignIn,
-  onOpenSignUp,
 }: AppRouterProps) {
   return (
     <Routes>
@@ -108,7 +94,7 @@ export function AppRouter({
         index
         element={
           <Suspense fallback={<LoadingFallback fullPage />}>
-            <Home onSignIn={onOpenSignIn} />
+            <Home />
           </Suspense>
         }
       />
@@ -116,7 +102,17 @@ export function AppRouter({
         path="home"
         element={
           <Suspense fallback={<LoadingFallback fullPage />}>
-            <Home onSignIn={onOpenSignIn} />
+            <Home />
+          </Suspense>
+        }
+      />
+
+      {/* ===== Auth routes ===== */}
+      <Route
+        path="auth/login"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LoginPage />
           </Suspense>
         }
       />
@@ -124,12 +120,7 @@ export function AppRouter({
       {/* ===== Store routes (with Navigation + Footer) ===== */}
       <Route
         element={
-          <StoreOutlet
-            authPanelOpen={authPanelOpen}
-            cartCount={cartCount}
-            onOpenSignIn={onOpenSignIn}
-            onOpenSignUp={onOpenSignUp}
-          />
+          <StoreOutlet cartCount={cartCount} />
         }
       >
         <Route path="community" element={<Community />} />
@@ -138,69 +129,69 @@ export function AppRouter({
         <Route
           path="shop"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Shop />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="kits"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Kits />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="product/:id"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <ProductDetail onAddToCart={onAddToCart} />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="cart"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Cart
                 cartItems={cartItems}
                 onUpdateQuantity={onUpdateQuantity}
                 onRemoveItem={onRemoveItem}
               />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="checkout"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Checkout cartItems={cartItems} onClearCart={onClearCart} />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="profile"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Profile />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="purchased"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Purchased />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
         <Route
           path="love"
           element={
-            <ProtectedRoute>
+            <RequireAuth>
               <Love />
-            </ProtectedRoute>
+            </RequireAuth>
           }
         />
       </Route>
@@ -209,11 +200,11 @@ export function AppRouter({
       <Route
         path="admin/*"
         element={
-          <RoleProtectedRoute allowedRoles={["admin"]}>
+          <RequireRole allowedRoles={["admin"]}>
             <Suspense fallback={<LoadingFallback fullPage />}>
               <AdminPage />
             </Suspense>
-          </RoleProtectedRoute>
+          </RequireRole>
         }
       />
 
@@ -221,11 +212,11 @@ export function AppRouter({
       <Route
         path="staff"
         element={
-          <RoleProtectedRoute allowedRoles={["staff"]}>
+          <RequireRole allowedRoles={["staff"]}>
             <Suspense fallback={<LoadingFallback fullPage />}>
               <StaffPage />
             </Suspense>
-          </RoleProtectedRoute>
+          </RequireRole>
         }
       />
 

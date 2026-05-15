@@ -3,7 +3,7 @@ import { User, ShoppingBag, LogOut, ChevronDown, Shield, Users as UsersIcon } fr
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,20 +28,21 @@ export function UserMenu() {
     signOut();
     setIsOpen(false);
     navigate("/");
-    toast.success("You've been signed out", {
-      description: "Come back soon for more cozy crafting!",
-    });
   };
 
   const roleLabel =
-    user.role === "admin" ? "Administrator" : user.role === "staff" ? "Staff Member" : "Member";
-  const RoleIcon = user.role === "admin" ? Shield : user.role === "staff" ? UsersIcon : User;
+    user.roleId === "admin" ? "Administrator" : user.roleId === "staff" ? "Staff Member" : "Member";
+  const RoleIcon = user.roleId === "admin" ? Shield : user.roleId === "staff" ? UsersIcon : User;
   const roleBadgeClass =
-    user.role === "admin"
+    user.roleId === "admin"
       ? "bg-destructive/10 text-destructive"
-      : user.role === "staff"
+      : user.roleId === "staff"
       ? "bg-secondary/20 text-secondary-foreground"
       : "bg-primary/10 text-primary";
+
+  const avatarUrl = user
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=E09F7D&color=fff`
+    : "";
 
   return (
     <div className="relative" ref={menuRef}>
@@ -51,8 +52,8 @@ export function UserMenu() {
       >
         <div className="relative">
           <img
-            src={user.avatar}
-            alt={user.name}
+            src={avatarUrl}
+            alt={user.fullName}
             className="w-9 h-9 rounded-full border-2 border-primary/20 object-cover"
           />
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-card"></span>
@@ -77,12 +78,12 @@ export function UserMenu() {
             <div className="p-4 border-b border-border">
               <div className="flex items-center gap-3">
                 <img
-                  src={user.avatar}
-                  alt={user.name}
+                  src={avatarUrl}
+                  alt={user.fullName}
                   className="w-12 h-12 rounded-full border-2 border-border object-cover"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">{user.name}</p>
+                  <p className="font-semibold text-foreground truncate">{user.fullName}</p>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
                   <span
                     className={`inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-full ${roleBadgeClass}`}

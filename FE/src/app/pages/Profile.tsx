@@ -1,10 +1,14 @@
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { Mail, Phone, Calendar } from "lucide-react";
 
 export function Profile() {
   const { user } = useAuth();
 
   if (!user) return null;
+
+  const avatarUrl = user
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=E09F7D&color=fff`
+    : "";
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
@@ -14,12 +18,12 @@ export function Profile() {
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div className="bg-gradient-to-br from-primary/10 to-secondary/10 p-8 flex items-center gap-6">
             <img
-              src={user.avatar}
-              alt={user.name}
+              src={avatarUrl}
+              alt={user.fullName}
               className="w-24 h-24 rounded-full border-4 border-card shadow-lg"
             />
             <div>
-              <h2 className="mb-1">{user.name}</h2>
+              <h2 className="mb-1">{user.fullName}</h2>
               <p className="text-muted-foreground">CozyStitch Member</p>
             </div>
           </div>

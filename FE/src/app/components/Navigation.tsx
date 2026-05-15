@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { ShoppingCart, Heart, Menu, X } from "lucide-react";
-import { Link } from "react-router";
-import { useAuth } from "../context/AuthContext";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../../hooks/useAuth";
 import { useFavorites } from "../context/FavoritesContext";
 import { UserMenu } from "./UserMenu";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface NavigationProps {
   cartCount: number;
-  onSignIn: () => void;
-  onSignUp: () => void;
 }
 
 const NAV_LINKS = [
@@ -21,11 +19,10 @@ const NAV_LINKS = [
 
 export function Navigation({
   cartCount,
-  onSignIn,
-  onSignUp,
 }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
 
   const { isAuthenticated } = useAuth();
   const { favorites } = useFavorites();
@@ -576,7 +573,7 @@ export function Navigation({
                   <button
                     key={label}
                     className="nav-link"
-                    onClick={onSignIn}
+                    onClick={() => navigate("/auth/login")}
                   >
                     {label}
                   </button>
@@ -634,14 +631,14 @@ export function Navigation({
 
                   <button
                     className="btn-signin"
-                    onClick={onSignIn}
+                    onClick={() => navigate("/auth/login")}
                   >
                     Sign In
                   </button>
 
                   <button
                     className="btn-signup"
-                    onClick={onSignUp}
+                    onClick={() => navigate("/auth/login")}
                   >
                     Sign Up
                   </button>
