@@ -68,8 +68,12 @@ export function RegisterPage() {
         fullName: form.fullName,
         username: form.username,
         email: form.email,
-        phone: form.phone || undefined,
+        phone: form.phone || "",
         password: form.password,
+        address: "",
+        gender: "OTHER" as const,
+        dateOfBirth: "",
+        roleId: "user" as const,
       });
       const { user } = useAuthStore.getState();
       if (!user || !user.roleId) navigate("/");
