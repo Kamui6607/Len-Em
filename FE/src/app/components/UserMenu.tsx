@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { User, ShoppingBag, LogOut, ChevronDown, Shield, Users as UsersIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth";
 
 export function UserMenu() {

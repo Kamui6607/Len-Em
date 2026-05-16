@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router";
 import { LogOut, User, Settings, Sun, Moon } from "lucide-react";
-import { toast } from "sonner";
 import { useAuth } from "../../../hooks/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import {
