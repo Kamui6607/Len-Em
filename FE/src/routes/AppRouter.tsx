@@ -55,6 +55,9 @@ const StaffPage = lazy(() =>
 const LoginPage = lazy(() =>
   import("../pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
 );
+const RegisterPage = lazy(() =>
+  import("../pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })),
+);
 
 interface AppRouterProps {
   cartItems: CartItem[];
@@ -113,6 +116,15 @@ export function AppRouter({
         element={
           <Suspense fallback={<LoadingFallback />}>
             <LoginPage />
+          </Suspense>
+        }
+      />
+
+      <Route
+        path="/auth/register"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <RegisterPage />
           </Suspense>
         }
       />

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { HomeNavigation } from "../components/Homenavigation ";
 
 interface HomeProps {
   isAuthOpen?: boolean;
@@ -13,6 +14,16 @@ const SLIDES = [
   { id: "cta", label: "CTA — Start Now" },
 ];
 
+/* Light-mode palette for each slide — soft, progressive, relaxing */
+const SLIDE_BG_LIGHT = [
+  "#FDF8F2", // Slide 0 — warm cream
+  "#FFFFFF", // Slide 1 — clean white
+  "#EFF7F3", // Slide 2 — soft mint/sage
+  "#EDE8F5", // Slide 3 — gentle lavender
+];
+
+const SLIDE_BG_DARK = ["#18100e", "#1f1411", "#18100e", "#0e0a09"];
+
 export function Home({ isAuthOpen = false }: HomeProps) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -22,6 +33,16 @@ export function Home({ isAuthOpen = false }: HomeProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const [heroIn, setHeroIn] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  const toggleDark = useCallback(() => {
+    setIsDark((d) => {
+      const next = !d;
+      document.documentElement.classList.toggle("dark", next);
+      return next;
+    });
+  }, []);
+
   const wheelAccRef = useRef(0);
   const lastWheelRef = useRef(0);
 
@@ -66,9 +87,9 @@ export function Home({ isAuthOpen = false }: HomeProps) {
     goToRef.current = goTo;
   }, [goTo]);
 
-  const activeSlidRef = useRef(activeSlide);
+  const activeSlideRef = useRef(activeSlide);
   useEffect(() => {
-    activeSlidRef.current = activeSlide;
+    activeSlideRef.current = activeSlide;
   }, [activeSlide]);
 
   useEffect(() => {
@@ -81,7 +102,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
       if (Math.abs(wheelAccRef.current) > 80) {
         const dir = wheelAccRef.current > 0 ? 1 : -1;
         wheelAccRef.current = 0;
-        goToRef.current(activeSlidRef.current + dir);
+        goToRef.current(activeSlideRef.current + dir);
       }
     };
     const el = containerRef.current;
@@ -97,11 +118,11 @@ export function Home({ isAuthOpen = false }: HomeProps) {
     const handleTouchEnd = (e: TouchEvent) => {
       const dy = startY - e.changedTouches[0].clientY;
       if (Math.abs(dy) > 50)
-        goToRef.current(activeSlidRef.current + (dy > 0 ? 1 : -1));
+        goToRef.current(activeSlideRef.current + (dy > 0 ? 1 : -1));
     };
     const el = containerRef.current;
-    el?.addEventListener("touchstart", handleTouchStart);
-    el?.addEventListener("touchend", handleTouchEnd);
+    el?.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el?.addEventListener("touchend", handleTouchEnd, { passive: true });
     return () => {
       el?.removeEventListener("touchstart", handleTouchStart);
       el?.removeEventListener("touchend", handleTouchEnd);
@@ -111,9 +132,9 @@ export function Home({ isAuthOpen = false }: HomeProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown" || e.key === "PageDown")
-        goToRef.current(activeSlidRef.current + 1);
+        goToRef.current(activeSlideRef.current + 1);
       if (e.key === "ArrowUp" || e.key === "PageUp")
-        goToRef.current(activeSlidRef.current - 1);
+        goToRef.current(activeSlideRef.current - 1);
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -140,354 +161,297 @@ export function Home({ isAuthOpen = false }: HomeProps) {
   const isEntering = (idx: number) => idx === activeSlide && prevSlide >= 0;
   const isLeaving = (idx: number) => idx === prevSlide;
 
+  const slideClass = (idx: number) => {
+    if (isEntering(idx))
+      return direction > 0 ? "anim-enter-bottom" : "anim-enter-top";
+    if (isLeaving(idx))
+      return direction > 0 ? "anim-exit-top" : "anim-exit-bottom";
+    return "";
+  };
+
+  const bg = (idx: number) =>
+    isDark ? SLIDE_BG_DARK[idx] : SLIDE_BG_LIGHT[idx];
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
-        .home-wrapper *, .home-wrapper *::before, .home-wrapper *::after {
-          box-sizing: border-box; margin: 0; padding: 0;
+        :root {
+          --rose:     #F2A7B2;
+          --blush:    #F9DDE2;
+          --sage:     #A8C5B5;
+          --sage-d:   #6FA08A;
+          --lavender: #C4B5E0;
+          --lavender-d: #8B78C4;
+          --butter:   #F5E6A3;
+          --cream:    #FDF8F2;
+          --ink:      #2A2220;
+          --muted:    #7A6E6B;
         }
 
-        :root {
-          --rose:      #F2A7B2;
-          --blush:     #F9DDE2;
-          --sage:      #A8C5B5;
-          --sage-d:    #6FA08A;
-          --lavender:  #C4B5E0;
-          --butter:    #F5E6A3;
-          --cream:     #FDF8F2;
-          --ink:       #2A2220;
-          --muted:     #7A6E6B;
-        }
+        .home-wrapper          { --hw-text: #2A2220; --hw-text2: #7A6E6B; --hw-card: #FFFFFF; --hw-card-border: rgba(242,167,178,0.18); --hw-why-card: #FFFFFF; --hw-why-border: rgba(196,181,224,0.22); --hw-stat: #FFFFFF; --hw-pill: rgba(255,255,255,0.8); }
+        .home-wrapper.hw-dark  { --hw-text: #F0E8E4; --hw-text2: #A0908C; --hw-card: #241810; --hw-card-border: rgba(242,167,178,0.1); --hw-why-card: #1e1510; --hw-why-border: rgba(196,181,224,0.12); --hw-stat: #1e1410; --hw-pill: #221611; }
 
         .home-wrapper {
-          position: relative; width: 100%; height: 100vh;
-          overflow: hidden; background: var(--cream);
+          position: relative; width: 100%;
+          height: calc(100vh - 70px);
+          height: calc(100dvh - 70px);
+          overflow: hidden;
           font-family: 'DM Sans', sans-serif;
+          transition: background 0.55s cubic-bezier(0.16,1,0.3,1);
         }
 
         .slide {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
           overflow: hidden; will-change: transform, opacity;
+          transition: background 0.55s cubic-bezier(0.16,1,0.3,1);
         }
 
-        @keyframes enterFromBottom {
-          from { transform: translateY(100%) scale(0.97); opacity: 0; }
-          to   { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        @keyframes enterFromTop {
-          0%   { transform: translateY(-60%) scale(0.98); opacity: 0; }
-          40%  { opacity: 1; }
-          100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        @keyframes exitToTop {
-          from { transform: translateY(0) scale(1); opacity: 1; }
-          to   { transform: translateY(-40%) scale(0.96); opacity: 0; }
-        }
-        @keyframes exitToBottom {
-          0%   { transform: translateY(0) scale(1); opacity: 1; }
-          50%  { opacity: 0.2; }
-          100% { transform: translateY(38%) scale(0.97); opacity: 0; }
-        }
+        @keyframes enterFromBottom { from { transform: translateY(100%) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        @keyframes enterFromTop    { 0% { transform: translateY(-60%) scale(0.98); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        @keyframes exitToTop       { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-40%) scale(0.96); opacity: 0; } }
+        @keyframes exitToBottom    { 0% { transform: translateY(0) scale(1); opacity: 1; } 50% { opacity: 0.2; } 100% { transform: translateY(38%) scale(0.97); opacity: 0; } }
 
         .anim-enter-bottom { animation: enterFromBottom 0.88s cubic-bezier(0.16,1,0.3,1) forwards; }
         .anim-enter-top    { animation: enterFromTop    1.05s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
         .anim-exit-top     { animation: exitToTop       0.88s cubic-bezier(0.16,1,0.3,1) forwards; }
         .anim-exit-bottom  { animation: exitToBottom    1.05s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
 
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(36px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeLeft {
-          from { opacity: 0; transform: translateX(-36px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes fadeRight {
-          from { opacity: 0; transform: translateX(36px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
+        @keyframes fadeUp   { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeRight{ from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+        .s1 { animation: fadeUp   0.7s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+        .s2 { animation: fadeUp   0.7s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+        .s3 { animation: fadeUp   0.7s cubic-bezier(0.16,1,0.3,1) 0.34s both; }
+        .s4 { animation: fadeUp   0.7s cubic-bezier(0.16,1,0.3,1) 0.46s both; }
+        .s5 { animation: fadeUp   0.7s cubic-bezier(0.16,1,0.3,1) 0.58s both; }
+        .fl { animation: fadeLeft  0.7s cubic-bezier(0.16,1,0.3,1) 0.16s both; }
+        .fr { animation: fadeRight 0.7s cubic-bezier(0.16,1,0.3,1) 0.28s both; }
 
-        .s1 { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
-        .s2 { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
-        .s3 { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) 0.38s both; }
-        .s4 { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) 0.51s both; }
-        .s5 { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) 0.64s both; }
-        .fl { animation: fadeLeft  0.75s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
-        .fr { animation: fadeRight 0.75s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+        @keyframes floatY     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        @keyframes rotateSlow { to{transform:rotate(360deg)} }
+        @keyframes driftX     { 0%,100%{transform:translateX(0) translateY(0)} 33%{transform:translateX(10px) translateY(-7px)} 66%{transform:translateX(-7px) translateY(9px)} }
+        @keyframes twinkle    { 0%,100%{opacity:0.15;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.25)} }
+        @keyframes sparkle    { 0%,100%{opacity:0;transform:rotate(0deg) scale(0.5)} 50%{opacity:0.65;transform:rotate(180deg) scale(1)} }
+        @keyframes bounce     { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(5px)} }
+        @keyframes shimmer    { 0%{background-position:-200% center} 100%{background-position:200% center} }
 
-        @keyframes floatY {
-          0%,100% { transform: translateY(0); }
-          50%      { transform: translateY(-14px); }
-        }
-        @keyframes rotateSlow { to { transform: rotate(360deg); } }
-
-        @keyframes shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
         .shimmer-text {
-          background: linear-gradient(90deg,
-            var(--rose) 0%, var(--lavender) 28%, var(--sage-d) 55%, var(--rose) 78%, var(--lavender) 100%
-          );
+          background: linear-gradient(90deg,var(--rose) 0%,var(--lavender) 28%,var(--sage-d) 55%,var(--rose) 78%,var(--lavender) 100%);
           background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          animation: shimmer 5s linear infinite;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          background-clip: text; animation: shimmer 5s linear infinite;
         }
 
-        @keyframes btnShimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes btnPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(242,167,178,0.4); }
-          50%       { box-shadow: 0 0 0 8px rgba(242,167,178,0); }
-        }
-        @keyframes btnGlowGreen {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(111,160,138,0.4); }
-          50%       { box-shadow: 0 0 0 8px rgba(111,160,138,0); }
-        }
-        @keyframes btnGlowCream {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(253,248,242,0.25); }
-          50%       { box-shadow: 0 0 0 10px rgba(253,248,242,0); }
-        }
-
-        @keyframes driftX {
-          0%,100% { transform: translateX(0) translateY(0); }
-          33%      { transform: translateX(12px) translateY(-8px); }
-          66%      { transform: translateX(-8px) translateY(10px); }
-        }
-        @keyframes twinkle {
-          0%,100% { opacity: 0.15; transform: scale(1); }
-          50%      { opacity: 0.55; transform: scale(1.3); }
-        }
-        @keyframes sparkle {
-          0%,100% { opacity: 0; transform: rotate(0deg) scale(0.5); }
-          50%      { opacity: 0.7; transform: rotate(180deg) scale(1); }
-        }
-
-        .star { position: absolute; pointer-events: none; font-style: normal; }
-        .star-twinkle { animation: twinkle var(--dur, 3s) ease-in-out infinite; }
-        .star-sparkle  { animation: sparkle var(--dur, 4s) ease-in-out infinite; }
-
-        .mesh-grid {
-          position: absolute; inset: 0; pointer-events: none;
-          background-image:
-            linear-gradient(rgba(242,167,178,0.06) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(242,167,178,0.06) 1px, transparent 1px);
-          background-size: 52px 52px;
-        }
-        .mesh-grid-lavender {
-          background-image:
-            linear-gradient(rgba(196,181,224,0.07) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(196,181,224,0.07) 1px, transparent 1px);
-          background-size: 48px 48px;
-        }
-        .mesh-grid-dark {
-          background-image:
-            linear-gradient(rgba(253,248,242,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(253,248,242,0.04) 1px, transparent 1px);
-          background-size: 56px 56px;
-        }
-
-        .blob { position: absolute; border-radius: 50%; pointer-events: none; }
-        .ring { position: absolute; border-radius: 50%; pointer-events: none; }
-
-        .pbar-wrap {
-          position: absolute; top: 0; left: 0; right: 0; height: 2px;
-          background: rgba(242,167,178,0.15); z-index: 200; pointer-events: none;
-        }
-        .pbar {
-          height: 100%;
-          background: linear-gradient(90deg, var(--rose), var(--lavender), var(--sage-d));
+        /* Shimmer for lavender slide — purple/rose tones */
+        .shimmer-lav {
+          background: linear-gradient(90deg,var(--lavender-d) 0%,var(--rose) 30%,var(--lavender) 60%,var(--lavender-d) 100%);
           background-size: 200% auto;
-          animation: btnShimmer 3s linear infinite;
-          transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          background-clip: text; animation: shimmer 5s linear infinite;
         }
+
+        .blob { position:absolute; border-radius:50%; pointer-events:none; }
+        .ring { position:absolute; border-radius:50%; pointer-events:none; }
+        .star { position:absolute; pointer-events:none; font-style:normal; }
+        .star-twinkle { animation: twinkle var(--dur,3s) ease-in-out infinite; }
+        .star-sparkle { animation: sparkle var(--dur,4s) ease-in-out infinite; }
 
         .dot-nav {
-          position: absolute; right: 28px; top: 50%;
+          position: absolute; right: 18px; top: 50%;
           transform: translateY(-50%);
-          display: flex; flex-direction: column; gap: 10px; z-index: 50;
-          transition: opacity 0.35s cubic-bezier(0.16,1,0.3,1),
-                      transform 0.35s cubic-bezier(0.16,1,0.3,1);
+          display: flex; flex-direction: column; gap: 8px; z-index: 50;
+          transition: opacity 0.3s, transform 0.3s;
         }
-        .dot-nav.auth-open { opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(14px); }
+        .dot-nav.auth-open { opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(12px); }
         .dot {
-          width: 8px; height: 8px; border-radius: 50%;
-          background: rgba(42,34,32,0.22); border: none; cursor: pointer; padding: 0;
-          transition: background 0.3s, transform 0.3s, height 0.35s;
+          width: 7px; height: 7px; border-radius: 50%;
+          background: rgba(42,34,32,0.2); border: none; cursor: pointer; padding: 0;
+          transition: background 0.3s, height 0.3s; touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
         }
-        .dot.active { background: var(--ink); height: 24px; border-radius: 4px; transform: none; }
-        .dot.dark-slide { background: rgba(253,248,242,0.3); }
-        .dot.dark-slide.active { background: var(--cream); }
+        .dot.active { background: var(--ink); height: 22px; border-radius: 4px; }
+        .hw-dark .dot { background: rgba(240,232,228,0.25); }
+        .hw-dark .dot.active { background: #F0E8E4; }
+
+        /* On lavender slide (light), dots should be lavender-tinted */
+        .dot.lav-slide { background: rgba(139,120,196,0.25); }
+        .dot.lav-slide.active { background: var(--lavender-d); }
 
         .counter {
-          position: absolute; bottom: 28px; left: 50%;
-          transform: translateX(-50%);
+          position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
           font-family: 'DM Sans', sans-serif;
-          font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted);
-          z-index: 200; display: flex; align-items: center; gap: 10px;
-          transition: color 0.4s, opacity 0.35s cubic-bezier(0.16,1,0.3,1),
-                      transform 0.35s cubic-bezier(0.16,1,0.3,1);
+          font-size: 0.68rem; letter-spacing: 0.16em; color: var(--muted);
+          z-index: 200; display: flex; align-items: center; gap: 8px;
+          transition: color 0.4s, opacity 0.3s, transform 0.3s;
           pointer-events: none;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
         }
-        .counter.on-dark { color: rgba(253,248,242,0.4); }
+        .hw-dark .counter { color: #A0908C; }
+        .counter.on-lav { color: var(--lavender-d); }
         .counter.auth-open { opacity: 0; transform: translateX(-50%) translateY(8px); }
 
         .btn {
           display: inline-flex; align-items: center; gap: 8px;
-          font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.95rem;
-          padding: 14px 36px; border-radius: 100px; border: none; cursor: pointer;
-          transition: transform 0.25s, box-shadow 0.25s;
-          letter-spacing: 0.01em; text-decoration: none;
+          font-family: 'DM Sans', sans-serif; font-weight: 500;
+          font-size: 0.9rem; padding: 12px 28px; border-radius: 100px;
+          border: none; cursor: pointer; letter-spacing: 0.01em;
           position: relative; overflow: hidden;
+          transition: transform 0.25s, box-shadow 0.25s, background 0.35s;
+          -webkit-tap-highlight-color: transparent; touch-action: manipulation;
         }
-        .btn::after {
-          content: ''; position: absolute; inset: 0;
-          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%);
-          background-size: 200% 100%; background-position: -100% 0;
-          border-radius: inherit; transition: background-position 0s; pointer-events: none;
-        }
-        .btn:hover::after { background-position: 200% 0; transition: background-position 0.55s ease; }
 
-        .btn-hero { background: linear-gradient(135deg, var(--ink) 0%, #3d2e2b 100%); color: var(--cream); }
-        .btn-hero:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 14px 36px rgba(42,34,32,0.25), 0 0 0 1px rgba(242,167,178,0.3);
-          animation: btnPulse 2s ease-in-out infinite;
-        }
+        .btn-hero { background: linear-gradient(135deg,var(--ink) 0%,#3d2e2b 100%); color: var(--cream); }
+        .hw-dark .btn-hero { background: linear-gradient(135deg,#3d2e2b 0%,#2a1e1c 100%); }
+        .btn-hero:hover { transform: translateY(-2px); }
 
         .btn-features {
           background: transparent; color: var(--ink);
           border: 1.5px solid rgba(42,34,32,0.18);
-          background-image: linear-gradient(135deg, rgba(249,221,226,0.4), rgba(196,181,224,0.3));
+          background-image: linear-gradient(135deg,rgba(249,221,226,0.4),rgba(196,181,224,0.3));
         }
-        .btn-features:hover {
-          transform: translateY(-2px); box-shadow: 0 10px 30px rgba(196,181,224,0.35);
-          border-color: rgba(196,181,224,0.6);
-          background-image: linear-gradient(135deg, rgba(249,221,226,0.7), rgba(196,181,224,0.55));
-        }
+        .hw-dark .btn-features { color: #F0E8E4; border-color: rgba(240,232,228,0.18); background-image: linear-gradient(135deg,rgba(249,221,226,0.1),rgba(196,181,224,0.1)); }
+        .btn-features:hover { transform: translateY(-2px); }
 
-        .btn-why { background: linear-gradient(135deg, var(--ink) 0%, #233d33 100%); color: var(--cream); }
-        .btn-why:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 14px 36px rgba(42,34,32,0.22), 0 0 0 1px rgba(111,160,138,0.4);
-          animation: btnGlowGreen 2s ease-in-out infinite;
-        }
+        .btn-why { background: linear-gradient(135deg,var(--ink) 0%,#233d33 100%); color: var(--cream); }
+        .hw-dark .btn-why { background: linear-gradient(135deg,#1a2e26 0%,#0f1f18 100%); }
+        .btn-why:hover { transform: translateY(-2px); }
 
+        /* CTA slide buttons — adapted for lavender light bg */
         .btn-cta-primary {
-          background: var(--cream); color: var(--ink);
-          background-image: linear-gradient(135deg, #FDF8F2 0%, #F9DDE2 100%);
+          background: linear-gradient(135deg, var(--lavender-d) 0%, #a394d8 100%);
+          color: #fff;
+          box-shadow: 0 4px 18px rgba(139,120,196,0.3);
         }
-        .btn-cta-primary:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 14px 36px rgba(42,34,32,0.3), 0 0 0 1px rgba(253,248,242,0.5);
-          animation: btnGlowCream 2s ease-in-out infinite;
-        }
+        .hw-dark .btn-cta-primary { background: var(--cream); color: var(--ink); box-shadow: none; }
+        .btn-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(139,120,196,0.4); }
 
-        .btn-ghost-light {
-          background: transparent; color: var(--cream);
-          border: 1.5px solid rgba(253,248,242,0.22);
+        .btn-cta-outline {
+          background: transparent;
+          color: var(--lavender-d);
+          border: 1.5px solid rgba(139,120,196,0.35);
         }
-        .btn-ghost-light:hover {
-          background: rgba(253,248,242,0.08); transform: translateY(-2px);
-          border-color: rgba(253,248,242,0.5);
-        }
+        .hw-dark .btn-cta-outline { color: var(--cream); border-color: rgba(253,248,242,0.22); }
+        .btn-cta-outline:hover { background: rgba(139,120,196,0.08); transform: translateY(-2px); border-color: rgba(139,120,196,0.55); }
 
         .home-link {
           font-family: 'DM Sans', sans-serif; color: var(--muted); text-decoration: none;
-          font-size: 0.92rem; font-weight: 400; position: relative; padding-bottom: 2px;
-          background: none; border: none; cursor: pointer;
+          font-size: 0.9rem; font-weight: 400; position: relative; padding-bottom: 2px;
+          background: none; border: none; cursor: pointer; touch-action: manipulation;
+          transition: color 0.3s;
         }
-        .home-link::after {
-          content: ''; position: absolute; bottom: 0; left: 0;
-          width: 0; height: 1.5px; background: var(--rose);
-          transition: width 0.3s cubic-bezier(0.16,1,0.3,1);
-        }
+        .hw-dark .home-link { color: #A0908C; }
+        .home-link::after { content:''; position:absolute; bottom:0; left:0; width:0; height:1.5px; background:var(--rose); transition:width 0.3s cubic-bezier(0.16,1,0.3,1); }
         .home-link:hover { color: var(--ink); }
+        .hw-dark .home-link:hover { color: #F0E8E4; }
         .home-link:hover::after { width: 100%; }
 
         .hero-title {
           font-family: 'Playfair Display', serif;
-          font-size: clamp(2.6rem, 7vw, 5.5rem);
-          font-weight: 900; line-height: 1.0; color: var(--ink);
+          font-size: clamp(2.2rem, 8vw, 5rem);
+          font-weight: 900; line-height: 1.02;
+          color: var(--hw-text);
+          transition: color 0.35s;
         }
         .display-h {
           font-family: 'Playfair Display', serif;
-          font-size: clamp(1.8rem, 4vw, 3rem);
-          font-weight: 900; line-height: 1.1; color: var(--ink);
+          font-size: clamp(1.6rem, 5vw, 2.8rem);
+          font-weight: 900; line-height: 1.1;
+          color: var(--hw-text);
+          transition: color 0.35s;
         }
-        .label {
-          font-size: 0.72rem; font-weight: 500;
-          letter-spacing: 0.18em; text-transform: uppercase; color: var(--rose);
-        }
+        .label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--rose); }
 
         .feat-card {
-          background: white; border-radius: 28px; padding: 28px 24px;
-          border: 1.5px solid rgba(242,167,178,0.18);
-          transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s;
+          background: var(--hw-card); border-radius: 22px; padding: 22px 18px;
+          border: 1.5px solid var(--hw-card-border);
+          transition: transform 0.3s,box-shadow 0.3s,background 0.35s,border-color 0.35s;
         }
-        .feat-card:hover { transform: translateY(-10px); box-shadow: 0 28px 64px rgba(242,167,178,0.2); }
+        .feat-card:hover { transform: translateY(-8px); }
 
         .why-card {
-          background: white; border-radius: 22px; padding: 22px 18px;
-          border: 1.5px solid rgba(196,181,224,0.22);
-          transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s;
+          background: var(--hw-why-card); border-radius: 18px; padding: 18px 15px;
+          border: 1.5px solid var(--hw-why-border);
+          transition: transform 0.3s,background 0.35s,border-color 0.35s;
         }
-        .why-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(196,181,224,0.18); }
+        .why-card:hover { transform: translateY(-5px); }
 
         .pill {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: white; border: 1.5px solid var(--blush);
-          border-radius: 100px; padding: 8px 18px;
-          font-size: 0.85rem; font-weight: 500; color: var(--ink);
+          display: inline-flex; align-items: center; gap: 6px;
+          background: var(--hw-pill); border: 1.5px solid rgba(242,167,178,0.3);
+          border-radius: 100px; padding: 6px 14px;
+          font-size: 0.8rem; font-weight: 500; color: var(--hw-text);
+          transition: background 0.35s, color 0.35s;
+          backdrop-filter: blur(8px);
         }
 
-        @keyframes bounce {
-          0%,100% { transform: translateX(-50%) translateY(0); }
-          50%      { transform: translateX(-50%) translateY(6px); }
-        }
-        .scroll-hint {
-          position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-          display: flex; flex-direction: column; align-items: center; gap: 6px;
-          animation: bounce 2.2s ease-in-out infinite;
-          opacity: 0.4; font-size: 0.7rem; letter-spacing: 0.12em; color: var(--ink);
-          pointer-events: none; z-index: 5;
+        .stat-box {
+          background: var(--hw-stat); border-radius: 14px; padding: 12px 8px; text-align: center;
+          border: 1.5px solid rgba(242,167,178,0.18);
+          transition: background 0.35s, border-color 0.35s;
         }
 
+        /* CTA testi cards — adapted for lavender bg */
         .testi {
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 20px; padding: 20px 24px;
-          max-width: 200px; text-align: center;
+          background: rgba(255,255,255,0.55);
+          border: 1px solid rgba(196,181,224,0.3);
+          border-radius: 16px; padding: 16px 18px; text-align: center;
+          backdrop-filter: blur(10px);
+          transition: background 0.35s, border-color 0.35s;
+        }
+        .hw-dark .testi {
+          background: rgba(255,255,255,0.06);
+          border-color: rgba(255,255,255,0.1);
+        }
+
+        .scroll-hint {
+          position: absolute; bottom: calc(28px + env(safe-area-inset-bottom,0px)); left: 50%;
+          transform: translateX(-50%);
+          display: flex; flex-direction: column; align-items: center; gap: 5px;
+          animation: bounce 2.2s ease-in-out infinite;
+          opacity: 0.4; font-size: 0.65rem; letter-spacing: 0.12em; color: var(--hw-text);
+          pointer-events: none; z-index: 5;
+          transition: color 0.35s;
         }
 
         .slide-content {
-          max-width: 1200px; width: 100%; padding: 0 48px;
+          max-width: 1100px; width: 100%;
+          padding: 0 clamp(16px,5vw,48px);
           position: relative; z-index: 1;
         }
 
-        @media (max-width: 768px) {
-          .slide-content { padding: 0 24px; }
-          .dot-nav { right: 14px; }
-          .hero-title { font-size: clamp(2.2rem, 10vw, 4rem); }
+        .body-text { color: var(--hw-text2); transition: color 0.35s; }
+        .title-text { color: var(--hw-text); transition: color 0.35s; }
+
+        @media (max-width: 640px) {
+          .feat-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .why-grid-outer { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .why-grid-inner { grid-template-columns: 1fr 1fr !important; }
+          .stat-grid { grid-template-columns: repeat(3,1fr) !important; }
+          .cta-testimonials { flex-direction: column !important; gap: 10px !important; }
+          .testi { max-width: 100% !important; }
+          .hero-buttons { gap: 12px !important; }
+          .hero-pills { gap: 6px !important; }
+          .btn { font-size: 0.85rem !important; padding: 11px 22px !important; }
+          .dot-nav { right: 10px !important; }
         }
       `}</style>
 
-      <div ref={containerRef} className="home-wrapper">
-        {/* Progress bar */}
-        <div className="pbar-wrap">
-          <div
-            className="pbar"
-            style={{ width: `${((activeSlide + 1) / SLIDES.length) * 100}%` }}
-          />
-        </div>
+      <HomeNavigation
+        activeSlide={activeSlide}
+        isDark={isDark}
+        onGoTo={goTo}
+        onToggleDark={toggleDark}
+        isAuthOpen={isAuthOpen}
+      />
 
+      <div
+        ref={containerRef}
+        className={`home-wrapper${isDark ? " hw-dark" : ""}`}
+        style={{ background: bg(activeSlide) }}
+      >
         {/* Dot nav */}
         <nav
           className={`dot-nav${isAuthOpen ? " auth-open" : ""}`}
@@ -497,7 +461,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
           {SLIDES.map((s, i) => (
             <button
               key={s.id}
-              className={`dot ${i === activeSlide ? "active" : ""} ${activeSlide === 3 ? "dark-slide" : ""}`}
+              className={`dot ${i === activeSlide ? "active" : ""} ${!isDark && activeSlide === 3 ? "lav-slide" : ""}`}
               onClick={() => goTo(i)}
               aria-label={`Go to slide ${i + 1}: ${s.label}`}
               aria-current={i === activeSlide ? "true" : undefined}
@@ -508,20 +472,13 @@ export function Home({ isAuthOpen = false }: HomeProps) {
 
         {/* Counter */}
         <div
-          className={`counter${activeSlide === 3 ? " on-dark" : ""}${isAuthOpen ? " auth-open" : ""}`}
+          className={`counter${!isDark && activeSlide === 3 ? " on-lav" : ""}${isAuthOpen ? " auth-open" : ""}`}
           aria-hidden="true"
         >
+          <span style={{ fontWeight: 500 }}>0{activeSlide + 1}</span>
           <span
             style={{
-              fontWeight: 500,
-              color: activeSlide === 3 ? "rgba(253,248,242,0.6)" : "var(--ink)",
-            }}
-          >
-            0{activeSlide + 1}
-          </span>
-          <span
-            style={{
-              width: 30,
+              width: 26,
               height: 1,
               background: "currentColor",
               display: "inline-block",
@@ -534,69 +491,54 @@ export function Home({ isAuthOpen = false }: HomeProps) {
         {/* ══ SLIDE 0 — HERO ══ */}
         {(activeSlide === 0 || prevSlide === 0) && (
           <div
-            className={`slide ${
-              isEntering(0)
-                ? direction > 0
-                  ? "anim-enter-bottom"
-                  : "anim-enter-top"
-                : isLeaving(0)
-                  ? direction > 0
-                    ? "anim-exit-top"
-                    : "anim-exit-bottom"
-                  : ""
-            }`}
-            style={{ background: "var(--cream)" }}
+            className={`slide ${slideClass(0)}`}
+            style={{ background: bg(0) }}
           >
-            <div className="mesh-grid" />
-
             <div
               className="blob"
               style={{
-                width: 520,
-                height: 520,
+                width: 480,
+                height: 480,
                 background: "var(--blush)",
-                opacity: 0.5,
+                opacity: isDark ? 0.15 : 0.5,
                 top: "-18%",
                 right: "-10%",
                 filter: "blur(80px)",
-                transform: `translate(${(mousePos.x - 0.5) * -30}px, ${(mousePos.y - 0.5) * -18}px)`,
+                transform: `translate(${(mousePos.x - 0.5) * -25}px,${(mousePos.y - 0.5) * -15}px)`,
                 animation: "driftX 12s ease-in-out infinite",
               }}
             />
             <div
               className="blob"
               style={{
-                width: 300,
-                height: 300,
+                width: 280,
+                height: 280,
                 background: "var(--lavender)",
-                opacity: 0.3,
+                opacity: isDark ? 0.12 : 0.28,
                 bottom: "0%",
                 left: "-6%",
                 filter: "blur(70px)",
-                transform: `translate(${(mousePos.x - 0.5) * 18}px, ${(mousePos.y - 0.5) * 14}px)`,
                 animation: "driftX 15s ease-in-out infinite reverse",
               }}
             />
             <div
               className="blob"
               style={{
-                width: 180,
-                height: 180,
+                width: 160,
+                height: 160,
                 background: "var(--sage)",
-                opacity: 0.22,
+                opacity: isDark ? 0.1 : 0.2,
                 top: "38%",
                 left: "60%",
                 filter: "blur(55px)",
-                transform: `translate(${(mousePos.x - 0.5) * -12}px, ${(mousePos.y - 0.5) * 22}px)`,
               }}
             />
-
             <div
               className="ring"
               style={{
-                width: 200,
-                height: 200,
-                border: "2px dashed rgba(242,167,178,0.32)",
+                width: 180,
+                height: 180,
+                border: "2px dashed rgba(242,167,178,0.28)",
                 top: "8%",
                 right: "10%",
                 animation: "rotateSlow 22s linear infinite",
@@ -605,30 +547,17 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             <div
               className="ring"
               style={{
-                width: 110,
-                height: 110,
-                border: "2px solid rgba(196,181,224,0.28)",
+                width: 100,
+                height: 100,
+                border: "2px solid rgba(196,181,224,0.25)",
                 bottom: "14%",
                 left: "7%",
                 animation: "rotateSlow 14s linear infinite reverse",
               }}
             />
-            <div
-              className="ring"
-              style={{
-                width: 340,
-                height: 340,
-                border: "1px dashed rgba(168,197,181,0.2)",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                animation: "rotateSlow 38s linear infinite",
-              }}
-            />
-
             {[
               {
-                s: 60,
+                s: 55,
                 x: "10%",
                 y: "20%",
                 c: "var(--rose)",
@@ -636,7 +565,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                 dur: "5s",
               },
               {
-                s: 40,
+                s: 36,
                 x: "83%",
                 y: "16%",
                 c: "var(--lavender)",
@@ -644,7 +573,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                 dur: "4.5s",
               },
               {
-                s: 46,
+                s: 42,
                 x: "74%",
                 y: "74%",
                 c: "var(--sage)",
@@ -652,20 +581,12 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                 dur: "6s",
               },
               {
-                s: 32,
+                s: 28,
                 x: "23%",
                 y: "76%",
                 c: "var(--butter)",
                 d: "1.9s",
                 dur: "4s",
-              },
-              {
-                s: 20,
-                x: "48%",
-                y: "10%",
-                c: "var(--rose)",
-                d: "2.4s",
-                dur: "5.5s",
               },
             ].map((b, i) => (
               <div
@@ -678,20 +599,46 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                   height: b.s,
                   borderRadius: "50%",
                   background: b.c,
-                  opacity: 0.28,
+                  opacity: isDark ? 0.1 : 0.26,
                   animation: `floatY ${b.dur} ease-in-out infinite`,
                   animationDelay: b.d,
                   pointerEvents: "none",
                 }}
               />
             ))}
-
             {[
-              { x: "30%", y: "12%", size: 10, dur: "2.8s", del: "0s" },
-              { x: "68%", y: "34%", size: 8, dur: "3.5s", del: "1.1s" },
-              { x: "18%", y: "55%", size: 12, dur: "4s", del: "0.5s" },
-              { x: "88%", y: "60%", size: 7, dur: "2.5s", del: "1.8s" },
-              { x: "55%", y: "82%", size: 9, dur: "3.2s", del: "0.8s" },
+              {
+                x: "30%",
+                y: "12%",
+                size: 9,
+                dur: "2.8s",
+                del: "0s",
+                c: "var(--rose)",
+              },
+              {
+                x: "68%",
+                y: "34%",
+                size: 7,
+                dur: "3.5s",
+                del: "1.1s",
+                c: "var(--lavender)",
+              },
+              {
+                x: "18%",
+                y: "55%",
+                size: 11,
+                dur: "4s",
+                del: "0.5s",
+                c: "var(--rose)",
+              },
+              {
+                x: "88%",
+                y: "60%",
+                size: 6,
+                dur: "2.5s",
+                del: "1.8s",
+                c: "var(--lavender)",
+              },
             ].map((sp, i) => (
               <div
                 key={i}
@@ -701,7 +648,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                     left: sp.x,
                     top: sp.y,
                     fontSize: sp.size,
-                    color: i % 2 === 0 ? "var(--rose)" : "var(--lavender)",
+                    color: sp.c,
                     ["--dur" as string]: sp.dur,
                     animationDelay: sp.del,
                   } as React.CSSProperties
@@ -712,48 +659,44 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             ))}
 
             <div className="slide-content">
-              <div style={{ maxWidth: 660 }}>
+              <div style={{ maxWidth: 620 }}>
                 <div
                   className={`label ${heroIn ? "s1" : ""}`}
                   style={{ opacity: heroIn ? undefined : 0 }}
                 >
                   ✦ Crochet — unwind on your own terms
                 </div>
-
                 <h1
                   className={`hero-title ${heroIn ? "s2" : ""}`}
-                  style={{ marginTop: 18, opacity: heroIn ? undefined : 0 }}
+                  style={{ marginTop: 14, opacity: heroIn ? undefined : 0 }}
                 >
                   Learn to Crochet
                   <br />
                   <span className="shimmer-text">Your Way</span>
                 </h1>
-
                 <p
-                  className={`${heroIn ? "s3" : ""}`}
+                  className={`body-text ${heroIn ? "s3" : ""}`}
                   style={{
-                    marginTop: 20,
+                    marginTop: 16,
                     opacity: heroIn ? undefined : 0,
-                    fontSize: "clamp(0.92rem, 1.4vw, 1.08rem)",
-                    color: "var(--muted)",
+                    fontSize: "clamp(0.88rem,2vw,1.02rem)",
                     lineHeight: 1.75,
                     fontWeight: 300,
-                    maxWidth: 460,
+                    maxWidth: 440,
                   }}
                 >
                   From your first skein to a finished project — CozyStitch
                   brings you quality materials, step-by-step guidance, and a
-                  community so you can crochet entirely at your own pace.
+                  community so you can crochet at your own pace.
                 </p>
-
                 <div
-                  className={`${heroIn ? "s4" : ""}`}
+                  className={`hero-buttons ${heroIn ? "s4" : ""}`}
                   style={{
-                    marginTop: 32,
+                    marginTop: 26,
                     opacity: heroIn ? undefined : 0,
                     display: "flex",
                     alignItems: "center",
-                    gap: 20,
+                    gap: 16,
                     flexWrap: "wrap",
                   }}
                 >
@@ -767,14 +710,13 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                     Community
                   </button>
                 </div>
-
                 <div
-                  className={`${heroIn ? "s5" : ""}`}
+                  className={`hero-pills ${heroIn ? "s5" : ""}`}
                   style={{
-                    marginTop: 36,
+                    marginTop: 28,
                     opacity: heroIn ? undefined : 0,
                     display: "flex",
-                    gap: 10,
+                    gap: 8,
                     flexWrap: "wrap",
                   }}
                 >
@@ -786,8 +728,8 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                     <span key={s.label} className="pill">
                       <span
                         style={{
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           borderRadius: "50%",
                           background: s.dot,
                           display: "inline-block",
@@ -801,7 +743,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             </div>
 
             <div className="scroll-hint">
-              <svg width="16" height="22" viewBox="0 0 16 22" fill="none">
+              <svg width="14" height="20" viewBox="0 0 16 22" fill="none">
                 <rect
                   x="1"
                   y="1"
@@ -829,28 +771,16 @@ export function Home({ isAuthOpen = false }: HomeProps) {
         {/* ══ SLIDE 1 — FEATURES ══ */}
         {(activeSlide === 1 || prevSlide === 1) && (
           <div
-            className={`slide ${
-              isEntering(1)
-                ? direction > 0
-                  ? "anim-enter-bottom"
-                  : "anim-enter-top"
-                : isLeaving(1)
-                  ? direction > 0
-                    ? "anim-exit-top"
-                    : "anim-exit-bottom"
-                  : ""
-            }`}
-            style={{ background: "white" }}
+            className={`slide ${slideClass(1)}`}
+            style={{ background: bg(1) }}
           >
-            <div className="mesh-grid mesh-grid-lavender" />
-
             <div
               className="blob"
               style={{
-                width: 420,
-                height: 420,
+                width: 380,
+                height: 380,
                 background: "var(--blush)",
-                opacity: 0.45,
+                opacity: isDark ? 0.12 : 0.4,
                 top: "-18%",
                 right: "-6%",
                 filter: "blur(85px)",
@@ -860,98 +790,22 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             <div
               className="blob"
               style={{
-                width: 220,
-                height: 220,
+                width: 200,
+                height: 200,
                 background: "var(--sage)",
-                opacity: 0.2,
+                opacity: isDark ? 0.08 : 0.18,
                 bottom: "-10%",
                 left: "20%",
                 filter: "blur(65px)",
                 animation: "driftX 10s ease-in-out infinite reverse",
               }}
             />
-            <div
-              className="blob"
-              style={{
-                width: 160,
-                height: 160,
-                background: "var(--lavender)",
-                opacity: 0.18,
-                top: "30%",
-                left: "2%",
-                filter: "blur(50px)",
-              }}
-            />
-
-            {[
-              {
-                x: "6%",
-                y: "14%",
-                size: 11,
-                dur: "3.1s",
-                del: "0s",
-                c: "var(--rose)",
-              },
-              {
-                x: "92%",
-                y: "22%",
-                size: 8,
-                dur: "2.7s",
-                del: "0.9s",
-                c: "var(--lavender)",
-              },
-              {
-                x: "15%",
-                y: "80%",
-                size: 10,
-                dur: "4.2s",
-                del: "0.3s",
-                c: "var(--sage-d)",
-              },
-              {
-                x: "88%",
-                y: "75%",
-                size: 7,
-                dur: "3.8s",
-                del: "1.5s",
-                c: "var(--rose)",
-              },
-            ].map((sp, i) => (
-              <div
-                key={i}
-                className="star star-sparkle"
-                style={
-                  {
-                    left: sp.x,
-                    top: sp.y,
-                    fontSize: sp.size,
-                    color: sp.c,
-                    ["--dur" as string]: sp.dur,
-                    animationDelay: sp.del,
-                  } as React.CSSProperties
-                }
-              >
-                ✦
-              </div>
-            ))}
-
-            <div
-              className="ring"
-              style={{
-                width: 80,
-                height: 80,
-                border: "1.5px solid rgba(242,167,178,0.25)",
-                bottom: "20%",
-                right: "8%",
-                animation: "rotateSlow 10s linear infinite",
-              }}
-            />
 
             <div className="slide-content">
-              <div className="s1 label" style={{ marginBottom: 14 }}>
+              <div className="s1 label" style={{ marginBottom: 12 }}>
                 What we offer
               </div>
-              <h2 className="display-h s2" style={{ marginBottom: 44 }}>
+              <h2 className="display-h s2" style={{ marginBottom: 32 }}>
                 Everything you need to{" "}
                 <em style={{ color: "var(--rose)", fontStyle: "italic" }}>
                   get started
@@ -959,10 +813,11 @@ export function Home({ isAuthOpen = false }: HomeProps) {
               </h2>
 
               <div
+                className="feat-grid"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 18,
+                  gridTemplateColumns: "repeat(3,1fr)",
+                  gap: 14,
                 }}
               >
                 {[
@@ -971,14 +826,14 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                     cls: "s3",
                     bg: "linear-gradient(135deg,#F9DDE2,#F2A7B2)",
                     title: "Made for beginners",
-                    desc: "Never crocheted before? Our kits come with yarn, hooks, and video walkthroughs for every stitch. Open the box and start right away.",
+                    desc: "Never crocheted before? Our kits come with yarn, hooks, and video walkthroughs. Open the box and start right away.",
                   },
                   {
                     emoji: "🌿",
                     cls: "s4",
                     bg: "linear-gradient(135deg,#EDE5F7,#C4B5E0)",
                     title: "Actually de-stresses",
-                    desc: "The steady rhythm of crochet pulls you away from screens and back to the present. Many people pick it up after class or work — and notice the difference.",
+                    desc: "The steady rhythm of crochet pulls you away from screens. Many people pick it up after class or work — and notice the difference.",
                   },
                   {
                     emoji: "💬",
@@ -991,36 +846,36 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                   <div key={f.title} className={`feat-card ${f.cls}`}>
                     <div
                       style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 18,
+                        width: 50,
+                        height: 50,
+                        borderRadius: 16,
                         background: f.bg,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: "1.6rem",
-                        marginBottom: 20,
+                        fontSize: "1.5rem",
+                        marginBottom: 16,
                       }}
                     >
                       {f.emoji}
                     </div>
                     <h3
+                      className="title-text"
                       style={{
-                        fontFamily: "'Playfair Display', serif",
-                        fontSize: "1.15rem",
+                        fontFamily: "'Playfair Display',serif",
+                        fontSize: "clamp(0.9rem,2vw,1.1rem)",
                         fontWeight: 700,
-                        color: "var(--ink)",
-                        marginBottom: 10,
+                        marginBottom: 8,
                       }}
                     >
                       {f.title}
                     </h3>
                     <p
+                      className="body-text"
                       style={{
-                        color: "var(--muted)",
-                        lineHeight: 1.68,
+                        lineHeight: 1.65,
                         fontWeight: 300,
-                        fontSize: "0.88rem",
+                        fontSize: "clamp(0.78rem,1.5vw,0.86rem)",
                       }}
                     >
                       {f.desc}
@@ -1032,7 +887,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
               <div
                 className="s5"
                 style={{
-                  marginTop: 36,
+                  marginTop: 28,
                   display: "flex",
                   justifyContent: "flex-end",
                 }}
@@ -1048,28 +903,16 @@ export function Home({ isAuthOpen = false }: HomeProps) {
         {/* ══ SLIDE 2 — WHY ══ */}
         {(activeSlide === 2 || prevSlide === 2) && (
           <div
-            className={`slide ${
-              isEntering(2)
-                ? direction > 0
-                  ? "anim-enter-bottom"
-                  : "anim-enter-top"
-                : isLeaving(2)
-                  ? direction > 0
-                    ? "anim-exit-top"
-                    : "anim-exit-bottom"
-                  : ""
-            }`}
-            style={{ background: "var(--cream)" }}
+            className={`slide ${slideClass(2)}`}
+            style={{ background: bg(2) }}
           >
-            <div className="mesh-grid" />
-
             <div
               className="blob"
               style={{
-                width: 460,
-                height: 460,
+                width: 420,
+                height: 420,
                 background: "var(--lavender)",
-                opacity: 0.25,
+                opacity: isDark ? 0.1 : 0.22,
                 bottom: "-18%",
                 right: "-10%",
                 filter: "blur(90px)",
@@ -1079,10 +922,10 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             <div
               className="blob"
               style={{
-                width: 240,
-                height: 240,
+                width: 220,
+                height: 220,
                 background: "var(--rose)",
-                opacity: 0.18,
+                opacity: isDark ? 0.08 : 0.16,
                 top: "-10%",
                 left: "10%",
                 filter: "blur(70px)",
@@ -1092,131 +935,57 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             <div
               className="blob"
               style={{
-                width: 200,
-                height: 200,
+                width: 180,
+                height: 180,
                 background: "var(--sage)",
-                opacity: 0.15,
-                top: "40%",
-                right: "8%",
-                filter: "blur(65px)",
-              }}
-            />
-
-            {[
-              {
-                x: "5%",
-                y: "10%",
-                size: 9,
-                dur: "3.5s",
-                del: "0s",
-                c: "var(--lavender)",
-              },
-              {
-                x: "92%",
-                y: "15%",
-                size: 11,
-                dur: "2.9s",
-                del: "1.2s",
-                c: "var(--sage-d)",
-              },
-              {
-                x: "80%",
-                y: "85%",
-                size: 8,
-                dur: "4.1s",
-                del: "0.4s",
-                c: "var(--rose)",
-              },
-              {
-                x: "12%",
-                y: "88%",
-                size: 10,
-                dur: "3.3s",
-                del: "1.7s",
-                c: "var(--lavender)",
-              },
-            ].map((sp, i) => (
-              <div
-                key={i}
-                className="star star-twinkle"
-                style={
-                  {
-                    left: sp.x,
-                    top: sp.y,
-                    fontSize: sp.size,
-                    color: sp.c,
-                    ["--dur" as string]: sp.dur,
-                    animationDelay: sp.del,
-                  } as React.CSSProperties
-                }
-              >
-                ✦
-              </div>
-            ))}
-
-            <div
-              className="ring"
-              style={{
-                width: 150,
-                height: 150,
-                border: "1.5px dashed rgba(111,160,138,0.25)",
-                top: "12%",
-                right: "16%",
-                animation: "rotateSlow 18s linear infinite",
-              }}
-            />
-            <div
-              className="ring"
-              style={{
-                width: 90,
-                height: 90,
-                border: "1.5px solid rgba(196,181,224,0.3)",
-                bottom: "18%",
-                left: "4%",
-                animation: "rotateSlow 12s linear infinite reverse",
+                opacity: isDark ? 0.06 : 0.2,
+                bottom: "10%",
+                left: "30%",
+                filter: "blur(60px)",
+                animation: "driftX 10s ease-in-out infinite",
               }}
             />
 
             <div className="slide-content">
               <div
+                className="why-grid-outer"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1.1fr",
-                  gap: 60,
+                  gap: 48,
                   alignItems: "center",
                 }}
               >
-                {/* Left */}
                 <div className="fl">
-                  <div className="label" style={{ marginBottom: 14 }}>
+                  <div className="label" style={{ marginBottom: 12 }}>
                     Why us
                   </div>
-                  <h2 className="display-h" style={{ marginBottom: 18 }}>
+                  <h2 className="display-h" style={{ marginBottom: 16 }}>
                     More than a<br />
                     <span style={{ color: "var(--rose)" }}>yarn shop.</span>
                   </h2>
                   <p
+                    className="body-text"
                     style={{
-                      color: "var(--muted)",
-                      lineHeight: 1.78,
+                      lineHeight: 1.75,
                       fontWeight: 300,
-                      fontSize: "0.95rem",
-                      marginBottom: 28,
-                      maxWidth: 400,
+                      fontSize: "clamp(0.85rem,1.8vw,0.95rem)",
+                      marginBottom: 22,
+                      maxWidth: 380,
                     }}
                   >
                     CozyStitch was built by people who were also complete
                     beginners once. We know the feeling of not knowing where to
-                    start — so everything here is designed to be as approachable
-                    as possible.
+                    start — so everything here is as approachable as possible.
                   </p>
 
                   <div
+                    className="stat-grid"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "repeat(3,1fr)",
-                      gap: 12,
-                      marginBottom: 32,
+                      gap: 10,
+                      marginBottom: 26,
                     }}
                   >
                     {[
@@ -1224,31 +993,22 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                       { num: "50+", label: "Tutorials" },
                       { num: "4.9★", label: "Rating" },
                     ].map((s) => (
-                      <div
-                        key={s.label}
-                        style={{
-                          background: "white",
-                          borderRadius: 16,
-                          padding: "14px 10px",
-                          textAlign: "center",
-                          border: "1.5px solid rgba(242,167,178,0.18)",
-                        }}
-                      >
+                      <div key={s.label} className="stat-box">
                         <div
+                          className="title-text"
                           style={{
                             fontFamily: "'Playfair Display',serif",
-                            fontSize: "1.5rem",
+                            fontSize: "clamp(1.1rem,3vw,1.4rem)",
                             fontWeight: 900,
-                            color: "var(--ink)",
                           }}
                         >
                           {s.num}
                         </div>
                         <div
+                          className="body-text"
                           style={{
-                            fontSize: "0.72rem",
-                            color: "var(--muted)",
-                            marginTop: 4,
+                            fontSize: "0.68rem",
+                            marginTop: 3,
                             fontWeight: 400,
                           }}
                         >
@@ -1263,38 +1023,38 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                   </button>
                 </div>
 
-                {/* Right 2×2 */}
                 <div
+                  className="why-grid-inner"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
-                    gap: 12,
+                    gap: 10,
                   }}
                 >
                   {[
                     {
                       emoji: "🎨",
                       title: "Curated materials",
-                      desc: "Soft cotton, acrylic in trending colors — chosen to work in warm climates and on sensitive skin.",
-                      d: "0.20s",
+                      desc: "Soft cotton & acrylic in trending colors — chosen to work in warm climates and on sensitive skin.",
+                      d: "0.18s",
                     },
                     {
                       emoji: "📚",
                       title: "Learn at your pace",
-                      desc: "Detailed video tutorials you can rewatch any time, no pressure, no deadlines.",
-                      d: "0.32s",
+                      desc: "Video tutorials you can rewatch any time. No pressure, no deadlines.",
+                      d: "0.30s",
                     },
                     {
                       emoji: "💬",
                       title: "Ask — get answered",
-                      desc: "An active community group every day. Stuck on a stitch? Just ask.",
-                      d: "0.44s",
+                      desc: "An active community every day. Stuck on a stitch? Just ask.",
+                      d: "0.42s",
                     },
                     {
                       emoji: "🌱",
-                      title: "Safe & skin-friendly",
-                      desc: "We prioritize non-irritating materials, safe for beginners and sensitive skin alike.",
-                      d: "0.56s",
+                      title: "Skin-friendly",
+                      desc: "Non-irritating materials, safe for beginners and sensitive skin alike.",
+                      d: "0.54s",
                     },
                   ].map((item) => (
                     <div
@@ -1302,25 +1062,25 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                       className="why-card fr"
                       style={{ animationDelay: item.d }}
                     >
-                      <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>
+                      <div style={{ fontSize: "1.35rem", marginBottom: 7 }}>
                         {item.emoji}
                       </div>
                       <h4
+                        className="title-text"
                         style={{
                           fontFamily: "'Playfair Display',serif",
-                          fontSize: "0.93rem",
+                          fontSize: "clamp(0.82rem,1.5vw,0.9rem)",
                           fontWeight: 700,
-                          color: "var(--ink)",
-                          marginBottom: 6,
+                          marginBottom: 5,
                         }}
                       >
                         {item.title}
                       </h4>
                       <p
+                        className="body-text"
                         style={{
-                          color: "var(--muted)",
-                          fontSize: "0.80rem",
-                          lineHeight: 1.6,
+                          fontSize: "clamp(0.73rem,1.3vw,0.78rem)",
+                          lineHeight: 1.58,
                           fontWeight: 300,
                         }}
                       >
@@ -1334,83 +1094,96 @@ export function Home({ isAuthOpen = false }: HomeProps) {
           </div>
         )}
 
-        {/* ══ SLIDE 3 — CTA (DARK) ══ */}
+        {/* ══ SLIDE 3 — CTA — Light: lavender, Dark: near-black ══ */}
         {(activeSlide === 3 || prevSlide === 3) && (
           <div
-            className={`slide ${
-              isEntering(3)
-                ? direction > 0
-                  ? "anim-enter-bottom"
-                  : "anim-enter-top"
-                : isLeaving(3)
-                  ? direction > 0
-                    ? "anim-exit-top"
-                    : "anim-exit-bottom"
-                  : ""
-            }`}
-            style={{ background: "var(--ink)" }}
+            className={`slide ${slideClass(3)}`}
+            style={{ background: bg(3) }}
           >
-            <div className="mesh-grid mesh-grid-dark" />
-
-            <div
-              className="blob"
-              style={{
-                width: 500,
-                height: 500,
-                background: "var(--rose)",
-                opacity: 0.14,
-                top: "-20%",
-                left: "-10%",
-                filter: "blur(100px)",
-                transform: `translate(${(mousePos.x - 0.5) * 18}px, ${(mousePos.y - 0.5) * 14}px)`,
-                animation: "driftX 18s ease-in-out infinite",
-              }}
-            />
-            <div
-              className="blob"
-              style={{
-                width: 380,
-                height: 380,
-                background: "var(--lavender)",
-                opacity: 0.16,
-                bottom: "-15%",
-                right: "-8%",
-                filter: "blur(90px)",
-                transform: `translate(${(mousePos.x - 0.5) * -14}px, ${(mousePos.y - 0.5) * -18}px)`,
-                animation: "driftX 22s ease-in-out infinite reverse",
-              }}
-            />
-            <div
-              className="blob"
-              style={{
-                width: 180,
-                height: 180,
-                background: "var(--sage)",
-                opacity: 0.12,
-                top: "40%",
-                right: "22%",
-                filter: "blur(60px)",
-              }}
-            />
-            <div
-              className="blob"
-              style={{
-                width: 120,
-                height: 120,
-                background: "var(--butter)",
-                opacity: 0.08,
-                bottom: "25%",
-                left: "30%",
-                filter: "blur(50px)",
-              }}
-            />
+            {/* Light mode blobs — soft lavender/rose */}
+            {!isDark && (
+              <>
+                <div
+                  className="blob"
+                  style={{
+                    width: 500,
+                    height: 500,
+                    background: "var(--lavender)",
+                    opacity: 0.35,
+                    top: "-20%",
+                    left: "-10%",
+                    filter: "blur(100px)",
+                    transform: `translate(${(mousePos.x - 0.5) * 16}px,${(mousePos.y - 0.5) * 12}px)`,
+                    animation: "driftX 18s ease-in-out infinite",
+                  }}
+                />
+                <div
+                  className="blob"
+                  style={{
+                    width: 360,
+                    height: 360,
+                    background: "var(--rose)",
+                    opacity: 0.22,
+                    bottom: "-15%",
+                    right: "-8%",
+                    filter: "blur(90px)",
+                    animation: "driftX 22s ease-in-out infinite reverse",
+                  }}
+                />
+                <div
+                  className="blob"
+                  style={{
+                    width: 200,
+                    height: 200,
+                    background: "var(--blush)",
+                    opacity: 0.3,
+                    top: "40%",
+                    right: "20%",
+                    filter: "blur(70px)",
+                    animation: "driftX 14s ease-in-out infinite",
+                  }}
+                />
+              </>
+            )}
+            {/* Dark mode blobs */}
+            {isDark && (
+              <>
+                <div
+                  className="blob"
+                  style={{
+                    width: 460,
+                    height: 460,
+                    background: "var(--rose)",
+                    opacity: 0.12,
+                    top: "-20%",
+                    left: "-10%",
+                    filter: "blur(100px)",
+                    transform: `translate(${(mousePos.x - 0.5) * 16}px,${(mousePos.y - 0.5) * 12}px)`,
+                    animation: "driftX 18s ease-in-out infinite",
+                  }}
+                />
+                <div
+                  className="blob"
+                  style={{
+                    width: 340,
+                    height: 340,
+                    background: "var(--lavender)",
+                    opacity: 0.14,
+                    bottom: "-15%",
+                    right: "-8%",
+                    filter: "blur(90px)",
+                    animation: "driftX 22s ease-in-out infinite reverse",
+                  }}
+                />
+              </>
+            )}
 
             <div
               className="ring"
               style={{
-                width: 260,
-                height: 260,
-                border: "1.5px dashed rgba(242,167,178,0.18)",
+                width: 220,
+                height: 220,
+                border: `1.5px dashed ${isDark ? "rgba(242,167,178,0.15)" : "rgba(139,120,196,0.2)"}`,
                 top: "5%",
                 right: "7%",
                 animation: "rotateSlow 24s linear infinite",
@@ -1419,24 +1192,12 @@ export function Home({ isAuthOpen = false }: HomeProps) {
             <div
               className="ring"
               style={{
-                width: 140,
-                height: 140,
-                border: "1.5px solid rgba(196,181,224,0.18)",
-                bottom: "10%",
-                left: "6%",
-                animation: "rotateSlow 16s linear infinite reverse",
-              }}
-            />
-            <div
-              className="ring"
-              style={{
-                width: 420,
-                height: 420,
-                border: "1px dashed rgba(253,248,242,0.06)",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                animation: "rotateSlow 45s linear infinite",
+                width: 120,
+                height: 120,
+                border: `1.5px solid ${isDark ? "rgba(196,181,224,0.1)" : "rgba(196,181,224,0.25)"}`,
+                bottom: "12%",
+                left: "8%",
+                animation: "rotateSlow 18s linear infinite reverse",
               }}
             />
 
@@ -1444,42 +1205,34 @@ export function Home({ isAuthOpen = false }: HomeProps) {
               {
                 x: "8%",
                 y: "18%",
-                size: 12,
+                size: 11,
                 dur: "3.2s",
                 del: "0s",
-                c: "rgba(242,167,178,0.6)",
+                c: isDark ? "rgba(242,167,178,0.55)" : "rgba(139,120,196,0.5)",
               },
               {
                 x: "88%",
                 y: "12%",
-                size: 8,
+                size: 7,
                 dur: "2.6s",
                 del: "1.0s",
-                c: "rgba(196,181,224,0.5)",
+                c: isDark ? "rgba(196,181,224,0.45)" : "rgba(242,167,178,0.55)",
               },
               {
                 x: "75%",
                 y: "78%",
-                size: 10,
+                size: 9,
                 dur: "4.0s",
                 del: "0.6s",
-                c: "rgba(168,197,181,0.5)",
+                c: isDark ? "rgba(168,197,181,0.45)" : "rgba(168,197,181,0.55)",
               },
               {
                 x: "20%",
                 y: "82%",
-                size: 7,
+                size: 6,
                 dur: "3.6s",
                 del: "1.8s",
-                c: "rgba(245,230,163,0.4)",
-              },
-              {
-                x: "50%",
-                y: "6%",
-                size: 9,
-                dur: "2.9s",
-                del: "0.3s",
-                c: "rgba(242,167,178,0.4)",
+                c: isDark ? "rgba(245,230,163,0.35)" : "rgba(196,181,224,0.6)",
               },
             ].map((sp, i) => (
               <div
@@ -1500,84 +1253,70 @@ export function Home({ isAuthOpen = false }: HomeProps) {
               </div>
             ))}
 
-            {[
-              { s: 52, x: "14%", y: "24%", c: "var(--rose)", d: "0s" },
-              { s: 34, x: "82%", y: "20%", c: "var(--lavender)", d: "1.5s" },
-              { s: 42, x: "72%", y: "70%", c: "var(--sage)", d: "0.8s" },
-            ].map((b, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  left: b.x,
-                  top: b.y,
-                  width: b.s,
-                  height: b.s,
-                  borderRadius: "50%",
-                  background: b.c,
-                  opacity: 0.2,
-                  animation: `floatY 5s ease-in-out infinite`,
-                  animationDelay: b.d,
-                  pointerEvents: "none",
-                }}
-              />
-            ))}
-
             <div
               style={{
                 textAlign: "center",
                 position: "relative",
                 zIndex: 1,
-                padding: "0 48px",
-                maxWidth: 780,
+                padding: "0 clamp(16px,5vw,48px)",
+                maxWidth: 720,
+                width: "100%",
               }}
             >
-              <div className="s1 label" style={{ color: "var(--rose)" }}>
+              <div
+                className="s1 label"
+                style={{ color: isDark ? "var(--rose)" : "var(--lavender-d)" }}
+              >
                 Ready to start?
               </div>
 
               <h2
                 className="s2"
                 style={{
-                  fontFamily: "'Playfair Display', serif",
-                  fontSize: "clamp(2.4rem, 6.5vw, 4.8rem)",
+                  fontFamily: "'Playfair Display',serif",
+                  fontSize: "clamp(2rem,7vw,4.4rem)",
                   fontWeight: 900,
-                  color: "var(--cream)",
+                  color: isDark ? "var(--cream)" : "var(--ink)",
                   lineHeight: 1.05,
-                  marginTop: 16,
-                  marginBottom: 18,
+                  marginTop: 14,
+                  marginBottom: 16,
+                  transition: "color 0.35s",
                 }}
               >
                 Your crochet journey
                 <br />
-                <span className="shimmer-text">starts here.</span>
+                <span className={isDark ? "shimmer-text" : "shimmer-lav"}>
+                  starts here.
+                </span>
               </h2>
 
               <p
                 className="s3"
                 style={{
-                  color: "rgba(253,248,242,0.55)",
-                  fontSize: "0.97rem",
+                  color: isDark
+                    ? "rgba(253,248,242,0.5)"
+                    : "rgba(80,60,90,0.6)",
+                  fontSize: "clamp(0.85rem,2vw,0.95rem)",
                   fontWeight: 300,
-                  lineHeight: 1.8,
-                  marginBottom: 36,
-                  maxWidth: 520,
-                  margin: "0 auto 36px",
+                  lineHeight: 1.78,
+                  maxWidth: 480,
+                  margin: "0 auto 28px",
+                  transition: "color 0.35s",
                 }}
               >
                 CozyStitch is where you find materials, follow tutorials, and
-                track your project progress. No prior experience needed — just
-                show up and start.
+                track your progress. No prior experience needed — just show up
+                and start.
               </p>
 
               <div
                 className="s4"
                 style={{
                   display: "flex",
-                  gap: 16,
+                  gap: 14,
                   justifyContent: "center",
                   flexWrap: "wrap",
-                  marginBottom: 44,
+                  marginBottom: 36,
                 }}
               >
                 <button
@@ -1587,7 +1326,7 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                   Shop now →
                 </button>
                 <button
-                  className="btn btn-ghost-light"
+                  className="btn btn-cta-outline"
                   onClick={handleBrowseKits}
                 >
                   Browse Kits
@@ -1595,10 +1334,10 @@ export function Home({ isAuthOpen = false }: HomeProps) {
               </div>
 
               <div
-                className="s5"
+                className="s5 cta-testimonials"
                 style={{
                   display: "flex",
-                  gap: 18,
+                  gap: 14,
                   justifyContent: "center",
                   flexWrap: "wrap",
                 }}
@@ -1611,17 +1350,24 @@ export function Home({ isAuthOpen = false }: HomeProps) {
                   },
                   { icon: "💬", text: "Technique support via community" },
                 ].map((item) => (
-                  <div key={item.text} className="testi">
-                    <div style={{ fontSize: "1.5rem", marginBottom: 10 }}>
+                  <div
+                    key={item.text}
+                    className="testi"
+                    style={{ maxWidth: 180, flex: "1 1 160px" }}
+                  >
+                    <div style={{ fontSize: "1.35rem", marginBottom: 8 }}>
                       {item.icon}
                     </div>
                     <p
                       style={{
-                        color: "rgba(253,248,242,0.75)",
-                        fontSize: "0.85rem",
+                        color: isDark
+                          ? "rgba(253,248,242,0.7)"
+                          : "rgba(80,60,90,0.75)",
+                        fontSize: "0.82rem",
                         fontWeight: 400,
-                        lineHeight: 1.6,
+                        lineHeight: 1.55,
                         margin: 0,
+                        transition: "color 0.35s",
                       }}
                     >
                       {item.text}
