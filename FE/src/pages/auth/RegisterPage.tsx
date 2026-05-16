@@ -72,9 +72,10 @@ export function RegisterPage() {
         password: form.password,
       });
       const { user } = useAuthStore.getState();
-      if (user?.roleId === "admin") navigate("/admin");
-      else if (user?.roleId === "staff") navigate("/staff");
-      else navigate("/");
+      if (!user || !user.roleId) navigate("/");
+      else if (user.roleId === "admin") navigate("/admin");
+      else if (user.roleId === "staff") navigate("/staff");
+      else navigate("/shop");
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       setError(

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   Mail,
   Lock,
@@ -13,16 +13,12 @@ import { useAuthStore } from "../../store/auth.store";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { login, isLoading } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
-  const from =
-    (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +30,10 @@ export function LoginPage() {
     try {
       await login(credentials);
       const { user } = useAuthStore.getState();
-      if (user?.roleId === "admin") navigate("/admin");
-      else if (user?.roleId === "staff") navigate("/staff");
-      else navigate(from);
+      if (!user || !user.roleId) navigate("/");
+      else if (user.roleId === "admin") navigate("/admin");
+      else if (user.roleId === "staff") navigate("/staff");
+      else navigate("/shop");
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       setError(
