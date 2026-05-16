@@ -1,8 +1,7 @@
-import { X, Package, Search, ChevronDown } from "lucide-react";
+import { Package, Search } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
-import { cn } from "../components/ui/utils";
 
 /* ── Category meta ── */
 const CATEGORY_META: Record<
@@ -48,492 +47,504 @@ export function Shop() {
     if (filters.search) return `No products found for "${filters.search}"`;
     if (filters.color.length > 0)    return "No products in the selected color";
     if (filters.material.length > 0) return "No products with the selected material";
+    if (filters.weight.length > 0)   return "No products in the selected weight";
     if (filters.difficulty.length > 0) return "No products at the selected difficulty";
-    return "No products match your filters";
+    return "No products found";
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap');
-
-        :root {
-          --rose:     #F2A7B2;
-          --blush:    #F9DDE2;
-          --sage:     #A8C5B5;
-          --sage-d:   #6FA08A;
-          --lavender: #C4B5E0;
-          --butter:   #F5E6A3;
-          --cream:    #FDF8F2;
-          --ink:      #2A2220;
-          --muted:    #7A6E6B;
-          --surface:  #FFFFFF;
-          --bdr:      rgba(42,34,32,0.10);
-        }
-        .dark {
-          --cream:   #17100E;
-          --ink:     #F0E8E4;
-          --muted:   #9A8480;
-          --surface: #211714;
-          --blush:   #3A2020;
-          --bdr:     rgba(200,120,100,0.14);
-        }
-
-        .shop-root {
-          min-height: 100vh;
-          background: var(--cream);
-          font-family: 'DM Sans', sans-serif;
+        /* ──── Top bar ──── */
+        .shop-top {
+          background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+          padding: 2.6rem 1.5rem 1.8rem;
           position: relative;
-          overflow-x: hidden;
-          transition: background 0.3s;
+          overflow: hidden;
+        }
+  .shop-top::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+          pointer-events: none;
         }
 
-        /* ── ambient decoration ── */
-        .shop-blob {
-          position: fixed; border-radius: 50%;
-          pointer-events: none; z-index: 0; filter: blur(90px);
-        }
-        .shop-mesh {
-          position: fixed; inset: 0; pointer-events: none; z-index: 0;
-          background-image:
-            linear-gradient(rgba(242,167,178,0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(242,167,178,0.05) 1px, transparent 1px);
-          background-size: 52px 52px;
+        .shop-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          position: relative;
+          z-index: 1;
         }
 
-        .shop-inner {
-          position: relative; z-index: 1;
-          max-width: 1280px; margin: 0 auto;
-          padding: 40px 24px 80px;
+        .shop-headline {
+          font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+          font-weight: 700;
+          color: #fff;
+          margin-bottom: 0.3rem;
+          letter-spacing: -0.02em;
+        }
+        .shop-subhead {
+          color: rgba(255,255,255,0.75);
+          font-size: 0.95rem;
+          font-weight: 400;
+          margin-bottom: 1.2rem;
         }
 
-        /* ── header ── */
-        .shop-label {
-          font-size: 0.7rem; font-weight: 500;
-          letter-spacing: 0.18em; text-transform: uppercase;
-          color: var(--rose); margin-bottom: 6px;
-          display: flex; align-items: center; gap: 6px;
+        /* ──── Search bar ──── */
+        .search-wrap {
+          position: relative;
+          max-width: 480px;
         }
-        .shop-title {
-          font-family: 'Playfair Display', serif;
-          font-size: clamp(1.8rem, 4vw, 2.8rem);
-          font-weight: 900; color: var(--ink); line-height: 1.1;
-          display: flex; align-items: center; gap: 12px;
-          margin-bottom: 4px; transition: color 0.3s;
+        .search-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: rgba(255,255,255,0.45);
+          pointer-events: none;
         }
-        .shop-title-count {
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.85rem; font-weight: 500;
-          background: var(--ink); color: var(--cream);
-          padding: 4px 12px; border-radius: 100px;
-          transition: background 0.3s, color 0.3s;
+        .search-input {
+          width: 100%;
+          padding: 11px 14px 11px 42px;
+          background: rgba(255,255,255,0.15);
+          border: 1.5px solid rgba(255,255,255,0.2);
+          border-radius: 100px;
+          outline: none;
+          font-family: inherit;
+          font-size: 0.9rem;
+          color: #fff;
+          transition: all 0.25s;
         }
-        .shop-desc {
-          color: var(--muted); font-size: 0.93rem;
-          font-weight: 300; line-height: 1.7;
-          max-width: 520px; margin-bottom: 28px;
-          transition: color 0.3s;
-        }
-
-        /* ── category tabs ── */
-        .cat-tabs {
-          display: flex; gap: 8px;
-          overflow-x: auto; padding-bottom: 4px;
-          margin-bottom: 20px;
-          scrollbar-width: none;
-        }
-        .cat-tabs::-webkit-scrollbar { display: none; }
-        .cat-tab {
-          display: flex; align-items: center; gap: 7px;
-          padding: 9px 18px; border-radius: 100px;
-          font-size: 0.87rem; font-weight: 500;
-          white-space: nowrap; cursor: pointer;
-          border: 1.5px solid transparent;
-          font-family: 'DM Sans', sans-serif;
-          transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
-        }
-        .cat-tab.active {
-          background: var(--ink); color: var(--cream);
-          border-color: var(--ink);
-        }
-        .cat-tab.inactive {
-          background: var(--surface); color: var(--ink);
-          border-color: var(--bdr);
-        }
-        .cat-tab.inactive:hover {
-          border-color: var(--rose);
-          background: var(--blush);
-        }
-        .cat-tab-count {
-          font-size: 0.75rem; opacity: 0.55; font-weight: 400;
+        .search-input::placeholder { color: rgba(255,255,255,0.45); }
+        .search-input:focus {
+          background: rgba(255,255,255,0.22);
+          border-color: rgba(255,255,255,0.4);
         }
 
-        /* ── toolbar ── */
-        .toolbar {
-          display: flex; gap: 10px; align-items: center;
-          margin-bottom: 14px; flex-wrap: wrap;
-        }
-        .search-pill {
-          flex: 1; min-width: 200px;
-          display: flex; align-items: center; gap: 10px;
-          background: var(--surface);
-          border: 1.5px solid var(--bdr);
-          border-radius: 100px; padding: 10px 18px;
-          transition: border-color 0.2s;
-        }
-        .search-pill:focus-within { border-color: var(--rose); }
-        .search-pill input {
-          border: none; background: transparent; outline: none;
-          font-size: 0.88rem; font-family: 'DM Sans', sans-serif;
-          color: var(--ink); width: 100%;
-        }
-        .search-pill input::placeholder { color: var(--muted); }
-        .sort-pill {
-          display: flex; align-items: center; gap: 8px;
-          background: var(--surface);
-          border: 1.5px solid var(--bdr);
-          border-radius: 100px; padding: 10px 18px;
-          font-size: 0.88rem; font-family: 'DM Sans', sans-serif;
-          color: var(--ink); cursor: pointer; white-space: nowrap;
-          transition: border-color 0.2s;
-        }
-        .sort-pill:hover { border-color: var(--rose); }
-        .sort-pill select {
-          border: none; background: transparent; outline: none;
-          font-size: 0.88rem; font-family: 'DM Sans', sans-serif;
-          color: var(--ink); cursor: pointer;
-          -webkit-appearance: none; padding-right: 2px;
+        /* ──── Body ──── */
+        .shop-body {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 1.5rem;
+          display: grid;
+          grid-template-columns: 240px 1fr;
+          gap: 1.5rem;
         }
 
-        /* ── filter chips row ── */
-        .filter-strip {
-          display: flex; align-items: center;
-          flex-wrap: wrap; gap: 6px;
-          margin-bottom: 16px; min-height: 32px;
+        @media (max-width: 820px) {
+          .shop-body {
+            grid-template-columns: 1fr;
+          }
         }
-        .filter-group-label {
-          font-size: 0.72rem; color: var(--muted);
-          font-weight: 500; letter-spacing: 0.06em;
-          text-transform: uppercase; margin-right: 2px;
-          flex-shrink: 0;
-        }
-        .active-chip {
-          display: inline-flex; align-items: center; gap: 5px;
-          background: var(--blush); color: #7A2233;
-          font-size: 0.78rem; font-weight: 500;
-          padding: 5px 8px 5px 12px; border-radius: 100px;
-          transition: background 0.2s;
-        }
-        .dark .active-chip { background: #3A2020; color: var(--rose); }
-        .active-chip:hover { background: #F5C6C6; }
-        .chip-x {
-          width: 16px; height: 16px; border-radius: 50%;
-          background: rgba(122,34,51,0.15); color: #7A2233;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 10px; cursor: pointer; flex-shrink: 0;
-          transition: background 0.15s;
-        }
-        .chip-x:hover { background: rgba(122,34,51,0.28); }
 
-        /* ── secondary filter pills (color / material) ── */
+        /* ──── Sidebar filters ──── */
         .filter-panel {
-          display: flex; flex-wrap: wrap; gap: 8px;
-          margin-bottom: 16px;
-        }
-        .filter-pill {
-          display: flex; align-items: center; gap: 6px;
-          padding: 7px 14px; border-radius: 100px;
-          font-size: 0.82rem; font-weight: 500;
-          font-family: 'DM Sans', sans-serif;
-          background: var(--surface); color: var(--ink);
-          border: 1.5px solid var(--bdr); cursor: pointer;
-          transition: all 0.18s;
-        }
-        .filter-pill.on {
-          background: #2A2220; color: var(--cream);
-          border-color: #2A2220;
-        }
-        .filter-pill:not(.on):hover {
-          border-color: var(--rose); background: var(--blush);
-        }
-        .filter-pill .swatch {
-          width: 10px; height: 10px; border-radius: 50%;
-          border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0;
+          background: var(--card-bg, var(--card));
+          border-radius: 16px;
+          border: 1px solid var(--border);
+          padding: 1.2rem;
+          height: fit-content;
+          position: sticky;
+          top: 6rem;
         }
 
-        /* ── results bar ── */
-        .results-bar {
-          display: flex; align-items: center;
+        .filter-header {
+          display: flex;
+          align-items: center;
           justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: 0.8rem;
+        }
+        .filter-title {
+          font-weight: 600;
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--foreground);
+        }
+        .filter-clear {
+          font-size: 0.75rem;
+          color: var(--primary);
+          background: none;
+          border: none;
+          cursor: pointer;
+          text-decoration: underline;
+          padding: 0;
+        }
+        .filter-group { margin-bottom: 1rem; }
+        .filter-group-label {
+          font-size: 0.78rem;
+          font-weight: 500;
+          color: var(--muted-foreground);
+          display: block;
+          margin-bottom: 0.4rem;
+        }
+        .filter-chip-group {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+        .chip-filter {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 5px 10px;
+          border-radius: 20px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          border: 1px solid var(--border);
+          background: var(--card);
+          color: var(--foreground);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .chip-filter:hover {
+          border-color: var(--primary);
+          background: var(--primary-foreground);
+        }
+        .chip-filter.active {
+          background: var(--primary);
+          color: var(--primary-foreground);
+          border-color: var(--primary);
+        }
+
+        /* ──── Price range ──── */
+        .price-inputs {
+          display: flex;
+          gap: 6px;
+          align-items: center;
+        }
+        .price-input {
+          width: 100%;
+          padding: 6px 8px;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--card);
+          font-size: 0.8rem;
+          color: var(--foreground);
+          outline: none;
+        }
+        .price-input:focus { border-color: var(--primary); }
+        .price-sep { color: var(--muted-foreground); font-size: 0.75rem; }
+
+        /* ──── Sort dropdown ──── */
+        .sort-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+        }
+        .sort-select {
+          padding: 6px 28px 6px 12px;
+          border-radius: 20px;
+          font-size: 0.82rem;
+          border: 1px solid var(--border);
+          background: var(--card);
+          color: var(--foreground);
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 8px center;
+          cursor: pointer;
+          outline: none;
+        }
+        .results-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          margin-bottom: 1rem;
+          gap: 0.5rem;
         }
         .results-count {
-          font-size: 0.82rem; color: var(--muted);
-          display: flex; align-items: center; gap: 7px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.85rem;
+          color: var(--muted-foreground);
         }
         .results-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: var(--sage-d); flex-shrink: 0;
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: var(--primary);
         }
-        .results-count strong { color: var(--ink); font-weight: 600; }
-        .clear-all-btn {
-          font-size: 0.78rem; color: var(--muted);
-          background: none; border: none; cursor: pointer;
-          font-family: 'DM Sans', sans-serif; padding: 4px 0;
-          text-decoration: underline; text-underline-offset: 3px;
-          transition: color 0.2s;
-        }
-        .clear-all-btn:hover { color: var(--ink); }
 
-        /* ── product grid ── */
+        /* ──── Grid ──── */
         .product-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 1rem;
+        }
+        @media (min-width: 600px) {
+          .product-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 820px) {
+          .product-grid { grid-template-columns: repeat(3, 1fr); }
         }
 
-        /* ── loading ── */
-        .shop-loading {
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          padding: 80px 0; gap: 16px;
+        /* ──── Active chips strip ──── */
+        .filter-strip {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-bottom: 0.8rem;
+          padding: 8px 0;
         }
-        .shop-spinner {
-          width: 36px; height: 36px; border-radius: 50%;
-          border: 2.5px solid var(--blush);
-          border-top-color: var(--rose);
-          animation: spin 0.8s linear infinite;
+        .active-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 4px 10px;
+          background: var(--primary);
+          color: var(--primary-foreground);
+          border-radius: 20px;
+          font-size: 0.78rem;
+          font-weight: 500;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .shop-loading p {
-          font-size: 0.88rem; color: var(--muted); font-weight: 300;
+        .chip-x {
+          cursor: pointer;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+          line-height: 1;
+          font-size: 1rem;
         }
+        .chip-x:hover { opacity: 1; }
 
-        /* ── empty state ── */
-        .empty-state {
-          text-align: center; padding: 80px 24px;
-          display: flex; flex-direction: column;
-          align-items: center; gap: 0;
-        }
-        .empty-icon {
-          width: 80px; height: 80px; border-radius: 24px;
-          background: linear-gradient(135deg, var(--blush), var(--lavender));
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 18px; position: relative;
-          transition: background 0.3s;
-        }
-        .empty-icon::after {
-          content: '✦'; position: absolute; top: -6px; right: -6px;
-          font-size: 13px; color: var(--rose);
-          animation: twinkle 2.5s ease-in-out infinite;
-        }
-        @keyframes twinkle {
-          0%,100% { opacity: 0.3; transform: scale(0.8); }
-          50%      { opacity: 1;   transform: scale(1.2); }
-        }
-        .empty-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 1.2rem; font-weight: 700;
-          color: var(--ink); margin-bottom: 8px;
-          transition: color 0.3s;
-        }
-        .empty-desc {
-          color: var(--muted); font-size: 0.88rem;
-          font-weight: 300; line-height: 1.7;
-          max-width: 340px; margin-bottom: 24px;
-          transition: color 0.3s;
-        }
-        .empty-btn {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: var(--ink); color: var(--cream);
-          padding: 12px 28px; border-radius: 100px; border: none;
-          cursor: pointer; font-family: 'DM Sans', sans-serif;
-          font-size: 0.88rem; font-weight: 500;
-          transition: transform 0.22s, box-shadow 0.22s, background 0.3s;
-        }
-        .empty-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 28px rgba(42,34,32,0.18);
-        }
-
-        /* ── pagination ── */
+        /* ──── Pagination ──── */
         .pagination {
-          display: flex; align-items: center;
-          justify-content: center; gap: 6px; margin-top: 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          margin-top: 2rem;
+          padding-bottom: 2rem;
         }
         .page-btn {
-          min-width: 38px; height: 38px; border-radius: 12px;
-          border: 1.5px solid var(--bdr);
-          background: var(--surface); color: var(--ink);
-          font-family: 'DM Sans', sans-serif;
-          font-size: 0.87rem; font-weight: 500;
-          cursor: pointer; padding: 0 12px;
-          display: inline-flex; align-items: center; justify-content: center;
-          transition: all 0.18s cubic-bezier(0.16,1,0.3,1);
+          min-width: 36px; height: 36px;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          border: 1px solid var(--border);
+          background: var(--card);
+          color: var(--foreground);
+          cursor: pointer;
+          transition: all 0.2s;
         }
-        .page-btn:hover:not(:disabled) {
-          border-color: var(--rose);
-          transform: translateY(-1px);
-        }
+        .page-btn:hover { border-color: var(--primary); }
         .page-btn.active {
-          background: var(--ink); color: var(--cream);
-          border-color: var(--ink);
+          background: var(--primary);
+          color: var(--primary-foreground);
+          border-color: var(--primary);
         }
-        .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .page-btn:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
 
-        @media (max-width: 640px) {
-          .shop-inner { padding: 24px 16px 60px; }
-          .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-          .shop-title { font-size: 1.6rem; }
-          .toolbar { gap: 8px; }
+        /* ──── Loader ──── */
+        .loading-dots {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 4rem 0;
+        }
+        .loading-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: var(--primary);
+          animation: dotPulse 0.8s ease-in-out infinite alternate;
+        }
+        .loading-dot:nth-child(2) { animation-delay: 0.15s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes dotPulse {
+          from { opacity: 0.25; transform: scale(0.8); }
+          to   { opacity: 1; transform: scale(1.2); }
         }
       `}</style>
 
-      <div className="shop-root">
-        <div className="shop-mesh" />
-        <div className="shop-blob" style={{ width: 480, height: 480, background: "var(--blush)", opacity: 0.4, top: "-10%", right: "-8%" }} />
-        <div className="shop-blob" style={{ width: 300, height: 300, background: "var(--lavender)", opacity: 0.2, bottom: "10%", left: "-6%" }} />
-        <div className="shop-blob" style={{ width: 180, height: 180, background: "var(--sage)", opacity: 0.15, top: "40%", left: "42%" }} />
+      {/* ──── TOP BAR ──── */}
+      <div className="shop-top">
+        <div className="shop-container">
+          <div className="shop-headline">
+            {meta.emoji} {meta.label}
+          </div>
+          <div className="shop-subhead">
+            {meta.desc}
+          </div>
 
-        <div className="shop-inner">
+          {/* Search */}
+          <div className="search-wrap">
+            <Search size={17} className="search-icon" />
+            <input
+              className="search-input"
+              placeholder="Search products…"
+              value={filters.search}
+              onChange={(e) => updateFilter("search", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
 
-          {/* ── Header ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="shop-label">✦ CozyStitch Store</div>
-            <div className="shop-title">
-              <span style={{ fontSize: "1.4rem" }}>{meta.emoji}</span>
-              {meta.label}
-              <span className="shop-title-count">{resultCount} items</span>
+      {/* ──── BODY ──── */}
+      <div className="shop-body">
+        {/* ──── Sidebar ──── */}
+        <aside className="filter-panel">
+          <div className="filter-header">
+            <span className="filter-title">Filters</span>
+            {hasActiveFilters && (
+              <button className="filter-clear" onClick={clearFilters}>
+                Clear all
+              </button>
+            )}
+          </div>
+
+          {/* Category */}
+          <div className="filter-group">
+            <span className="filter-group-label">Category</span>
+            <div className="filter-chip-group">
+              {Object.entries(CATEGORY_META).map(([key, cat]) => (
+                <button
+                  key={key}
+                  className={`chip-filter ${filters.category === key ? "active" : ""}`}
+                  onClick={() => updateFilter("category", key)}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
             </div>
-            <p className="shop-desc">{meta.desc}</p>
-          </motion.div>
+          </div>
 
-          {/* ── Category tabs ── */}
-          <motion.div
-            className="cat-tabs"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {(["all", "yarn", "kit", "tools"] as const).map((cat) => {
-              const m = CATEGORY_META[cat];
-              return (
-                <button
-                  key={cat}
-                  className={cn("cat-tab", filters.category === cat ? "active" : "inactive")}
-                  onClick={() => updateFilter("category", cat)}
-                >
-                  <span>{m.emoji}</span>
-                  {m.label}
-                </button>
-              );
-            })}
-          </motion.div>
+          {/* Color */}
+          {dynamicFilters.colors.length > 0 && (
+            <div className="filter-group">
+              <span className="filter-group-label">Color</span>
+              <div className="filter-chip-group">
+                {dynamicFilters.colors.map((c) => (
+                  <button
+                    key={c.name}
+                    className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("color", c.name)}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 10, height: 10,
+                        borderRadius: "50%",
+                        background: c.hex,
+                        border: "1px solid rgba(0,0,0,0.12)",
+                      }}
+                    />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-          {/* ── Toolbar: search + sort ── */}
-          <motion.div
-            className="toolbar"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.13, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="search-pill">
-              <Search size={14} color="var(--muted)" />
+          {/* Material */}
+          {dynamicFilters.materials.length > 0 && (
+            <div className="filter-group">
+              <span className="filter-group-label">Material</span>
+              <div className="filter-chip-group">
+                {dynamicFilters.materials.map((m) => (
+                  <button
+                    key={m.name}
+                    className={`chip-filter ${filters.material.includes(m.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("material", m.name)}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Weight */}
+          {dynamicFilters.weights.length > 0 && (
+            <div className="filter-group">
+              <span className="filter-group-label">Weight</span>
+              <div className="filter-chip-group">
+                {dynamicFilters.weights.map((w) => (
+                  <button
+                    key={w.name}
+                    className={`chip-filter ${filters.weight.includes(w.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("weight", w.name)}
+                  >
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Difficulty */}
+          {dynamicFilters.difficulties.length > 0 && (
+            <div className="filter-group">
+              <span className="filter-group-label">Difficulty</span>
+              <div className="filter-chip-group">
+                {dynamicFilters.difficulties.map((d) => (
+                  <button
+                    key={d.name}
+                    className={`chip-filter ${filters.difficulty.includes(d.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("difficulty", d.name)}
+                  >
+                    {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Price range */}
+          <div className="filter-group">
+            <span className="filter-group-label">Price range</span>
+            <div className="price-inputs">
               <input
-                type="text"
-                placeholder="Search products..."
-                value={filters.search}
-                onChange={(e) => updateFilter("search", e.target.value)}
+                className="price-input"
+                type="number"
+                placeholder="Min"
+                value={filters.minPrice || ""}
+                onChange={(e) => updateFilter("minPrice", Number(e.target.value))}
               />
-              {filters.search && (
-                <button
-                  onClick={() => updateFilter("search", "")}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
-                >
-                  <X size={14} color="var(--muted)" />
-                </button>
+              <span className="price-sep">–</span>
+              <input
+                className="price-input"
+                type="number"
+                placeholder="Max"
+                value={filters.maxPrice || ""}
+                onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
+              />
+            </div>
+          </div>
+        </aside>
+
+        {/* ──── Main content ──── */}
+        <div>
+          {/* Sort bar */}
+          <div className="sort-bar">
+            <div className="results-count">
+              <span className="results-dot" />
+              {!hasActiveFilters && resultCount === totalCount ? (
+                <span>All <strong>{totalCount}</strong> products</span>
+              ) : (
+                <span><strong>{resultCount}</strong> of {totalCount} products</span>
               )}
             </div>
 
-            <div className="sort-pill">
-              <ChevronDown size={14} color="var(--muted)" />
-              <select
-                value={filters.sort}
-                onChange={(e) => updateFilter("sort", e.target.value)}
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          </motion.div>
-
-          {/* ── Color filter pills ── */}
-          {filters.category === "yarn" && dynamicFilters.colors.length > 0 && (
-            <motion.div
-              className="filter-panel"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.16 }}
+            <select
+              className="sort-select"
+              value={filters.sort}
+              onChange={(e) => updateFilter("sort", e.target.value)}
             >
-              {dynamicFilters.colors.map((c) => (
-                <button
-                  key={c.name}
-                  className={cn("filter-pill", filters.color.includes(c.name) ? "on" : "")}
-                  onClick={() => toggleArrayFilter("color", c.name)}
-                >
-                  <span className="swatch" style={{ backgroundColor: c.hex }} />
-                  {c.name}
-                </button>
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
-            </motion.div>
-          )}
+            </select>
+          </div>
 
-          {/* ── Material filter pills ── */}
-          {filters.category === "yarn" && dynamicFilters.materials.length > 0 && (
-            <motion.div
-              className="filter-panel"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.18 }}
-            >
-              {dynamicFilters.materials.map((m) => (
-                <button
-                  key={m.name}
-                  className={cn("filter-pill", filters.material.includes(m.name) ? "on" : "")}
-                  onClick={() => toggleArrayFilter("material", m.name)}
-                >
-                  {m.name}
-                </button>
-              ))}
-            </motion.div>
-          )}
-
-          {/* ── Difficulty pills (kits) ── */}
-          {filters.category === "kit" && dynamicFilters.difficulties.length > 0 && (
-            <motion.div
-              className="filter-panel"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.18 }}
-            >
-              {dynamicFilters.difficulties.map((d) => (
-                <button
-                  key={d.name}
-                  className={cn("filter-pill", filters.difficulty.includes(d.name) ? "on" : "")}
-                  onClick={() => toggleArrayFilter("difficulty", d.name)}
-                >
-                  {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
-                </button>
-              ))}
-            </motion.div>
-          )}
-
-          {/* ── Active chips ── */}
+          {/* Active chips */}
           <AnimatePresence>
             {activeChips.length > 0 && (
               <motion.div
@@ -546,7 +557,7 @@ export function Shop() {
                 <span className="filter-group-label">Active:</span>
                 {activeChips.map((chip) => (
                   <motion.span
-                    key={chip.id}
+                    key={chip.value + chip.type}
                     className="active-chip"
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -554,134 +565,70 @@ export function Shop() {
                     transition={{ duration: 0.2 }}
                   >
                     {chip.label}
-                    <span className="chip-x" onClick={() => removeChip(chip)}>×</span>
+                    <span className="chip-x" onClick={() => removeChip(chip.type, chip.value)}>×</span>
                   </motion.span>
                 ))}
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ── Results bar ── */}
-          <div className="results-bar">
-            <div className="results-count">
-              <span className="results-dot" />
-              {!hasActiveFilters && resultCount === totalCount ? (
-                <span>All <strong>{totalCount}</strong> products</span>
-              ) : (
-                <span><strong>{resultCount}</strong> of <strong>{totalCount}</strong> products</span>
-              )}
-            </div>
-            {hasActiveFilters && (
-              <button className="clear-all-btn" onClick={clearFilters}>
-                Clear all ×
-              </button>
-            )}
-          </div>
-
-          {/* ── Content ── */}
+          {/* Products */}
           {isLoading ? (
-            <div className="shop-loading">
-              <div className="shop-spinner" />
-              <p>Loading your cozy finds...</p>
+            <div className="loading-dots">
+              <div className="loading-dot" />
+              <div className="loading-dot" />
+              <div className="loading-dot" />
             </div>
           ) : filteredProducts.length > 0 ? (
             <>
               <div className="product-grid">
-                {filteredProducts.map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.38,
-                      delay: (index % 8) * 0.05,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                  >
-                    <ProductCard product={product} />
-                  </motion.div>
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
-              {/* ── Pagination ── */}
+              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="pagination">
                   <button
                     className="page-btn"
-                    onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage <= 1}
+                    onClick={() => goToPage(currentPage - 1)}
                   >
-                    ← Prev
+                    ‹
                   </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  {Array.from({ length: totalPages }, (_, i) => (
                     <button
-                      key={page}
-                      className={cn("page-btn", currentPage === page && "active")}
-                      onClick={() => goToPage(page)}
+                      key={i + 1}
+                      className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
+                      onClick={() => goToPage(i + 1)}
                     >
-                      {page}
+                      {i + 1}
                     </button>
                   ))}
-
                   <button
                     className="page-btn"
-                    onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage >= totalPages}
+                    onClick={() => goToPage(currentPage + 1)}
                   >
-                    Next →
+                    ›
                   </button>
                 </div>
               )}
             </>
           ) : (
-            /* ── Empty state ── */
-            <motion.div
-              className="empty-state"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="empty-icon">
-                <Package size={32} color="var(--muted)" />
-              </div>
-              <div className="empty-title">{getEmptyStateMessage()}</div>
-              <p className="empty-desc">
-                Try adjusting your search, removing some filters, or browsing a different category.
-              </p>
-              {hasActiveFilters && (
-                <button className="empty-btn" onClick={clearFilters}>
-                  <X size={14} />
-                  Clear all filters
-                </button>
-              )}
-
-              {/* ── Browse other categories ── */}
-              {!hasActiveFilters && filters.category !== "all" && (
-                <div style={{ marginTop: 32, display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-                  {(["all", "yarn", "kit", "tools"] as const)
-                    .filter((c) => c !== filters.category)
-                    .map((cat) => {
-                      const m = CATEGORY_META[cat];
-                      return (
-                        <button
-                          key={cat}
-                          className="filter-pill"
-                          onClick={() => updateFilter("category", cat)}
-                          style={{ fontSize: "0.88rem", padding: "9px 20px" }}
-                        >
-                          <span>{m.emoji}</span>
-                          {m.label}
-                        </button>
-                      );
-                    })}
-                </div>
-              )}
-            </motion.div>
+            <div style={{
+              textAlign: "center",
+              padding: "4rem 1rem",
+              color: "var(--muted-foreground)",
+            }}>
+              <Package size={48} style={{ margin: "0 auto 1rem", opacity: 0.3 }} />
+              <p style={{ fontWeight: 500, marginBottom: 4 }}>{getEmptyStateMessage()}</p>
+              <p style={{ fontSize: "0.85rem" }}>Try adjusting your filters</p>
+            </div>
           )}
-
         </div>
       </div>
-    </>
+    </div>
   );
 }
