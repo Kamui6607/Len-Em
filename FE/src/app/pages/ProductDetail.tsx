@@ -338,27 +338,6 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
               </div>
             )}
 
-            {/* All variants color preview */}
-            {variantItems.length > 1 && (
-              <div className="space-y-2">
-                <span className="text-xs text-muted-foreground">
-                  All variants ({variantItems.length})
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {variantItems.map((v) => (
-                    <ColorSwatch
-                      key={v.id}
-                      color={v.color || "Default"}
-                      hexCode={v.hexCode || "#ccc"}
-                      isSelected={selectedVariant?.id === v.id}
-                      size="sm"
-                      onClick={() => handleVariantChange(v)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Add to Cart */}
             <div className="space-y-3 pt-2">
               <button
