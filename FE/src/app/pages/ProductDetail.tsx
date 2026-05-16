@@ -3,7 +3,6 @@ import { useParams, Link, useNavigate } from "react-router";
 import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
-import { ColorSwatch } from "../components/ColorSwatch";
 import { cn } from "../components/ui/utils";
 import type { ProductVariantUI } from "../components/ProductVariantSelector";
 
