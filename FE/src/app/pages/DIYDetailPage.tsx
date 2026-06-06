@@ -46,14 +46,6 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
     });
     toast.success(`${post.linkedCombo.name} added to cart`);
   };
-
-  const handleViewMaterialCombo = (event: React.MouseEvent) => {
-    if (!isAuthenticated) {
-      event.preventDefault();
-      navigate("/auth/login");
-    }
-  };
-
   const savePost = () => {
     const wasSaved = isDIYPostSaved(post.id);
     toggleDIYPostSave(post.id);

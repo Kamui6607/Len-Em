@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Heart, Menu, Palette, ShoppingBag, ShoppingCart, Sparkles, X } from "lucide-react";
+import { BookOpen, Heart, LogIn, Menu, Palette, ShoppingBag, ShoppingCart, Sparkles, UserPlus, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useFavorites } from "../context/FavoritesContext";
 import { ThemeToggle } from "./ThemeToggle";
@@ -22,6 +22,8 @@ const homeNavLinks = [
   { label: "LEARN", href: "/learn", icon: BookOpen, sectionId: "section-learn", protected: false },
   { label: "SHOP", href: "/shop", icon: ShoppingBag, sectionId: "section-shop", protected: true },
   { label: "DIY", href: "/diy", icon: Palette, sectionId: "section-diy", protected: false },
+  { label: "LOGIN", href: "/auth/login", icon: LogIn, protected: false },
+  { label: "REGISTER", href: "/auth/register", icon: UserPlus, protected: false },
 ];
 
 export function Navigation({ cartCount }: NavigationProps) {
@@ -91,7 +93,7 @@ export function Navigation({ cartCount }: NavigationProps) {
     return href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
   };
 
-  const navigateTo = (href: string, isProtected: boolean, sectionId?: string) => {
+  const navigateTo = (href: string, sectionId?: string) => {
     setIsMobileMenuOpen(false);
     if (isHomePage && sectionId) {
       scrollToSection(sectionId);
@@ -130,7 +132,7 @@ export function Navigation({ cartCount }: NavigationProps) {
               <button
                 key={item.href}
                 type="button"
-                onClick={() => navigateTo(item.href, item.protected, "sectionId" in item ? (item.sectionId as string) : undefined)}
+                onClick={() => navigateTo(item.href, "sectionId" in item ? (item.sectionId as string) : undefined)}
                 className={cn(
                   "relative flex items-center gap-2 px-4 py-2 text-sm font-bold tracking-[0.12em] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]",
                   active && "text-[var(--color-text)]",
@@ -207,7 +209,7 @@ export function Navigation({ cartCount }: NavigationProps) {
               <button
                 key={item.href}
                 type="button"
-                onClick={() => navigateTo(item.href, item.protected, "sectionId" in item ? (item.sectionId as string) : undefined)}
+                onClick={() => navigateTo(item.href, "sectionId" in item ? (item.sectionId as string) : undefined)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-bold text-[var(--color-text)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]",
                   isActive(item.href, "sectionId" in item ? (item.sectionId as string) : undefined) && "bg-[color-mix(in_srgb,var(--color-primary)_14%,transparent)] text-[var(--color-primary)]",
