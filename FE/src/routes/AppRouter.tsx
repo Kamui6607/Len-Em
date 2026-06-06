@@ -24,15 +24,30 @@ const Cart = lazy(() =>
 const Checkout = lazy(() =>
   import("../app/pages/Checkout").then((m) => ({ default: m.Checkout })),
 );
-const Community = lazy(() =>
-  import("../app/pages/Community").then((m) => ({ default: m.Community })),
+const DIYFeedPage = lazy(() =>
+  import("../app/pages/DIYFeedPage").then((m) => ({ default: m.DIYFeedPage })),
+);
+const DIYDetailPage = lazy(() =>
+  import("../app/pages/DIYDetailPage").then((m) => ({ default: m.DIYDetailPage })),
+);
+const DIYCreatePage = lazy(() =>
+  import("../app/pages/DIYCreatePage").then((m) => ({ default: m.DIYCreatePage })),
 );
 const Learn = lazy(() =>
-  import("../app/pages/Learn").then((m) => ({ default: m.Learn })),
+  import("../app/pages/LearnPage").then((m) => ({ default: m.LearnPage })),
 );
-const Kits = lazy(() =>
-  import("../app/pages/Kits").then((m) => ({ default: m.Kits })),
+const CourseDetailPage = lazy(() =>
+  import("../app/pages/CourseDetailPage").then((m) => ({
+    default: m.CourseDetailPage,
+  })),
 );
+const LessonPage = lazy(() =>
+  import("../app/pages/LessonPage").then((m) => ({ default: m.LessonPage })),
+);
+// [DEPRECATED - v1] Kits page is replaced by /shop?category=combo.
+// const Kits = lazy(() =>
+//   import("../app/pages/Kits").then((m) => ({ default: m.Kits })),
+// );
 const Profile = lazy(() =>
   import("../app/pages/Profile").then((m) => ({ default: m.Profile })),
 );
@@ -61,7 +76,7 @@ const RegisterPage = lazy(() =>
 
 interface AppRouterProps {
   cartItems: CartItem[];
-  onAddToCart: (productId: string) => void;
+  onAddToCart: (productId: string, metadata?: CartItem["metadata"]) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
@@ -92,76 +107,48 @@ export function AppRouter({
 }: AppRouterProps) {
   return (
     <Routes>
-      {/* ===== Home — standalone, no Navigation/Footer ===== */}
-      <Route
-        index
-        element={
-          <Suspense fallback={<LoadingFallback fullPage />}>
-            <Home />
-          </Suspense>
-        }
-      />
-      <Route
-        path="home"
-        element={
-          <Suspense fallback={<LoadingFallback fullPage />}>
-            <Home />
-          </Suspense>
-        }
-      />
+      {/* ===== Landing Page — Len&em entry point with StoreLayout ===== */}
+      <Route element={<StoreOutlet cartCount={cartCount} />}>
+        <Route index element={<Home />} />
 
-      {/* ===== Auth routes ===== */}
-      <Route
-        path="auth/login"
-        element={
-          <Suspense fallback={<LoadingFallback />}>
-            <LoginPage />
-          </Suspense>
-        }
-      />
-
-      <Route
-        path="/auth/register"
-        element={
-          <Suspense fallback={<LoadingFallback />}>
-            <RegisterPage />
-          </Suspense>
-        }
-      />
-
-      {/* ===== Store routes (with Navigation + Footer) ===== */}
-      <Route
-        element={
-          <StoreOutlet cartCount={cartCount} />
-        }
-      >
-        <Route path="community" element={<Community />} />
+        {/* ===== LEARN routes ===== */}
         <Route path="learn" element={<Learn />} />
+        <Route
+          path="learn/:courseId"
+          element={<CourseDetailPage onAddToCart={onAddToCart} />}
+        />
+        <Route
+          path="learn/:courseId/lesson/:lessonId"
+          element={
+            <RequireAuth>
+              <LessonPage onAddToCart={onAddToCart} />
+            </RequireAuth>
+          }
+        />
 
+        {/* ===== SHOP routes ===== */}
         <Route
           path="shop"
-          element={
-            <RequireAuth>
-              <Shop />
-            </RequireAuth>
-          }
+          element={<Shop onAddToCart={onAddToCart} />}
         />
         <Route
-          path="kits"
-          element={
-            <RequireAuth>
-              <Kits />
-            </RequireAuth>
-          }
+          path="shop/product/:id"
+          element={<ProductDetail onAddToCart={onAddToCart} />}
         />
+
+        {/* ===== DIY routes ===== */}
+        <Route path="diy" element={<DIYFeedPage onAddToCart={onAddToCart} />} />
         <Route
-          path="product/:id"
+          path="diy/create"
           element={
             <RequireAuth>
-              <ProductDetail onAddToCart={onAddToCart} />
+              <DIYCreatePage />
             </RequireAuth>
           }
         />
+        <Route path="diy/:postId" element={<DIYDetailPage onAddToCart={onAddToCart} />} />
+
+        {/* ===== Customer routes ===== */}
         <Route
           path="cart"
           element={
@@ -206,7 +193,46 @@ export function AppRouter({
             </RequireAuth>
           }
         />
+
+        {/* [DEPRECATED - v1] /home was the standalone v1 home route. */}
+        <Route path="home" element={<Home />} />
+        {/* [DEPRECATED - v1] /community is now /diy. */}
+        <Route path="community" element={<Navigate to="/diy" replace />} />
+        {/* [DEPRECATED - v1] /kits is now covered by /shop combo filters. */}
+        <Route path="kits" element={<Navigate to="/shop?category=combo" replace />} />
+        {/* [DEPRECATED - v1] /product/:id moved under /shop/product/:id. */}
+        <Route path="product/:id" element={<Navigate to="/shop" replace />} />
       </Route>
+
+      {/* ===== Auth routes ===== */}
+      <Route
+        path="auth/login"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LoginPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="auth/register"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <RegisterPage />
+          </Suspense>
+        }
+      />
+
+      {/* ===== Creator dashboard (no store navbar/footer) ===== */}
+      <Route
+        path="creator/*"
+        element={
+          <RequireRole allowedRoles={["creator"]}>
+            <Suspense fallback={<LoadingFallback fullPage />}>
+              <Profile />
+            </Suspense>
+          </RequireRole>
+        }
+      />
 
       {/* ===== Admin dashboard (no store navbar/footer) ===== */}
       <Route

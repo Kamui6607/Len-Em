@@ -1,90 +1,147 @@
 import { memo, useState } from "react";
-import { Link } from "react-router";
-import { Heart } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { Heart, ShoppingCart } from "lucide-react";
+import { motion } from "motion/react";
 import type { Product } from "../data/products";
 import { getBasePrice } from "../data/products";
 import { useFavorites } from "../context/FavoritesContext";
-import { motion } from "motion/react";
+import { useAuth } from "../../hooks/useAuth";
+import { Button } from "./ui/button";
+import { LevelBadge } from "./LevelBadge";
 
 interface ProductCardProps {
   product: Product;
+  onAddToCart?: (productId: string) => void;
+  relatedLessonId?: string;
+  relatedCourseId?: string;
 }
 
-export const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({
+  product,
+  onAddToCart,
+  relatedLessonId,
+  relatedCourseId,
+}: ProductCardProps) {
+  const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
 
-  const prices = product.variants?.map((v) => v.price) ?? [getBasePrice(product)];
+  const prices = product.variants?.map((variant) => variant.price) ?? [getBasePrice(product)];
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const hasPriceRange = minPrice !== maxPrice;
 
+  const formattedPrice = hasPriceRange
+    ? `$${minPrice.toFixed(2)} – $${maxPrice.toFixed(2)}`
+    : `$${minPrice.toFixed(2)}`;
+
+  const requireAuth = (action: () => void) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    action();
+  };
+
+  const handleAddClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    requireAuth(() => onAddToCart?.(product.id));
+  };
+
+  const handleProductClick = (event: React.MouseEvent) => {
+    if (!isAuthenticated) {
+      event.preventDefault();
+      navigate("/auth/login");
+    }
+  };
+
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      className="card-hover group overflow-hidden"
     >
-      <Link
-        to={`/product/${product.id}`}
-        className="group block bg-card rounded-2xl overflow-hidden border border-border hover:shadow-xl hover:border-primary/20 transition-all duration-300"
-      >
-        <div className="relative aspect-square overflow-hidden bg-muted">
+      <Link to={`/shop/product/${product.id}`} className="block" onClick={handleProductClick}>
+        <div className="relative aspect-square overflow-hidden bg-[var(--color-bg)]">
           <motion.div
-            animate={{ scale: isHovered ? 1.08 : 1 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full h-full"
+            animate={{ scale: isHovered ? 1.07 : 1 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full w-full"
           >
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+            <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
           </motion.div>
 
-          {/* Favorite button */}
           <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.preventDefault();
+            type="button"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={(event) => {
+              event.preventDefault();
               toggleFavorite(product.id);
             }}
-            className="absolute top-3 right-3 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+            className="absolute right-3 top-3 flex size-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg-card)_88%,transparent)] text-[var(--color-text-muted)] shadow-sm backdrop-blur-md transition-colors hover:text-[var(--color-primary)]"
+            aria-label={isFavorite(product.id) ? "Remove from favorites" : "Add to favorites"}
           >
             <Heart
-              className={`w-5 h-5 ${
+              className={
                 isFavorite(product.id)
-                  ? "fill-destructive text-destructive"
-                  : "text-muted-foreground"
-              }`}
+                  ? "size-5 fill-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "size-5"
+              }
             />
           </motion.button>
 
-          {/* Category badge */}
-          <span className="absolute bottom-3 left-3 text-[10px] font-medium bg-white/80 backdrop-blur-sm text-foreground px-2.5 py-1 rounded-full capitalize shadow-sm">
-            {product.category}
-          </span>
-        </div>
-
-        <div className="p-4 space-y-2">
-          <h3 className="font-medium text-foreground truncate text-base leading-tight">
-            {product.name}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-            {product.description}
-          </p>
-          <div className="flex items-center justify-between pt-1.5">
-            <span className="text-lg font-semibold text-primary">
-              {hasPriceRange
-                ? `$${minPrice.toFixed(2)} – $${maxPrice.toFixed(2)}`
-                : `$${minPrice.toFixed(2)}`}
+          <div className="absolute bottom-3 left-3 flex flex-wrap gap-2">
+            <LevelBadge level={product.difficulty} />
+            <span className="rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg-card)_88%,transparent)] px-3 py-1 text-xs font-bold capitalize text-[var(--color-text)] shadow-sm backdrop-blur-md">
+              {product.category}
             </span>
+            {relatedLessonId && relatedCourseId && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(`/learn/${relatedCourseId}/lesson/${relatedLessonId}`);
+                }}
+                className="rounded-full bg-[var(--color-primary)] px-3 py-1 text-xs font-bold text-white shadow-sm transition-transform hover:scale-[1.02]"
+              >
+                📹 In a lesson
+              </button>
+            )}
           </div>
         </div>
       </Link>
-    </motion.div>
+
+      <div className="space-y-3 p-4">
+        <Link to={`/shop/product/${product.id}`} className="block" onClick={handleProductClick}>
+          <h3 className="truncate text-base font-bold text-[var(--color-text)] transition-colors group-hover:text-[var(--color-primary)]">
+            {product.name}
+          </h3>
+          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+            {product.description}
+          </p>
+        </Link>
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <span className="font-heading text-xl font-bold text-[var(--color-primary)]">
+            {formattedPrice}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleAddClick}
+            className="rounded-full bg-[var(--color-primary)] px-4 font-bold text-white shadow-sm transition-transform hover:scale-[1.02] hover:bg-[var(--color-primary-light)]"
+            disabled={!onAddToCart}
+          >
+            <ShoppingCart className="size-4" />
+            Add
+          </Button>
+        </div>
+      </div>
+    </motion.article>
   );
 });

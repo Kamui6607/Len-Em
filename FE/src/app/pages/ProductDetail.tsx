@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router";
 import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
+import { useAuth } from "../../hooks/useAuth";
 import { cn } from "../components/ui/utils";
 import type { ProductVariantUI } from "../components/ProductVariantSelector";
 
@@ -29,7 +30,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
                 ? "fill-amber-400 text-amber-400"
                 : i < rating
                 ? "fill-amber-400/50 text-amber-400"
-                : "fill-muted text-muted-foreground"
+                : "fill-muted-foreground/20 text-muted-foreground/30"
             )}
           />
         ))}
@@ -44,6 +45,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
 export function ProductDetail({ onAddToCart }: ProductDetailProps) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const product = products.find((p) => p.id === id);
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantUI | null>(null);
@@ -75,8 +77,20 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
     setActiveImageIndex(0);
   }, []);
 
+  const requireAuth = (action: () => void) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    action();
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
     // Pass the variant-specific identifier if available
     const cartId = selectedVariant
       ? `${product.id}-${selectedVariant.id}`
@@ -132,14 +146,24 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
               />
               {/* Favorite button overlay */}
               <button
+                type="button"
                 title="Toggle favorite"
-                className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+                className="absolute top-4 right-4 w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
+                style={{
+                  background: "var(--card)",
+                  opacity: 0.9,
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
+                }}
               >
                 <Heart className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
               </button>
               {/* Color indicator on image */}
               {currentColor && selectedVariant?.hexCode && (
-                <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-sm">
+                <div
+                  className="absolute bottom-4 left-4 flex items-center gap-2 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-sm"
+                  style={{ background: "var(--card)", opacity: 0.9 }}
+                >
                   <span
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: selectedVariant.hexCode }}
@@ -154,6 +178,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {selectedVariant?.images?.map((img, idx) => (
                   <button
+                    type="button"
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
                     className={cn(
@@ -162,6 +187,10 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                         ? "border-primary"
                         : "border-border hover:border-primary/40"
                     )}
+                    style={{
+                      touchAction: "manipulation",
+                      WebkitTapHighlightColor: "transparent",
+                    }}
                   >
                     <img
                       src={img}
@@ -267,7 +296,13 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
 
             {/* Yarn-specific details */}
             {product.category === "yarn" && (
-              <div className="space-y-3 p-5 bg-muted/50 rounded-2xl border border-border/50">
+              <div
+                className="space-y-3 p-5 rounded-2xl"
+                style={{
+                  background: "color-mix(in srgb, var(--muted) 50%, transparent)",
+                  border: "1px solid var(--border)",
+                }}
+              >
                 <h3 className="text-sm font-medium">Yarn Specifications</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {product.material && (
@@ -300,7 +335,13 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
 
             {/* Kit-specific details */}
             {product.category === "kit" && (
-              <div className="space-y-3 p-5 bg-muted/50 rounded-2xl border border-border/50">
+              <div
+                className="space-y-3 p-5 rounded-2xl"
+                style={{
+                  background: "color-mix(in srgb, var(--muted) 50%, transparent)",
+                  border: "1px solid var(--border)",
+                }}
+              >
                 <h3 className="text-sm font-medium">Kit Details</h3>
                 {product.difficulty && (
                   <div className="flex items-center gap-2 text-sm">
@@ -340,19 +381,32 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
             {/* Add to Cart */}
             <div className="space-y-3 pt-2">
               <button
+                type="button"
                 onClick={handleAddToCart}
                 disabled={currentStock === 0}
                 className={cn(
-                  "w-full py-4 rounded-full flex items-center justify-center gap-2 text-base font-medium transition-all",
+                  "w-full min-h-11 py-4 rounded-full flex items-center justify-center gap-2 text-base font-medium transition-all",
                   currentStock > 0
                     ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md"
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
+                style={{
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
+                }}
               >
                 <ShoppingCart className="w-5 h-5" />
                 {currentStock > 0 ? "Add to Cart" : "Sold Out"}
               </button>
-              <button className="w-full bg-card text-foreground py-4 rounded-full border border-border hover:bg-muted transition-colors flex items-center justify-center gap-2">
+              <button
+                type="button"
+                className="w-full min-h-11 bg-card text-foreground py-4 rounded-full border border-border hover:bg-muted flex items-center justify-center gap-2"
+                style={{
+                  transition: "background 0.2s, border-color 0.2s",
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
                 <Heart className="w-5 h-5" />
                 Add to Wishlist
               </button>
@@ -389,7 +443,16 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   <Link
                     key={related.id}
                     to={`/product/${related.id}`}
-                    className="group bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg transition-all hover:border-primary/20"
+                    className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20"
+                    style={{
+                      boxShadow: "0 0 0 transparent",
+                    }}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.boxShadow = "0 14px 36px color-mix(in srgb, var(--primary) 8%, transparent)";
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.boxShadow = "0 0 0 transparent";
+                    }}
                   >
                     <div className="aspect-square overflow-hidden bg-muted">
                       <img

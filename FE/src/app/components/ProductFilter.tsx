@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLearnStore } from "../../store/learn.store";
 import { SearchBar } from "./shared/SearchBar";
 import { SortDropdown } from "./shared/SortDropdown";
 import { FilterDrawer, FilterToggleButton } from "./shared/FilterDrawer";
@@ -21,6 +22,7 @@ interface ProductFilterProps {
   ) => void;
   onClearFilters: () => void;
   onRemoveChip: (type: string, value: string) => void;
+  onLessonComboFilter?: (courseId: string) => void;
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -71,8 +73,10 @@ export function ProductFilter({
   onToggleFilter,
   onClearFilters,
   onRemoveChip,
+  onLessonComboFilter,
 }: ProductFilterProps) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const currentCourseId = useLearnStore((state) => state.currentCourseId);
 
   const isYarnCategory = filters.category === "yarn";
   const isKitCategory = filters.category === "kit";
@@ -85,8 +89,18 @@ export function ProductFilter({
     (isKitCategory && dynamicFilters.difficulties.length > 0);
 
   /* ── Inline filter panel ── */
-  const filterPanel = hasAnyFilter ? (
+  const filterPanel = hasAnyFilter || currentCourseId ? (
     <div className="pf-filter-stack">
+      {currentCourseId && onLessonComboFilter && (
+        <div className="pf-filter-row">
+          <button
+            className="pf-pill pf-pill-active"
+            onClick={() => onLessonComboFilter(currentCourseId)}
+          >
+            📚 Based on your current lesson
+          </button>
+        </div>
+      )}
       {/* Color row */}
       {isYarnCategory && dynamicFilters.colors.length > 0 && (
         <div className="pf-filter-row">
