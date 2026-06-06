@@ -77,14 +77,6 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
     setActiveImageIndex(0);
   }, []);
 
-  const requireAuth = (action: () => void) => {
-    if (!isAuthenticated) {
-      navigate("/auth/login");
-      return;
-    }
-    action();
-  };
-
   const handleAddToCart = () => {
     if (!product) return;
     if (!isAuthenticated) {

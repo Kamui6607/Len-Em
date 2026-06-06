@@ -1,6 +1,5 @@
-import { useRef } from "react";
 import { BookOpen, Check, Palette, ShoppingBag, Sparkles } from "lucide-react";
-import { motion, useInView } from "motion/react";
+import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
 
