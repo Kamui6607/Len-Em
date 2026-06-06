@@ -2,7 +2,7 @@
 // Auth Types — mirrors backend API contracts
 // ============================================================
 
-export type UserRole = "admin" | "staff" | "user";
+export type UserRole = "admin" | "staff" | "user" | "creator";
 
 export interface User {
   id: string;
@@ -46,6 +46,7 @@ export function mapRoleNameToUserRole(roleName: string): UserRole {
     Admin: "admin",
     Staff: "staff",
     User: "user",
+    Creator: "creator",
   };
   return roleMap[roleName] || "user";
 }

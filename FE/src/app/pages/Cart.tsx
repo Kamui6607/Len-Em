@@ -1,10 +1,16 @@
 import { Link, useNavigate } from "react-router";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { products } from "../data/products";
+import { learnLessons } from "../../features/learn/data/learn.mock";
 
 interface CartItem {
   productId: string;
   quantity: number;
+  metadata?: {
+    source?: "learn";
+    lessonId?: string;
+    courseId?: string;
+  };
 }
 
 interface CartProps {
@@ -45,6 +51,10 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
       price: selectedVariant?.price ?? 0,
       variantName: selectedVariant?.color ?? null,
       variantHex: selectedVariant?.hexCode ?? null,
+      metadata: item.metadata,
+      sourceLessonName: item.metadata?.source === "learn"
+        ? learnLessons.find((lesson) => lesson.id === item.metadata?.lessonId)?.title ?? null
+        : null,
     };
   })
   .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -113,6 +123,11 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                       >
                         <h4 className="truncate">{item.name}</h4>
                       </Link>
+                      {item.sourceLessonName && (
+                        <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          From lesson: {item.sourceLessonName}
+                        </span>
+                      )}
                       <button
                         onClick={() => onRemoveItem(item.cartId)}
                         className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"

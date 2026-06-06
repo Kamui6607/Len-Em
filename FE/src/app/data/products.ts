@@ -24,6 +24,7 @@ export interface Product {
   reviewCount: number;
   popularity: number;
   createdAt: string;
+  linkedComboIds?: string[];
   variants?: ProductVariant[];
 }
 
@@ -32,6 +33,7 @@ export const products: Product[] = [
     id: "1",
     name: "Soft Cotton Yarn - Blush Pink",
     category: "yarn",
+    linkedComboIds: ["combo-beginner-scarf", "combo-strawberry-case", "combo-daisy-top", "combo-bow-bag"],
     tags: ["cotton", "beginner-friendly", "soft", "breathable"],
     description: "Ultra-soft cotton yarn perfect for beginners. This gentle blush pink creates cozy, breathable pieces.",
     image: "https://images.unsplash.com/photo-1596536220107-16ea84ac5bcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -82,6 +84,7 @@ export const products: Product[] = [
     id: "2",
     name: "Rainbow Pastel Yarn Bundle",
     category: "yarn",
+    linkedComboIds: ["combo-pro-hat", "combo-bunny-hat", "combo-phone-charm", "combo-cloud-cardigan"],
     tags: ["bundle", "pastel", "multi-color", "gift"],
     description: "A dreamy collection of 6 pastel colors. Perfect for creating gradient projects or mix-and-match pieces.",
     image: "https://images.unsplash.com/photo-1678443087150-4a40aa2f250a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -108,6 +111,7 @@ export const products: Product[] = [
     id: "3",
     name: "Chunky Merino Wool - Sage Green",
     category: "yarn",
+    linkedComboIds: ["combo-promax-tote", "combo-sage-tote", "combo-checkerboard-blanket"],
     tags: ["wool", "chunky", "luxury", "warm"],
     description: "Luxuriously soft merino wool in a calming sage green. Ideal for quick, cozy projects.",
     image: "https://images.unsplash.com/photo-1649680579917-4cc253d7761b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -192,6 +196,7 @@ export const products: Product[] = [
     id: "5",
     name: "Beginner Crochet Hook Set",
     category: "tools",
+    linkedComboIds: ["combo-beginner-scarf", "combo-pro-hat", "combo-phone-charm"],
     tags: ["hooks", "set", "ergonomic", "starter"],
     description: "Complete set of ergonomic crochet hooks in all essential sizes. Designed for comfort during long crochet sessions.",
     image: "https://images.unsplash.com/photo-1682953745453-c537d3248028?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -213,6 +218,7 @@ export const products: Product[] = [
     id: "6",
     name: "Premium Bamboo Hook Set",
     category: "tools",
+    linkedComboIds: ["combo-beginner-scarf", "combo-pro-hat", "combo-bunny-hat"],
     tags: ["bamboo", "eco-friendly", "premium", "smooth"],
     description: "Eco-friendly bamboo hooks that are gentle on your hands. Smooth finish for effortless stitching.",
     image: "https://images.unsplash.com/photo-1620633437938-be73c35eb77e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -234,6 +240,7 @@ export const products: Product[] = [
     id: "7",
     name: "Cozy Blanket Starter Kit",
     category: "kit",
+    linkedComboIds: ["combo-beginner-scarf", "combo-promax-tote", "combo-scrunchie-set"],
     tags: ["blanket", "starter", "beginner", "complete"],
     description: "Everything you need to create your first chunky blanket. Includes yarn, hook, and step-by-step video tutorial.",
     image: "https://images.unsplash.com/photo-1649680748668-0ed757752dc8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -267,6 +274,7 @@ export const products: Product[] = [
     id: "8",
     name: "Cute Amigurumi Animals Kit",
     category: "kit",
+    linkedComboIds: ["combo-pro-hat", "combo-daisy-top"],
     tags: ["amigurumi", "animals", "cute", "gift", "beginner-friendly"],
     description: "Make adorable mini animals! Kit includes yarn in 6 colors, stuffing, safety eyes, and patterns for 3 animals.",
     image: "https://images.unsplash.com/photo-1630191631464-24a005b8cfda?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -290,6 +298,7 @@ export const products: Product[] = [
     id: "9",
     name: "Self-Care Scrunchie Kit",
     category: "kit",
+    linkedComboIds: ["combo-promax-tote", "combo-checkerboard-blanket", "combo-cloud-cardigan"],
     tags: ["scrunchie", "quick", "self-care", "gift", "beginner"],
     description: "Create trendy scrunchies for yourself or gifts! Quick project perfect for stress relief.",
     image: "https://images.unsplash.com/photo-1596536220107-16ea84ac5bcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
@@ -313,6 +322,7 @@ export const products: Product[] = [
     id: "10",
     name: "Alpaca Silk Fingering Yarn",
     category: "yarn",
+    linkedComboIds: ["combo-promax-tote", "combo-sage-tote", "combo-bow-bag"],
     tags: ["alpaca", "silk", "luxury", "fingering", "lace"],
     description: "Sumptuously soft alpaca and silk blend in a delicate fingering weight. Perfect for shawls and lightweight garments.",
     image: "https://images.unsplash.com/photo-1649680603092-b0edd0e5e2f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",

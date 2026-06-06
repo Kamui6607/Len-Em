@@ -10,6 +10,11 @@ import { AppRouter } from "../routes/AppRouter";
 export interface CartItem {
   productId: string;
   quantity: number;
+  metadata?: {
+    source?: "learn";
+    lessonId?: string;
+    courseId?: string;
+  };
 }
 
 export default function App() {
@@ -20,17 +25,24 @@ export default function App() {
     initialize();
   }, [initialize]);
 
-  const handleAddToCart = (productId: string) => {
+  const handleAddToCart = (productId: string, metadata?: CartItem["metadata"]) => {
     setCartItems((prev) => {
-      const existing = prev.find((item) => item.productId === productId);
+      const existing = prev.find(
+        (item) =>
+          item.productId === productId &&
+          item.metadata?.lessonId === metadata?.lessonId &&
+          item.metadata?.courseId === metadata?.courseId,
+      );
       if (existing) {
         return prev.map((item) =>
-          item.productId === productId
+          item.productId === productId &&
+          item.metadata?.lessonId === metadata?.lessonId &&
+          item.metadata?.courseId === metadata?.courseId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prev, { productId, quantity: 1 }];
+      return [...prev, { productId, quantity: 1, metadata }];
     });
   };
 

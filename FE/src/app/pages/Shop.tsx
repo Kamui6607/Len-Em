@@ -1,8 +1,15 @@
 import { Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
+import { products } from "../data/products";
+import { getLessonsByCourse, materialCombos } from "../../features/learn/data/learn.mock";
+import { useLearnStore } from "../../store/learn.store";
+import { useAuth } from "../../hooks/useAuth";
+import type { CartItem } from "../App";
 
 const CATEGORY_META: Record<string, { label: string; desc: string; emoji: string }> = {
   all:   { label: "All",      desc: "Everything you need to start your cozy crochet journey", emoji: "🛍️" },
@@ -19,7 +26,14 @@ const SORT_OPTIONS = [
   { value: "rating",     label: "Top rated"        },
 ];
 
-export function Shop() {
+interface ShopProps {
+  onAddToCart: (productId: string, metadata?: CartItem["metadata"]) => void;
+}
+
+export function Shop({ onAddToCart }: ShopProps) {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
   const {
     filters,
     filteredProducts,
@@ -39,7 +53,60 @@ export function Shop() {
   } = useProducts();
 
   const [filterOpen, setFilterOpen] = useState(false);
+  const [recommendationsDismissed, setRecommendationsDismissed] = useState(
+    () => localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true",
+  );
+  const [lessonFilterActive, setLessonFilterActive] = useState(false);
   const meta = CATEGORY_META[filters.category] ?? CATEGORY_META.all;
+  const currentCourseId = useLearnStore((state) => state.currentCourseId);
+  const currentLessonId = useLearnStore((state) => state.currentLessonId);
+
+  const requireAuth = (action: () => void) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    action();
+  };
+
+  const currentLessons = currentCourseId ? getLessonsByCourse(currentCourseId) : [];
+  const currentLesson = currentLessons.find((lesson) => lesson.id === currentLessonId) ?? null;
+  const currentCourseComboIds = useMemo(() => {
+    if (!currentCourseId) return [];
+    return materialCombos
+      .filter((combo) => currentLessons.some((lesson) =>
+        lesson.linkedProducts.some((linkedProduct) => combo.productIds.includes(linkedProduct.productId)),
+      ))
+      .map((combo) => combo.id);
+  }, [currentCourseId, currentLessons]);
+  const recommendedProducts = useMemo(() => {
+    if (!currentLesson) return [];
+    const lessonProductIds = currentLesson.linkedProducts.map((product) => product.productId);
+    return products.filter((product) => lessonProductIds.includes(product.id)).slice(0, 4);
+  }, [currentLesson]);
+  const displayedProducts = lessonFilterActive && currentCourseComboIds.length > 0
+    ? filteredProducts.filter((product) =>
+        product.linkedComboIds?.some((comboId) => currentCourseComboIds.includes(comboId)),
+      )
+    : filteredProducts;
+
+  const addLessonProductToCart = (productId: string) => {
+    onAddToCart(productId, currentCourseId && currentLessonId ? {
+      source: "learn",
+      courseId: currentCourseId,
+      lessonId: currentLessonId,
+    } : undefined);
+  };
+
+  const addAllLessonProducts = () => {
+    recommendedProducts.forEach((product) => addLessonProductToCart(product.id));
+    toast.success("Lesson materials added to cart");
+  };
+
+  const dismissRecommendations = () => {
+    localStorage.setItem("lenem_shop_learn_banner_dismissed", "true");
+    setRecommendationsDismissed(true);
+  };
 
   const getEmptyStateMessage = () => {
     if (filters.search) return `No products found for "${filters.search}"`;
@@ -58,6 +125,22 @@ export function Shop() {
           <button className="filter-clear" onClick={clearFilters}>Clear all</button>
         )}
       </div>
+
+      {/* Smart lesson filter */}
+      {currentCourseId && currentCourseComboIds.length > 0 && (
+        <div className="filter-group">
+          <button
+            className={`chip-filter ${lessonFilterActive ? "active" : ""}`}
+            onClick={() => {
+              setLessonFilterActive((active) => !active);
+              updateFilter("category", "all");
+              setFilterOpen(false);
+            }}
+          >
+            📚 Based on your current lesson
+          </button>
+        </div>
+      )}
 
       {/* Category */}
       <div className="filter-group">
@@ -342,7 +425,18 @@ export function Shop() {
         }
         .chip-x:hover { opacity: 1; }
 
-        /* ── Product grid ── */
+        .lesson-banner {
+          margin-bottom: 1rem;
+          border: 1px solid var(--color-border);
+          border-radius: 18px;
+          background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-card)), var(--color-bg-card));
+          padding: 1rem;
+          box-shadow: 0 12px 32px rgba(44,36,32,0.08);
+        }
+        .lesson-banner-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+        .lesson-banner-title { font-weight: 700; color: var(--color-text); }
+        .lesson-banner-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 0.75rem; }
+        @media (min-width: 768px) { .lesson-banner-grid { grid-template-columns: repeat(4, 1fr); } }
         .product-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -421,6 +515,39 @@ export function Shop() {
 
         {/* Main content */}
         <div>
+          {currentLesson && recommendedProducts.length > 0 && !recommendationsDismissed && (
+            <section className="lesson-banner">
+              <div className="lesson-banner-head">
+                <div>
+                  <p className="lesson-banner-title">
+                    🧶 Currently learning: {currentLesson.title} — Here are the materials you need:
+                  </p>
+                </div>
+                <button className="drawer-close" style={{ position: "static" }} onClick={dismissRecommendations} aria-label="Dismiss lesson recommendations">
+                  <X size={18} />
+                </button>
+              </div>
+              <button
+                onClick={() => requireAuth(addAllLessonProducts)}
+                className="chip-filter active"
+                style={{ marginBottom: "0.75rem" }}
+              >
+                Add all to cart
+              </button>
+              <div className="lesson-banner-grid">
+                {recommendedProducts.map((product) => (
+                  <ProductCard
+                    key={`lesson-${product.id}`}
+                    product={product}
+                    onAddToCart={addLessonProductToCart}
+                    relatedCourseId={currentCourseId ?? undefined}
+                    relatedLessonId={currentLessonId ?? undefined}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Sort bar */}
           <div className="sort-bar">
             <div className="sort-bar-left">
@@ -445,7 +572,7 @@ export function Shop() {
                 {!hasActiveFilters && resultCount === totalCount ? (
                   <span>All <strong>{totalCount}</strong> products</span>
                 ) : (
-                  <span><strong>{resultCount}</strong> of {totalCount}</span>
+                  <span><strong>{displayedProducts.length}</strong> of {totalCount}</span>
                 )}
               </div>
             </div>
@@ -496,11 +623,25 @@ export function Shop() {
               <div className="loading-dot" />
               <div className="loading-dot" />
             </div>
-          ) : filteredProducts.length > 0 ? (
+          ) : displayedProducts.length > 0 ? (
             <>
               <div className="product-grid">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {displayedProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={onAddToCart}
+                    relatedCourseId={
+                      currentCourseId && product.linkedComboIds?.some((comboId) => currentCourseComboIds.includes(comboId))
+                        ? currentCourseId
+                        : undefined
+                    }
+                    relatedLessonId={
+                      currentLessonId && currentLesson?.linkedProducts.some((linkedProduct) => linkedProduct.productId === product.id)
+                        ? currentLessonId
+                        : undefined
+                    }
+                  />
                 ))}
               </div>
 

@@ -1,666 +1,251 @@
-import { useState, useRef, useEffect } from "react";
-import { ShoppingCart, Heart, Menu, X } from "lucide-react";
-import { Link, useNavigate } from "react-router";
-import { useAuth } from "../../hooks/useAuth";
+import { useEffect, useState } from "react";
+import { BookOpen, Heart, Menu, Palette, ShoppingBag, ShoppingCart, Sparkles, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useFavorites } from "../context/FavoritesContext";
-import { UserMenu } from "./UserMenu";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
+import { Button } from "./ui/button";
+import { cn } from "./ui/utils";
 
 interface NavigationProps {
   cartCount: number;
 }
 
-const NAV_LINKS = [
-  { label: "Shop", href: "/shop", protected: true },
-  { label: "DIY Kits", href: "/kits", protected: true },
-  { label: "Community", href: "/community", protected: false },
-  { label: "Learn", href: "/learn", protected: false },
+const navLinks = [
+  { label: "LEARN", href: "/learn", icon: BookOpen, protected: false },
+  { label: "SHOP", href: "/shop", icon: ShoppingBag, protected: true },
+  { label: "DIY", href: "/diy", icon: Palette, protected: false },
 ];
 
-export function Navigation({
-  cartCount,
-}: NavigationProps) {
+const homeNavLinks = [
+  { label: "HOME", href: "/", icon: Sparkles, sectionId: "top", protected: false },
+  { label: "LEARN", href: "/learn", icon: BookOpen, sectionId: "section-learn", protected: false },
+  { label: "SHOP", href: "/shop", icon: ShoppingBag, sectionId: "section-shop", protected: true },
+  { label: "DIY", href: "/diy", icon: Palette, sectionId: "section-diy", protected: false },
+];
+
+export function Navigation({ cartCount }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("top");
+  const location = useLocation();
   const navigate = useNavigate();
-
-  const { isAuthenticated } = useAuth();
   const { favorites } = useFavorites();
+  const isHomePage = location.pathname === "/";
+  const displayedNavLinks = isHomePage ? homeNavLinks : navLinks;
 
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 8);
-
-    window.addEventListener("scroll", handleScroll, {
-      passive: true,
-    });
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-
-    if (isMobileMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+  const scrollToSection = (id: string) => {
+    if (id === "top") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
     }
 
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMobileMenuOpen]);
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!isHomePage) return;
+
+    const onScroll = () => {
+      if (window.scrollY < 260) setActiveSection("top");
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.find((entry) => entry.isIntersecting);
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { threshold: 0.4 },
+    );
+
+    ["section-learn", "section-shop", "section-diy"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [isHomePage]);
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
-
     return () => {
       document.body.style.overflow = "";
     };
   }, [isMobileMenuOpen]);
 
+  const isActive = (href: string, sectionId?: string) => {
+    if (isHomePage) return sectionId ? activeSection === sectionId : false;
+    return href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
+  };
+
+  const navigateTo = (href: string, isProtected: boolean, sectionId?: string) => {
+    setIsMobileMenuOpen(false);
+    if (isHomePage && sectionId) {
+      scrollToSection(sectionId);
+      return;
+    }
+    navigate(href);
+  };
+
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap');
-
-        .nav-root {
-          position: sticky;
-          top: 0;
-          z-index: 40;
-          font-family: 'DM Sans', sans-serif;
-        }
-
-        .nav-bar {
-          background: rgba(255, 249, 245, 0.88);
-          backdrop-filter: blur(16px) saturate(1.6);
-          -webkit-backdrop-filter: blur(16px) saturate(1.6);
-          border-bottom: 1px solid rgba(236, 180, 160, 0.22);
-
-          transition:
-            box-shadow 0.3s ease,
-            border-color 0.3s ease,
-            background 0.3s ease;
-        }
-
-        .nav-bar.scrolled {
-          box-shadow:
-            0 4px 32px rgba(200, 120, 90, 0.1),
-            0 1px 0 rgba(236, 180, 160, 0.3);
-
-          border-bottom-color: rgba(236, 180, 160, 0.4);
-        }
-
-        .dark .nav-bar {
-          background: rgba(22, 16, 14, 0.9);
-          border-bottom-color: rgba(160, 90, 70, 0.2);
-        }
-
-        .dark .nav-bar.scrolled {
-          box-shadow:
-            0 4px 32px rgba(0, 0, 0, 0.45),
-            0 1px 0 rgba(160, 90, 70, 0.3);
-
-          border-bottom-color: rgba(160, 90, 70, 0.35);
-        }
-
-        .nav-inner {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 24px;
-
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          height: 72px;
-        }
-
-        /* ───────────────── Logo ───────────────── */
-
-        .nav-logo {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-
-          text-decoration: none;
-          flex-shrink: 0;
-
-          transition: transform 0.25s ease;
-        }
-
-        .nav-logo:hover {
-          transform: translateY(-1px);
-        }
-
-        .nav-logo-icon {
-          width: 56px;
-          height: 56px;
-
-          border-radius: 50%;
-          overflow: hidden;
-          position: relative;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(255,255,255,0.9),
-              rgba(255,245,240,0.85)
-            );
-
-          border: 2px solid rgba(232, 153, 122, 0.25);
-
-          box-shadow:
-            0 4px 18px rgba(212, 117, 106, 0.22),
-            0 2px 6px rgba(0,0,0,0.04);
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          transition:
-            transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-            box-shadow 0.35s ease,
-            border-color 0.3s ease;
-        }
-
-        .nav-logo-icon::before {
-          content: "";
-          position: absolute;
-          inset: -3px;
-
-          border-radius: 50%;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(232,153,122,0.35),
-              rgba(212,117,106,0.15),
-              rgba(255,192,203,0.28)
-            );
-
-          z-index: -1;
-          opacity: 0;
-
-          transition: opacity 0.3s ease;
-        }
-
-        .nav-logo:hover .nav-logo-icon {
-          transform:
-            rotate(-5deg)
-            scale(1.08);
-
-          box-shadow:
-            0 10px 28px rgba(212,117,106,0.35),
-            0 4px 10px rgba(0,0,0,0.08);
-
-          border-color: rgba(232, 153, 122, 0.5);
-        }
-
-        .nav-logo:hover .nav-logo-icon::before {
-          opacity: 1;
-        }
-
-        .nav-logo-img {
-          width: 100%;
-          height: 100%;
-
-          object-fit: cover;
-
-          transition:
-            transform 0.4s ease,
-            filter 0.3s ease;
-        }
-
-        .nav-logo:hover .nav-logo-img {
-          transform: scale(1.06);
-        }
-
-        .nav-logo-text {
-          font-family: 'Playfair Display', serif;
-          font-size: 1.4rem;
-          font-weight: 600;
-
-          color: #2A1A14;
-
-          letter-spacing: -0.02em;
-          line-height: 1;
-
-          transition:
-            color 0.3s ease,
-            transform 0.25s ease;
-        }
-
-        .nav-logo:hover .nav-logo-text {
-          color: #C1604E;
-        }
-
-        .dark .nav-logo-text {
-          color: #F5EDE8;
-        }
-
-        .dark .nav-logo:hover .nav-logo-text {
-          color: #F0C4B0;
-        }
-
-        .dark .nav-logo-icon {
-          background:
-            linear-gradient(
-              135deg,
-              rgba(35,25,22,0.95),
-              rgba(28,18,16,0.9)
-            );
-
-          border-color: rgba(232,153,122,0.18);
-
-          box-shadow:
-            0 6px 22px rgba(0,0,0,0.45);
-        }
-
-        /* ───────────────── Desktop Links ───────────────── */
-
-        .nav-links {
-          display: none;
-          align-items: center;
-          gap: 4px;
-        }
-
-        @media (min-width: 768px) {
-          .nav-links {
-            display: flex;
-          }
-        }
-
-        .nav-link {
-          position: relative;
-
-          display: inline-flex;
-          align-items: center;
-
-          padding: 8px 14px;
-
-          border-radius: 10px;
-
-          font-size: 0.9rem;
-          font-weight: 400;
-
-          color: #5A3E35;
-
-          text-decoration: none;
-          background: transparent;
-          border: none;
-
-          cursor: pointer;
-
-          transition:
-            color 0.18s,
-            background 0.18s;
-        }
-
-        .nav-link::after {
-          content: '';
-
-          position: absolute;
-
-          bottom: 4px;
-          left: 14px;
-          right: 14px;
-
-          height: 1.5px;
-
-          background:
-            linear-gradient(
-              90deg,
-              #E8997A,
-              #D4756A
-            );
-
-          border-radius: 2px;
-
-          transform: scaleX(0);
-          transform-origin: left;
-
-          transition:
-            transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .nav-link:hover {
-          color: #C1604E;
-          background: rgba(232, 153, 122, 0.08);
-        }
-
-        .nav-link:hover::after {
-          transform: scaleX(1);
-        }
-
-        .dark .nav-link {
-          color: #C8A99A;
-        }
-
-        .dark .nav-link:hover {
-          color: #F0C4B0;
-          background: rgba(232, 153, 122, 0.1);
-        }
-
-        /* ───────────────── Actions ───────────────── */
-
-        .nav-actions {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .nav-icon-btn {
-          position: relative;
-
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-
-          width: 40px;
-          height: 40px;
-
-          border-radius: 12px;
-
-          color: #5A3E35;
-
-          background: transparent;
-          border: none;
-
-          cursor: pointer;
-
-          transition:
-            color 0.18s,
-            background 0.18s,
-            transform 0.15s;
-
-          text-decoration: none;
-        }
-
-        .nav-icon-btn:hover {
-          color: #C1604E;
-          background: rgba(232, 153, 122, 0.1);
-          transform: translateY(-1px);
-        }
-
-        .dark .nav-icon-btn {
-          color: #C8A99A;
-        }
-
-        .dark .nav-icon-btn:hover {
-          color: #F0C4B0;
-          background: rgba(232, 153, 122, 0.12);
-        }
-
-        .nav-badge {
-          position: absolute;
-
-          top: 2px;
-          right: 2px;
-
-          min-width: 17px;
-          height: 17px;
-
-          padding: 0 4px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #E8997A,
-              #C1604E
-            );
-
-          color: white;
-
-          font-size: 10px;
-          font-weight: 600;
-
-          border-radius: 999px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .nav-divider {
-          width: 1px;
-          height: 22px;
-
-          background: rgba(232, 153, 122, 0.25);
-
-          margin: 0 2px;
-        }
-
-        .dark .nav-divider {
-          background: rgba(160, 90, 70, 0.25);
-        }
-
-        .btn-signin,
-        .btn-signup {
-          display: none;
-        }
-
-        @media (min-width: 640px) {
-          .btn-signin,
-          .btn-signup {
-            display: flex;
-            align-items: center;
-          }
-        }
-
-        .btn-signin {
-          padding: 8px 16px;
-
-          font-size: 0.85rem;
-          font-weight: 500;
-
-          color: #5A3E35;
-
-          background: transparent;
-
-          border: 1.5px solid rgba(232, 153, 122, 0.3);
-          border-radius: 10px;
-
-          cursor: pointer;
-
-          transition: all 0.18s;
-        }
-
-        .btn-signin:hover {
-          border-color: rgba(193, 96, 78, 0.5);
-          background: rgba(232, 153, 122, 0.06);
-          color: #C1604E;
-        }
-
-        .btn-signup {
-          padding: 8px 18px;
-
-          font-size: 0.85rem;
-          font-weight: 500;
-
-          color: white;
-
-          background:
-            linear-gradient(
-              135deg,
-              #E8997A,
-              #C1604E
-            );
-
-          border: none;
-          border-radius: 10px;
-
-          cursor: pointer;
-
-          box-shadow:
-            0 2px 10px rgba(193, 96, 78, 0.3);
-
-          transition: all 0.18s;
-        }
-
-        .btn-signup:hover {
-          transform: translateY(-1px);
-
-          box-shadow:
-            0 4px 18px rgba(193, 96, 78, 0.4);
-        }
-
-        /* mobile button */
-
-        .nav-hamburger {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          width: 40px;
-          height: 40px;
-
-          border-radius: 12px;
-
-          background: transparent;
-          border: none;
-
-          color: #5A3E35;
-
-          cursor: pointer;
-        }
-
-        @media (min-width: 768px) {
-          .nav-hamburger {
-            display: none;
-          }
-        }
-      `}</style>
-
-      <nav className="nav-root">
-        <div className={`nav-bar${scrolled ? " scrolled" : ""}`}>
-          <div className="nav-inner">
-            {/* LOGO */}
-            <Link to="/shop" className="nav-logo">
-              <div className="nav-logo-icon">
-                <img
-                  src="/yarn-shop-2-removebg-preview.svg"
-                  alt="Yarn Shop"
-                  className="nav-logo-img"
-                />
-              </div>
-
-              <span className="nav-logo-text">Yarn Shop</span>
-            </Link>
-
-            {/* LINKS */}
-            <div className="nav-links">
-              {NAV_LINKS.map(({ label, href, protected: isProtected }) =>
-                isProtected && !isAuthenticated ? (
-                  <button
-                    key={label}
-                    className="nav-link"
-                    onClick={() => navigate("/auth/login")}
-                  >
-                    {label}
-                  </button>
-                ) : (
-                  <Link key={label} to={href} className="nav-link">
-                    {label}
-                  </Link>
-                )
-              )}
-            </div>
-
-            {/* ACTIONS */}
-            <div className="nav-actions">
-              {isAuthenticated && (
-                <Link
-                  to="/love"
-                  className="nav-icon-btn"
-                  aria-label="Favourites"
-                >
-                  <Heart size={18} />
-
-                  {favorites.length > 0 && (
-                    <span className="nav-badge">
-                      {favorites.length}
-                    </span>
-                  )}
-                </Link>
-              )}
-
-              <Link
-                to="/cart"
-                className="nav-icon-btn"
-                aria-label="Cart"
-              >
-                <ShoppingCart size={18} />
-
-                {cartCount > 0 && (
-                  <span className="nav-badge">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-
-              {isAuthenticated ? (
-                <>
-                  <div className="nav-divider" />
-                  <UserMenu />
-                  <ThemeToggle size="sm" />
-                </>
-              ) : (
-                <>
-                  <div className="nav-divider" />
-
-                  <ThemeToggle size="sm" />
-
-                  <button
-                    className="btn-signin"
-                    onClick={() => navigate("/auth/login")}
-                  >
-                    Sign In
-                  </button>
-
-                  <button
-                    className="btn-signup"
-                    onClick={() => navigate("/auth/login")}
-                  >
-                    Sign Up
-                  </button>
-                </>
-              )}
-
-              <button
-                className="nav-hamburger"
-                onClick={() =>
-                  setIsMobileMenuOpen(!isMobileMenuOpen)
-                }
-              >
-                {isMobileMenuOpen ? (
-                  <X size={20} />
-                ) : (
-                  <Menu size={20} />
-                )}
-              </button>
-            </div>
+    <header
+      className={cn(
+        "sticky top-0 z-50 border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_88%,transparent)] backdrop-blur-xl transition-shadow duration-300",
+        scrolled && "shadow-[0_12px_34px_rgba(44,36,32,0.08)]",
+      )}
+    >
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="group flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-lg font-bold text-white shadow-[0_10px_24px_rgba(196,94,62,0.28)] transition-transform group-hover:-translate-y-0.5">
+            L
           </div>
+          <div className="leading-none">
+            <p className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
+              Len<span className="text-[var(--color-primary)]">&</span>em
+            </p>
+            <p className="hidden text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-text-muted)] sm:block">
+              Learn • Buy • Create
+            </p>
+          </div>
+        </Link>
+
+        <nav className="hidden items-center gap-2 md:flex">
+          {displayedNavLinks.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href, "sectionId" in item ? (item.sectionId as string) : undefined);
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => navigateTo(item.href, item.protected, "sectionId" in item ? (item.sectionId as string) : undefined)}
+                className={cn(
+                  "relative flex items-center gap-2 px-4 py-2 text-sm font-bold tracking-[0.12em] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]",
+                  active && "text-[var(--color-text)]",
+                )}
+              >
+                <Icon className="size-4" />
+                {item.label}
+                <span
+                  className={cn(
+                    "absolute inset-x-4 -bottom-2 h-[3px] origin-left rounded-full bg-[var(--color-primary)] transition-transform duration-200",
+                    active ? "scale-x-100" : "scale-x-0",
+                  )}
+                />
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="hidden items-center gap-2 md:flex">
+          <Button asChild variant="ghost" size="icon" className="relative rounded-full text-[var(--color-text)]">
+            <Link to="/love" aria-label="Favorites">
+              <Heart className="size-5" />
+              {favorites.length > 0 && <Counter>{favorites.length}</Counter>}
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon" className="relative rounded-full text-[var(--color-text)]">
+            <Link to="/cart" aria-label="Cart">
+              <ShoppingCart className="size-5" />
+              {cartCount > 0 && <Counter>{cartCount}</Counter>}
+            </Link>
+          </Button>
+          <ThemeToggle />
+          <UserMenu />
         </div>
-      </nav>
-    </>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="rounded-full text-[var(--color-text)] md:hidden"
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="size-6" />
+        </Button>
+      </div>
+
+      <div
+        className={cn(
+          "fixed inset-0 z-50 bg-black/35 opacity-0 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none",
+        )}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+      <aside
+        className={cn(
+          "fixed right-0 top-0 z-50 h-dvh w-[82vw] max-w-sm border-l border-[var(--color-border)] bg-[var(--color-bg)] p-5 shadow-2xl transition-transform duration-300 ease-out md:hidden",
+          isMobileMenuOpen ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <div className="mb-8 flex items-center justify-between">
+          <p className="font-heading text-2xl font-bold text-[var(--color-text)]">
+            Len<span className="text-[var(--color-primary)]">&</span>em
+          </p>
+          <Button type="button" variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+            <X className="size-5" />
+          </Button>
+        </div>
+
+        <nav className="space-y-2">
+          {displayedNavLinks.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => navigateTo(item.href, item.protected, "sectionId" in item ? (item.sectionId as string) : undefined)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-bold text-[var(--color-text)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]",
+                  isActive(item.href, "sectionId" in item ? (item.sectionId as string) : undefined) && "bg-[color-mix(in_srgb,var(--color-primary)_14%,transparent)] text-[var(--color-primary)]",
+                )}
+              >
+                <Icon className="size-5" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="mt-8 grid grid-cols-2 gap-3">
+          <Button asChild variant="outline" className="rounded-full">
+            <Link to="/love" onClick={() => setIsMobileMenuOpen(false)}>Saved ({favorites.length})</Link>
+          </Button>
+          <Button asChild className="rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)]">
+            <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)}>Cart ({cartCount})</Link>
+          </Button>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between rounded-2xl border border-[var(--color-border)] p-3">
+          <span className="text-sm font-bold text-[var(--color-text-muted)]">Theme</span>
+          <ThemeToggle />
+        </div>
+
+        <div className="mt-4">
+          <UserMenu />
+        </div>
+      </aside>
+    </header>
+  );
+}
+
+function Counter({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] font-bold text-white">
+      {children}
+    </span>
   );
 }
