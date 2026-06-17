@@ -99,30 +99,30 @@ const initialUsers: AdminUser[] = [
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AdminUser[]>(() => {
-    const saved = localStorage.getItem("cozyStitch_users");
+    const saved = localStorage.getItem("lenEm_users");
     return saved ? JSON.parse(saved) : initialUsers;
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem("cozyStitch_orders");
+    const saved = localStorage.getItem("lenEm_orders");
     return saved ? JSON.parse(saved) : [];
   });
 
   const [activities, setActivities] = useState<Activity[]>(() => {
-    const saved = localStorage.getItem("cozyStitch_activities");
+    const saved = localStorage.getItem("lenEm_activities");
     return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem("cozyStitch_users", JSON.stringify(users));
+    localStorage.setItem("lenEm_users", JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem("cozyStitch_orders", JSON.stringify(orders));
+    localStorage.setItem("lenEm_orders", JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem("cozyStitch_activities", JSON.stringify(activities));
+    localStorage.setItem("lenEm_activities", JSON.stringify(activities));
   }, [activities]);
 
   const createUser = (user: Omit<AdminUser, "id" | "createdAt">) => {

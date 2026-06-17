@@ -1,4 +1,4 @@
-import { Instagram, Youtube, MessageCircle } from "lucide-react";
+import { Drama as Instagram, Route as Youtube, MessageCircle } from "lucide-react";
 import { Link } from "react-router";
 
 export function Footer() {
@@ -11,7 +11,7 @@ export function Footer() {
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-primary-foreground">🧶</span>
               </div>
-              <span className="font-semibold text-xl text-foreground">CozyStitch</span>
+              <span className="font-semibold text-xl text-foreground">Len&Em</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Your cozy corner for yarn, kits, and creative vibes.
@@ -100,7 +100,7 @@ export function Footer() {
 
         <div className="pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <p>&copy; 2026 CozyStitch. Made with 💛 for makers everywhere.</p>
+            <p>&copy; 2026 Len&Em. Made with 💛 for makers everywhere.</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-primary transition-colors">
                 Privacy Policy

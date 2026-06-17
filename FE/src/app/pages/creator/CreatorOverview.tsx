@@ -1,5 +1,5 @@
 import { BarChart, Bar, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { DollarSign, PlayCircle, Share2, Users } from "lucide-react";
+import { DollarSign, CirclePlay as PlayCircle, Share2, Users } from "lucide-react";
 import { creatorCourses, creatorDiyPosts, linkedProducts, revenueByDay, topVideoProducts } from "../../../features/creator/data/creator.mock";
 
 export function CreatorOverview() {
@@ -17,7 +17,7 @@ export function CreatorOverview() {
   return (
     <div className="space-y-8">
       <div className="rounded-3xl bg-gradient-to-br from-[#fff8ed] via-[#f4eadb] to-[#e8f0df] p-6 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#b7664e]">Len&amp;em Creator Studio</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#b7664e]">Len&amp;Em Creator Studio</p>
         <h1 className="mt-3 text-3xl font-bold text-[#3f342c]">Grow lessons that sell the perfect yarn combo.</h1>
         <p className="mt-2 max-w-3xl text-[#756557]">Track your closed loop: learners watch, add linked products, share DIY results, and return for the next tutorial.</p>
       </div>

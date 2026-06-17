@@ -12,8 +12,8 @@ const API_BASE_URL =
 
 // ---- Token storage (localStorage wrappers) ----
 
-const TOKEN_KEY = "cozyStitch_accessToken";
-const REFRESH_KEY = "cozyStitch_refreshToken";
+const TOKEN_KEY = "lenEm_accessToken";
+const REFRESH_KEY = "lenEm_refreshToken";
 
 export const tokenStorage = {
   getAccess: (): string | null => localStorage.getItem(TOKEN_KEY),
@@ -153,7 +153,7 @@ function handleAxiosError(error: AxiosError): Promise<never> {
 
 function forceLogout(): void {
   tokenStorage.clear();
-  localStorage.removeItem("cozyStitch_user");
+  localStorage.removeItem("lenEm_user");
   toast.error("Session expired. Please sign in again.");
   window.location.href = "/";
 }

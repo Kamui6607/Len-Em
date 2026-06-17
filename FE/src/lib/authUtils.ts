@@ -96,7 +96,7 @@ export function getTokenTtlSeconds(): number {
  */
 export function logout(): void {
   tokenStorage.clear();
-  localStorage.removeItem("cozyStitch_user");
+  localStorage.removeItem("lenEm_user");
 }
 
 // ---- Role-based access helpers ----

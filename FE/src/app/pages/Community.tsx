@@ -69,7 +69,7 @@ export function Community() {
         <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl p-8 mb-12 text-center">
           <h3 className="mb-3">Share Your Latest Make</h3>
           <p className="text-muted-foreground mb-6">
-            Finished a project? Show it off! Use #CozyStitchCreations
+            Finished a project? Show it off! Use #LenEmCreations
           </p>
           <button
             onClick={() => setIsUploadModalOpen(true)}

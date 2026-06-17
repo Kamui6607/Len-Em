@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CircleCheck as CheckCircle2 } from "lucide-react";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -20,7 +20,7 @@ export function ForgotPasswordPage() {
             <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-lg">
               <span className="text-2xl">🧶</span>
             </div>
-            <span className="text-2xl font-semibold">CozyStitch</span>
+            <span className="text-2xl font-semibold">Len&Em</span>
           </Link>
 
           <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
@@ -52,7 +52,7 @@ export function ForgotPasswordPage() {
             <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-lg">
               <span className="text-2xl">🧶</span>
             </div>
-            <span className="text-2xl font-semibold">CozyStitch</span>
+            <span className="text-2xl font-semibold">Len&Em</span>
           </Link>
         </div>
 
