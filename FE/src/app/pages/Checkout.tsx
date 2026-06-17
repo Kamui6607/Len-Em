@@ -17,7 +17,7 @@ type Payment = "bank" | "cash";
 const DELIVERY_FEE_PERCENT = 15;
 const BANK_NAME = "Vietcombank";
 const BANK_ACCOUNT = "101 123 4567";
-const BANK_HOLDER = "YARN SHOP CO., LTD";
+const BANK_HOLDER = "LEN & EM CO., LTD";
 
 function formatPrice(amount: number): string {
   return `$${amount.toFixed(2)}`;

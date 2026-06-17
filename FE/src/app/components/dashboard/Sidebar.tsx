@@ -63,7 +63,7 @@ export function Sidebar({ navItems, title }: SidebarProps) {
             </div>
             <div>
               <p className="text-sm font-semibold leading-tight">{title}</p>
-              <p className="text-[10px] text-muted-foreground">CozyStitch</p>
+              <p className="text-[10px] text-muted-foreground">Len&Em</p>
             </div>
           </Link>
           <button
@@ -105,7 +105,7 @@ export function Sidebar({ navItems, title }: SidebarProps) {
         {/* Bottom branding */}
         <div className="px-5 py-4 border-t border-border shrink-0">
           <p className="text-[10px] text-muted-foreground">
-            &copy; {new Date().getFullYear()} CozyStitch
+            &copy; {new Date().getFullYear()} Len&Em
           </p>
         </div>
       </aside>

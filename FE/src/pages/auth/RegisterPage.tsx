@@ -1,16 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-  User as UserIcon,
-  Phone,
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader as Loader2, CircleAlert as AlertCircle, User as UserIcon, Phone } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 
 export function RegisterPage() {
@@ -371,7 +361,7 @@ export function RegisterPage() {
           <Link to="/" className="left-logo">
             <div className="left-logo-icon">🧶</div>
             <div>
-              <div className="left-logo-name">CozyStitch</div>
+              <div className="left-logo-name">Len&Em</div>
               <div className="left-logo-sub">your craft, your story</div>
             </div>
           </Link>

@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader as Loader2, CircleAlert as AlertCircle } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 
 export function LoginPage() {
@@ -295,7 +287,7 @@ export function LoginPage() {
           <Link to="/" className="left-logo">
             <div className="left-logo-icon">🧶</div>
             <div>
-              <div className="left-logo-name">CozyStitch</div>
+              <div className="left-logo-name">Len&Em</div>
               <div className="left-logo-sub">your craft, your story</div>
             </div>
           </Link>
@@ -329,7 +321,7 @@ export function LoginPage() {
           <div className="left-footer">
             <div className="testimonial">
               <div className="testimonial-text">
-                "CozyStitch has completely changed how I shop for yarn. The
+                "Len&Em has completely changed how I shop for yarn. The
                 quality is unmatched and the kits are just perfect."
               </div>
               <div className="testimonial-author">
@@ -426,7 +418,7 @@ export function LoginPage() {
 
             <div className="divider">
               <div className="divider-line" />
-              <span>New to CozyStitch?</span>
+              <span>New to Len&Em?</span>
               <div className="divider-line" />
             </div>
 

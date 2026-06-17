@@ -14,7 +14,7 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(undefin
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem("cozyStitch_favorites");
+    const saved = localStorage.getItem("lenEm_favorites");
     return saved ? JSON.parse(saved) : [];
   });
   const [savedDIYPosts, setSavedDIYPosts] = useState<string[]>(() => {
@@ -23,7 +23,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    localStorage.setItem("cozyStitch_favorites", JSON.stringify(favorites));
+    localStorage.setItem("lenEm_favorites", JSON.stringify(favorites));
   }, [favorites]);
 
   useEffect(() => {

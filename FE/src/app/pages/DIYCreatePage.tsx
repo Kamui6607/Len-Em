@@ -114,7 +114,7 @@ export function DIYCreatePage() {
       <form onSubmit={handleSubmit} className="mx-auto max-w-6xl space-y-8">
         <section className="rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
           <Badge variant="secondary" className="mb-4">Create DIY</Badge>
-          <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">Share your make with Len&em.</h1>
+          <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">Share your make with Len&Em.</h1>
           <p className="max-w-3xl text-muted-foreground md:text-lg">
             Upload your handmade creation, link the exact materials you used, and let viewers buy the combo instantly.
           </p>

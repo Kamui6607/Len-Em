@@ -253,7 +253,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       // Persist for page refreshes
-      localStorage.setItem("cozyStitch_user", JSON.stringify(user));
+      localStorage.setItem("lenEm_user", JSON.stringify(user));
       toast.success("Welcome back!");
     } catch (apiError) {
       // API call failed — try demo account fallback
@@ -268,7 +268,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isAuthenticated: true,
           isLoading: false,
         });
-        localStorage.setItem("cozyStitch_user", JSON.stringify(demoUser));
+        localStorage.setItem("lenEm_user", JSON.stringify(demoUser));
         toast.success("Welcome back! (Demo mode)");
         return;
       }
@@ -299,8 +299,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
 
-      localStorage.setItem("cozyStitch_user", JSON.stringify(user));
-      toast.success("Account created! Welcome to CozyStitch.");
+      localStorage.setItem("lenEm_user", JSON.stringify(user));
+      toast.success("Account created! Welcome to Len&Em.");
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -312,7 +312,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Best-effort server-side token invalidation
     authService.logout().catch(() => {});
     tokenStorage.clear();
-    localStorage.removeItem("cozyStitch_user");
+    localStorage.removeItem("lenEm_user");
     set({
       user: null,
       accessToken: null,
@@ -325,7 +325,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user: User) => {
     set({ user });
-    localStorage.setItem("cozyStitch_user", JSON.stringify(user));
+    localStorage.setItem("lenEm_user", JSON.stringify(user));
   },
 
   setTokens: (tokens) => {

@@ -107,7 +107,7 @@ export function AppRouter({
 }: AppRouterProps) {
   return (
     <Routes>
-      {/* ===== Landing Page — Len&em entry point with StoreLayout ===== */}
+      {/* ===== Landing Page — Len&Em entry point with StoreLayout ===== */}
       <Route element={<StoreOutlet cartCount={cartCount} />}>
         <Route index element={<Home />} />
 

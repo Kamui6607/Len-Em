@@ -13,7 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem("cozyStitch_theme");
+    const saved = localStorage.getItem("lenEm_theme");
     return (saved as Theme) || "light";
   });
 
@@ -24,7 +24,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem("cozyStitch_theme", theme);
+    localStorage.setItem("lenEm_theme", theme);
   }, [theme]);
 
   const toggleTheme = () => {

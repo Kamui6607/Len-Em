@@ -272,7 +272,7 @@ export function HomeNavigation({
             aria-label="Go to hero slide"
           >
             <div className="hn-logo-orb">🧶</div>
-            <span className="hn-logo-name">CozyStitch</span>
+            <span className="hn-logo-name">Len&Em</span>
           </button>
 
           {/* Slide links */}

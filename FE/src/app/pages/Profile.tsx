@@ -24,7 +24,7 @@ export function Profile() {
             />
             <div>
               <h2 className="mb-1">{user.fullName}</h2>
-              <p className="text-muted-foreground">CozyStitch Member</p>
+              <p className="text-muted-foreground">Len&Em Member</p>
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Edit, Eye, Plus, Trash2, Upload } from "lucide-react";
+import { CreditCard as Edit, Eye, Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
@@ -25,7 +25,7 @@ export function CreatorCourses() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create new course</DialogTitle>
-              <DialogDescription>Mock form for a new Len&amp;em tutorial course.</DialogDescription>
+              <DialogDescription>Mock form for a new Len&amp;Em tutorial course.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2"><Label htmlFor="course-name">Course name</Label><Input id="course-name" placeholder="Cozy flower bouquet" /></div>

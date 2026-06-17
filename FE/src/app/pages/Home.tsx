@@ -498,7 +498,7 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
             Your next handmade project starts here.
           </h2>
           <p className="mt-4 text-base leading-7 text-white/80">
-            Join thousands of learners, shoppers, and makers on Len&em.
+            Join thousands of learners, shoppers, and makers on Len&Em.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <button

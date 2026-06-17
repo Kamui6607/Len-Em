@@ -1,5 +1,5 @@
 /**
- * Axios API client configured for CozyStitch backend.
+ * Axios API client configured for Len&Em backend.
  *
  * - Base URL from env or default to localhost:5000
  * - JWT token injection via request interceptor
@@ -112,7 +112,7 @@ const api: ApiClient = axios.create({
 
 // Request interceptor — attach JWT
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("cozyStitch_token");
+  const token = localStorage.getItem("lenEm_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -125,24 +125,24 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Token expired — attempt refresh
-      const refreshToken = localStorage.getItem("cozyStitch_refresh");
+      const refreshToken = localStorage.getItem("lenEm_refresh");
       if (refreshToken) {
         try {
           const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refreshToken,
           });
-          localStorage.setItem("cozyStitch_token", data.token);
+          localStorage.setItem("lenEm_token", data.token);
           // Retry original request
           error.config.headers.Authorization = `Bearer ${data.token}`;
           return api(error.config);
         } catch {
           // Refresh failed — force logout
-          localStorage.removeItem("cozyStitch_token");
-          localStorage.removeItem("cozyStitch_refresh");
+          localStorage.removeItem("lenEm_token");
+          localStorage.removeItem("lenEm_refresh");
           window.location.href = "/";
         }
       } else {
-        localStorage.removeItem("cozyStitch_token");
+        localStorage.removeItem("lenEm_token");
         window.location.href = "/";
       }
     }
