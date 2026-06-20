@@ -9,6 +9,7 @@ import { Progress } from "../components/ui/progress";
 import { learnCourses, getLessonsByCourse } from "../../features/learn/data/learn.mock";
 import { useLearnStore as useFeatureLearnStore } from "../../features/learn/store/learn.store";
 import { useLearnStore } from "../../store/learn.store";
+import { formatPrice } from "../../lib/formatPrice";
 import type { LinkedProduct } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
 
@@ -167,7 +168,7 @@ export function LessonPage({ onAddToCart }: LessonPageProps) {
                         {isActive && <span className="text-xs font-medium text-primary">Now used</span>}
                       </div>
                       <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">${product.price.toFixed(2)}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{formatPrice(product.price)}</p>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => addProductToCart(product)}>
                       Add

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { products } from "../data/products";
 import { learnLessons } from "../../features/learn/data/learn.mock";
+import { formatPrice } from "../../lib/formatPrice";
 
 interface CartItem {
   productId: string;
@@ -18,10 +19,6 @@ interface CartProps {
   cartItems: CartItem[];
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
-}
-
-function formatPrice(amount: number): string {
-  return `$${amount.toFixed(2)}`;
 }
 
 export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {

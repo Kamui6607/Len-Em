@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { products, getBasePrice } from "../../data/products";
+import { formatPrice } from "../../../lib/formatPrice";
 
 export function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,18 +35,10 @@ export function AdminProducts() {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Product
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Category
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Price
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Stock
-                </th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Product</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Price</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Stock</th>
               </tr>
             </thead>
             <tbody>
@@ -56,11 +49,7 @@ export function AdminProducts() {
                 <tr key={product.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
+                      <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover" />
                       <span className="font-medium">{product.name}</span>
                     </div>
                   </td>
@@ -68,7 +57,7 @@ export function AdminProducts() {
                     <span className="capitalize">{product.category}</span>
                   </td>
                   <td className="px-6 py-4 text-primary font-semibold">
-                    ${price.toFixed(2)}
+                    {formatPrice(price)}
                   </td>
                   <td className="px-6 py-4 text-secondary">{totalStock} in stock</td>
                 </tr>

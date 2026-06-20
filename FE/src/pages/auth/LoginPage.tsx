@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader as Loader2, CircleAlert as AlertCircle } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader as Loader2,
+  CircleAlert as AlertCircle,
+} from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 
 export function LoginPage() {
@@ -321,8 +329,8 @@ export function LoginPage() {
           <div className="left-footer">
             <div className="testimonial">
               <div className="testimonial-text">
-                "Len&Em has completely changed how I shop for yarn. The
-                quality is unmatched and the kits are just perfect."
+                "Len&Em has completely changed how I shop for yarn. The quality
+                is unmatched and the kits are just perfect."
               </div>
               <div className="testimonial-author">
                 <div className="t-avatar">TN</div>
@@ -431,7 +439,7 @@ export function LoginPage() {
 
             <div className="demo-box">
               <div className="demo-title">
-                🔑 Demo accounts — password: <strong>123</strong>
+                🔑 Tài khoản dùng thử — mật khẩu: <strong>123456</strong>
               </div>
               <div className="demo-grid">
                 <div className="demo-chip">
@@ -439,21 +447,21 @@ export function LoginPage() {
                     <span className="demo-dot dot-r" />
                     Admin
                   </div>
-                  admin@gmail.com
+                  admin@lenem.vn
                 </div>
                 <div className="demo-chip">
                   <div className="demo-role">
                     <span className="demo-dot dot-a" />
                     Staff
                   </div>
-                  staff@gmail.com
+                  staff@lenem.vn
                 </div>
-                <div className="demo-chip full">
+                <div className="demo-chip">
                   <div className="demo-role">
                     <span className="demo-dot dot-p" />
                     User
                   </div>
-                  tranngoc5979@gmail.com
+                  user@gmail.com
                 </div>
               </div>
             </div>
