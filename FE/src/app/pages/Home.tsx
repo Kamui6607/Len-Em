@@ -160,7 +160,7 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
   const openShop = () => navigate(isAuthenticated ? "/shop" : "/auth/login");
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(135deg,var(--color-bg)_0%,#F5EDE4_100%)] text-[var(--color-text)] dark:bg-[linear-gradient(135deg,var(--color-bg)_0%,#241C18_100%)]">
+    <main className="min-h-screen bg-[linear-gradient(135deg,var(--color-bg)_0%,#F5EDE4_100%)] text-[var(--color-text)] dark:bg-[linear-gradient(135deg,var(--color-bg)_0%,#241C18_100%)] pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       {/* ── HERO ── */}
       <section className="relative overflow-hidden px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <YarnPattern />

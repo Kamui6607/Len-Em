@@ -53,7 +53,7 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
         <main className="space-y-6">
           <Carousel className="overflow-hidden rounded-3xl border bg-card">

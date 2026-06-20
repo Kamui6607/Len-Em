@@ -110,7 +110,7 @@ export function DIYCreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <form onSubmit={handleSubmit} className="mx-auto max-w-6xl space-y-8">
         <section className="rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
           <Badge variant="secondary" className="mb-4">Create DIY</Badge>

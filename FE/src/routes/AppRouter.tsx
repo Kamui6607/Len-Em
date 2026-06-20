@@ -189,7 +189,7 @@ export function AppRouter({
           path="love"
           element={
             <RequireAuth>
-              <Love />
+              <Love onAddToCart={onAddToCart} />
             </RequireAuth>
           }
         />

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
@@ -50,6 +50,19 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantUI | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const clientHeight = window.innerHeight;
+      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Map product variants to the UI format
   const variantItems: ProductVariantUI[] = useMemo(() => {
@@ -116,7 +129,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
     selectedVariant?.images && selectedVariant.images.length > 1;
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:py-12">
+    <div className="min-h-screen bg-background py-8 px-4 sm:py-12 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="max-w-6xl mx-auto">
         {/* Breadcrumb */}
         <Link
@@ -425,7 +438,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
         {/* Related Products */}
         <div className="mt-16">
           <h2 className="text-xl mb-6">You Might Also Like</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 scrollbar-none">
             {products
               .filter((p) => p.id !== product.id && p.category === product.category)
               .slice(0, 4)
@@ -435,7 +448,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   <Link
                     key={related.id}
                     to={`/product/${related.id}`}
-                    className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20"
+                    className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20 shrink-0 w-[180px] md:w-auto"
                     style={{
                       boxShadow: "0 0 0 transparent",
                     }}
@@ -465,6 +478,25 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
           </div>
         </div>
       </div>
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {!scrolledToBottom && (
+        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Price</p>
+              <p className="text-lg font-bold text-primary">${currentPrice.toFixed(2)}</p>
+            </div>
+            <button
+              onClick={handleAddToCart}
+              disabled={currentStock === 0}
+              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm disabled:opacity-50"
+            >
+              {currentStock > 0 ? "Add to Cart" : "Sold Out"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

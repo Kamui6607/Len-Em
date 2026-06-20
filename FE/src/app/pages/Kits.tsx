@@ -6,7 +6,7 @@ export function Kits() {
   const kits = products.filter((p) => p.category === "kit");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background py-10 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <style>{`
         .kits-top {
           background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -121,7 +121,7 @@ export function Kits() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto py-12 px-4">
+      <div className="max-w-6xl mx-auto py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
         <div className="kits-panel p-8 mb-12">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">

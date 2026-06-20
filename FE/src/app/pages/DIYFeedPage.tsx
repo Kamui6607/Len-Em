@@ -17,7 +17,7 @@ interface DIYFeedPageProps {
   onAddToCart: (productId: string) => void;
 }
 
-type FeedFilter = "all" | "idols" | "newest" | "purchased";
+type FeedFilter = "all" | "newest" | "purchased";
 
 export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
   const navigate = useNavigate();
@@ -41,7 +41,6 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
       return post.tags.some((tag) => tag.toLowerCase().includes(normalizedSearch));
     });
 
-    if (filter === "idols") next = next.filter((post) => post.creator.isIdol);
     if (filter === "newest") {
       next = [...next].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -70,7 +69,7 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="mx-auto max-w-7xl">
         <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
           <Badge variant="secondary" className="mb-4">DIY</Badge>
@@ -84,9 +83,8 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
 
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FeedFilter)}>
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-fit sm:grid-cols-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-fit sm:grid-cols-3">
               <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="idols">From Idols</TabsTrigger>
               <TabsTrigger value="newest">Newest</TabsTrigger>
               <TabsTrigger value="purchased">Most Purchased</TabsTrigger>
             </TabsList>
@@ -114,7 +112,7 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
             >
               <div className="relative overflow-hidden bg-muted">
                 <img src={post.images[0]} alt={post.title} className="w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 p-3 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 p-3 opacity-100 md:opacity-0 md:transition-opacity group-hover:md:opacity-100">
                   <Button asChild size="sm" variant="secondary">
                     <Link to={`/diy/${post.id}`} onClick={(e) => { if (!isAuthenticated) { e.preventDefault(); navigate("/auth/login"); } }}>View material combo</Link>
                   </Button>

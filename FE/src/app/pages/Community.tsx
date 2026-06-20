@@ -56,7 +56,7 @@ export function Community() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="mb-4">Community Gallery</h1>
