@@ -301,7 +301,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                 </button>
               </>
             )}
-            {isAuthenticated && (
+            {isAuthenticated && !isHomePage && (
               <div className="relative">
                 <UserMenu position="top" />
               </div>
@@ -476,13 +476,10 @@ export function Navigation({ cartCount }: NavigationProps) {
             LOGOUT
           </button>
         )}
-
       </aside>
 
-      {/* Bottom nav - hide on home page, mobile menu open, or keyboard visible */}
-      {isMobile && !isHomePage && !isMobileMenuOpen && !keyboardOpen && (
-        <BottomNav />
-      )}
+      {/* Bottom nav - hide when mobile menu open or keyboard visible */}
+      {isMobile && !isMobileMenuOpen && !keyboardOpen && <BottomNav />}
     </>
   );
 }
