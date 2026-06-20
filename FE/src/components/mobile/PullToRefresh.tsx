@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface PullToRefreshProps {
   children: ReactNode;
@@ -67,15 +67,12 @@ interface PullToRefreshRootProps {
 function PullToRefreshRoot({
   children,
   onRefresh,
-  indicatorHeight,
 }: PullToRefreshRootProps) {
   const { containerRef, isPulling } = usePullToRefresh({ onRefresh });
 
-  // Expose ref setter to children
+  // Expose ref setter to children using callback ref pattern
   const setRef = (el: HTMLDivElement | null) => {
-    if (containerRef.current !== el) {
-      containerRef.current = el;
-    }
+    (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
   };
 
   return <>{children(setRef, isPulling)}</>;

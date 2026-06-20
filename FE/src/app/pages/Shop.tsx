@@ -2,7 +2,6 @@ import { Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Drawer } from "vaul";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
@@ -10,7 +9,6 @@ import { products } from "../data/products";
 import { getLessonsByCourse, materialCombos } from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
-import { ProductGridSkeleton } from "../../components/skeletons/MobileProductSkeleton";
 import type { CartItem } from "../App";
 
 const CATEGORY_META: Record<string, { label: string; desc: string; emoji: string }> = {
