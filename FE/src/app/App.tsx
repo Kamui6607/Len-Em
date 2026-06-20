@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter } from "react-router";
-import { Toaster } from "sonner";
+import { Toaster } from "./components/ui/sonner";
 import { useAuthStore } from "../store/auth.store";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AdminProvider } from "./context/AdminContext";
@@ -68,7 +68,13 @@ export default function App() {
     <ThemeProvider>
       <AdminProvider>
         <FavoritesProvider>
-          <Toaster position="top-right" richColors />
+          <Toaster
+            position="top-right"
+            richColors
+            visibleToasts={5}
+            gap={8}
+            offset={{ right: 16, top: 16 }}
+          />
           <BrowserRouter>
             <AppRouter
               cartItems={cartItems}
