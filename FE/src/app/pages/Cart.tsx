@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { products } from "../data/products";
@@ -25,6 +26,18 @@ function formatPrice(amount: number): string {
 
 export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
   const navigate = useNavigate();
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const clientHeight = window.innerHeight;
+      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const cartProducts = cartItems
   .map((item) => {
@@ -88,7 +101,7 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="max-w-6xl mx-auto">
         <h1 className="mb-8">Shopping Cart</h1>
 
@@ -102,10 +115,10 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
               return (
                 <div
                   key={item.id}
-                  className="bg-card rounded-2xl p-6 border border-border flex gap-6"
+                  className="bg-card rounded-2xl p-4 md:p-6 border border-border flex flex-col md:flex-row gap-4 md:gap-6"
                 >
                   {/* Product Image */}
-                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                  <div className="w-full md:w-24 h-32 md:h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -123,19 +136,21 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                       >
                         <h4 className="truncate">{item.name}</h4>
                       </Link>
-                      {item.sourceLessonName && (
-                        <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                          From lesson: {item.sourceLessonName}
-                        </span>
-                      )}
                       <button
                         onClick={() => onRemoveItem(item.cartId)}
-                        className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                        className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
                         title="Remove item"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
+
+                    {/* Source lesson badge */}
+                    {item.sourceLessonName && (
+                      <span className="mb-2 inline-flex w-fit rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                        From lesson: {item.sourceLessonName}
+                      </span>
+                    )}
 
                     {/* Variant info */}
                     {item.variantName && (
@@ -166,7 +181,7 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                           }
                           disabled={isMinQuantity}
                           aria-label="Decrease quantity"
-                          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${
+                          className={`w-11 h-11 md:w-8 md:h-8 rounded-full border flex items-center justify-center transition-colors ${
                             isMinQuantity
                               ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
                               : "border-border hover:bg-muted"
@@ -182,7 +197,7 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                             onUpdateQuantity(item.cartId, item.quantity + 1)
                           }
                           aria-label="Increase quantity"
-                          className="w-8 h-8 rounded-full border border-border hover:bg-muted transition-colors flex items-center justify-center"
+                          className="w-11 h-11 md:w-8 md:h-8 rounded-full border border-border hover:bg-muted transition-colors flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
@@ -231,6 +246,24 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
           </div>
         </div>
       </div>
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {!scrolledToBottom && (
+        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-lg font-bold text-primary">{formatPrice(total)}</p>
+            </div>
+            <button
+              onClick={() => navigate("/checkout")}
+              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm"
+            >
+              Checkout →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { BookOpen, Clock, Star, Users } from "lucide-react";
+import { BookOpen, Clock, SlidersHorizontal, Star, Users } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -31,6 +32,7 @@ export function LearnPage() {
   const [selectedLevels, setSelectedLevels] = useState<CourseLevel[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedCreators, setSelectedCreators] = useState<string[]>([]);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const tags = useMemo(
     () => Array.from(new Set(learnCourses.flatMap((course) => course.tags))).sort(),
@@ -61,7 +63,7 @@ export function LearnPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-8">
           <Badge variant="secondary" className="mb-4">LEARN</Badge>
@@ -75,7 +77,23 @@ export function LearnPage() {
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-          <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-24">
+          {/* Mobile filter FAB */}
+          <div className="mb-4 flex lg:hidden">
+            <button
+              onClick={() => setFilterDrawerOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-sm font-medium"
+            >
+              <SlidersHorizontal className="size-4" />
+              Filters
+              {(selectedLevels.length + selectedTags.length + selectedCreators.length) > 0 && (
+                <span className="bg-primary text-primary-foreground text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                  {selectedLevels.length + selectedTags.length + selectedCreators.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <aside className="hidden lg:block h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-24">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="font-semibold">Filters</h2>
               <Button
@@ -197,6 +215,90 @@ export function LearnPage() {
           </main>
         </div>
       </div>
+
+      {/* ── Mobile filter drawer ── */}
+      <AnimatePresence>
+        {filterDrawerOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setFilterDrawerOpen(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl p-5 max-h-[80dvh] overflow-y-auto lg:hidden safe-area-bottom"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            >
+              <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-lg">Filters</h2>
+                <button
+                  onClick={() => {
+                    setSelectedLevels([]);
+                    setSelectedTags([]);
+                    setSelectedCreators([]);
+                  }}
+                  className="text-sm text-primary underline"
+                >
+                  Reset all
+                </button>
+              </div>
+
+              <FilterGroup title="Level">
+                {(Object.keys(levelLabels) as CourseLevel[]).map((level) => (
+                  <FilterCheckbox
+                    key={level}
+                    id={`mobile-level-${level}`}
+                    label={levelLabels[level]}
+                    checked={selectedLevels.includes(level)}
+                    onCheckedChange={() => setSelectedLevels(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level])}
+                  />
+                ))}
+              </FilterGroup>
+
+              <Separator className="my-4" />
+
+              <FilterGroup title="Tags">
+                {tags.map((tag) => (
+                  <FilterCheckbox
+                    key={tag}
+                    id={`mobile-tag-${tag}`}
+                    label={tag}
+                    checked={selectedTags.includes(tag)}
+                    onCheckedChange={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                  />
+                ))}
+              </FilterGroup>
+
+              <Separator className="my-4" />
+
+              <FilterGroup title="Creator">
+                {creators.map((creator) => (
+                  <FilterCheckbox
+                    key={creator}
+                    id={`mobile-creator-${creator}`}
+                    label={creator}
+                    checked={selectedCreators.includes(creator)}
+                    onCheckedChange={() => setSelectedCreators(prev => prev.includes(creator) ? prev.filter(c => c !== creator) : [...prev, creator])}
+                  />
+                ))}
+              </FilterGroup>
+
+              <Button
+                className="w-full mt-6"
+                onClick={() => setFilterDrawerOpen(false)}
+              >
+                Show {filteredCourses.length} courses
+              </Button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

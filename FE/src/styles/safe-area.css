@@ -1,0 +1,33 @@
+/* Safe area variables for notched devices */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+.safe-area-top {
+  padding-top: var(--sat);
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--sab);
+}
+
+.safe-area-left {
+  padding-left: var(--sal);
+}
+
+.safe-area-right {
+  padding-right: var(--sar);
+}
+
+.main-content {
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+/* Bottom nav specific - ensures safe area is respected */
+.bottom-nav {
+  padding-bottom: var(--sab);
+}

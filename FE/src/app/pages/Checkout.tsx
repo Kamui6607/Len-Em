@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Check, Banknote, QrCode, DollarSign, ShoppingBag, Truck } from "lucide-react";
+import { Check, Banknote, QrCode, DollarSign } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
 import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
+import { useKeyboardAvoidance } from "../../hooks/useKeyboardAvoidance";
 import { products } from "../data/products";
 
 interface CheckoutProps {
@@ -11,7 +12,6 @@ interface CheckoutProps {
   onClearCart: () => void;
 }
 
-type Fulfillment = "online" | "instore";
 type Payment = "bank" | "cash";
 
 const DELIVERY_FEE_PERCENT = 15;
@@ -24,7 +24,6 @@ function formatPrice(amount: number): string {
 }
 
 export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
-  const [fulfillment, setFulfillment] = useState<Fulfillment | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,6 +33,19 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   const { createOrder, logActivity } = useAdmin();
   const { user } = useAuth();
   const navigate = useNavigate();
+  useKeyboardAvoidance();
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const clientHeight = window.innerHeight;
+      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const orderItems = cartItems.map((item) => {
     const parts = String(item.productId).split("-");
@@ -48,26 +60,19 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   });
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = fulfillment === "online" ? (subtotal * DELIVERY_FEE_PERCENT) / 100 : 0;
+  const deliveryFee = (subtotal * DELIVERY_FEE_PERCENT) / 100;
   const grandTotal = subtotal + deliveryFee;
 
   const getPaymentMethodLabel = () => {
-    if (!fulfillment || !payment) return "";
+    if (!payment) return "";
     const labels: Record<string, string> = {
-      bank_online: "Chuyển khoản + Giao hàng",
-      cash_online: "COD + Giao hàng",
-      bank_instore: "Chuyển khoản + Nhận tại shop",
-      cash_instore: "Tiền mặt + Nhận tại shop",
+      bank: "Chuyển khoản + Giao hàng",
+      cash: "COD + Giao hàng",
     };
-    return labels[`${payment}_${fulfillment}`];
+    return labels[payment];
   };
 
   const handlePlaceOrder = () => {
-    // Validation
-    if (!fulfillment) {
-      toast.error("Vui lòng chọn hình thức nhận hàng.");
-      return;
-    }
     if (!payment) {
       toast.error("Vui lòng chọn phương thức thanh toán.");
       return;
@@ -80,23 +85,19 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
       toast.error("Vui lòng nhập số điện thoại.");
       return;
     }
-    if (fulfillment === "online") {
-      if (!email.trim()) {
-        toast.error("Vui lòng nhập email để nhận thông báo giao hàng.");
-        return;
-      }
-      if (!address.trim()) {
-        toast.error("Vui lòng nhập địa chỉ giao hàng.");
-        return;
-      }
+    if (!email.trim()) {
+      toast.error("Vui lòng nhập email để nhận thông báo giao hàng.");
+      return;
+    }
+    if (!address.trim()) {
+      toast.error("Vui lòng nhập địa chỉ giao hàng.");
+      return;
     }
 
     if (orderItems.length === 0) {
       toast.error("Giỏ hàng trống.");
       return;
     }
-
-    const paymentMethod = `${payment}_${fulfillment}`;
 
     const orderId = createOrder({
       userId: user?.email || "guest",
@@ -105,9 +106,9 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
       items: orderItems,
       total: grandTotal,
       deliveryFee,
-      fulfillment,
-      address: fulfillment === "online" ? address.trim() : undefined,
-      paymentMethod,
+      fulfillment: "online",
+      address: address.trim(),
+      paymentMethod: payment,
       paymentStatus: "pending",
     });
 
@@ -128,7 +129,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
         <div className="text-center space-y-6 max-w-md">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
             <Check className="w-10 h-10 text-primary" />
@@ -146,152 +147,107 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+130px)] md:pb-0">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-semibold mb-8">Thanh toán</h1>
 
-        {/* ── STEP 1: Fulfillment Method ── */}
+        {/* ── Customer Info ── */}
         <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">1. Hình thức nhận hàng</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => { setFulfillment("online"); setPayment(null); }}
-              className={`p-4 rounded-xl border-2 transition-all text-left ${
-                fulfillment === "online"
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-primary/30"
-              }`}
-            >
-              <Truck className="w-6 h-6 mb-2" />
-              <p className="text-sm font-medium">Mua online</p>
-              <p className="text-xs text-muted-foreground">Giao hàng tận nơi</p>
-            </button>
-            <button
-              onClick={() => { setFulfillment("instore"); setPayment(null); }}
-              className={`p-4 rounded-xl border-2 transition-all text-left ${
-                fulfillment === "instore"
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-primary/30"
-              }`}
-            >
-              <ShoppingBag className="w-6 h-6 mb-2" />
-              <p className="text-sm font-medium">Mua tại shop</p>
-              <p className="text-xs text-muted-foreground">Nhận hàng trực tiếp</p>
-            </button>
+          <h2 className="text-lg font-semibold mb-4">Thông tin giao hàng</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm mb-1">Họ tên *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nguyễn Văn A"
+                className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
+              />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Số điện thoại *</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0703339186"
+                className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
+              />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Email *</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
+              />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Địa chỉ giao hàng *</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
+              />
+            </div>
           </div>
         </div>
 
-        {/* ── Customer Info ── */}
-        {fulfillment && (
-          <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">
-              {fulfillment === "online" ? "Thông tin giao hàng" : "Thông tin liên hệ"}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">Họ tên *</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Nguyễn Văn A"
-                  className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Số điện thoại *</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0703339186"
-                  className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                />
-              </div>
-              {fulfillment === "online" && (
-                <>
-                  <div>
-                    <label className="block text-sm mb-1">Email *</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">Địa chỉ giao hàng *</label>
-                    <input
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                      className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
+        {/* ── Payment Method ── */}
+        <div className="bg-card rounded-2xl border border-border p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Phương thức thanh toán</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => setPayment("bank")}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                payment === "bank"
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-primary/30"
+              }`}
+            >
+              <QrCode className="w-6 h-6 mb-2 mx-auto" />
+              <p className="text-sm font-medium">Chuyển khoản / QR</p>
+              <p className="text-xs text-muted-foreground">Thanh toán online</p>
+            </button>
+            <button
+              onClick={() => setPayment("cash")}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                payment === "cash"
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-primary/30"
+              }`}
+            >
+              <DollarSign className="w-6 h-6 mb-2 mx-auto" />
+              <p className="text-sm font-medium">Tiền mặt</p>
+              <p className="text-xs text-muted-foreground">Trả khi nhận hàng (COD)</p>
+            </button>
           </div>
-        )}
 
-        {/* ── STEP 2: Payment Method ── */}
-        {fulfillment && (
-          <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">2. Phương thức thanh toán</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setPayment("bank")}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  payment === "bank"
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <QrCode className="w-6 h-6 mb-2 mx-auto" />
-                <p className="text-sm font-medium">Chuyển khoản / QR</p>
-                <p className="text-xs text-muted-foreground">
-                  {fulfillment === "online" ? "Thanh toán online" : "Chuyển khoản trước"}
-                </p>
-              </button>
-              <button
-                onClick={() => setPayment("cash")}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  payment === "cash"
-                    ? "border-primary bg-primary/10"
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <DollarSign className="w-6 h-6 mb-2 mx-auto" />
-                <p className="text-sm font-medium">Tiền mặt</p>
-                <p className="text-xs text-muted-foreground">
-                  {fulfillment === "online" ? "Trả khi nhận hàng (COD)" : "Trả tại quầy"}
-                </p>
-              </button>
-            </div>
-
-            {/* Bank info block */}
-            {payment === "bank" && (
-              <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Banknote className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <p className="font-medium">Thông tin chuyển khoản</p>
-                    <p className="text-muted-foreground">Ngân hàng: {BANK_NAME}</p>
-                    <p className="text-muted-foreground">Số tài khoản: {BANK_ACCOUNT}</p>
-                    <p className="text-muted-foreground">Chủ tài khoản: {BANK_HOLDER}</p>
-                    <p className="text-muted-foreground">
-                      Nội dung: <span className="font-mono text-foreground">Họ tên + SĐT</span>
-                    </p>
-                  </div>
+          {/* Bank info block */}
+          {payment === "bank" && (
+            <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Banknote className="w-6 h-6 text-primary" />
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium">Thông tin chuyển khoản</p>
+                  <p className="text-muted-foreground">Ngân hàng: {BANK_NAME}</p>
+                  <p className="text-muted-foreground">Số tài khoản: {BANK_ACCOUNT}</p>
+                  <p className="text-muted-foreground">Chủ tài khoản: {BANK_HOLDER}</p>
+                  <p className="text-muted-foreground">
+                    Nội dung: <span className="font-mono text-foreground">Họ tên + SĐT</span>
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         {/* ── Order Summary ── */}
         <div className="bg-card rounded-2xl border border-border p-6 mb-6">
@@ -312,19 +268,17 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
               <span>Tạm tính</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
-            {fulfillment === "online" && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Phí giao hàng ({DELIVERY_FEE_PERCENT}%)</span>
-                <span>{formatPrice(deliveryFee)}</span>
-              </div>
-            )}
+            <div className="flex justify-between text-muted-foreground">
+              <span>Phí giao hàng ({DELIVERY_FEE_PERCENT}%)</span>
+              <span>{formatPrice(deliveryFee)}</span>
+            </div>
             <div className="flex justify-between font-semibold text-lg pt-2">
               <span>Tổng cộng</span>
               <span className="text-primary">{formatPrice(grandTotal)}</span>
             </div>
           </div>
 
-          {fulfillment && payment && (
+          {payment && (
             <div className="mt-4 p-3 bg-primary/5 rounded-xl border border-primary/20 text-sm">
               <span className="font-medium">Phương thức: </span>
               <span className="text-muted-foreground">{getPaymentMethodLabel()}</span>
@@ -333,7 +287,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
         </div>
 
         {/* ── Place Order Button ── */}
-        {fulfillment && payment && (
+        {payment && (
           <button
             onClick={handlePlaceOrder}
             className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 transition-colors text-lg font-medium"
@@ -342,6 +296,24 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
           </button>
         )}
       </div>
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {payment && !scrolledToBottom && (
+        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Tổng cộng</p>
+              <p className="text-lg font-bold text-primary">{formatPrice(grandTotal)}</p>
+            </div>
+            <button
+              onClick={handlePlaceOrder}
+              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm"
+            >
+              Đặt hàng →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

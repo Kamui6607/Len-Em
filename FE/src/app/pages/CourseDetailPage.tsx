@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { BookOpen, Clock, Play, ShoppingCart, Star, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +40,19 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
     if (courseId) setCurrentCourse(courseId);
   }, [courseId, setCurrentCourse]);
 
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const clientHeight = window.innerHeight;
+      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   if (!course) return <Navigate to="/learn" replace />;
 
   const lessons = getLessonsByCourse(course.id);
@@ -67,12 +80,12 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
           <main className="space-y-8">
             <section className="overflow-hidden rounded-3xl border bg-card">
-              <div className="relative h-72 bg-muted md:h-96">
+              <div className="relative aspect-[16/9] md:h-96 bg-muted">
                 <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
@@ -81,7 +94,7 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
                 </div>
               </div>
               <div className="space-y-6 p-6 md:p-8">
-                <div className="flex flex-wrap items-center gap-5">
+                <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
                   <div className="flex items-center gap-3">
                     <Avatar className="size-11">
                       <AvatarImage src={course.creator.avatar} alt={course.creator.name} />
@@ -116,7 +129,7 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
               </div>
             </section>
 
-            <section className="rounded-2xl border bg-card p-6">
+            <section className="rounded-2xl border bg-card p-6 mb-20 md:mb-0">
               <h2 className="mb-4 text-2xl font-semibold">Lessons</h2>
               <Accordion type="single" collapsible defaultValue={lessons[0]?.id}>
                 {lessons.map((lesson) => (
@@ -165,6 +178,27 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
           </aside>
         </div>
       </div>
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {!scrolledToBottom && (
+        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">{course.totalLessons} lessons</p>
+              <p className="text-lg font-bold text-primary">{course.level}</p>
+            </div>
+            {firstLesson && (
+              <Link
+                to={`/learn/${course.id}/lesson/${firstLesson.id}`}
+                onClick={handleStartLearning}
+                className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm text-center"
+              >
+                Start Learning →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

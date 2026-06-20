@@ -2,6 +2,7 @@ import { Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { Drawer } from "vaul";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
@@ -9,6 +10,7 @@ import { products } from "../data/products";
 import { getLessonsByCourse, materialCombos } from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
+import { ProductGridSkeleton } from "../../components/skeletons/MobileProductSkeleton";
 import type { CartItem } from "../App";
 
 const CATEGORY_META: Record<string, { label: string; desc: string; emoji: string }> = {
@@ -117,14 +119,16 @@ export function Shop({ onAddToCart }: ShopProps) {
     return "No products found";
   };
 
-  const FilterContent = () => (
+  const FilterContent = ({ showHeader = true }: { showHeader?: boolean }) => (
     <>
-      <div className="filter-header">
-        <span className="filter-title">Filters</span>
-        {hasActiveFilters && (
-          <button className="filter-clear" onClick={clearFilters}>Clear all</button>
-        )}
-      </div>
+      {showHeader && (
+        <div className="filter-header">
+          <span className="filter-title">Filters</span>
+          {hasActiveFilters && (
+            <button className="filter-clear" onClick={clearFilters}>Clear all</button>
+          )}
+        </div>
+      )}
 
       {/* Smart lesson filter */}
       {currentCourseId && currentCourseComboIds.length > 0 && (
@@ -134,7 +138,6 @@ export function Shop({ onAddToCart }: ShopProps) {
             onClick={() => {
               setLessonFilterActive((active) => !active);
               updateFilter("category", "all");
-              setFilterOpen(false);
             }}
           >
             📚 Based on your current lesson
@@ -150,7 +153,7 @@ export function Shop({ onAddToCart }: ShopProps) {
             <button
               key={key}
               className={`chip-filter ${filters.category === key ? "active" : ""}`}
-              onClick={() => { updateFilter("category", key); setFilterOpen(false); }}
+              onClick={() => updateFilter("category", key)}
             >
               {cat.emoji} {cat.label}
             </button>
@@ -459,7 +462,7 @@ export function Shop({ onAddToCart }: ShopProps) {
           flex-wrap: wrap;
         }
         .page-btn {
-          min-width: 38px; height: 38px;
+          min-width: 44px; min-height: 44px;
           display: flex; align-items: center; justify-content: center;
           border-radius: 10px; font-size: 0.85rem;
           border: 1px solid var(--border); background: var(--card);
