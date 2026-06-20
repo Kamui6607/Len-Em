@@ -8,6 +8,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { learnCourses, materialCombos, getLessonsByCourse } from "../../features/learn/data/learn.mock";
+import { formatPrice } from "../../lib/formatPrice";
 import { useLearnStore } from "../../features/learn/store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
 import type { CourseLevel } from "../../features/learn/types/learn.types";
@@ -167,7 +168,7 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
                   </div>
                   <div className="flex items-center justify-between font-medium">
                     <span>Total</span>
-                    <span>${combo.price.toFixed(2)}</span>
+                    <span>{formatPrice(combo.price)}</span>
                   </div>
                   <Button className="w-full" onClick={() => requireAuth(() => addComboToCart(combo.productIds, combo.name))}>
                     <ShoppingCart className="size-4" /> Add all to cart

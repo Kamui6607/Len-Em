@@ -1,4 +1,5 @@
 import { Package, Calendar } from "lucide-react";
+import { formatPrice } from "../../lib/formatPrice";
 
 export function Purchased() {
   const mockOrders = [
@@ -6,7 +7,7 @@ export function Purchased() {
       id: "ORD-001",
       date: "May 8, 2026",
       status: "Delivered",
-      total: 49.99,
+      total: 587000,
       items: [
         {
           name: "Cozy Blanket Starter Kit",
@@ -18,7 +19,7 @@ export function Purchased() {
       id: "ORD-002",
       date: "May 3, 2026",
       status: "Delivered",
-      total: 34.99,
+      total: 349000,
       items: [
         {
           name: "Rainbow Pastel Yarn Bundle",
@@ -54,7 +55,7 @@ export function Purchased() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="font-semibold text-primary">${order.total.toFixed(2)}</p>
+                  <p className="font-semibold text-primary">{formatPrice(order.total)}</p>
                 </div>
               </div>
 

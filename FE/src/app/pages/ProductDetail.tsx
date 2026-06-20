@@ -5,6 +5,7 @@ import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
 import { useAuth } from "../../hooks/useAuth";
 import { cn } from "../components/ui/utils";
+import { formatPrice } from "../../lib/formatPrice";
 import type { ProductVariantUI } from "../components/ProductVariantSelector";
 
 interface ProductDetailProps {
@@ -238,13 +239,13 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
               {/* Price */}
               <div className="mt-4 flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-primary">
-                  ${currentPrice.toFixed(2)}
+                  {formatPrice(currentPrice)}
                 </span>
                 {selectedVariant &&
                   variantItems.length > 1 &&
                   selectedVariant.price !== variantItems[0].price && (
                     <span className="text-lg text-muted-foreground line-through">
-                      ${variantItems[0].price.toFixed(2)}
+                      {formatPrice(variantItems[0].price)}
                     </span>
                   )}
               </div>
@@ -469,7 +470,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     <div className="p-4">
                       <h4 className="line-clamp-1 text-sm">{related.name}</h4>
                       <p className="text-primary font-semibold mt-1.5">
-                        ${relPrice.toFixed(2)}
+                        {formatPrice(relPrice)}
                       </p>
                     </div>
                   </Link>
@@ -485,7 +486,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs text-muted-foreground">Price</p>
-              <p className="text-lg font-bold text-primary">${currentPrice.toFixed(2)}</p>
+              <p className="text-lg font-bold text-primary">{formatPrice(currentPrice)}</p>
             </div>
             <button
               onClick={handleAddToCart}

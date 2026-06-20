@@ -1,6 +1,7 @@
 import { Users, Package, ShoppingCart, Activity, TrendingUp, DollarSign } from "lucide-react";
 import { useAdmin } from "../../context/AdminContext";
 import { products } from "../../data/products";
+import { formatPrice } from "../../../lib/formatPrice";
 
 export function AdminDashboard() {
   const { users, orders, activities } = useAdmin();
@@ -36,7 +37,7 @@ export function AdminDashboard() {
     },
     {
       title: "Total Revenue",
-      value: `$${totalRevenue.toFixed(2)}`,
+      value: formatPrice(totalRevenue),
       icon: DollarSign,
       color: "bg-primary/10 text-primary",
       change: "+18%",
@@ -129,7 +130,7 @@ export function AdminDashboard() {
             <div className="pt-4 border-t border-border">
               <div className="flex justify-between items-center">
                 <span className="text-foreground font-medium">Total Revenue</span>
-                <span className="font-bold text-xl text-primary">${totalRevenue.toFixed(2)}</span>
+                <span className="font-bold text-xl text-primary">{formatPrice(totalRevenue)}</span>
               </div>
             </div>
           </div>

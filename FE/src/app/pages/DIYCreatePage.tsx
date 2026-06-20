@@ -9,6 +9,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { products } from "../data/products";
+import { formatPrice } from "../../lib/formatPrice";
 
 interface ComboItem {
   productId: string;
@@ -208,7 +209,7 @@ export function DIYCreatePage() {
                       <img src={product.thumbnail} alt={product.name} className="size-14 rounded-lg object-cover" />
                       <div className="min-w-0 flex-1">
                         <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">${product.price.toFixed(2)}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{formatPrice(product.price)}</p>
                       </div>
                       <Button type="button" size="sm" variant="outline" onClick={() => addProductToCombo(product)}>
                         <Plus className="size-4" />
@@ -231,7 +232,7 @@ export function DIYCreatePage() {
                     <img src={item.thumbnail} alt={item.name} className="size-14 rounded-lg object-cover" />
                     <div className="min-w-0 flex-1">
                       <h3 className="line-clamp-2 text-sm font-medium">{item.name}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{formatPrice(item.price)} each</p>
                     </div>
                     <button type="button" onClick={() => removeComboItem(item.productId)} className="text-muted-foreground hover:text-destructive">
                       <X className="size-4" />
@@ -254,7 +255,7 @@ export function DIYCreatePage() {
 
             <div className="my-5 flex items-center justify-between text-lg font-semibold">
               <span>Total</span>
-              <span>${comboTotal.toFixed(2)}</span>
+              <span>{formatPrice(comboTotal)}</span>
             </div>
 
             <Button type="submit" size="lg" className="w-full">

@@ -144,9 +144,9 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     toast.error(mapped[status] ?? message);
   }
 
-  if (!status) {
-    toast.error("Network error. Check your connection.");
-  }
+  // if (!status) {
+  //   toast.error("Network error. Check your connection.");
+  // }
 
   return Promise.reject(error);
 }

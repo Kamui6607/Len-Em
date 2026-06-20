@@ -31,35 +31,51 @@ interface DemoAccount {
 
 const demoAccounts: DemoAccount[] = [
   {
-    email: "admin@gmail.com",
+    email: "admin@lenem.vn",
     username: "admin",
-    password: "123",
-    fullName: "Admin User",
-    phone: "123456789",
+    password: "123456",
+    fullName: "Quản Trị Viên",
+    phone: "0912345678",
     roleId: "admin",
   },
   {
-    email: "staff@gmail.com",
+    email: "staff@lenem.vn",
     username: "staff",
-    password: "123",
-    fullName: "Staff User",
-    phone: "987654321",
+    password: "123456",
+    fullName: "Nhân Viên",
+    phone: "0987654321",
     roleId: "staff",
   },
   {
-    email: "tranngoc5979@gmail.com",
-    username: "tranngoc",
-    password: "123",
-    fullName: "Tran Ngoc",
+    email: "creator@lenem.vn",
+    username: "creator_linh",
+    password: "123456",
+    fullName: "Nguyễn Thị Linh",
+    phone: "0909123456",
+    roleId: "user",
+  },
+  {
+    email: "user@gmail.com",
+    username: "ngoc_tran",
+    password: "123456",
+    fullName: "Trần Thị Ngọc",
     phone: "0703339186",
     roleId: "user",
   },
   {
-    email: "kamuikatzzz@gmail.com",
-    username: "kamuikatzzz",
-    password: "123",
-    fullName: "Kamui Katz",
+    email: "minh@lenem.vn",
+    username: "minh_handmade",
+    password: "123456",
+    fullName: "Phạm Văn Minh",
     phone: "0909315708",
+    roleId: "user",
+  },
+  {
+    email: "thu@lenem.vn",
+    username: "thu_handmade",
+    password: "123456",
+    fullName: "Lê Thị Thu",
+    phone: "0938123456",
     roleId: "user",
   },
 ];
@@ -269,7 +285,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
         });
         localStorage.setItem("lenEm_user", JSON.stringify(demoUser));
-        toast.success("Welcome back! (Demo mode)");
+        toast.success("Welcome back!");
         return;
       }
 

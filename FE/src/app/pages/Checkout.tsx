@@ -6,6 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
 import { useKeyboardAvoidance } from "../../hooks/useKeyboardAvoidance";
 import { products } from "../data/products";
+import { formatPrice } from "../../lib/formatPrice";
 
 interface CheckoutProps {
   cartItems: { productId: string; quantity: number }[];
@@ -18,10 +19,6 @@ const DELIVERY_FEE_PERCENT = 15;
 const BANK_NAME = "Vietcombank";
 const BANK_ACCOUNT = "101 123 4567";
 const BANK_HOLDER = "LEN & EM CO., LTD";
-
-function formatPrice(amount: number): string {
-  return `$${amount.toFixed(2)}`;
-}
 
 export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -259,7 +256,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
                   <p className="font-medium">{item.productName}</p>
                   <p className="text-sm text-muted-foreground">SL: {item.quantity}</p>
                 </div>
-                <p className="font-medium">{(item.price * item.quantity).toFixed(2)}$</p>
+                <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
               </div>
             ))}
           </div>

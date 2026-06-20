@@ -16,6 +16,7 @@ import { Separator } from "../components/ui/separator";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
 import { diyPosts } from "../../features/diy/data/diy.mock";
+import { formatPrice } from "../../lib/formatPrice";
 
 interface DIYDetailPageProps {
   onAddToCart: (productId: string) => void;
@@ -142,7 +143,7 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
                   <h3 className="line-clamp-2 text-sm font-medium">{item.name}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">Qty {item.quantity}</p>
                 </div>
-                <p className="text-sm font-semibold">${item.price.toFixed(2)}</p>
+                  <p className="text-sm font-semibold">{formatPrice(item.price)}</p>
               </div>
             ))}
           </div>
@@ -151,7 +152,7 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
 
           <div className="mb-5 flex items-center justify-between text-lg font-semibold">
             <span>Total combo price</span>
-            <span>${post.linkedCombo.totalPrice.toFixed(2)}</span>
+              <span>{formatPrice(post.linkedCombo.totalPrice)}</span>
           </div>
 
           <Button className="w-full" size="lg" onClick={() => requireAuth(buyCombo)}>

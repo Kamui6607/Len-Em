@@ -4,6 +4,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { useAdmin } from "../../context/AdminContext";
 import { products } from "../../data/products";
 import { DashboardShell } from "../../components/dashboard/DashboardShell";
+import { formatPrice } from "../../../lib/formatPrice";
 import type { NavItem } from "../../components/dashboard/Sidebar";
 import { toast } from "sonner";
 
@@ -56,7 +57,7 @@ export function StaffPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-primary text-xl">
-                        ${order.total.toFixed(2)}
+                        {formatPrice(order.total)}
                       </p>
                       <p className="text-xs text-muted-foreground">Cash Payment</p>
                     </div>
@@ -147,7 +148,7 @@ export function StaffPage() {
                 <div className="p-4">
                   <h4 className="mb-2">{product.name}</h4>
                   <p className="text-primary font-semibold">
-                    ${product.variants?.[0]?.price.toFixed(2) ?? "0.00"}
+                    {formatPrice(product.variants?.[0]?.price ?? 0)}
                   </p>
                 </div>
               </div>

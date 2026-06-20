@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAdmin } from "../../context/AdminContext";
 import { toast } from "sonner";
+import { formatPrice } from "../../../lib/formatPrice";
 
 export function AdminOrders() {
   const { orders, confirmPayment, cancelOrder, logActivity } = useAdmin();
@@ -83,7 +84,7 @@ export function AdminOrders() {
                   <p className="text-sm text-muted-foreground">{order.userName} • {order.userEmail}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-primary">${order.total.toFixed(2)}</p>
+                  <p className="font-bold text-primary">{formatPrice(order.total)}</p>
                   <p className="text-xs text-muted-foreground capitalize">{order.paymentMethod}</p>
                 </div>
               </div>

@@ -8,6 +8,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
 import { Button } from "./ui/button";
 import { LevelBadge } from "./LevelBadge";
+import { formatPrice } from "../../lib/formatPrice";
 
 interface ProductCardProps {
   product: Product;
@@ -33,8 +34,8 @@ export const ProductCard = memo(function ProductCard({
   const hasPriceRange = minPrice !== maxPrice;
 
   const formattedPrice = hasPriceRange
-    ? `$${minPrice.toFixed(2)} – $${maxPrice.toFixed(2)}`
-    : `$${minPrice.toFixed(2)}`;
+    ? `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`
+    : formatPrice(minPrice);
 
   const requireAuth = (action: () => void) => {
     if (!isAuthenticated) {
