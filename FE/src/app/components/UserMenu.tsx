@@ -12,13 +12,17 @@ interface UserMenuProps {
 export function UserMenu({ position = "top" }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isOutsideMenu = menuRef.current && !menuRef.current.contains(target);
+      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(target);
+      if (isOutsideMenu && isOutsideDropdown) {
         setIsOpen(false);
       }
     }
@@ -56,6 +60,7 @@ export function UserMenu({ position = "top" }: UserMenuProps) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: position === "top" ? -8 : 8, scale: 0.95 }}
         transition={{ duration: 0.18 }}
+        ref={dropdownRef}
         className={`fixed right-4 w-64 bg-card rounded-2xl shadow-xl border border-border overflow-hidden z-[100] ${
           position === "top" ? "top-20" : "bottom-20"
         }`}
