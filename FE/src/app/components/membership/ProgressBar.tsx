@@ -20,7 +20,6 @@ const heightClasses = {
 export function ProgressBar({
   points,
   currentRank,
-  animate = true,
   showTooltip = true,
   size = "md",
 }: ProgressBarProps) {

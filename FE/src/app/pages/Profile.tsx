@@ -7,7 +7,7 @@ import { RankBadge } from "../components/membership/RankBadge";
 
 export function Profile() {
   const { user } = useAuth();
-  const { data, initialize } = useMembershipStore();
+  const { data } = useMembershipStore();
 
   if (!user) return null;
 
