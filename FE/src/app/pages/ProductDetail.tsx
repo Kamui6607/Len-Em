@@ -149,6 +149,13 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 src={currentImage}
                 alt={product.name}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.fallback) {
+                    target.dataset.fallback = "true";
+                    target.src = `https://picsum.photos/seed/${product.id}/800/800`;
+                  }
+                }}
               />
               {/* Favorite button overlay */}
               <button
@@ -391,9 +398,9 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 onClick={handleAddToCart}
                 disabled={currentStock === 0}
                 className={cn(
-                  "w-full min-h-11 py-4 rounded-full flex items-center justify-center gap-2 text-base font-medium transition-all",
+                  "w-full min-h-11 py-4 rounded-full flex items-center justify-center gap-2 text-base font-medium transition-all duration-200",
                   currentStock > 0
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
                 style={{
@@ -406,9 +413,8 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
               </button>
               <button
                 type="button"
-                className="w-full min-h-11 bg-card text-foreground py-4 rounded-full border border-border hover:bg-muted flex items-center justify-center gap-2"
+                className="w-full min-h-11 bg-card text-foreground py-4 rounded-full border border-border hover:bg-muted hover:shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 transition-all duration-200"
                 style={{
-                  transition: "background 0.2s, border-color 0.2s",
                   touchAction: "manipulation",
                   WebkitTapHighlightColor: "transparent",
                 }}
@@ -482,16 +488,16 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
 
       {/* ── Mobile sticky bottom bar ── */}
       {!scrolledToBottom && (
-        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Price</p>
-              <p className="text-lg font-bold text-primary">{formatPrice(currentPrice)}</p>
+        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Price:</p>
+              <p className="text-base font-bold text-primary">{formatPrice(currentPrice)}</p>
             </div>
             <button
               onClick={handleAddToCart}
               disabled={currentStock === 0}
-              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm hover:bg-primary/90 hover:shadow-lg active:scale-[0.97] transition-all duration-200 shadow-sm disabled:opacity-50"
             >
               {currentStock > 0 ? "Add to Cart" : "Sold Out"}
             </button>

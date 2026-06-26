@@ -23,6 +23,8 @@ import { Button } from "./ui/button";
 import { cn } from "./ui/utils";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { BottomNav } from "../../components/mobile/BottomNav";
+import { RankBadge } from "./membership/RankBadge";
+import { useMembershipStore } from "../../features/membership/store/membership.store";
 
 interface NavigationProps {
   cartCount: number;
@@ -302,9 +304,11 @@ export function Navigation({ cartCount }: NavigationProps) {
               </>
             )}
             {isAuthenticated && !isHomePage && (
-              <div className="relative">
-                <UserMenu position="top" />
-              </div>
+              <>
+                <div className="relative">
+                  <UserMenu position="top" />
+                </div>
+              </>
             )}
             {isAuthenticated && isHomePage && (
               <button
@@ -490,4 +494,15 @@ function Counter({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
+}
+
+function MembershipBadge() {
+  const data = useMembershipStore((s) => s.data);
+  const init = useMembershipStore((s) => s.initialize);
+  useEffect(() => {
+    if (!data) init();
+  }, [data, init]);
+
+  if (!data) return null;
+  return <RankBadge rank={data.rank} size="sm" />;
 }

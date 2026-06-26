@@ -17,6 +17,27 @@
   --color-text-muted: #8B7355;
   --color-border: #E8DDD4;
 
+  /* ── Membership Rank Colors ── */
+  --member-grad-start: #F5F0EB;
+  --member-grad-end: #EDE5DA;
+  --member-text: #8B7355;
+  --member-bg: #F5F0EB;
+  --silver-grad-start: #F0F0F0;
+  --silver-grad-mid: #D0D0D0;
+  --silver-grad-end: #A8A8A8;
+  --silver-text: #4A4A4A;
+  --silver-bg: #F0F0F0;
+  --gold-grad-start: #FFF8E1;
+  --gold-grad-mid: #FFD700;
+  --gold-grad-end: #FFB300;
+  --gold-text: #7A5C00;
+  --gold-bg: #FFF8E1;
+  --diamond-grad-start: #E3F2FD;
+  --diamond-grad-mid: #90CAF9;
+  --diamond-grad-end: #64B5F6;
+  --diamond-text: #1565C0;
+  --diamond-bg: #E3F2FD;
+
   --font-heading: 'Playfair Display', Georgia, serif;
   --font-body: 'DM Sans', Inter, system-ui, sans-serif;
 
@@ -46,6 +67,27 @@
   --color-text: #F5EDE4;
   --color-text-muted: #C8B6A6;
   --color-border: #4A3A31;
+
+  /* ── Membership Rank Colors (dark mode) ── */
+  --member-grad-start: #3A3028;
+  --member-grad-end: #2C2420;
+  --member-text: #C8B6A6;
+  --member-bg: #3A3028;
+  --silver-grad-start: #3A3A3A;
+  --silver-grad-mid: #505050;
+  --silver-grad-end: #606060;
+  --silver-text: #C0C0C0;
+  --silver-bg: #3A3A3A;
+  --gold-grad-start: #4A3A1A;
+  --gold-grad-mid: #B8860B;
+  --gold-grad-end: #8B6914;
+  --gold-text: #FFD700;
+  --gold-bg: #4A3A1A;
+  --diamond-grad-start: #1A2A3A;
+  --diamond-grad-mid: #1A5276;
+  --diamond-grad-end: #1565C0;
+  --diamond-text: #90CAF9;
+  --diamond-bg: #1A2A3A;
 
   --background: var(--color-bg);
   --foreground: var(--color-text);

@@ -38,16 +38,29 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
 
   const cartProducts = cartItems
   .map((item) => {
-    // productId may be composite "productId-variantId" from ProductDetail
-    const parts = String(item.productId).split("-");
-    const baseId = parts[0];
-    const product = products.find(
-      (p) => String(p.id) === baseId,
-    );
+    // productId is either a simple product ID or "productId-variantId" from ProductDetail
+    const idStr = String(item.productId);
+    
+    // Check if it's a composite ID (productId-variantId)
+    // We know variant IDs contain dots but not dashes, product IDs contain dashes
+    // Simple approach: try matching exact, then try composite matching
+    let product = products.find((p) => String(p.id) === idStr);
+    let variantId: string | null = null;
+    
+    if (!product) {
+      // Try composite ID pattern: find the product by checking prefix
+      // Example: "yarn-cotton-blush-cotton-blush" → product "yarn-cotton-blush", variant "cotton-blush"
+      for (const p of products) {
+        if (idStr.startsWith(p.id + "-")) {
+          product = p;
+          variantId = idStr.slice(p.id.length + 1);
+          break;
+        }
+      }
+    }
+    
     if (!product) return null;
 
-    // Reconstruct the full variant id from remaining parts
-    const variantId = parts.length > 1 ? parts.slice(1).join("-") : null;
     const variant =
       variantId && product.variants
         ? product.variants.find((v) => String(v.id) === variantId)
@@ -56,7 +69,7 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
 
     return {
       ...product,
-      cartId: item.productId, // preserve the original composite key for callbacks
+      cartId: item.productId,
       quantity: item.quantity,
       price: selectedVariant?.price ?? 0,
       variantName: selectedVariant?.color ?? null,
@@ -120,6 +133,13 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                       src={item.image}
                       alt={item.name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.fallback) {
+                          target.dataset.fallback = "true";
+                          target.src = `https://picsum.photos/seed/${item.id}/200/200`;
+                        }
+                      }}
                     />
                   </div>
 
@@ -178,10 +198,10 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                           }
                           disabled={isMinQuantity}
                           aria-label="Decrease quantity"
-                          className={`w-11 h-11 md:w-8 md:h-8 rounded-full border flex items-center justify-center transition-colors ${
+                          className={`w-11 h-11 md:w-8 md:h-8 rounded-full border flex items-center justify-center transition-all duration-200 ${
                             isMinQuantity
                               ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
-                              : "border-border hover:bg-muted"
+                              : "border-border hover:bg-muted hover:shadow-sm active:scale-90"
                           }`}
                         >
                           <Minus className="w-4 h-4" />
@@ -194,7 +214,7 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                             onUpdateQuantity(item.cartId, item.quantity + 1)
                           }
                           aria-label="Increase quantity"
-                          className="w-11 h-11 md:w-8 md:h-8 rounded-full border border-border hover:bg-muted transition-colors flex items-center justify-center"
+                          className="w-11 h-11 md:w-8 md:h-8 rounded-full border border-border hover:bg-muted hover:shadow-sm active:scale-90 transition-all duration-200 flex items-center justify-center"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
@@ -226,12 +246,12 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
                 </div>
               </div>
 
-              <button
-                onClick={() => navigate("/checkout")}
-                className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 transition-colors mb-3 font-medium"
-              >
-                Proceed to Checkout
-              </button>
+                  <button
+                    onClick={() => navigate("/checkout")}
+                    className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 mb-3 font-medium"
+                  >
+                    Proceed to Checkout
+                  </button>
 
               <Link
                 to="/shop"
@@ -246,17 +266,17 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
 
       {/* ── Mobile sticky bottom bar ── */}
       {!scrolledToBottom && (
-        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-lg font-bold text-primary">{formatPrice(total)}</p>
+        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total:</p>
+              <p className="text-base font-bold text-primary">{formatPrice(total)}</p>
             </div>
             <button
               onClick={() => navigate("/checkout")}
-              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm"
+              className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm hover:bg-primary/90 hover:shadow-lg active:scale-[0.97] transition-all duration-200 shadow-sm"
             >
-              Checkout →
+              Proceed to Checkout →
             </button>
           </div>
         </div>
