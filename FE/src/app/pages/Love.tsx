@@ -76,15 +76,15 @@ export function Love({ onAddToCart }: LoveProps) {
 
       {/* ── Mobile sticky bottom bar ── */}
       {!scrolledToBottom && onAddToCart && (
-        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Wishlist</p>
-              <p className="text-lg font-bold text-primary">{favoriteProducts.length} items</p>
+        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Wishlist:</p>
+              <p className="text-base font-bold text-primary">{favoriteProducts.length} items</p>
             </div>
             <button
               onClick={addAllToCart}
-              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm flex items-center justify-center gap-2"
+              className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 hover:shadow-lg active:scale-[0.97] transition-all duration-200 shadow-sm"
             >
               <ShoppingCart className="size-4" />
               Add all to cart

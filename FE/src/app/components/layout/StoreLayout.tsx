@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useLocation } from "react-router";
 import { Navigation } from "../Navigation";
@@ -21,6 +21,11 @@ export function StoreLayout({
   const shouldReduceMotion = useReducedMotion();
 
   useSwipeBack(isMobile);
+
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [location.pathname]);
 
   return (
     <motion.div className="min-h-screen bg-background flex flex-col">

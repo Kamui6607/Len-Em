@@ -80,6 +80,16 @@ const demoAccounts: DemoAccount[] = [
   },
 ];
 
+// Addresses for demo accounts (used to auto-fill checkout)
+const demoAddresses: Record<string, string> = {
+  "admin@lenem.vn": "123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
+  "staff@lenem.vn": "45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
+  "creator@lenem.vn": "200 Pasteur, Phường 6, Quận 3, TP. Hồ Chí Minh",
+  "user@gmail.com": "123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
+  "minh@lenem.vn": "45 Lê Lợi, Quận Hai Bà Trưng, Hà Nội",
+  "thu@lenem.vn": "78 Trần Phú, Quận Hải Châu, Đà Nẵng",
+};
+
 // ---- Helpers ----
 
 function safeDecode(token: string): DecodedToken | null {
@@ -125,7 +135,7 @@ function matchDemoAccount(emailOrUsername: string, password: string): User | nul
     username: account.username,
     fullName: account.fullName,
     phone: account.phone,
-    address: "",
+    address: demoAddresses[account.email] || "",
     gender: "OTHER",
     dateOfBirth: "",
     roleId: account.roleId,

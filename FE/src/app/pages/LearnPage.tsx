@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { BookOpen, Clock, SlidersHorizontal, Star, Users } from "lucide-react";
+import { BookOpen, Clock, SlidersHorizontal, Star, Users, Play } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
@@ -9,7 +9,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
-import { learnCourses } from "../../features/learn/data/learn.mock";
+import { learnCourses, freeVideos } from "../../features/learn/data/learn.mock";
 import { useAuth } from "../../hooks/useAuth";
 import type { CourseLevel } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
@@ -150,67 +150,148 @@ export function LearnPage() {
             </FilterGroup>
           </aside>
 
-          <main>
-            <div className="mb-5 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold">Featured courses</h2>
-                <p className="text-sm text-muted-foreground">
-                  {filteredCourses.length} course{filteredCourses.length === 1 ? "" : "s"} ready to start
-                </p>
+          <main className="space-y-12">
+            {/* ── Premium Courses ── */}
+            <div>
+              <div className="mb-5 flex items-end justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🔥</span>
+                    <h2 className="text-2xl font-semibold">Premium Courses</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {filteredCourses.length} course{filteredCourses.length === 1 ? "" : "s"} — structured lessons with PDF materials
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredCourses.map((course) => (
+                  <Card key={course.id} className="overflow-hidden transition-shadow hover:shadow-lg">
+                    <div className="relative aspect-video overflow-hidden bg-muted">
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                      <Badge className={cn("absolute left-3 top-3 border", levelStyles[course.level])}>
+                        {levelLabels[course.level]}
+                      </Badge>
+                      {course.price && course.price > 0 && (
+                        <Badge className="absolute right-3 top-3 border-amber-200 bg-amber-100 text-amber-800">
+                          {course.price.toLocaleString()}₫
+                        </Badge>
+                      )}
+                      {course.price === 0 && (
+                        <Badge className="absolute right-3 top-3 border-green-200 bg-green-100 text-green-700">
+                          Free
+                        </Badge>
+                      )}
+                    </div>
+                    <CardContent className="space-y-4 p-5">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-9">
+                          <AvatarImage src={course.creator.avatar} alt={course.creator.name} />
+                          <AvatarFallback>{course.creator.name.slice(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{course.creator.name}</span>
+                      </div>
+                      <div>
+                        <h3 className="line-clamp-2 min-h-12 text-lg font-semibold">{course.title}</h3>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {course.tags.slice(0, 2).map((tag) => (
+                            <Badge key={tag} variant="outline">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} lessons</span>
+                        <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} min</span>
+                        <span className="flex items-center gap-1.5"><Star className="size-4 fill-yellow-400 text-yellow-400" />{course.rating}</span>
+                        <span className="flex items-center gap-1.5"><Users className="size-4" />{course.enrolledCount.toLocaleString()}</span>
+                      </div>
+                      {course.pointReward && course.pointReward > 0 && (
+                        <p className="text-[11px] text-primary">🏆 +{course.pointReward} Points khi hoàn thành</p>
+                      )}
+                      <Button asChild className="w-full">
+                        <Link
+                          to={`/learn/${course.id}`}
+                          onClick={(e) => {
+                            if (!isAuthenticated) {
+                              e.preventDefault();
+                              navigate("/auth/login");
+                            }
+                          }}
+                        >
+                          {course.price && course.price > 0 ? `Mua ngay ${course.price.toLocaleString()}₫` : "Bắt đầu học"}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredCourses.map((course) => (
-                <Card key={course.id} className="overflow-hidden transition-shadow hover:shadow-lg">
-                  <div className="relative aspect-video overflow-hidden bg-muted">
-                    <img
-                      src={course.thumbnail}
-                      alt={course.title}
-                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                    />
-                    <Badge className={cn("absolute left-3 top-3 border", levelStyles[course.level])}>
-                      {levelLabels[course.level]}
-                    </Badge>
+            {/* ── Free Videos ── */}
+            <div>
+              <div className="mb-5 flex items-end justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🆓</span>
+                    <h2 className="text-2xl font-semibold">Free Videos</h2>
                   </div>
-                  <CardContent className="space-y-4 p-5">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-9">
-                        <AvatarImage src={course.creator.avatar} alt={course.creator.name} />
-                        <AvatarFallback>{course.creator.name.slice(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{course.creator.name}</span>
+                  <p className="text-sm text-muted-foreground">
+                    {freeVideos.length} short tutorials — no login required
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {freeVideos.map((video) => (
+                  <div
+                    key={video.id}
+                    className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:shadow-md cursor-pointer"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        navigate("/auth/login");
+                      }
+                    }}
+                  >
+                    <div className="relative aspect-video overflow-hidden bg-muted">
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                          <Play className="w-5 h-5 text-foreground ml-0.5" />
+                        </div>
+                      </div>
+                      <Badge className={cn("absolute left-3 top-3 border", levelStyles[video.level])}>
+                        {levelLabels[video.level]}
+                      </Badge>
+                      <Badge className="absolute right-3 top-3 border-green-200 bg-green-100 text-green-700 text-[10px]">
+                        {video.duration} phút
+                      </Badge>
                     </div>
-                    <div>
-                      <h3 className="line-clamp-2 min-h-12 text-lg font-semibold">{course.title}</h3>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {course.tags.slice(0, 2).map((tag) => (
-                          <Badge key={tag} variant="outline">{tag}</Badge>
-                        ))}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Avatar className="size-6">
+                          <AvatarImage src={video.creator.avatar} alt={video.creator.name} />
+                          <AvatarFallback className="text-[10px]">{video.creator.name.slice(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground">{video.creator.name}</span>
+                      </div>
+                      <h4 className="text-sm font-semibold line-clamp-2">{video.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{video.description}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-muted-foreground">👁️ {video.viewCount.toLocaleString()} lượt xem</span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} lessons</span>
-                      <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} min</span>
-                      <span className="flex items-center gap-1.5"><Star className="size-4 fill-yellow-400 text-yellow-400" />{course.rating}</span>
-                      <span className="flex items-center gap-1.5"><Users className="size-4" />{course.enrolledCount.toLocaleString()}</span>
-                    </div>
-                    <Button asChild className="w-full">
-                      <Link
-                        to={`/learn/${course.id}`}
-                        onClick={(e) => {
-                          if (!isAuthenticated) {
-                            e.preventDefault();
-                            navigate("/auth/login");
-                          }
-                        }}
-                      >
-                        Start Learning
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </main>
         </div>

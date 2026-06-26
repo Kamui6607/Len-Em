@@ -1,9 +1,109 @@
-import type { Course, Lesson, MaterialCombo } from "../types/learn.types";
+import type { Course, Lesson, MaterialCombo, FreeVideo } from "../types/learn.types";
+
+// ============================================================
+// Free Videos (miễn phí, ngắn)
+// ============================================================
+export const freeVideos: FreeVideo[] = [
+  {
+    id: "free-magic-knot",
+    title: "Magic Knot — Nối Len Không Đầu Chỉ",
+    description: "Học cách nối len không đầu chỉ, kỹ thuật cơ bản ai cũng cần biết.",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    duration: 6,
+    level: "beginner",
+    thumbnail: "https://images.unsplash.com/photo-1596536220107-16ea84ac5bcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
+    creator: { id: "creator-thu", name: "Thu Handmade", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
+    linkedProducts: [
+      { productId: "yarn-cotton-blush", name: "Len Cotton Mềm - Hồng Phấn", price: 129000, thumbnail: "https://images.unsplash.com/photo-1596536220107-16ea84ac5bcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=300", timestamp: 8 },
+    ],
+    tags: ["beginner", "knot", "kỹ thuật"],
+    viewCount: 15200,
+    createdAt: "2026-05-01",
+  },
+  {
+    id: "free-chart-reading",
+    title: "Cách Đọc Chart Móc Cơ Bản",
+    description: "Hiểu các ký hiệu và đọc chart móc như một pro.",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    duration: 8,
+    level: "beginner",
+    thumbnail: "https://images.unsplash.com/photo-1620633437938-be73c35eb77e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
+    creator: { id: "creator-minh", name: "Minh Handmade", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
+    tags: ["beginner", "chart", "kỹ thuật"],
+    viewCount: 9800,
+    createdAt: "2026-05-05",
+  },
+  {
+    id: "free-magic-ring",
+    title: "Mũi Magic Ring — Bắt Đầu Vòng Tròn",
+    description: "Kỹ thuật magic ring cho các dự án móc vòng tròn hoàn hảo.",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    duration: 5,
+    level: "beginner",
+    thumbnail: "https://images.unsplash.com/photo-1596536220107-16ea84ac5bcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
+    creator: { id: "creator-thu", name: "Thu Handmade", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
+    linkedProducts: [
+      { productId: "tool-hooks-aluminum", name: "Bộ Kim Móc Nhôm - Cơ Bản", price: 249000, thumbnail: "https://images.unsplash.com/photo-1682953745453-c537d3248028?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=300", timestamp: 12 },
+    ],
+    tags: ["beginner", "magic ring", "vòng tròn"],
+    viewCount: 22100,
+    createdAt: "2026-05-10",
+  },
+  {
+    id: "free-basic-stitches",
+    title: "5 Loại Mũi Cơ Bản Ai Cũng Phải Biết",
+    description: "Từ mũi bính, mũi đơn, mũi kép — tất cả trong 12 phút.",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    duration: 12,
+    level: "beginner",
+    thumbnail: "https://images.unsplash.com/photo-1682953745453-c537d3248028?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
+    creator: { id: "creator-ngoc", name: "Ngọc Handmade", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
+    linkedProducts: [
+      { productId: "tool-stitch-markers", name: "Bộ Đánh Dấu Mũi & Phụ Kiện", price: 89000, thumbnail: "https://images.unsplash.com/photo-1620633437938-be73c35eb77e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=300", timestamp: 20 },
+    ],
+    tags: ["beginner", "mũi cơ bản"],
+    viewCount: 31500,
+    createdAt: "2026-04-20",
+  },
+  {
+    id: "free-color-change",
+    title: "Kỹ Thuật Đổi Màu Sạch Đẹp",
+    description: "Đổi màu len không để lại chỉ thừa, chuyên nghiệp như creator.",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    duration: 7,
+    level: "intermediate",
+    thumbnail: "https://images.unsplash.com/photo-1678443087150-4a40aa2f250a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
+    creator: { id: "creator-linh", name: "Linh Creator", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
+    linkedProducts: [
+      { productId: "yarn-pastel-bundle", name: "Bộ Len Pastel Cầu Vồng", price: 349000, thumbnail: "https://images.unsplash.com/photo-1678443087150-4a40aa2f250a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=300", timestamp: 10 },
+    ],
+    tags: ["intermediate", "color", "kỹ thuật"],
+    viewCount: 12400,
+    createdAt: "2026-04-15",
+  },
+  {
+    id: "free-measure-hat",
+    title: "Cách Đo Size Mũ Chuẩn",
+    description: "Đo size mũ chuẩn không bị rộng hay chật.",
+    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    duration: 4,
+    level: "beginner",
+    thumbnail: "https://images.unsplash.com/photo-1618354691229-88d47f285158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
+    creator: { id: "creator-thu", name: "Thu Handmade", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
+    tags: ["beginner", "mũ", "size"],
+    viewCount: 8700,
+    createdAt: "2026-05-15",
+  },
+];
 
 export const learnCourses: Course[] = [
   {
     id: "khoa-hoc-khan-co-ban",
     title: "Khăn Quàng Cơ Bản Cho Người Mới Bắt Đầu",
+    type: "premium",
+    price: 0,
+    pointReward: 200,
+    purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
     level: "beginner",
     creator: {
@@ -23,6 +123,10 @@ export const learnCourses: Course[] = [
   {
     id: "khoa-hoc-mu-bucket",
     title: "Mũ Bucket Pastel - Xưởng Làm Mũ",
+    type: "premium",
+    price: 59000,
+    pointReward: 300,
+    purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1618354691229-88d47f285158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
     level: "intermediate",
     creator: {
@@ -42,6 +146,10 @@ export const learnCourses: Course[] = [
   {
     id: "khoa-hoc-tote-promax",
     title: "Túi Tote Cá Tính - Builder Nâng Cao",
+    type: "premium",
+    price: 79000,
+    pointReward: 400,
+    purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1544816155-12df9643f363?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
     level: "advanced",
     creator: {
@@ -61,6 +169,10 @@ export const learnCourses: Course[] = [
   {
     id: "khoa-hoc-daisy-top",
     title: "Áo Croptop Daisy - Phong Cách Mùa Hè",
+    type: "premium",
+    price: 59000,
+    pointReward: 300,
+    purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
     level: "intermediate",
     creator: {
@@ -80,6 +192,10 @@ export const learnCourses: Course[] = [
   {
     id: "khoa-hoc-mu-bunny",
     title: "Mũ Bunny Idol - Tai Thỏ Dễ Thương",
+    type: "premium",
+    price: 0,
+    pointReward: 200,
+    purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1618354691229-88d47f285158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
     level: "beginner",
     creator: {
@@ -99,6 +215,10 @@ export const learnCourses: Course[] = [
   {
     id: "khoa-hoc-cardigan-cloud",
     title: "Cardigan Cloud Puff - Ôm Mây",
+    type: "premium",
+    price: 99000,
+    pointReward: 500,
+    purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
     level: "advanced",
     creator: {

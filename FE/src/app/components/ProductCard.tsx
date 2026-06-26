@@ -28,7 +28,9 @@ export const ProductCard = memo(function ProductCard({
   const { isAuthenticated } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
 
-  const prices = product.variants?.map((variant) => variant.price) ?? [getBasePrice(product)];
+  const prices = product.variants?.map((variant) => variant.price) ?? [
+    getBasePrice(product),
+  ];
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const hasPriceRange = minPrice !== maxPrice;
@@ -66,14 +68,22 @@ export const ProductCard = memo(function ProductCard({
       onMouseLeave={() => setIsHovered(false)}
       className="card-hover group overflow-hidden"
     >
-      <Link to={`/shop/product/${product.id}`} className="block" onClick={handleProductClick}>
+      <Link
+        to={`/shop/product/${product.id}`}
+        className="block"
+        onClick={handleProductClick}
+      >
         <div className="relative aspect-square overflow-hidden bg-[var(--color-bg)]">
           <motion.div
             animate={{ scale: isHovered ? 1.07 : 1 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="h-full w-full"
           >
-            <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+            <img
+              src={product.image}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
           </motion.div>
 
           <motion.button
@@ -85,7 +95,11 @@ export const ProductCard = memo(function ProductCard({
               toggleFavorite(product.id);
             }}
             className="absolute right-3 top-3 flex size-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg-card)_88%,transparent)] text-[var(--color-text-muted)] shadow-sm backdrop-blur-md transition-colors hover:text-[var(--color-primary)]"
-            aria-label={isFavorite(product.id) ? "Remove from favorites" : "Add to favorites"}
+            aria-label={
+              isFavorite(product.id)
+                ? "Remove from favorites"
+                : "Add to favorites"
+            }
           >
             <Heart
               className={
@@ -106,7 +120,9 @@ export const ProductCard = memo(function ProductCard({
                 type="button"
                 onClick={(event) => {
                   event.preventDefault();
-                  navigate(`/learn/${relatedCourseId}/lesson/${relatedLessonId}`);
+                  navigate(
+                    `/learn/${relatedCourseId}/lesson/${relatedLessonId}`,
+                  );
                 }}
                 className="rounded-full bg-[var(--color-primary)] px-3 py-1 text-xs font-bold text-white shadow-sm transition-transform hover:scale-[1.02]"
               >
@@ -118,7 +134,11 @@ export const ProductCard = memo(function ProductCard({
       </Link>
 
       <div className="space-y-3 p-4">
-        <Link to={`/shop/product/${product.id}`} className="block" onClick={handleProductClick}>
+        <Link
+          to={`/shop/product/${product.id}`}
+          className="block"
+          onClick={handleProductClick}
+        >
           <h3 className="truncate text-base font-bold text-[var(--color-text)] transition-colors group-hover:text-[var(--color-primary)]">
             {product.name}
           </h3>
@@ -135,7 +155,7 @@ export const ProductCard = memo(function ProductCard({
             type="button"
             size="sm"
             onClick={handleAddClick}
-            className="rounded-full bg-[var(--color-primary)] px-4 font-bold text-white shadow-sm transition-transform hover:scale-[1.02] hover:bg-[var(--color-primary-light)]"
+            className="rounded-full bg-[var(--color-primary)] px-4 font-bold text-white shadow-sm hover:shadow-lg hover:scale-[1.05] hover:bg-[var(--color-primary-light)] active:scale-95 transition-all duration-200"
             disabled={!onAddToCart}
           >
             <ShoppingCart className="size-4" />

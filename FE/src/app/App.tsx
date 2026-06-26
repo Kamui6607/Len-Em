@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { BrowserRouter } from "react-router";
 import { Toaster } from "./components/ui/sonner";
 import { useAuthStore } from "../store/auth.store";
+import { useMembershipStore } from "../features/membership/store/membership.store";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AdminProvider } from "./context/AdminContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -20,10 +21,19 @@ export interface CartItem {
 export default function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const initialize = useAuthStore((s) => s.initialize);
+  const initializeMembership = useMembershipStore((s) => s.initialize);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Initialize membership when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      initializeMembership();
+    }
+  }, [isAuthenticated, initializeMembership]);
 
   const handleAddToCart = (productId: string, metadata?: CartItem["metadata"]) => {
     setCartItems((prev) => {

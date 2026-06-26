@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useKeyboardAvoidance } from "../../hooks/useKeyboardAvoidance";
 import { products } from "../data/products";
 import { formatPrice } from "../../lib/formatPrice";
+import { CoinUsage } from "../components/membership/CoinUsage";
 
 interface CheckoutProps {
   cartItems: { productId: string; quantity: number }[];
@@ -33,6 +34,16 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   useKeyboardAvoidance();
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
+  // Auto-fill user data when component mounts
+  useEffect(() => {
+    if (user) {
+      if (user.fullName) setName(user.fullName);
+      if (user.email) setEmail(user.email);
+      if (user.phone) setPhone(user.phone);
+      if (user.address) setAddress(user.address);
+    }
+  }, [user]);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollHeight = document.documentElement.scrollHeight;
@@ -45,9 +56,17 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   }, []);
 
   const orderItems = cartItems.map((item) => {
-    const parts = String(item.productId).split("-");
-    const baseId = parts[0];
-    const product = products.find((p) => String(p.id) === baseId);
+    const idStr = String(item.productId);
+    // Try exact match first, then composite ID prefix matching
+    let product = products.find((p) => String(p.id) === idStr);
+    if (!product) {
+      for (const p of products) {
+        if (idStr.startsWith(p.id + "-")) {
+          product = p;
+          break;
+        }
+      }
+    }
     return {
       productId: item.productId,
       productName: product?.name || "Unknown",
@@ -283,28 +302,33 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
           )}
         </div>
 
+        {/* ── Coin Usage ── */}
+        <div className="mb-6">
+          <CoinUsage orderTotal={grandTotal} />
+        </div>
+
         {/* ── Place Order Button ── */}
         {payment && (
-          <button
-            onClick={handlePlaceOrder}
-            className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 transition-colors text-lg font-medium"
-          >
-            Đặt hàng — {formatPrice(grandTotal)}
-          </button>
+              <button
+                onClick={handlePlaceOrder}
+                className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium"
+              >
+                Đặt hàng
+              </button>
         )}
       </div>
 
       {/* ── Mobile sticky bottom bar ── */}
       {payment && !scrolledToBottom && (
-        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Tổng cộng</p>
-              <p className="text-lg font-bold text-primary">{formatPrice(grandTotal)}</p>
+        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Tổng cộng:</p>
+              <p className="text-base font-bold text-primary">{formatPrice(grandTotal)}</p>
             </div>
             <button
               onClick={handlePlaceOrder}
-              className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm"
+              className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm hover:bg-primary/90 hover:shadow-lg active:scale-[0.97] transition-all duration-200 shadow-sm"
             >
               Đặt hàng →
             </button>

@@ -531,7 +531,15 @@ export function Shop({ onAddToCart }: ShopProps) {
               <button
                 onClick={() => requireAuth(addAllLessonProducts)}
                 className="chip-filter active"
-                style={{ marginBottom: "0.75rem" }}
+                style={{ marginBottom: "0.75rem", transition: "all 0.2s" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(196,94,62,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "";
+                  e.currentTarget.style.boxShadow = "";
+                }}
               >
                 Add all to cart
               </button>
@@ -705,6 +713,15 @@ export function Shop({ onAddToCart }: ShopProps) {
                   fontSize: "0.95rem", fontWeight: 600, cursor: "pointer",
                   marginTop: "0.5rem",
                   touchAction: "manipulation",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(196,94,62,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "";
+                  e.currentTarget.style.boxShadow = "";
                 }}
               >
                 Show {resultCount} results

@@ -51,6 +51,11 @@ const LessonPage = lazy(() =>
 const Profile = lazy(() =>
   import("../app/pages/Profile").then((m) => ({ default: m.Profile })),
 );
+const MembershipPage = lazy(() =>
+  import("../app/pages/membership/MembershipPage").then((m) => ({
+    default: m.MembershipPage,
+  })),
+);
 const Purchased = lazy(() =>
   import("../app/pages/Purchased").then((m) => ({ default: m.Purchased })),
 );
@@ -174,6 +179,14 @@ export function AppRouter({
           element={
             <RequireAuth>
               <Profile />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="my-account/membership"
+          element={
+            <RequireAuth>
+              <MembershipPage />
             </RequireAuth>
           }
         />

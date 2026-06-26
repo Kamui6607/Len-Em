@@ -153,7 +153,7 @@ function SectionMotion({
   );
 }
 
-export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
+export function Home(_props: HomeProps) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const startLearning = () => navigate("/learn");
@@ -211,14 +211,14 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
               <button
                 type="button"
                 onClick={startLearning}
-                className="btn-primary px-7 py-3 text-sm"
+                className="btn-primary px-7 py-3 text-sm active:scale-95 hover:-translate-y-0.5 transition-all duration-200"
               >
                 Start learning now
               </button>
               <button
                 type="button"
                 onClick={openShop}
-                className="btn-outline px-7 py-3 text-sm"
+                className="btn-outline px-7 py-3 text-sm active:scale-95 hover:-translate-y-0.5 transition-all duration-200"
               >
                 Browse material combos
               </button>
@@ -317,7 +317,7 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
             <button
               type="button"
               onClick={startLearning}
-              className="btn-primary mt-7 px-6 py-3 text-sm"
+              className="btn-primary mt-7 px-6 py-3 text-sm active:scale-95 hover:-translate-y-0.5 transition-all duration-200"
             >
               Browse courses →
             </button>
@@ -362,7 +362,7 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
             <button
               type="button"
               onClick={openShop}
-              className="btn-outline mt-7 px-6 py-3 text-sm"
+              className="btn-outline mt-7 px-6 py-3 text-sm active:scale-95 hover:-translate-y-0.5 transition-all duration-200"
             >
               Shop combos →
             </button>
@@ -396,7 +396,7 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
                 </div>
                 <button
                   type="button"
-                  className="shrink-0 rounded-full bg-[var(--color-primary)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-primary-light)]"
+                  className="shrink-0 rounded-full bg-[var(--color-primary)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-primary-light)] hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all duration-200"
                 >
                   Add
                 </button>
@@ -482,7 +482,7 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
             <button
               type="button"
               onClick={() => navigate("/diy")}
-              className="btn-primary px-7 py-3 text-sm"
+              className="btn-primary px-7 py-3 text-sm active:scale-95 hover:-translate-y-0.5 transition-all duration-200"
             >
               Explore all DIY →
             </button>
@@ -504,14 +504,14 @@ export function Home({ isAuthOpen: _isAuthOpen = false }: HomeProps) {
             <button
               type="button"
               onClick={startLearning}
-              className="rounded-full bg-white px-7 py-3 text-sm font-extrabold text-[var(--color-primary)] shadow-lg transition-transform hover:-translate-y-0.5"
+              className="rounded-full bg-white px-7 py-3 text-sm font-extrabold text-[var(--color-primary)] shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
             >
               Start learning for free
             </button>
             <button
               type="button"
               onClick={openShop}
-              className="rounded-full border border-white/70 px-7 py-3 text-sm font-extrabold text-white hover:bg-white/10"
+              className="rounded-full border border-white/70 px-7 py-3 text-sm font-extrabold text-white hover:bg-white/10 active:scale-95 hover:-translate-y-0.5 transition-all duration-200"
             >
               Explore the shop
             </button>
