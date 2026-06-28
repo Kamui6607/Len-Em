@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Check } from "lucide-react";
 import { cn } from "./ui/utils";
 import { ColorSwatch } from "./ColorSwatch";
@@ -26,22 +26,26 @@ export function ProductVariantSelector({
   showLabel = true,
 }: ProductVariantSelectorProps) {
   const [selectedId, setSelectedId] = useState<string>(
-    defaultVariantId || variants[0]?.id || ""
+    defaultVariantId || variants[0]?.id || "",
   );
 
   // Re-sync when defaultVariantId changes externally (e.g., navigating to a new product)
-  const prevDefaultId = useState(defaultVariantId)[0];
-  if (defaultVariantId && defaultVariantId !== prevDefaultId && defaultVariantId !== selectedId) {
-    setSelectedId(defaultVariantId);
-  }
+  useEffect(() => {
+    if (defaultVariantId && defaultVariantId !== selectedId) {
+      setSelectedId(defaultVariantId);
+    }
+  }, [defaultVariantId, selectedId]);
 
-  const selectedVariant = variants.find((v) => v.id === selectedId) || variants[0];
+  const selectedVariant = useMemo(
+    () => variants.find((v) => v.id === selectedId) || variants[0],
+    [selectedId, variants],
+  );
 
   useEffect(() => {
     if (selectedVariant) {
       onVariantChange(selectedVariant);
     }
-  }, [selectedId]);
+  }, [onVariantChange, selectedVariant]);
 
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
@@ -72,7 +76,7 @@ export function ProductVariantSelector({
               title={variant.color || variant.id}
               className={cn(
                 "group relative flex flex-col items-center gap-1.5 transition-all",
-                variant.stock === 0 && "opacity-40 cursor-not-allowed"
+                variant.stock === 0 && "opacity-40 cursor-not-allowed",
               )}
             >
               <ColorSwatch
@@ -91,7 +95,7 @@ export function ProductVariantSelector({
                   "text-[10px] transition-colors",
                   selectedId === variant.id
                     ? "text-primary font-medium"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 {variant.stock > 0 ? `${variant.stock}` : "Out"}
@@ -106,7 +110,9 @@ export function ProductVariantSelector({
   // Non-color variants (e.g., different hook sizes) display as pills
   return (
     <div className="space-y-3">
-      {showLabel && <label className="text-sm text-foreground">Size / Option</label>}
+      {showLabel && (
+        <label className="text-sm text-foreground">Size / Option</label>
+      )}
       <div className="flex flex-wrap gap-2">
         {variants.map((variant) => (
           <button
@@ -118,7 +124,8 @@ export function ProductVariantSelector({
               selectedId === variant.id
                 ? "bg-primary text-primary-foreground border-primary shadow-sm"
                 : "bg-card text-foreground border-border hover:border-primary/30 hover:bg-muted",
-              variant.stock === 0 && "opacity-40 cursor-not-allowed line-through"
+              variant.stock === 0 &&
+                "opacity-40 cursor-not-allowed line-through",
             )}
           >
             {variant.color || variant.id}
@@ -127,7 +134,9 @@ export function ProductVariantSelector({
                 (only {variant.stock} left)
               </span>
             )}
-            {variant.stock === 0 && <span className="ml-2 text-xs text-destructive">Sold out</span>}
+            {variant.stock === 0 && (
+              <span className="ml-2 text-xs text-destructive">Sold out</span>
+            )}
           </button>
         ))}
       </div>

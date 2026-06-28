@@ -1,8 +1,173 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader as Loader2, CircleAlert as AlertCircle, User as UserIcon, Phone } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader,
+  AlertCircle,
+  User as UserIcon,
+  Phone,
+  AtSign,
+  Check,
+  MapPin,
+} from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
+import { toast } from "sonner";
 
+/* ─── Design tokens (shared với LoginPage) ─── */
+const T = {
+  ink: "#2C2C28", // sidebar background (dark olive)
+  inkHover: "#3a3a34",
+  cream: "#F5F0EA", // form background
+  surface: "#FFFFFF",
+  sage: "#4A7C65", // accent xanh rêu
+  sageLight: "rgba(74,124,101,0.12)",
+  gold: "#C8974A", // accent italic "journey"
+  muted: "#7A6E6B",
+  mutedLight: "rgba(122,110,107,0.35)",
+  border: "rgba(42,34,32,0.12)",
+  borderFocus: "#4A7C65",
+  errorRed: "#C0392B",
+  errorBg: "rgba(192,57,43,0.07)",
+  errorBorder: "rgba(192,57,43,0.25)",
+  textLight: "#F0EDE6",
+  textMuted: "rgba(240,237,230,0.45)",
+} as const;
+
+/* ─── Shared input style factory ─── */
+const inputStyle = (hasIcon = true, hasError = false): React.CSSProperties => ({
+  width: "100%",
+  height: 46,
+  padding: hasIcon ? "0 14px 0 42px" : "0 14px",
+  border: `1.5px solid ${hasError ? T.errorRed : T.border}`,
+  borderRadius: 10,
+  fontSize: 14,
+  background: T.surface,
+  color: T.ink,
+  outline: "none",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+  transition: "border 0.18s, box-shadow 0.18s",
+});
+
+/* ─── Field component ─── */
+function Field({
+  label,
+  icon: Icon,
+  k,
+  type = "text",
+  placeholder,
+  form,
+  fe,
+  upd,
+  optional,
+  rightSlot,
+  extraInputStyle,
+}: {
+  label: string;
+  icon?: React.ElementType;
+  k: string;
+  type?: string;
+  placeholder?: string;
+  form: Record<string, string>;
+  fe: Record<string, string>;
+  upd: (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+  optional?: boolean;
+  rightSlot?: React.ReactNode;
+  extraInputStyle?: React.CSSProperties;
+}) {
+  const [focused, setFocused] = useState(false);
+  const hasError = !!fe[k];
+
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <label
+        style={{
+          display: "block",
+          fontSize: 12.5,
+          fontWeight: 600,
+          color: T.ink,
+          marginBottom: 5,
+        }}
+      >
+        {label}
+        {optional ? (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 400,
+              color: T.muted,
+              marginLeft: 4,
+            }}
+          >
+            (optional)
+          </span>
+        ) : (
+          <span style={{ color: "#C0392B", marginLeft: 2 }}>*</span>
+        )}
+      </label>
+      <div
+        style={{ position: "relative", display: "flex", alignItems: "center" }}
+      >
+        {Icon && (
+          <Icon
+            size={15}
+            style={{
+              position: "absolute",
+              left: 13,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: focused ? T.sage : T.muted,
+              opacity: focused ? 1 : 0.6,
+              pointerEvents: "none",
+              transition: "color 0.18s",
+            }}
+          />
+        )}
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={form[k]}
+          onChange={upd(k)}
+          required={!optional}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            ...inputStyle(!!Icon, hasError),
+            ...(rightSlot ? { paddingRight: 44 } : {}),
+            ...(focused
+              ? {
+                  border: `1.5px solid ${hasError ? T.errorRed : T.borderFocus}`,
+                  boxShadow: hasError
+                    ? `0 0 0 3px ${T.errorBg}`
+                    : `0 0 0 3px ${T.sageLight}`,
+                }
+              : {}),
+            ...extraInputStyle,
+          }}
+        />
+        {rightSlot}
+      </div>
+      {hasError && (
+        <div
+          style={{
+            fontSize: 11,
+            color: T.errorRed,
+            marginTop: 4,
+            paddingLeft: 2,
+          }}
+        >
+          {fe[k]}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main component ─── */
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuthStore();
@@ -14,45 +179,88 @@ export function RegisterPage() {
     phone: "",
     password: "",
     confirmPassword: "",
+    address: "",
+    gender: "OTHER",
+    dateOfBirth: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showCp, setShowCp] = useState(false);
   const [error, setError] = useState("");
+  const [fe, setFe] = useState<Record<string, string>>({});
   const [step, setStep] = useState<1 | 2>(1);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  /* ─── Date of birth picker state ─── */
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobYear, setDobYear] = useState("");
 
-  /* Basic client-side validation before hitting API */
-  const validateStep1 = () => {
-    if (!form.fullName.trim()) return "Please enter your full name.";
-    if (!form.username.trim()) return "Please choose a username.";
-    if (!/^[a-zA-Z0-9_]{3,}$/.test(form.username))
-      return "Username must be 3+ characters (letters, numbers, underscores only).";
-    if (!form.email.includes("@")) return "Please enter a valid email.";
-    return "";
+  /** Combine 3 dropdown values into MM/DD/YYYY string for the API */
+  const getDobString = () => {
+    if (!dobMonth || !dobDay || !dobYear) return "";
+    return `${dobMonth.padStart(2, "0")}/${dobDay.padStart(2, "0")}/${dobYear}`;
   };
 
-  const validateStep2 = () => {
-    if (form.password.length < 6) return "Password must be at least 6 characters.";
-    if (form.password !== form.confirmPassword) return "Passwords do not match.";
-    return "";
+  const upd = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setFe((prev) => ({ ...prev, [k]: "" }));
+    setError("");
+  };
+
+  const v1 = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!form.fullName.trim()) errors.fullName = "Please enter your full name.";
+    if (!form.username.trim()) errors.username = "Please choose a username.";
+    else if (!/^[a-zA-Z0-9_]{3,}$/.test(form.username))
+      errors.username = "3+ chars: letters, numbers, underscores only.";
+    if (!form.email.trim()) errors.email = "Please enter your email.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      errors.email = "Please enter a valid email address.";
+    if (form.phone && !/^[0-9]{10,11}$/.test(form.phone.replace(/\s/g, "")))
+      errors.phone = "Enter a valid 10–11 digit phone number.";
+    if (form.dateOfBirth) {
+      const dobRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+      if (!dobRegex.test(form.dateOfBirth)) {
+        errors.dateOfBirth = "Please enter a valid date (MM/DD/YYYY).";
+      }
+    }
+    return errors;
+  };
+
+  const v2 = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!form.password) errors.password = "Please enter a password.";
+    else if (form.password.length < 6)
+      errors.password = "Password must be at least 6 characters.";
+    if (!form.confirmPassword)
+      errors.confirmPassword = "Please confirm your password.";
+    else if (form.password !== form.confirmPassword)
+      errors.confirmPassword = "Passwords do not match.";
+    return errors;
   };
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateStep1();
-    if (err) { setError(err); return; }
+    const errors = v1();
+    if (Object.keys(errors).length > 0) {
+      setFe(errors);
+      setError("Please fix the errors below.");
+      return;
+    }
+    setFe({});
     setError("");
     setStep(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateStep2();
-    if (err) { setError(err); return; }
+    const errors = v2();
+    if (Object.keys(errors).length > 0) {
+      setFe(errors);
+      setError("Please fix the errors below.");
+      return;
+    }
+    setFe({});
     setError("");
-
     try {
       await register({
         fullName: form.fullName,
@@ -60,563 +268,1018 @@ export function RegisterPage() {
         email: form.email,
         phone: form.phone || "",
         password: form.password,
-        address: "",
-        gender: "OTHER" as const,
-        dateOfBirth: "",
-        roleId: "user" as const,
+        address: form.address,
+        gender: form.gender as "MALE" | "FEMALE" | "OTHER",
+        dateOfBirth: getDobString(),
       });
-      const { user } = useAuthStore.getState();
-      if (!user || !user.roleId) navigate("/");
-      else if (user.roleId === "admin") navigate("/admin");
-      else if (user.roleId === "staff") navigate("/staff");
-      else navigate("/shop");
+      toast.success("Account created! Please sign in.");
+      navigate("/auth/login");
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(
-        axiosError?.response?.data?.message || "Registration failed. Please try again.",
-      );
+      const ax = err as {
+        response?: {
+          status?: number;
+          data?: { message?: string; errors?: Record<string, string[]> };
+        };
+      };
+      const status = ax?.response?.status;
+      const data = ax?.response?.data;
+      if (status === 400 && data?.errors) {
+        const fieldErrors: Record<string, string> = {};
+        Object.entries(data.errors).forEach(([f, ms]) => {
+          fieldErrors[f] = Array.isArray(ms) ? ms[0] : String(ms);
+        });
+        setFe(fieldErrors);
+        setError("Please fix the errors below.");
+        return;
+      }
+      if (status === 409) {
+        const message = data?.message || "User already exists";
+        const lower = message.toLowerCase();
+        if (lower.includes("email")) setFe({ email: message });
+        else if (lower.includes("username")) setFe({ username: message });
+        else if (lower.includes("phone")) setFe({ phone: message });
+        else setError(message);
+        return;
+      }
+      setError(data?.message || "Registration failed. Please try again.");
     }
   };
+
+  const pwScore =
+    form.password.length === 0
+      ? -1
+      : form.password.length < 6
+        ? 0
+        : form.password.length < 10
+          ? 1
+          : 2;
+  const pwLabel = pwScore <= 0 ? "Weak" : pwScore === 1 ? "Fair" : "Strong";
+  const pwColor = pwScore <= 0 ? "#C0392B" : pwScore === 1 ? "#C8974A" : T.sage;
+
+  /* ─── Sidebar step indicator ─── */
+  const steps = [
+    { n: "01", title: "Your info", desc: "Name, email, address & more" },
+    { n: "02", title: "Set password", desc: "Secure your account" },
+  ];
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap');
-
-        :root {
-          --rose:     #F2A7B2;
-          --blush:    #F9DDE2;
-          --sage:     #A8C5B5;
-          --sage-d:   #6FA08A;
-          --lavender: #C4B5E0;
-          --cream:    #FDF8F2;
-          --ink:      #2A2220;
-          --muted:    #7A6E6B;
-          --surface:  #FFFFFF;
-          --bdr:      rgba(42,34,32,0.10);
-        }
-
-        .reg-root {
-          min-height: 100vh;
-          background: var(--cream);
-          font-family: 'DM Sans', sans-serif;
-          display: flex;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .reg-blob { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
-        .rb-rose     { width: 420px; height: 420px; background: var(--blush); opacity: 0.55; top: -80px; right: -60px; animation: bm1 20s ease-in-out infinite; }
-        .rb-lavender { width: 280px; height: 280px; background: var(--lavender); opacity: 0.22; bottom: -40px; left: 5%; animation: bm2 25s ease-in-out infinite; }
-        .rb-sage     { width: 180px; height: 180px; background: var(--sage); opacity: 0.18; top: 40%; left: 38%; animation: bm3 18s ease-in-out infinite; }
-
-        @keyframes bm1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,25px)} }
-        @keyframes bm2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-20px)} }
-        @keyframes bm3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-15px,20px) scale(1.1)} }
-
-        .reg-mesh {
-          position: fixed; inset: 0; pointer-events: none; z-index: 0;
-          background-image:
-            linear-gradient(rgba(242,167,178,0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(242,167,178,0.05) 1px, transparent 1px);
-          background-size: 52px 52px;
-        }
-
-        /* ── Left brand panel ── */
-        .reg-left {
-          flex: 0 0 42%;
-          background: linear-gradient(160deg, #2A2220 60%, #1a2e26 100%);
-          display: flex; flex-direction: column; justify-content: space-between;
-          padding: 44px 40px;
-          position: relative; overflow: hidden; z-index: 1;
-          animation: panelIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        @keyframes panelIn { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:translateX(0)} }
-
-        .rlib { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
-        .rlib-1 { width: 320px; height: 320px; background: var(--sage); opacity: 0.10; top: -60px; right: -80px; }
-        .rlib-2 { width: 200px; height: 200px; background: var(--lavender); opacity: 0.09; bottom: 20px; left: -40px; }
-        .rlib-3 { width: 150px; height: 150px; background: var(--rose); opacity: 0.08; top: 45%; left: 50%; }
-
-        .left-logo {
-          display: flex; align-items: center; gap: 12px;
-          position: relative; z-index: 1; text-decoration: none;
-        }
-        .left-logo-icon {
-          width: 44px; height: 44px; border-radius: 14px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.15);
-          display: flex; align-items: center; justify-content: center; font-size: 22px;
-          animation: wiggle 4s ease-in-out infinite;
-        }
-        @keyframes wiggle { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
-        .left-logo-name { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--cream); letter-spacing: -0.3px; }
-        .left-logo-sub { font-size: 11px; color: rgba(253,248,242,0.4); margin-top: 1px; font-weight: 300; }
-
-        .left-mid {
-          position: relative; z-index: 1;
-          flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0;
-        }
-        .left-eyebrow {
-          font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
-          color: var(--sage); font-weight: 500; margin-bottom: 14px;
-          display: flex; align-items: center; gap: 6px;
-        }
-        .left-eyebrow::before { content:''; display:inline-block; width:20px; height:1px; background:var(--sage); }
-        .left-headline {
-          font-family: 'Playfair Display', serif;
-          font-size: clamp(26px,3.2vw,36px);
-          font-weight: 900; color: var(--cream); line-height: 1.15; margin-bottom: 16px;
-        }
-        .left-headline em { font-style: italic; color: var(--sage); }
-        .left-body { font-size: 13.5px; color: rgba(253,248,242,0.5); line-height: 1.75; font-weight: 300; max-width: 260px; }
-
-        .left-steps { display: flex; flex-direction: column; gap: 0; margin-top: 30px; }
-        .lstep {
-          display: flex; align-items: flex-start; gap: 14px;
-          padding: 12px 0;
-          border-left: 1px solid rgba(255,255,255,0.07);
-          padding-left: 16px; margin-left: 11px;
-          position: relative;
-        }
-        .lstep::before {
-          content: '';
-          position: absolute; left: -6px; top: 16px;
-          width: 11px; height: 11px; border-radius: 50%;
-          background: rgba(168,197,181,0.35);
-          border: 2px solid var(--sage);
-          transition: background 0.3s;
-        }
-        .lstep.active::before { background: var(--sage); }
-        .lstep:last-child { border-left-color: transparent; }
-        .lstep-num { font-size: 10px; color: var(--sage); font-weight: 700; letter-spacing: 0.1em; margin-top: 1px; }
-        .lstep-label { font-size: 12.5px; color: rgba(253,248,242,0.55); font-weight: 400; line-height: 1.5; }
-        .lstep.active .lstep-label { color: rgba(253,248,242,0.85); }
-
-        .left-footer { position: relative; z-index: 1; }
-        .reg-guarantee {
-          background: rgba(168,197,181,0.08);
-          border: 1px solid rgba(168,197,181,0.15);
-          border-radius: 16px; padding: 16px 18px;
-          display: flex; flex-direction: column; gap: 8px;
-        }
-        .guarantee-item { display: flex; align-items: center; gap: 9px; font-size: 12px; color: rgba(253,248,242,0.5); font-weight: 300; }
-        .g-check {
-          width: 18px; height: 18px; border-radius: 50%;
-          background: rgba(168,197,181,0.2);
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; font-size: 10px;
-        }
-
-        /* ── Right form panel ── */
-        .reg-right {
-          flex: 1; display: flex; align-items: center; justify-content: center;
-          padding: 40px 48px; position: relative; z-index: 1;
-          animation: formIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s both;
-        }
-        @keyframes formIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-
-        .form-wrap { width: 100%; max-width: 380px; }
-
-        /* Step indicator */
-        .step-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 26px; }
-        .step-pill {
-          height: 4px; border-radius: 100px; flex: 1;
-          background: rgba(42,34,32,0.1);
-          transition: background 0.4s cubic-bezier(0.16,1,0.3,1);
-          overflow: hidden; position: relative;
-        }
-        .step-pill.done { background: var(--sage-d); }
-        .step-pill.active { background: rgba(42,34,32,0.1); }
-        .step-pill.active::after {
-          content: '';
-          position: absolute; inset: 0;
-          background: var(--sage-d);
-          animation: fillPill 0.5s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        @keyframes fillPill { from{width:0} to{width:100%} }
-        .step-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-
-        .form-header { margin-bottom: 24px; }
-        .form-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--sage-d); font-weight: 500; margin-bottom: 10px; }
-        .form-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900; color: var(--ink); letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 6px; }
-        .form-sub { font-size: 13px; color: var(--muted); font-weight: 300; line-height: 1.6; }
-
-        /* Step animation */
-        .step-fields {
-          animation: stepIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        @keyframes stepIn { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
-
-        .field { margin-bottom: 13px; }
-        .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--ink); margin-bottom: 6px; }
-        .field-label span { color: var(--rose); margin-left: 2px; }
-        .field-wrap { position: relative; transition: transform 0.2s; }
-        .field-wrap:focus-within { transform: scale(1.01); }
-        .field-icon {
-          position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-          color: var(--muted); pointer-events: none; transition: color 0.2s;
-        }
-        .field-wrap:focus-within .field-icon { color: var(--sage-d); }
-        .field-input {
-          width: 100%; padding: 12px 13px 12px 40px;
-          background: var(--surface); color: var(--ink);
-          border: 1.5px solid var(--bdr); border-radius: 12px;
-          font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-          box-sizing: border-box;
-        }
-        .field-input::placeholder { color: rgba(122,110,107,0.35); }
-        .field-input:focus { border-color: var(--sage-d); box-shadow: 0 0 0 3px rgba(111,160,138,0.12); }
-        .field-input-pr { padding-right: 44px; }
-        .eye-btn {
-          position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-          background: none; border: none; cursor: pointer; padding: 0;
-          color: var(--muted); display: flex; align-items: center; transition: color 0.2s;
-        }
-        .eye-btn:hover { color: var(--ink); }
-
-        /* Password strength */
-        .pw-strength { margin-top: 7px; display: flex; gap: 4px; }
-        .pw-bar {
-          flex: 1; height: 3px; border-radius: 100px;
-          background: rgba(42,34,32,0.1);
-          transition: background 0.3s;
-        }
-        .pw-bar.filled-weak   { background: #F2A7B2; }
-        .pw-bar.filled-ok     { background: var(--butter, #F5E6A3); }
-        .pw-bar.filled-strong { background: var(--sage-d); }
-        .pw-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
-
-        .err-box {
-          display: flex; align-items: flex-start; gap: 8px;
-          background: #FEF2F2; border: 1.5px solid #FECACA;
-          border-radius: 10px; padding: 10px 13px;
-          font-size: 12.5px; color: #991B1B; margin-bottom: 14px;
-          animation: shake 0.3s;
-        }
-        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
-
-        .btn-row { display: flex; gap: 10px; margin-top: 4px; }
-
-        .back-btn {
-          padding: 13.5px 22px; border-radius: 100px;
-          border: 1.5px solid var(--bdr); cursor: pointer;
-          font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
-          background: transparent; color: var(--ink);
-          transition: background 0.2s, border-color 0.2s;
-          flex-shrink: 0;
-        }
-        .back-btn:hover { background: rgba(42,34,32,0.05); border-color: rgba(42,34,32,0.2); }
-
-        .submit-btn {
-          flex: 1; padding: 13.5px; border-radius: 100px; border: none; cursor: pointer;
-          font-family: 'DM Sans', sans-serif; font-size: 14.5px; font-weight: 500;
-          background: linear-gradient(135deg, #2A2220 0%, #233d33 100%);
-          color: var(--cream);
-          transition: transform 0.22s cubic-bezier(0.16,1,0.3,1), box-shadow 0.22s;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(42,34,32,0.2); }
-        .submit-btn:active:not(:disabled) { transform: scale(0.98); }
-        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .submit-btn.full { flex: none; width: 100%; }
-
-        .divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; }
-        .divider-line { flex: 1; height: 1px; background: var(--bdr); }
-        .divider span { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-
-        .login-txt { text-align: center; font-size: 13px; color: var(--muted); }
-        .login-txt a { color: var(--sage-d); text-decoration: none; font-weight: 500; }
-        .login-txt a:hover { text-decoration: underline; }
-
-        /* Terms note */
-        .terms-note {
-          font-size: 11.5px; color: var(--muted); text-align: center;
-          line-height: 1.6; margin-top: 14px;
-        }
-        .terms-note a { color: var(--sage-d); text-decoration: none; }
-        .terms-note a:hover { text-decoration: underline; }
-
-        @media (max-width: 768px) {
-          .reg-left { display: none; }
-          .reg-right { padding: 32px 24px; }
-        }
-
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; }
+        .rp-root { min-height: 100vh; display: flex; font-family: 'DM Sans', system-ui, sans-serif; }
+        .rp-left { width: 42%; min-height: 100vh; background: ${T.ink}; display: flex; flex-direction: column; justify-content: space-between; padding: 44px 40px; position: relative; overflow: hidden; }
+        .rp-right { flex: 1; background: ${T.cream}; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 48px; overflow-y: auto; }
+        .rp-left-blob1 { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: ${T.sage}; opacity: 0.08; top: -80px; right: -60px; filter: blur(60px); pointer-events: none; }
+        .rp-left-blob2 { position: absolute; width: 180px; height: 180px; border-radius: 50%; background: ${T.gold}; opacity: 0.07; bottom: 20px; left: -30px; filter: blur(50px); pointer-events: none; }
+        .rp-subbtn { width: 100%; height: 48px; border-radius: 100px; border: none; background: ${T.ink}; color: white; font-size: 14.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: transform 0.2s, box-shadow 0.2s; }
+        .rp-subbtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(44,44,40,0.22); }
+        .rp-subbtn:active:not(:disabled) { transform: scale(0.97); }
+        .rp-subbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .rp-back { flex: 1; height: 48px; border-radius: 100px; border: 1.5px solid ${T.border}; background: transparent; font-size: 14px; font-weight: 500; color: ${T.muted}; cursor: pointer; font-family: inherit; transition: border-color 0.18s, color 0.18s; }
+        .rp-back:hover { border-color: ${T.ink}; color: ${T.ink}; }
+        .rp-input-focus:focus { border-color: ${T.borderFocus} !important; box-shadow: 0 0 0 3px ${T.sageLight} !important; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .rp-left { display: none; }
+          .rp-right { padding: 32px 24px; }
+        }
       `}</style>
 
-      <div className="reg-root">
-        <div className="reg-blob rb-rose" />
-        <div className="reg-blob rb-lavender" />
-        <div className="reg-blob rb-sage" />
-        <div className="reg-mesh" />
+      <div className="rp-root">
+        {/* ── LEFT SIDEBAR ── */}
+        <div className="rp-left">
+          <div className="rp-left-blob1" />
+          <div className="rp-left-blob2" />
 
-        {/* ── Left brand panel ── */}
-        <div className="reg-left">
-          <div className="rlib rlib-1" />
-          <div className="rlib rlib-2" />
-          <div className="rlib rlib-3" />
-
-          <Link to="/" className="left-logo">
-            <div className="left-logo-icon">🧶</div>
+          {/* Logo */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22,
+              }}
+            >
+              🧶
+            </div>
             <div>
-              <div className="left-logo-name">Len&Em</div>
-              <div className="left-logo-sub">your craft, your story</div>
-            </div>
-          </Link>
-
-          <div className="left-mid">
-            <div className="left-eyebrow">Join our community</div>
-            <div className="left-headline">
-              Start your<br />
-              crafting<br />
-              <em>journey</em>
-            </div>
-            <p className="left-body">
-              Create your account in two simple steps and unlock a world of cozy crochet.
-            </p>
-
-            <div className="left-steps">
-              {[
-                { label: "Your info — name, username & email", num: "01" },
-                { label: "Set a secure password", num: "02" },
-              ].map((s, i) => (
-                <div key={i} className={`lstep${step === i + 1 ? " active" : ""}`}>
-                  <div>
-                    <div className="lstep-num">Step {s.num}</div>
-                    <div className="lstep-label">{s.label}</div>
-                  </div>
-                </div>
-              ))}
+              <div
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 19,
+                  fontWeight: 700,
+                  color: T.textLight,
+                  letterSpacing: "-0.2px",
+                }}
+              >
+                Len&amp;Em
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: T.textMuted,
+                  fontWeight: 300,
+                  marginTop: 1,
+                }}
+              >
+                your craft, your story
+              </div>
             </div>
           </div>
 
-          <div className="left-footer">
-            <div className="reg-guarantee">
-              {[
-                "Free to join, no credit card needed",
-                "Your data is safe & never sold",
-                "Cancel or delete account anytime",
-              ].map((g) => (
-                <div className="guarantee-item" key={g}>
-                  <div className="g-check">✓</div>
-                  {g}
-                </div>
-              ))}
+          {/* Headline */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              padding: "40px 0",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: T.sage,
+                fontWeight: 500,
+                marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <div style={{ width: 20, height: 1, background: T.sage }} />
+              Join our community
             </div>
+            <div
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "clamp(28px, 3vw, 38px)",
+                fontWeight: 900,
+                color: T.textLight,
+                lineHeight: 1.12,
+                marginBottom: 14,
+              }}
+            >
+              Start your
+              <br />
+              crafting
+              <br />
+              <em style={{ fontStyle: "italic", color: T.gold }}>journey</em>
+            </div>
+            <p
+              style={{
+                fontSize: 13.5,
+                color: T.textMuted,
+                lineHeight: 1.75,
+                fontWeight: 300,
+                maxWidth: 260,
+                marginBottom: 36,
+              }}
+            >
+              Create your account in two simple steps and unlock a world of cozy
+              crochet.
+            </p>
+
+            {/* Step indicator */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {steps.map((s, i) => {
+                const isActive = step === i + 1;
+                const isDone = step > i + 1;
+                return (
+                  <div
+                    key={s.n}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          background: isDone
+                            ? T.sage
+                            : isActive
+                              ? T.sage
+                              : "transparent",
+                          border: `2px solid ${isActive || isDone ? T.sage : "rgba(240,237,230,0.2)"}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color:
+                            isActive || isDone
+                              ? "white"
+                              : "rgba(240,237,230,0.3)",
+                        }}
+                      >
+                        {isDone ? <Check size={11} strokeWidth={3} /> : i + 1}
+                      </div>
+                      {i < steps.length - 1 && (
+                        <div
+                          style={{
+                            width: 2,
+                            height: 32,
+                            background: isDone
+                              ? T.sage
+                              : "rgba(240,237,230,0.1)",
+                            margin: "3px 0",
+                          }}
+                        />
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        paddingTop: 2,
+                        paddingBottom: i < steps.length - 1 ? 0 : 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: isActive
+                            ? T.textLight
+                            : isDone
+                              ? T.sage
+                              : "rgba(240,237,230,0.4)",
+                        }}
+                      >
+                        Step {s.n} — {s.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: isActive
+                            ? "rgba(240,237,230,0.55)"
+                            : "rgba(240,237,230,0.25)",
+                          fontWeight: 300,
+                          marginTop: 1,
+                        }}
+                      >
+                        {s.desc}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Trust badges */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 14,
+              padding: "14px 16px",
+            }}
+          >
+            {[
+              "Free to join, no credit card needed",
+              "Your data is safe & never sold",
+              "Cancel or delete account anytime",
+            ].map((t) => (
+              <div
+                key={t}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    background: "rgba(74,124,101,0.25)",
+                    border: "1px solid rgba(74,124,101,0.4)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Check size={10} color={T.sage} strokeWidth={3} />
+                </div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(240,237,230,0.5)",
+                    fontWeight: 300,
+                  }}
+                >
+                  {t}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* ── Right form panel ── */}
-        <div className="reg-right">
-          <div className="form-wrap">
-
-            {/* Step progress bar */}
-            <div className="step-bar">
-              <div className={`step-pill${step === 1 ? " active" : " done"}`} />
-              <div className={`step-pill${step === 2 ? " active" : step > 2 ? " done" : ""}`} />
-              <span className="step-label">Step {step} of 2</span>
+        {/* ── RIGHT FORM ── */}
+        <div className="rp-right">
+          {/* Progress bar */}
+          <div style={{ width: "100%", maxWidth: 440, marginBottom: 36 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                style={{
+                  flex: 1,
+                  height: 3,
+                  borderRadius: 2,
+                  background: T.sage,
+                  transition: "background 0.3s",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  height: 3,
+                  borderRadius: 2,
+                  background: step === 2 ? T.sage : "rgba(42,34,32,0.12)",
+                  transition: "background 0.3s",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 12,
+                  color: T.muted,
+                  whiteSpace: "nowrap",
+                  marginLeft: 8,
+                }}
+              >
+                Step {step} of 2
+              </span>
             </div>
+          </div>
 
-            <div className="form-header">
-              <div className="form-eyebrow">
-                {step === 1 ? "✦ Create account" : "✦ Almost there"}
+          <div style={{ width: "100%", maxWidth: 440 }}>
+            {/* Form header */}
+            <div style={{ marginBottom: 28 }}>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: T.sage,
+                  fontWeight: 600,
+                  marginBottom: 8,
+                }}
+              >
+                + {step === 1 ? "Create account" : "Set password"}
               </div>
-              <div className="form-title">
-                {step === 1 ? "Tell us about you" : "Secure your account"}
-              </div>
-              <p className="form-sub">
+              <h1
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 30,
+                  fontWeight: 900,
+                  color: T.ink,
+                  margin: "0 0 6px",
+                  lineHeight: 1.1,
+                }}
+              >
+                {step === 1 ? "Tell us about you" : "Keep your account safe"}
+              </h1>
+              <p
+                style={{
+                  fontSize: 13.5,
+                  color: T.muted,
+                  margin: 0,
+                  lineHeight: 1.6,
+                }}
+              >
                 {step === 1
                   ? "We just need a few details to get you set up"
-                  : "Choose a strong password to protect your account"}
+                  : "Choose a strong password you'll remember"}
               </p>
             </div>
 
-            {/* ── STEP 1 ── */}
+            {/* Error banner */}
+            {error && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 9,
+                  background: T.errorBg,
+                  border: `1.5px solid ${T.errorBorder}`,
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  marginBottom: 16,
+                  fontSize: 13,
+                  color: T.errorRed,
+                }}
+              >
+                <AlertCircle
+                  size={15}
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                />
+                {error}
+              </div>
+            )}
+
+            {/* STEP 1 */}
             {step === 1 && (
               <form onSubmit={handleNext}>
-                {error && (
-                  <div className="err-box">
-                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ margin: 0 }}>{error}</p>
-                  </div>
-                )}
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                >
+                  <Field
+                    label="Full name"
+                    icon={UserIcon}
+                    k="fullName"
+                    placeholder="Nguyen Van A"
+                    form={form}
+                    fe={fe}
+                    upd={upd}
+                  />
+                  <Field
+                    label="Username"
+                    icon={AtSign}
+                    k="username"
+                    placeholder="your_username"
+                    form={form}
+                    fe={fe}
+                    upd={upd}
+                  />
+                  <Field
+                    label="Email"
+                    icon={Mail}
+                    k="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    form={form}
+                    fe={fe}
+                    upd={upd}
+                  />
+                  <Field
+                    label="Phone"
+                    icon={Phone}
+                    k="phone"
+                    type="tel"
+                    placeholder="0912 345 678"
+                    optional
+                    form={form}
+                    fe={fe}
+                    upd={upd}
+                  />
+                  <Field
+                    label="Address"
+                    icon={MapPin}
+                    k="address"
+                    placeholder="123 Main Street, District 1, Ho Chi Minh City"
+                    optional
+                    form={form}
+                    fe={fe}
+                    upd={upd}
+                  />
 
-                <div className="step-fields">
-                  <div className="field">
-                    <label className="field-label">Full name<span>*</span></label>
-                    <div className="field-wrap">
-                      <UserIcon size={16} className="field-icon" />
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="Nguyen Van A"
-                        value={form.fullName}
-                        onChange={set("fullName")}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="field">
-                    <label className="field-label">Username<span>*</span></label>
-                    <div className="field-wrap">
-                      <span className="field-icon" style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)", top: "50%", transform: "translateY(-50%)", left: 13 }}>@</span>
-                      <input
-                        type="text"
-                        className="field-input"
-                        placeholder="your_username"
-                        value={form.username}
-                        onChange={set("username")}
-                        required
-                        autoComplete="username"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="field">
-                    <label className="field-label">Email<span>*</span></label>
-                    <div className="field-wrap">
-                      <Mail size={16} className="field-icon" />
-                      <input
-                        type="email"
-                        className="field-input"
-                        placeholder="you@example.com"
-                        value={form.email}
-                        onChange={set("email")}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="field">
-                    <label className="field-label">
-                      Phone <span style={{ color: "var(--muted)", fontWeight: 300, fontSize: 11 }}>(optional)</span>
+                  {/* Gender — custom radio buttons */}
+                  <div style={{ marginBottom: 4 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: T.ink,
+                        marginBottom: 8,
+                      }}
+                    >
+                      Gender
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 400,
+                          color: T.muted,
+                          marginLeft: 4,
+                        }}
+                      >
+                        (optional)
+                      </span>
                     </label>
-                    <div className="field-wrap">
-                      <Phone size={16} className="field-icon" />
-                      <input
-                        type="tel"
-                        className="field-input"
-                        placeholder="0912 345 678"
-                        value={form.phone}
-                        onChange={set("phone")}
-                      />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {(
+                        [
+                          { value: "MALE", label: "Male" },
+                          { value: "FEMALE", label: "Female" },
+                          { value: "OTHER", label: "Other" },
+                        ] as const
+                      ).map(({ value, label }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => {
+                            setForm((f) => ({ ...f, gender: value }));
+                            setFe((prev) => ({ ...prev, gender: "" }));
+                            setError("");
+                          }}
+                          style={{
+                            flex: 1,
+                            height: 46,
+                            borderRadius: 10,
+                            border: `1.5px solid ${
+                              form.gender === value ? T.sage : T.border
+                            }`,
+                            background:
+                              form.gender === value ? T.sageLight : T.surface,
+                            color: form.gender === value ? T.sage : T.muted,
+                            fontSize: 14,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            transition: "all 0.18s",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
+                    {fe.gender && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: T.errorRed,
+                          marginTop: 4,
+                          paddingLeft: 2,
+                        }}
+                      >
+                        {fe.gender}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Date of Birth — 3 dropdowns */}
+                  <div style={{ marginBottom: 4 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: T.ink,
+                        marginBottom: 8,
+                      }}
+                    >
+                      Date of birth
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 400,
+                          color: T.muted,
+                          marginLeft: 4,
+                        }}
+                      >
+                        (optional)
+                      </span>
+                    </label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <select
+                        value={dobMonth}
+                        onChange={(e) => {
+                          setDobMonth(e.target.value);
+                          setFe((prev) => ({ ...prev, dateOfBirth: "" }));
+                          setError("");
+                        }}
+                        style={{
+                          flex: 1,
+                          height: 46,
+                          padding: "0 10px",
+                          border: `1.5px solid ${fe.dateOfBirth ? T.errorRed : T.border}`,
+                          borderRadius: 10,
+                          fontSize: 14,
+                          background: T.surface,
+                          color: dobMonth ? T.ink : T.muted,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="">Month</option>
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const m = String(i + 1);
+                          return (
+                            <option key={m} value={m}>
+                              {m.padStart(2, "0")}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <select
+                        value={dobDay}
+                        onChange={(e) => {
+                          setDobDay(e.target.value);
+                          setFe((prev) => ({ ...prev, dateOfBirth: "" }));
+                          setError("");
+                        }}
+                        style={{
+                          flex: 1,
+                          height: 46,
+                          padding: "0 10px",
+                          border: `1.5px solid ${fe.dateOfBirth ? T.errorRed : T.border}`,
+                          borderRadius: 10,
+                          fontSize: 14,
+                          background: T.surface,
+                          color: dobDay ? T.ink : T.muted,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="">Day</option>
+                        {Array.from({ length: 31 }, (_, i) => {
+                          const d = String(i + 1);
+                          return (
+                            <option key={d} value={d}>
+                              {d.padStart(2, "0")}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <select
+                        value={dobYear}
+                        onChange={(e) => {
+                          setDobYear(e.target.value);
+                          setFe((prev) => ({ ...prev, dateOfBirth: "" }));
+                          setError("");
+                        }}
+                        style={{
+                          flex: 1,
+                          height: 46,
+                          padding: "0 10px",
+                          border: `1.5px solid ${fe.dateOfBirth ? T.errorRed : T.border}`,
+                          borderRadius: 10,
+                          fontSize: 14,
+                          background: T.surface,
+                          color: dobYear ? T.ink : T.muted,
+                          fontFamily: "inherit",
+                          cursor: "pointer",
+                          outline: "none",
+                        }}
+                      >
+                        <option value="">Year</option>
+                        {Array.from({ length: 100 }, (_, i) => {
+                          const y = String(new Date().getFullYear() - i);
+                          return (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    {fe.dateOfBirth && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: T.errorRed,
+                          marginTop: 4,
+                          paddingLeft: 2,
+                        }}
+                      >
+                        {fe.dateOfBirth}
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                <button type="submit" className="submit-btn full" style={{ marginTop: 6 }}>
-                  Continue <ArrowRight size={17} />
-                </button>
+                <div style={{ marginTop: 24 }}>
+                  <button type="submit" className="rp-subbtn">
+                    Continue <ArrowRight size={16} />
+                  </button>
+                </div>
               </form>
             )}
 
-            {/* ── STEP 2 ── */}
+            {/* STEP 2 */}
             {step === 2 && (
               <form onSubmit={handleSubmit}>
-                {error && (
-                  <div className="err-box">
-                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ margin: 0 }}>{error}</p>
-                  </div>
-                )}
-
-                <div className="step-fields">
-                  <div className="field">
-                    <label className="field-label">Password<span style={{ color: "var(--rose)", marginLeft: 2 }}>*</span></label>
-                    <div className="field-wrap">
-                      <Lock size={16} className="field-icon" />
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                >
+                  {/* Password */}
+                  <div style={{ marginBottom: 4 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: T.ink,
+                        marginBottom: 5,
+                      }}
+                    >
+                      Password <span style={{ color: "#C0392B" }}>*</span>
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <Lock
+                        size={15}
+                        style={{
+                          position: "absolute",
+                          left: 13,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: T.muted,
+                          opacity: 0.6,
+                          pointerEvents: "none",
+                        }}
+                      />
                       <input
-                        type={showPassword ? "text" : "password"}
-                        className="field-input field-input-pr"
-                        placeholder="At least 6 characters"
+                        type={showPw ? "text" : "password"}
+                        placeholder="Create a strong password"
                         value={form.password}
-                        onChange={set("password")}
+                        onChange={upd("password")}
                         required
                         autoComplete="new-password"
+                        className="rp-input-focus"
+                        style={{
+                          ...inputStyle(true, !!fe.password),
+                          paddingRight: 44,
+                          width: "100%",
+                          borderColor: fe.password ? T.errorRed : T.border,
+                        }}
                       />
-                      <button type="button" className="eye-btn" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <button
+                        type="button"
+                        onClick={() => setShowPw(!showPw)}
+                        style={{
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 4,
+                          color: T.muted,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
-                    {/* Strength meter */}
-                    {form.password.length > 0 && (() => {
-                      const len = form.password.length;
-                      const hasUpper = /[A-Z]/.test(form.password);
-                      const hasNum = /[0-9]/.test(form.password);
-                      const score = (len >= 8 ? 1 : 0) + (hasUpper ? 1 : 0) + (hasNum ? 1 : 0);
-                      const cls = score <= 0 ? "filled-weak" : score === 1 ? "filled-ok" : "filled-strong";
-                      const label = score <= 0 ? "Weak" : score === 1 ? "Fair" : "Strong";
-                      return (
-                        <>
-                          <div className="pw-strength">
-                            {[0,1,2].map(i => <div key={i} className={`pw-bar${i <= score - 1 ? " " + cls : ""}`} />)}
-                          </div>
-                          <div className="pw-hint">{label} password{score < 2 ? " — add numbers or uppercase letters" : ""}</div>
-                        </>
-                      );
-                    })()}
+                    {fe.password && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: T.errorRed,
+                          marginTop: 4,
+                          paddingLeft: 2,
+                        }}
+                      >
+                        {fe.password}
+                      </div>
+                    )}
+                    {form.password.length > 0 && (
+                      <>
+                        <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                          {[0, 1, 2].map((i) => (
+                            <div
+                              key={i}
+                              style={{
+                                height: 3,
+                                flex: 1,
+                                borderRadius: 2,
+                                background: i <= pwScore ? pwColor : T.border,
+                                transition: "background 0.25s",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: pwColor,
+                            marginTop: 3,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {pwLabel}
+                          {pwScore < 2 ? " — add numbers or uppercase" : ""}
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  <div className="field">
-                    <label className="field-label">Confirm password<span style={{ color: "var(--rose)", marginLeft: 2 }}>*</span></label>
-                    <div className="field-wrap">
-                      <Lock size={16} className="field-icon" />
+                  {/* Confirm password */}
+                  <div style={{ marginBottom: 4 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: T.ink,
+                        marginBottom: 5,
+                      }}
+                    >
+                      Confirm password{" "}
+                      <span style={{ color: "#C0392B" }}>*</span>
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <Lock
+                        size={15}
+                        style={{
+                          position: "absolute",
+                          left: 13,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: T.muted,
+                          opacity: 0.6,
+                          pointerEvents: "none",
+                        }}
+                      />
                       <input
-                        type={showConfirm ? "text" : "password"}
-                        className="field-input field-input-pr"
+                        type={showCp ? "text" : "password"}
                         placeholder="Repeat your password"
                         value={form.confirmPassword}
-                        onChange={set("confirmPassword")}
+                        onChange={upd("confirmPassword")}
                         required
-                        autoComplete="new-password"
+                        className="rp-input-focus"
+                        style={{
+                          ...inputStyle(true, !!fe.confirmPassword),
+                          paddingRight: 44,
+                          width: "100%",
+                          borderColor: fe.confirmPassword
+                            ? T.errorRed
+                            : T.border,
+                        }}
                       />
-                      <button type="button" className="eye-btn" onClick={() => setShowConfirm(!showConfirm)} tabIndex={-1}>
-                        {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <button
+                        type="button"
+                        onClick={() => setShowCp(!showCp)}
+                        style={{
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 4,
+                          color: T.muted,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {showCp ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
-                    {form.confirmPassword.length > 0 && form.password !== form.confirmPassword && (
-                      <div className="pw-hint" style={{ color: "var(--rose)" }}>Passwords don't match yet</div>
+                    {fe.confirmPassword && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: T.errorRed,
+                          marginTop: 4,
+                          paddingLeft: 2,
+                        }}
+                      >
+                        {fe.confirmPassword}
+                      </div>
                     )}
-                    {form.confirmPassword.length > 0 && form.password === form.confirmPassword && (
-                      <div className="pw-hint" style={{ color: "var(--sage-d)" }}>✓ Passwords match</div>
+                    {form.confirmPassword.length > 0 && !fe.confirmPassword && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          marginTop: 3,
+                          fontWeight: 500,
+                          color:
+                            form.password === form.confirmPassword
+                              ? T.sage
+                              : T.muted,
+                        }}
+                      >
+                        {form.password === form.confirmPassword
+                          ? "✓ Passwords match"
+                          : "Passwords don't match yet"}
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="btn-row" style={{ marginTop: 10 }}>
-                  <button type="button" className="back-btn" onClick={() => { setError(""); setStep(1); }}>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button
+                    type="button"
+                    className="rp-back"
+                    onClick={() => {
+                      setError("");
+                      setStep(1);
+                    }}
+                  >
                     ← Back
                   </button>
-                  <button type="submit" className="submit-btn" disabled={isLoading}>
+                  <button
+                    type="submit"
+                    className="rp-subbtn"
+                    disabled={isLoading}
+                    style={{ flex: 2 }}
+                  >
                     {isLoading ? (
                       <>
-                        <Loader2 size={17} style={{ animation: "spin 0.8s linear infinite" }} />
+                        <Loader
+                          size={16}
+                          style={{ animation: "spin 0.8s linear infinite" }}
+                        />{" "}
                         Creating…
                       </>
                     ) : (
-                      <>Create account <ArrowRight size={17} /></>
+                      <>
+                        Create account <ArrowRight size={16} />
+                      </>
                     )}
                   </button>
                 </div>
 
-                <p className="terms-note">
+                <p
+                  style={{
+                    fontSize: 11.5,
+                    color: T.muted,
+                    textAlign: "center",
+                    marginTop: 16,
+                    lineHeight: 1.6,
+                  }}
+                >
                   By creating an account you agree to our{" "}
-                  <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+                  <a href="#" style={{ color: T.ink, fontWeight: 500 }}>
+                    Terms
+                  </a>{" "}
+                  and{" "}
+                  <a href="#" style={{ color: T.ink, fontWeight: 500 }}>
+                    Privacy Policy
+                  </a>
+                  .
                 </p>
               </form>
             )}
 
-            <div className="divider">
-              <div className="divider-line" />
-              <span>Already have an account?</span>
-              <div className="divider-line" />
+            {/* Sign in link */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                margin: "24px 0 12px",
+              }}
+            >
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+              <span
+                style={{ fontSize: 12, color: T.muted, whiteSpace: "nowrap" }}
+              >
+                Already have an account?
+              </span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
             </div>
-
-            <p className="login-txt">
-              <Link to="/auth/login">Sign in here</Link> and continue your journey ✦
+            <p
+              style={{
+                textAlign: "center",
+                fontSize: 13.5,
+                color: T.muted,
+                margin: 0,
+              }}
+            >
+              <Link
+                to="/auth/login"
+                style={{
+                  color: T.sage,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                Sign in here
+              </Link>{" "}
+              and continue your journey +
             </p>
           </div>
         </div>

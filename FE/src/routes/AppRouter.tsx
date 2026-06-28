@@ -79,6 +79,10 @@ const RegisterPage = lazy(() =>
   import("../pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })),
 );
 
+
+const ForgotPasswordPage = lazy(() =>
+  import("../pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })),
+);
 interface AppRouterProps {
   cartItems: CartItem[];
   onAddToCart: (productId: string, metadata?: CartItem["metadata"]) => void;
@@ -231,6 +235,15 @@ export function AppRouter({
         element={
           <Suspense fallback={<LoadingFallback />}>
             <RegisterPage />
+          </Suspense>
+        }
+      />
+
+      <Route
+        path="auth/forgot-password"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ForgotPasswordPage />
           </Suspense>
         }
       />

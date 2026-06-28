@@ -49,7 +49,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
         coinTransactions: mockCoinTransactions,
         loading: false,
       });
-    } catch (err) {
+        } catch {
       set({ error: "Failed to load membership data", loading: false });
     }
   },

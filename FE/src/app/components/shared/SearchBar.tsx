@@ -31,7 +31,7 @@ export function SearchBar({
       setLocalValue(value);
     }
     isFirstMount.current = false;
-  }, [value]);
+  }, [value, localValue]);
 
   // Debounce: update debounced value after delay
   useEffect(() => {
@@ -58,7 +58,7 @@ export function SearchBar({
         onChange(e.target.value);
       }
     },
-    [debounceMs, onChange]
+    [debounceMs, onChange],
   );
 
   const handleClear = useCallback(() => {
@@ -86,7 +86,7 @@ export function SearchBar({
           "w-full pl-12 pr-10 py-3.5 bg-card border border-border rounded-2xl",
           "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary",
           "transition-all text-foreground placeholder:text-muted-foreground/60",
-          "text-base"
+          "text-base",
         )}
       />
 
@@ -98,7 +98,7 @@ export function SearchBar({
           className={cn(
             "absolute right-3 top-1/2 -translate-y-1/2",
             "p-1.5 rounded-full hover:bg-muted transition-colors",
-            "focus:outline-none focus:ring-2 focus:ring-primary/30"
+            "focus:outline-none focus:ring-2 focus:ring-primary/30",
           )}
         >
           <X className="w-4 h-4 text-muted-foreground" />
