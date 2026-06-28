@@ -6,24 +6,42 @@ import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
 import { products } from "../data/products";
-import { getLessonsByCourse, materialCombos } from "../../features/learn/data/learn.mock";
+import {
+  getLessonsByCourse,
+  materialCombos,
+} from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
 import type { CartItem } from "../App";
 
-const CATEGORY_META: Record<string, { label: string; desc: string; emoji: string }> = {
-  all:   { label: "All",      desc: "Everything you need to start your cozy crochet journey", emoji: "🛍️" },
-  yarn:  { label: "Yarn",     desc: "Premium yarns for every project",                        emoji: "🧵" },
-  kit:   { label: "DIY Kits", desc: "Curated kits with everything you need",                  emoji: "🎁" },
-  tools: { label: "Tools",    desc: "Essential tools for every crafter",                      emoji: "🪡" },
+const CATEGORY_META: Record<
+  string,
+  { label: string; desc: string; emoji: string }
+> = {
+  all: {
+    label: "All",
+    desc: "Everything you need to start your cozy crochet journey",
+    emoji: "🛍️",
+  },
+  yarn: { label: "Yarn", desc: "Premium yarns for every project", emoji: "🧵" },
+  kit: {
+    label: "DIY Kits",
+    desc: "Curated kits with everything you need",
+    emoji: "🎁",
+  },
+  tools: {
+    label: "Tools",
+    desc: "Essential tools for every crafter",
+    emoji: "🪡",
+  },
 };
 
 const SORT_OPTIONS = [
-  { value: "popular",    label: "Most popular"     },
-  { value: "newest",     label: "Newest first"     },
-  { value: "price-asc",  label: "Price: low → high" },
+  { value: "popular", label: "Most popular" },
+  { value: "newest", label: "Newest first" },
+  { value: "price-asc", label: "Price: low → high" },
   { value: "price-desc", label: "Price: high → low" },
-  { value: "rating",     label: "Top rated"        },
+  { value: "rating", label: "Top rated" },
 ];
 
 interface ShopProps {
@@ -69,37 +87,59 @@ export function Shop({ onAddToCart }: ShopProps) {
     action();
   };
 
-  const currentLessons = currentCourseId ? getLessonsByCourse(currentCourseId) : [];
-  const currentLesson = currentLessons.find((lesson) => lesson.id === currentLessonId) ?? null;
+  const currentLessons = useMemo(
+    () => (currentCourseId ? getLessonsByCourse(currentCourseId) : []),
+    [currentCourseId],
+  );
+  const currentLesson =
+    currentLessons.find((lesson) => lesson.id === currentLessonId) ?? null;
   const currentCourseComboIds = useMemo(() => {
     if (!currentCourseId) return [];
     return materialCombos
-      .filter((combo) => currentLessons.some((lesson) =>
-        lesson.linkedProducts.some((linkedProduct) => combo.productIds.includes(linkedProduct.productId)),
-      ))
+      .filter((combo) =>
+        currentLessons.some((lesson) =>
+          lesson.linkedProducts.some((linkedProduct) =>
+            combo.productIds.includes(linkedProduct.productId),
+          ),
+        ),
+      )
       .map((combo) => combo.id);
   }, [currentCourseId, currentLessons]);
   const recommendedProducts = useMemo(() => {
     if (!currentLesson) return [];
-    const lessonProductIds = currentLesson.linkedProducts.map((product) => product.productId);
-    return products.filter((product) => lessonProductIds.includes(product.id)).slice(0, 4);
+    const lessonProductIds = currentLesson.linkedProducts.map(
+      (product) => product.productId,
+    );
+    return products
+      .filter((product) => lessonProductIds.includes(product.id))
+      .slice(0, 4);
   }, [currentLesson]);
-  const displayedProducts = lessonFilterActive && currentCourseComboIds.length > 0
-    ? filteredProducts.filter((product) =>
-        product.linkedComboIds?.some((comboId) => currentCourseComboIds.includes(comboId)),
-      )
-    : filteredProducts;
+  const displayedProducts =
+    lessonFilterActive && currentCourseComboIds.length > 0
+      ? filteredProducts.filter((product) =>
+          product.linkedComboIds?.some((comboId) =>
+            currentCourseComboIds.includes(comboId),
+          ),
+        )
+      : filteredProducts;
 
   const addLessonProductToCart = (productId: string) => {
-    onAddToCart(productId, currentCourseId && currentLessonId ? {
-      source: "learn",
-      courseId: currentCourseId,
-      lessonId: currentLessonId,
-    } : undefined);
+    onAddToCart(
+      productId,
+      currentCourseId && currentLessonId
+        ? {
+            source: "learn",
+            courseId: currentCourseId,
+            lessonId: currentLessonId,
+          }
+        : undefined,
+    );
   };
 
   const addAllLessonProducts = () => {
-    recommendedProducts.forEach((product) => addLessonProductToCart(product.id));
+    recommendedProducts.forEach((product) =>
+      addLessonProductToCart(product.id),
+    );
     toast.success("Lesson materials added to cart");
   };
 
@@ -110,10 +150,12 @@ export function Shop({ onAddToCart }: ShopProps) {
 
   const getEmptyStateMessage = () => {
     if (filters.search) return `No products found for "${filters.search}"`;
-    if (filters.color.length > 0)      return "No products in the selected color";
-    if (filters.material.length > 0)   return "No products with the selected material";
-    if (filters.weight.length > 0)     return "No products in the selected weight";
-    if (filters.difficulty.length > 0) return "No products at the selected difficulty";
+    if (filters.color.length > 0) return "No products in the selected color";
+    if (filters.material.length > 0)
+      return "No products with the selected material";
+    if (filters.weight.length > 0) return "No products in the selected weight";
+    if (filters.difficulty.length > 0)
+      return "No products at the selected difficulty";
     return "No products found";
   };
 
@@ -123,7 +165,9 @@ export function Shop({ onAddToCart }: ShopProps) {
         <div className="filter-header">
           <span className="filter-title">Filters</span>
           {hasActiveFilters && (
-            <button className="filter-clear" onClick={clearFilters}>Clear all</button>
+            <button className="filter-clear" onClick={clearFilters}>
+              Clear all
+            </button>
           )}
         </div>
       )}
@@ -170,11 +214,16 @@ export function Shop({ onAddToCart }: ShopProps) {
                 className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
                 onClick={() => toggleArrayFilter("color", c.name)}
               >
-                <span style={{
-                  display: "inline-block", width: 10, height: 10,
-                  borderRadius: "50%", background: c.hex,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                }} />
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: c.hex,
+                    border: "1px solid rgba(0,0,0,0.12)",
+                  }}
+                />
                 {c.name}
               </button>
             ))}
@@ -241,13 +290,17 @@ export function Shop({ onAddToCart }: ShopProps) {
         <span className="filter-group-label">Price range</span>
         <div className="price-inputs">
           <input
-            className="price-input" type="number" placeholder="Min"
+            className="price-input"
+            type="number"
+            placeholder="Min"
             value={filters.minPrice || ""}
             onChange={(e) => updateFilter("minPrice", Number(e.target.value))}
           />
           <span className="price-sep">–</span>
           <input
-            className="price-input" type="number" placeholder="Max"
+            className="price-input"
+            type="number"
+            placeholder="Max"
             value={filters.maxPrice || ""}
             onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
           />
@@ -493,7 +546,9 @@ export function Shop({ onAddToCart }: ShopProps) {
       {/* ── TOP BAR ── */}
       <div className="shop-top">
         <div className="shop-container">
-          <div className="shop-headline">{meta.emoji} {meta.label}</div>
+          <div className="shop-headline">
+            {meta.emoji} {meta.label}
+          </div>
           <div className="shop-subhead">{meta.desc}</div>
           <div className="search-wrap">
             <Search size={16} className="search-icon" />
@@ -516,61 +571,81 @@ export function Shop({ onAddToCart }: ShopProps) {
 
         {/* Main content */}
         <div>
-          {currentLesson && recommendedProducts.length > 0 && !recommendationsDismissed && (
-            <section className="lesson-banner">
-              <div className="lesson-banner-head">
-                <div>
-                  <p className="lesson-banner-title">
-                    🧶 Currently learning: {currentLesson.title} — Here are the materials you need:
-                  </p>
+          {currentLesson &&
+            recommendedProducts.length > 0 &&
+            !recommendationsDismissed && (
+              <section className="lesson-banner">
+                <div className="lesson-banner-head">
+                  <div>
+                    <p className="lesson-banner-title">
+                      🧶 Currently learning: {currentLesson.title} — Here are
+                      the materials you need:
+                    </p>
+                  </div>
+                  <button
+                    className="drawer-close"
+                    style={{ position: "static" }}
+                    onClick={dismissRecommendations}
+                    aria-label="Dismiss lesson recommendations"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
-                <button className="drawer-close" style={{ position: "static" }} onClick={dismissRecommendations} aria-label="Dismiss lesson recommendations">
-                  <X size={18} />
+                <button
+                  onClick={() => requireAuth(addAllLessonProducts)}
+                  className="chip-filter active"
+                  style={{ marginBottom: "0.75rem", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(196,94,62,0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "";
+                    e.currentTarget.style.boxShadow = "";
+                  }}
+                >
+                  Add all to cart
                 </button>
-              </div>
-              <button
-                onClick={() => requireAuth(addAllLessonProducts)}
-                className="chip-filter active"
-                style={{ marginBottom: "0.75rem", transition: "all 0.2s" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(196,94,62,0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "";
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              >
-                Add all to cart
-              </button>
-              <div className="lesson-banner-grid">
-                {recommendedProducts.map((product) => (
-                  <ProductCard
-                    key={`lesson-${product.id}`}
-                    product={product}
-                    onAddToCart={addLessonProductToCart}
-                    relatedCourseId={currentCourseId ?? undefined}
-                    relatedLessonId={currentLessonId ?? undefined}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+                <div className="lesson-banner-grid">
+                  {recommendedProducts.map((product) => (
+                    <ProductCard
+                      key={`lesson-${product.id}`}
+                      product={product}
+                      onAddToCart={addLessonProductToCart}
+                      relatedCourseId={currentCourseId ?? undefined}
+                      relatedLessonId={currentLessonId ?? undefined}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
           {/* Sort bar */}
           <div className="sort-bar">
             <div className="sort-bar-left">
               {/* Mobile filter button */}
-              <button className="filter-fab" onClick={() => setFilterOpen(true)}>
+              <button
+                className="filter-fab"
+                onClick={() => setFilterOpen(true)}
+              >
                 <SlidersHorizontal size={14} />
                 Filters
                 {hasActiveFilters && (
-                  <span style={{
-                    background: "var(--primary)", color: "var(--primary-foreground)",
-                    borderRadius: "50%", width: 16, height: 16,
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "0.65rem", fontWeight: 700,
-                  }}>
+                  <span
+                    style={{
+                      background: "var(--primary)",
+                      color: "var(--primary-foreground)",
+                      borderRadius: "50%",
+                      width: 16,
+                      height: 16,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                    }}
+                  >
                     {activeChips.length}
                   </span>
                 )}
@@ -579,9 +654,13 @@ export function Shop({ onAddToCart }: ShopProps) {
               <div className="results-count">
                 <span className="results-dot" />
                 {!hasActiveFilters && resultCount === totalCount ? (
-                  <span>All <strong>{totalCount}</strong> products</span>
+                  <span>
+                    All <strong>{totalCount}</strong> products
+                  </span>
                 ) : (
-                  <span><strong>{displayedProducts.length}</strong> of {totalCount}</span>
+                  <span>
+                    <strong>{displayedProducts.length}</strong> of {totalCount}
+                  </span>
                 )}
               </div>
             </div>
@@ -592,7 +671,9 @@ export function Shop({ onAddToCart }: ShopProps) {
               onChange={(e) => updateFilter("sort", e.target.value)}
             >
               {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
@@ -618,7 +699,12 @@ export function Shop({ onAddToCart }: ShopProps) {
                     transition={{ duration: 0.18 }}
                   >
                     {chip.label}
-                    <span className="chip-x" onClick={() => removeChip(chip.type, chip.value)}>×</span>
+                    <span
+                      className="chip-x"
+                      onClick={() => removeChip(chip.type, chip.value)}
+                    >
+                      ×
+                    </span>
                   </motion.span>
                 ))}
               </motion.div>
@@ -641,12 +727,19 @@ export function Shop({ onAddToCart }: ShopProps) {
                     product={product}
                     onAddToCart={onAddToCart}
                     relatedCourseId={
-                      currentCourseId && product.linkedComboIds?.some((comboId) => currentCourseComboIds.includes(comboId))
+                      currentCourseId &&
+                      product.linkedComboIds?.some((comboId) =>
+                        currentCourseComboIds.includes(comboId),
+                      )
                         ? currentCourseId
                         : undefined
                     }
                     relatedLessonId={
-                      currentLessonId && currentLesson?.linkedProducts.some((linkedProduct) => linkedProduct.productId === product.id)
+                      currentLessonId &&
+                      currentLesson?.linkedProducts.some(
+                        (linkedProduct) =>
+                          linkedProduct.productId === product.id,
+                      )
                         ? currentLessonId
                         : undefined
                     }
@@ -656,7 +749,13 @@ export function Shop({ onAddToCart }: ShopProps) {
 
               {totalPages > 1 && (
                 <div className="pagination">
-                  <button className="page-btn" disabled={currentPage <= 1} onClick={() => goToPage(currentPage - 1)}>‹</button>
+                  <button
+                    className="page-btn"
+                    disabled={currentPage <= 1}
+                    onClick={() => goToPage(currentPage - 1)}
+                  >
+                    ‹
+                  </button>
                   {Array.from({ length: totalPages }, (_, i) => (
                     <button
                       key={i + 1}
@@ -666,14 +765,31 @@ export function Shop({ onAddToCart }: ShopProps) {
                       {i + 1}
                     </button>
                   ))}
-                  <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => goToPage(currentPage + 1)}>›</button>
+                  <button
+                    className="page-btn"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => goToPage(currentPage + 1)}
+                  >
+                    ›
+                  </button>
                 </div>
               )}
             </>
           ) : (
-            <div style={{ textAlign: "center", padding: "4rem 1rem", color: "var(--muted-foreground)" }}>
-              <Package size={44} style={{ margin: "0 auto 1rem", opacity: 0.3 }} />
-              <p style={{ fontWeight: 500, marginBottom: 4 }}>{getEmptyStateMessage()}</p>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "4rem 1rem",
+                color: "var(--muted-foreground)",
+              }}
+            >
+              <Package
+                size={44}
+                style={{ margin: "0 auto 1rem", opacity: 0.3 }}
+              />
+              <p style={{ fontWeight: 500, marginBottom: 4 }}>
+                {getEmptyStateMessage()}
+              </p>
               <p style={{ fontSize: "0.83rem" }}>Try adjusting your filters</p>
             </div>
           )}
@@ -700,24 +816,33 @@ export function Shop({ onAddToCart }: ShopProps) {
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
             >
               <div className="drawer-handle" />
-              <button className="drawer-close" onClick={() => setFilterOpen(false)}>
+              <button
+                className="drawer-close"
+                onClick={() => setFilterOpen(false)}
+              >
                 <X size={20} />
               </button>
               <FilterContent />
               <button
                 onClick={() => setFilterOpen(false)}
                 style={{
-                  width: "100%", padding: "13px",
-                  background: "var(--primary)", color: "var(--primary-foreground)",
-                  border: "none", borderRadius: "12px",
-                  fontSize: "0.95rem", fontWeight: 600, cursor: "pointer",
+                  width: "100%",
+                  padding: "13px",
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
                   marginTop: "0.5rem",
                   touchAction: "manipulation",
                   transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(196,94,62,0.3)";
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 12px rgba(196,94,62,0.3)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "";

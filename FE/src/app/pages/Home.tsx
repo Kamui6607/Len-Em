@@ -3,10 +3,6 @@ import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
 
-interface HomeProps {
-  isAuthOpen?: boolean;
-}
-
 const scrollToSection = (id: string) => {
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -153,7 +149,7 @@ function SectionMotion({
   );
 }
 
-export function Home(_props: HomeProps) {
+export function Home() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const startLearning = () => navigate("/learn");

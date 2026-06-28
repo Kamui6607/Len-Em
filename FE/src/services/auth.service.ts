@@ -1,56 +1,47 @@
 // ============================================================
 // Auth Service — all API calls related to authentication
 // ============================================================
-// USAGE: replace FE/src/services/auth.service.ts with this file
-// ============================================================
 
 import axiosClient from "../lib/axiosClient";
 import type {
-  LoginRequest,
-  RegisterRequest,
-  AuthTokens,
-  User,
-  ApiResponse,
+  LoginRequest, RegisterRequest, AuthTokens, ApiResponse,
+  LoginResponseData, RegisterResponseData,
+  ApiUserProfile, ChangePasswordRequest, ForgotPasswordResetRequest, MessageResponseData,
 } from "../types/auth.types";
 
 const AUTH_BASE = "/auth";
 
 export const authService = {
-  /**
-   * Login with email/username + password.
-   * POST /auth/login → { status, data: { accessToken, refreshToken } }
-   *
-   * The backend accepts EITHER email OR username (not both required).
-   * Send only the field the user provided.
-   */
+  /** POST /auth/login  → { status, data: { accessToken, refreshToken, subscription?, user? } } */
   login: (credentials: LoginRequest) =>
-    axiosClient.post<ApiResponse<AuthTokens>>(`${AUTH_BASE}/login`, credentials),
+    axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/login`, credentials),
 
-  /**
-   * Register a new user.
-   * POST /auth/register → { status, data: { accessToken, refreshToken } }
-   */
+  /** POST /auth/signup  → { status, data: { username, email, ... } }  (no tokens) */
   register: (data: RegisterRequest) =>
-    axiosClient.post<ApiResponse<AuthTokens>>(`${AUTH_BASE}/register`, data),
+    axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/signup`, data),
 
-  /**
-   * Refresh the access token.
-   * POST /auth/refresh → { status, data: { accessToken, refreshToken } }
-   */
-  refreshToken: (refreshToken: string) =>
-    axiosClient.post<ApiResponse<AuthTokens>>(`${AUTH_BASE}/refresh`, { refreshToken }),
+  /** POST /auth/refresh-token  → { status, data: { accessToken, refreshToken } }
+   *  Body: { oldRefreshToken } — token rotation (old one revoked) */
+  refreshToken: (oldRefreshToken: string) =>
+    axiosClient.post<ApiResponse<AuthTokens>>(`${AUTH_BASE}/refresh-token`, { oldRefreshToken }),
 
-  /**
-   * Fetch the currently authenticated user's profile.
-   * GET /auth/me → { status, data: User }
-   */
+  /** GET /users/me  → { status, data: { userProfile: ApiUserProfile } } */
   getCurrentUser: () =>
-    axiosClient.get<ApiResponse<User>>(`${AUTH_BASE}/me`),
+    axiosClient.get<ApiResponse<{ userProfile: ApiUserProfile }>>(`/users/me`),
 
-  /**
-   * Invalidate tokens on the server.
-   * POST /auth/logout
-   */
+  /** DELETE /auth/logout  → revoke refresh token, requires auth */
   logout: () =>
-    axiosClient.post(`${AUTH_BASE}/logout`),
+    axiosClient.delete(`${AUTH_BASE}/logout`),
+
+  /** PATCH /auth/change-password → Change user password after OTP verification */
+  changePassword: (data: ChangePasswordRequest) =>
+    axiosClient.patch<ApiResponse<MessageResponseData>>(`${AUTH_BASE}/change-password`, data),
+
+  /** PATCH /auth/forgot-password → Reset password using verified reset link */
+  forgotPassword: (data: ForgotPasswordResetRequest) =>
+    axiosClient.patch<ApiResponse<MessageResponseData>>(`${AUTH_BASE}/forgot-password`, data),
+
+  /** POST /mail/forgot-password → Send forgot password email with reset link */
+  sendForgotPasswordEmail: (email: string) =>
+    axiosClient.post<ApiResponse<MessageResponseData>>(`/mail/forgot-password`, { email }),
 };

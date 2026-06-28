@@ -1,11 +1,15 @@
-import { useState } from "react";
-import { Users, Package, ShoppingCart, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, Package, ShoppingCart, CheckCircle, Flag } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { useAdmin } from "../../context/AdminContext";
 import { products } from "../../data/products";
 import { DashboardShell } from "../../components/dashboard/DashboardShell";
 import { formatPrice } from "../../../lib/formatPrice";
+import { StaffReports } from "./StaffReports";
+import { orderService } from "../../../features/orders/services/order.service";
 import type { NavItem } from "../../components/dashboard/Sidebar";
+import type { Order } from "../../../features/orders/types/order.types";
+import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { toast } from "sonner";
 
 const navItems: NavItem[] = [
@@ -13,25 +17,62 @@ const navItems: NavItem[] = [
 ];
 
 export function StaffPage() {
-  const [activeTab, setActiveTab] = useState<"users" | "products" | "orders">("orders");
+  const [activeTab, setActiveTab] = useState<
+    "orders" | "users" | "products" | "reports"
+  >("orders");
   const { user } = useAuth();
-  const { users, orders, confirmPayment, logActivity } = useAdmin();
+  const { users, logActivity } = useAdmin();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleConfirmCashPayment = (orderId: string) => {
-    confirmPayment(orderId, user?.fullName || "Staff");
-    const order = orders.find((o) => o.id === orderId);
-    if (order) {
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        const { data: response } = await orderService.getAllOrders({
+          page: 1,
+          limit: 20,
+        });
+        setOrders(response.orders.map(normalizeOrder));
+      } catch {
+        // API unavailable — empty state (demo mode / offline)
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadOrders();
+  }, []);
+
+  const cashOrders = orders.filter(
+    (o) => o.payment.method === "CASH" && o.orderStatus === "PENDING",
+  );
+
+  const handleConfirmCashPayment = async (orderId: string) => {
+    try {
+      await orderService.updateOrderStatus(orderId, {
+        orderStatus: "CONFIRMED",
+      });
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === orderId
+            ? {
+                ...o,
+                orderStatus: "CONFIRMED" as const,
+                payment: { ...o.payment, status: "PAID" as const },
+              }
+            : o,
+        ),
+      );
       logActivity({
         type: "payment_confirmed",
         userId: user?.email || "staff",
         userName: user?.fullName || "Staff",
         description: `Confirmed cash payment for order ${orderId} at store`,
       });
+      toast.success("Cash payment confirmed");
+    } catch {
+      toast.error("Failed to confirm payment");
     }
-    toast.success("Cash payment confirmed");
   };
-
-  const cashOrders = orders.filter((o) => o.paymentMethod === "cash" && o.paymentStatus === "pending");
 
   const renderContent = () => {
     if (activeTab === "orders") {
@@ -44,22 +85,34 @@ export function StaffPage() {
             </p>
           </div>
 
-          {cashOrders.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : cashOrders.length > 0 ? (
             <div className="grid gap-4">
               {cashOrders.map((order) => (
-                <div key={order.id} className="bg-card rounded-2xl p-6 border border-border">
+                <div
+                  key={order._id}
+                  className="bg-card rounded-2xl p-6 border border-border"
+                >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="font-semibold mb-1">Order {order.id}</h3>
+                      <h3 className="font-semibold mb-1">
+                        Order #{order._id.slice(-8).toUpperCase()}
+                      </h3>
                       <p className="text-sm text-muted-foreground">
-                        {order.userName} • {order.userEmail}
+                        {order.shippingAddress?.fullName || "N/A"} •{" "}
+                        {order.shippingAddress?.phone || "N/A"}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-primary text-xl">
-                        {formatPrice(order.total)}
+                        {formatPrice(order.totalPrice)}
                       </p>
-                      <p className="text-xs text-muted-foreground">Cash Payment</p>
+                      <p className="text-xs text-muted-foreground">
+                        Cash Payment
+                      </p>
                     </div>
                   </div>
 
@@ -68,18 +121,19 @@ export function StaffPage() {
                     <div className="space-y-1">
                       {order.items.map((item, idx) => (
                         <p key={idx} className="text-sm">
-                          {item.productName} x{item.quantity}
+                          {item.productName || `Product ${item.productId}`} x
+                          {item.quantity}
                         </p>
                       ))}
                     </div>
                   </div>
 
                   <button
-                    onClick={() => handleConfirmCashPayment(order.id)}
+                    onClick={() => handleConfirmCashPayment(order._id)}
                     className="w-full bg-secondary text-secondary-foreground px-6 py-3 rounded-full hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2"
                   >
-                    <CheckCircle className="w-5 h-5" />
-                    Confirm Payment Received
+                    <CheckCircle className="w-4 h-4" />
+                    Confirm Cash Payment
                   </button>
                 </div>
               ))}
@@ -87,9 +141,9 @@ export function StaffPage() {
           ) : (
             <div className="bg-card rounded-2xl p-12 text-center border border-border">
               <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="mb-2">No Pending Cash Orders</h3>
+              <h3 className="mb-2">No pending cash orders</h3>
               <p className="text-muted-foreground">
-                All cash payments have been processed
+                All cash payments have been processed.
               </p>
             </div>
           )}
@@ -104,7 +158,6 @@ export function StaffPage() {
             <h1 className="text-2xl mb-2">Users (Read Only)</h1>
             <p className="text-muted-foreground">View all registered users</p>
           </div>
-
           <div className="bg-card rounded-2xl border border-border overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted/50">
@@ -118,7 +171,9 @@ export function StaffPage() {
                 {users.map((u) => (
                   <tr key={u.id} className="border-t border-border">
                     <td className="px-6 py-4">{u.name}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{u.email}</td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {u.email}
+                    </td>
                     <td className="px-6 py-4 capitalize">{u.role}</td>
                   </tr>
                 ))}
@@ -136,10 +191,12 @@ export function StaffPage() {
             <h1 className="text-2xl mb-2">Products (Read Only)</h1>
             <p className="text-muted-foreground">View all available products</p>
           </div>
-
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <div key={product.id} className="bg-card rounded-2xl overflow-hidden border border-border">
+              <div
+                key={product.id}
+                className="bg-card rounded-2xl overflow-hidden border border-border"
+              >
                 <img
                   src={product.image}
                   alt={product.name}
@@ -163,33 +220,29 @@ export function StaffPage() {
 
   return (
     <DashboardShell navItems={navItems} title="Staff Panel">
-      {/* Tab navigation */}
       <div className="flex gap-2 mb-8">
-        {(["orders", "users", "products"] as const).map((tab) => {
-          const icons = {
-            orders: ShoppingCart,
-            users: Users,
-            products: Package,
+        {(["orders", "users", "products", "reports"] as const).map((tab) => {
+          const icons: Record<string, React.ReactNode> = {
+            orders: <ShoppingCart className="w-4 h-4" />,
+            users: <Users className="w-4 h-4" />,
+            products: <Package className="w-4 h-4" />,
+            reports: <Flag className="w-4 h-4" />,
           };
-          const Icon = icons[tab];
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${
-                activeTab === tab
-                  ? "bg-secondary text-secondary-foreground shadow-sm"
-                  : "bg-card text-foreground border border-border hover:bg-muted"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${activeTab === tab ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-card text-foreground border border-border hover:bg-muted"}`}
             >
-              <Icon className="w-4 h-4" />
-              <span className="capitalize">{tab === "orders" ? "Cash Orders" : tab}</span>
+              {icons[tab]}
+              <span className="capitalize">
+                {tab === "orders" ? "Cash Orders" : tab}
+              </span>
             </button>
           );
         })}
       </div>
-
-      {renderContent()}
+      {activeTab === "reports" ? <StaffReports /> : renderContent()}
     </DashboardShell>
   );
 }

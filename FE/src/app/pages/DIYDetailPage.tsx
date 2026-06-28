@@ -1,5 +1,6 @@
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { BookOpen, Bookmark, Heart, ShoppingCart } from "lucide-react";
+import { ReportButton } from "../components/ReportButton";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
@@ -89,10 +90,13 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
                     <p className="text-sm text-muted-foreground">Posted {new Date(post.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
-                <Button variant="outline" onClick={savePost}>
-                  <Bookmark className={isDIYPostSaved(post.id) ? "size-4 fill-current" : "size-4"} />
-                  {isDIYPostSaved(post.id) ? "Saved" : "Save"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <ReportButton targetType="diy_post" targetId={post.id} targetTitle={post.title} />
+                  <Button variant="outline" onClick={savePost}>
+                    <Bookmark className={isDIYPostSaved(post.id) ? "size-4 fill-current" : "size-4"} />
+                    {isDIYPostSaved(post.id) ? "Saved" : "Save"}
+                  </Button>
+                </div>
               </div>
 
               <div>

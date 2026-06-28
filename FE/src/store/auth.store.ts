@@ -1,215 +1,40 @@
 // ============================================================
-// Zustand Auth Store
-// ============================================================
-// USAGE: replace FE/src/store/auth.store.ts with this file
+// Auth Store — Zustand store for authentication state
 // ============================================================
 
 import { create } from "zustand";
-import { jwtDecode } from "jwt-decode";
 import { authService } from "../services/auth.service";
 import { tokenStorage } from "../lib/axiosClient";
-import type {
-  AuthState,
-  LoginRequest,
-  RegisterRequest,
-  User,
-  DecodedToken,
-} from "../types/auth.types";
-import { mapRoleNameToUserRole } from "../types/auth.types";
-import { toast } from "sonner";
-
-// ---- Demo Accounts (fallback when backend is unavailable) ----
-
-interface DemoAccount {
-  email: string;
-  username: string;
-  password: string;
-  fullName: string;
-  phone: string;
-  roleId: "admin" | "staff" | "user";
-}
-
-const demoAccounts: DemoAccount[] = [
-  {
-    email: "admin@lenem.vn",
-    username: "admin",
-    password: "123456",
-    fullName: "Quản Trị Viên",
-    phone: "0912345678",
-    roleId: "admin",
-  },
-  {
-    email: "staff@lenem.vn",
-    username: "staff",
-    password: "123456",
-    fullName: "Nhân Viên",
-    phone: "0987654321",
-    roleId: "staff",
-  },
-  {
-    email: "creator@lenem.vn",
-    username: "creator_linh",
-    password: "123456",
-    fullName: "Nguyễn Thị Linh",
-    phone: "0909123456",
-    roleId: "user",
-  },
-  {
-    email: "user@gmail.com",
-    username: "ngoc_tran",
-    password: "123456",
-    fullName: "Trần Thị Ngọc",
-    phone: "0703339186",
-    roleId: "user",
-  },
-  {
-    email: "minh@lenem.vn",
-    username: "minh_handmade",
-    password: "123456",
-    fullName: "Phạm Văn Minh",
-    phone: "0909315708",
-    roleId: "user",
-  },
-  {
-    email: "thu@lenem.vn",
-    username: "thu_handmade",
-    password: "123456",
-    fullName: "Lê Thị Thu",
-    phone: "0938123456",
-    roleId: "user",
-  },
-];
-
-// Addresses for demo accounts (used to auto-fill checkout)
-const demoAddresses: Record<string, string> = {
-  "admin@lenem.vn": "123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-  "staff@lenem.vn": "45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-  "creator@lenem.vn": "200 Pasteur, Phường 6, Quận 3, TP. Hồ Chí Minh",
-  "user@gmail.com": "123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
-  "minh@lenem.vn": "45 Lê Lợi, Quận Hai Bà Trưng, Hà Nội",
-  "thu@lenem.vn": "78 Trần Phú, Quận Hải Châu, Đà Nẵng",
-};
-
-// ---- Helpers ----
-
-function safeDecode(token: string): DecodedToken | null {
-  try {
-    return jwtDecode<DecodedToken>(token);
-  } catch {
-    return null;
-  }
-}
-
-function isTokenValid(token: string): boolean {
-  const decoded = safeDecode(token);
-  if (!decoded) return false;
-  return decoded.exp * 1000 > Date.now();
-}
-
-/**
- * Build a minimal User shell from JWT payload.
- * The store will attempt to enrich this with a /auth/me call when possible.
- */
-function buildUserFromToken(decoded: DecodedToken): Partial<User> {
-  return {
-    id: decoded.userId,
-    fullName: decoded.fullName,
-    roleId: mapRoleNameToUserRole(decoded.roleName),
-  };
-}
-
-/**
- * Try to match credentials against demo accounts.
- * Returns a User object if matched, null otherwise.
- */
-function matchDemoAccount(emailOrUsername: string, password: string): User | null {
-  const account = demoAccounts.find(
-    (acc) =>
-      (acc.email === emailOrUsername || acc.username === emailOrUsername) &&
-      acc.password === password,
-  );
-  if (!account) return null;
-  return {
-    id: `demo-${account.roleId}-${Date.now()}`,
-    email: account.email,
-    username: account.username,
-    fullName: account.fullName,
-    phone: account.phone,
-    address: demoAddresses[account.email] || "",
-    gender: "OTHER",
-    dateOfBirth: "",
-    roleId: account.roleId,
-  };
-}
-
-/**
- * Attempt to silently refresh the access token.
- * Returns the new access token on success, null on failure.
- */
-async function attemptTokenRefresh(): Promise<string | null> {
-  const refreshToken = tokenStorage.getRefresh();
-  if (!refreshToken) return null;
-  try {
-    const { data } = await authService.refreshToken(refreshToken);
-    const tokens = data.data;
-    tokenStorage.setAccess(tokens.accessToken);
-    tokenStorage.setRefresh(tokens.refreshToken);
-    return tokens.accessToken;
-  } catch {
-    return null;
-  }
-}
-
-// ---- Store ----
+import { isAuthenticated as hasValidToken } from "../lib/authUtils";
+import type { AuthState, LoginRequest, RegisterRequest, User } from "../types/auth.types";
+import { normalizeApiUserProfile } from "../types/auth.types";
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // ---- Initial state ----
   user: null,
-  accessToken: tokenStorage.getAccess(),
-  refreshToken: tokenStorage.getRefresh(),
-  isAuthenticated: false, // resolved properly in initialize()
+  accessToken: null,
+  refreshToken: null,
+  isAuthenticated: false,
   isLoading: true,
 
-  // ---- initialize ----
-  /**
-   * Call once on app mount (e.g. in App.tsx useEffect).
-   * Validates existing tokens, refreshes if expired, restores user state.
-   */
   initialize: async () => {
-    const accessToken = tokenStorage.getAccess();
-    const refreshToken = tokenStorage.getRefresh();
-
-    // No tokens at all → unauthenticated
-    if (!accessToken && !refreshToken) {
-      set({ isAuthenticated: false, isLoading: false, user: null });
-      return;
-    }
-
-    // Try to use existing access token
-    if (accessToken && isTokenValid(accessToken)) {
-      const decoded = safeDecode(accessToken);
-      if (!decoded) {
-        tokenStorage.clear();
-        set({ isAuthenticated: false, isLoading: false, user: null });
+    set({ isLoading: true });
+    try {
+      if (!hasValidToken()) {
+        set({ isLoading: false, isAuthenticated: false, user: null });
         return;
       }
 
-      // Build user from JWT payload (backend JWT contains fullName, roleName, userId)
-      const user = buildUserFromToken(decoded) as User;
+      const { data } = await authService.getCurrentUser();
+      const user = normalizeApiUserProfile(data.data.userProfile);
 
       set({
         user,
-        accessToken,
-        refreshToken,
+        accessToken: tokenStorage.getAccess(),
+        refreshToken: tokenStorage.getRefresh(),
         isAuthenticated: true,
         isLoading: false,
       });
-      return;
-    }
-
-    // Access token expired or missing — try refresh
-    const newAccessToken = await attemptTokenRefresh();
-    if (!newAccessToken) {
+    } catch {
       tokenStorage.clear();
       set({
         user: null,
@@ -218,124 +43,49 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: false,
         isLoading: false,
       });
-      return;
     }
-
-    const decoded = safeDecode(newAccessToken);
-    if (!decoded) {
-      tokenStorage.clear();
-      set({ user: null, isAuthenticated: false, isLoading: false });
-      return;
-    }
-
-    const user = buildUserFromToken(decoded) as User;
-
-    set({
-      user,
-      accessToken: newAccessToken,
-      refreshToken: tokenStorage.getRefresh(),
-      isAuthenticated: true,
-      isLoading: false,
-    });
   },
 
-  // ---- login ----
-  /**
-   * POST /auth/login
-   *
-   * First tries API login. If backend is unavailable, falls back to demo accounts.
-   */
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true });
     try {
-      // Build minimal payload
-      const payload: LoginRequest = { password: credentials.password };
-      if (credentials.email) {
-        payload.email = credentials.email;
-      } else if (credentials.username) {
-        payload.username = credentials.username;
-      }
+      const { data } = await authService.login(credentials);
+      const { accessToken, refreshToken } = data.data;
 
-      // Try API login first
-      const { data } = await authService.login(payload);
-      const tokens = data.data;
+      tokenStorage.setAccess(accessToken);
+      tokenStorage.setRefresh(refreshToken);
 
-      tokenStorage.setAccess(tokens.accessToken);
-      tokenStorage.setRefresh(tokens.refreshToken);
-
-      // Decode JWT for user info
-      const decoded = safeDecode(tokens.accessToken);
-      if (!decoded) throw new Error("Invalid token received from server");
-
-      // Build user from JWT payload (contains fullName, roleName, userId)
-      const user = buildUserFromToken(decoded) as User;
+      // Fetch full user profile and normalize backend role object for app routing
+      const profileRes = await authService.getCurrentUser();
+      const user = normalizeApiUserProfile(profileRes.data.data.userProfile);
 
       set({
         user,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+        accessToken,
+        refreshToken,
         isAuthenticated: true,
         isLoading: false,
       });
-
-      // Persist for page refreshes
-      localStorage.setItem("lenEm_user", JSON.stringify(user));
-      toast.success("Welcome back!");
-    } catch (apiError) {
-      // API call failed — try demo account fallback
-      const identifier = credentials.email || credentials.username || "";
-      const demoUser = matchDemoAccount(identifier, credentials.password);
-
-      if (demoUser) {
-        set({
-          user: demoUser,
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-        localStorage.setItem("lenEm_user", JSON.stringify(demoUser));
-        toast.success("Welcome back!");
-        return;
-      }
-
+    } catch (err) {
       set({ isLoading: false });
-      throw apiError; // let the UI handle the error message
+      throw err;
     }
   },
 
-  // ---- register ----
   register: async (data: RegisterRequest) => {
     set({ isLoading: true });
     try {
-      const { data: response } = await authService.register(data);
-      const tokens = response.data;
-
-      tokenStorage.setAccess(tokens.accessToken);
-      tokenStorage.setRefresh(tokens.refreshToken);
-
-      const decoded = safeDecode(tokens.accessToken);
-      const user = decoded ? (buildUserFromToken(decoded) as User) : null;
-
-      set({
-        user,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-
-      localStorage.setItem("lenEm_user", JSON.stringify(user));
-      toast.success("Account created! Welcome to Len&Em.");
-    } catch (error) {
+      const { data: res } = await authService.register(data);
       set({ isLoading: false });
-      throw error;
+      return res.message || "Registration successful";
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
     }
   },
 
-  // ---- logout ----
   logout: () => {
-    // Best-effort server-side token invalidation
+    // Best effort logout API call
     authService.logout().catch(() => {});
     tokenStorage.clear();
     localStorage.removeItem("lenEm_user");
@@ -346,12 +96,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
       isLoading: false,
     });
-    toast.success("Signed out. See you soon!");
   },
 
   setUser: (user: User) => {
     set({ user });
-    localStorage.setItem("lenEm_user", JSON.stringify(user));
   },
 
   setTokens: (tokens) => {

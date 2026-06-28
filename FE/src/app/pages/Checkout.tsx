@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Check, Banknote, QrCode, DollarSign } from "lucide-react";
-import { useAdmin } from "../context/AdminContext";
 import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
 import { useKeyboardAvoidance } from "../../hooks/useKeyboardAvoidance";
 import { products } from "../data/products";
 import { formatPrice } from "../../lib/formatPrice";
 import { CoinUsage } from "../components/membership/CoinUsage";
+import { orderService } from "../../features/orders/services/order.service";
+import type { CreateOrderRequest } from "../../features/orders/types/order.types";
 
 interface CheckoutProps {
   cartItems: { productId: string; quantity: number }[];
@@ -28,13 +29,11 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const { createOrder, logActivity } = useAdmin();
   const { user } = useAuth();
   const navigate = useNavigate();
   useKeyboardAvoidance();
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
-  // Auto-fill user data when component mounts
   useEffect(() => {
     if (user) {
       if (user.fullName) setName(user.fullName);
@@ -57,7 +56,6 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
 
   const orderItems = cartItems.map((item) => {
     const idStr = String(item.productId);
-    // Try exact match first, then composite ID prefix matching
     let product = products.find((p) => String(p.id) === idStr);
     if (!product) {
       for (const p of products) {
@@ -75,7 +73,10 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
     };
   });
 
-  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = orderItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
   const deliveryFee = (subtotal * DELIVERY_FEE_PERCENT) / 100;
   const grandTotal = subtotal + deliveryFee;
 
@@ -88,7 +89,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
     return labels[payment];
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!payment) {
       toast.error("Vui lòng chọn phương thức thanh toán.");
       return;
@@ -102,45 +103,45 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
       return;
     }
     if (!email.trim()) {
-      toast.error("Vui lòng nhập email để nhận thông báo giao hàng.");
+      toast.error("Vui lòng nhập email.");
       return;
     }
     if (!address.trim()) {
-      toast.error("Vui lòng nhập địa chỉ giao hàng.");
+      toast.error("Vui lòng nhập địa chỉ.");
       return;
     }
-
     if (orderItems.length === 0) {
       toast.error("Giỏ hàng trống.");
       return;
     }
 
-    const orderId = createOrder({
-      userId: user?.email || "guest",
-      userName: name.trim(),
-      userEmail: email || user?.email || "guest@example.com",
-      items: orderItems,
-      total: grandTotal,
-      deliveryFee,
-      fulfillment: "online",
-      address: address.trim(),
-      paymentMethod: payment,
-      paymentStatus: "pending",
-    });
-
-    logActivity({
-      type: "purchase",
-      userId: user?.email || "guest",
-      userName: user?.fullName || name.trim() || "Guest",
-      description: `Đơn ${orderId} — ${getPaymentMethodLabel()} — ${formatPrice(grandTotal)}`,
-    });
-
-    setShowSuccess(true);
-    onClearCart();
-
-    setTimeout(() => {
-      navigate("/purchased");
-    }, 2000);
+    try {
+      const payload: CreateOrderRequest = {
+        items: orderItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        shippingAddress: {
+          fullName: name.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          ward: "",
+          district: "",
+          city: "",
+        },
+        paymentMethod: payment === "bank" ? "VNPAY" : "CASH",
+      };
+      const { data: result } = await orderService.createOrder(payload);
+      onClearCart();
+      if (result.payUrl) {
+        window.location.href = result.payUrl;
+        return;
+      }
+      setShowSuccess(true);
+      setTimeout(() => navigate("/purchased"), 2000);
+    } catch {
+      toast.error("Đặt hàng thất bại. Vui lòng thử lại.");
+    }
   };
 
   if (showSuccess) {
@@ -152,7 +153,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
           </div>
           <h1 className="text-3xl font-semibold">Đặt hàng thành công!</h1>
           <p className="text-muted-foreground">
-            Đơn hàng của bạn đã được ghi nhận. Bạn sẽ được chuyển đến trang đơn hàng trong giây lát.
+            Đơn hàng của bạn đã được ghi nhận.
           </p>
           <div className="h-1 bg-muted rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
@@ -167,7 +168,7 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-semibold mb-8">Thanh toán</h1>
 
-        {/* ── Customer Info ── */}
+        {/* Customer Info */}
         <div className="bg-card rounded-2xl border border-border p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Thông tin giao hàng</h2>
           <div className="space-y-4">
@@ -187,17 +188,17 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="0703339186"
+                placeholder="0901234567"
                 className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
               />
             </div>
             <div>
-              <label className="block text-sm mb-1">Email *</label>
+              <label className="block text-sm mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder="email@example.com"
                 className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
               />
             </div>
@@ -207,75 +208,99 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                placeholder="Số nhà, tên đường, quận/huyện, thành phố"
                 className="w-full px-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base"
               />
             </div>
           </div>
         </div>
 
-        {/* ── Payment Method ── */}
+        {/* Payment Method */}
         <div className="bg-card rounded-2xl border border-border p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Phương thức thanh toán</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setPayment("bank")}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                payment === "bank"
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${payment === "bank" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
             >
-              <QrCode className="w-6 h-6 mb-2 mx-auto" />
-              <p className="text-sm font-medium">Chuyển khoản / QR</p>
-              <p className="text-xs text-muted-foreground">Thanh toán online</p>
+              {payment === "bank" && (
+                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center">
+                  <Check className="w-3 h-3" />
+                </span>
+              )}
+              <QrCode className="w-7 h-7 text-primary" />
+              <span className="text-xs font-semibold text-center">
+                Chuyển khoản +<br />
+                Giao hàng
+              </span>
             </button>
             <button
               onClick={() => setPayment("cash")}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                payment === "cash"
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${payment === "cash" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
             >
-              <DollarSign className="w-6 h-6 mb-2 mx-auto" />
-              <p className="text-sm font-medium">Tiền mặt</p>
-              <p className="text-xs text-muted-foreground">Trả khi nhận hàng (COD)</p>
+              {payment === "cash" && (
+                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center">
+                  <Check className="w-3 h-3" />
+                </span>
+              )}
+              <DollarSign className="w-7 h-7 text-primary" />
+              <span className="text-xs font-semibold text-center">
+                COD +<br />
+                Giao hàng
+              </span>
             </button>
           </div>
 
-          {/* Bank info block */}
           {payment === "bank" && (
-            <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Banknote className="w-6 h-6 text-primary" />
-                </div>
-                <div className="space-y-1 text-sm">
-                  <p className="font-medium">Thông tin chuyển khoản</p>
-                  <p className="text-muted-foreground">Ngân hàng: {BANK_NAME}</p>
-                  <p className="text-muted-foreground">Số tài khoản: {BANK_ACCOUNT}</p>
-                  <p className="text-muted-foreground">Chủ tài khoản: {BANK_HOLDER}</p>
-                  <p className="text-muted-foreground">
-                    Nội dung: <span className="font-mono text-foreground">Họ tên + SĐT</span>
-                  </p>
-                </div>
+            <div className="mt-4 p-4 bg-muted/50 rounded-xl border border-border">
+              <div className="flex items-center gap-3 mb-3">
+                <Banknote className="w-5 h-5 text-primary" />
+                <span className="font-medium text-sm">
+                  Thông tin chuyển khoản
+                </span>
+              </div>
+              <div className="space-y-1 text-sm">
+                <p>
+                  <span className="text-muted-foreground">Ngân hàng: </span>
+                  <span className="font-medium">{BANK_NAME}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Số tài khoản: </span>
+                  <span className="font-medium">{BANK_ACCOUNT}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Chủ tài khoản: </span>
+                  <span className="font-medium">{BANK_HOLDER}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Nội dung:{" "}
+                  <span className="font-mono text-foreground">
+                    Họ tên + SĐT
+                  </span>
+                </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Order Summary ── */}
+        {/* Order Summary */}
         <div className="bg-card rounded-2xl border border-border p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Tóm tắt đơn hàng</h2>
           <div className="space-y-4">
             {orderItems.map((item, index) => (
-              <div key={index} className="flex justify-between items-center py-2 border-b border-border last:border-0">
+              <div
+                key={index}
+                className="flex justify-between items-center py-2 border-b border-border last:border-0"
+              >
                 <div>
                   <p className="font-medium">{item.productName}</p>
-                  <p className="text-sm text-muted-foreground">SL: {item.quantity}</p>
+                  <p className="text-sm text-muted-foreground">
+                    SL: {item.quantity}
+                  </p>
                 </div>
-                <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
+                <p className="font-medium">
+                  {formatPrice(item.price * item.quantity)}
+                </p>
               </div>
             ))}
           </div>
@@ -293,38 +318,43 @@ export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
               <span className="text-primary">{formatPrice(grandTotal)}</span>
             </div>
           </div>
-
           {payment && (
             <div className="mt-4 p-3 bg-primary/5 rounded-xl border border-primary/20 text-sm">
               <span className="font-medium">Phương thức: </span>
-              <span className="text-muted-foreground">{getPaymentMethodLabel()}</span>
+              <span className="text-muted-foreground">
+                {getPaymentMethodLabel()}
+              </span>
             </div>
           )}
         </div>
 
-        {/* ── Coin Usage ── */}
+        {/* Coin Usage */}
         <div className="mb-6">
           <CoinUsage orderTotal={grandTotal} />
         </div>
 
-        {/* ── Place Order Button ── */}
+        {/* Place Order */}
         {payment && (
-              <button
-                onClick={handlePlaceOrder}
-                className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium"
-              >
-                Đặt hàng
-              </button>
+          <button
+            onClick={handlePlaceOrder}
+            className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium"
+          >
+            Đặt hàng
+          </button>
         )}
       </div>
 
-      {/* ── Mobile sticky bottom bar ── */}
+      {/* Mobile sticky bottom */}
       {payment && !scrolledToBottom && (
         <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Tổng cộng:</p>
-              <p className="text-base font-bold text-primary">{formatPrice(grandTotal)}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                Tổng cộng:
+              </p>
+              <p className="text-base font-bold text-primary">
+                {formatPrice(grandTotal)}
+              </p>
             </div>
             <button
               onClick={handlePlaceOrder}

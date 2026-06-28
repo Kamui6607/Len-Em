@@ -4,6 +4,7 @@ import { AdminDashboard } from "./AdminDashboard";
 import { AdminUsers } from "./AdminUsers";
 import { AdminProducts } from "./AdminProducts";
 import { AdminOrders } from "./AdminOrders";
+import { AdminReports } from "./AdminReports";
 
 export function AdminPage() {
   return (
@@ -13,6 +14,7 @@ export function AdminPage() {
         <Route path="users" element={<AdminUsers />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="reports" element={<AdminReports />} />
         <Route path="payments" element={<AdminOrders />} />
         <Route path="activity" element={<AdminDashboard />} />
       </Routes>

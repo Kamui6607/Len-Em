@@ -93,16 +93,14 @@ axiosClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    try {
-      const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-        refreshToken,
+            try {
+      const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+        oldRefreshToken: refreshToken,
       });
 
       // Support both { data: { accessToken } } and { accessToken } response shapes
-      const newAccessToken: string =
-        data.data?.accessToken ?? data.accessToken;
-      const newRefreshToken: string | undefined =
-        data.data?.refreshToken ?? data.refreshToken;
+      const newAccessToken = data.data?.accessToken ?? data.accessToken;
+      const newRefreshToken = data.data?.refreshToken ?? data.refreshToken;
 
       tokenStorage.setAccess(newAccessToken);
       if (newRefreshToken) tokenStorage.setRefresh(newRefreshToken);
@@ -113,7 +111,6 @@ axiosClient.interceptors.response.use(
       return axiosClient(original);
     } catch (refreshError) {
       flushQueue(refreshError, null);
-      forceLogout();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

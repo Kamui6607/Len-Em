@@ -1,15 +1,27 @@
 import { useState } from "react";
-import { Link } from "react-router";
-import { Mail, ArrowLeft, CircleCheck as CheckCircle2 } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { Mail, ArrowLeft, CircleCheck as CheckCircle2, Loader as Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { authService } from "../../services/auth.service";
 
 export function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder — integrate with backend later
-    setSent(true);
+    if (!email.trim()) return;
+    setLoading(true);
+    try {
+      await authService.sendForgotPasswordEmail(email);
+      setSent(true);
+    } catch {
+      toast.error("Failed to send reset email. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (sent) {
@@ -31,13 +43,14 @@ export function ForgotPasswordPage() {
             <p className="text-muted-foreground text-sm mb-6">
               We've sent a password reset link to <strong>{email}</strong>
             </p>
-            <Link
-              to="/auth/login"
-              className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 text-primary hover:underline text-sm cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to login
-            </Link>
+              Back
+            </button>
           </div>
         </div>
       </div>
@@ -74,6 +87,7 @@ export function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
                 className="w-full pl-11 pr-4 py-3 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               />
             </div>
@@ -81,16 +95,28 @@ export function ForgotPasswordPage() {
 
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground py-3.5 rounded-full hover:bg-primary/90 transition-all font-medium"
+            disabled={loading}
+            className="w-full bg-primary text-primary-foreground py-3.5 rounded-full hover:bg-primary/90 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >
-            Send reset link
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Send reset link"
+            )}
           </button>
 
           <p className="text-center">
-            <Link to="/auth/login" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-sm text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+            >
               <ArrowLeft className="w-4 h-4" />
-              Back to login
-            </Link>
+              Back
+            </button>
           </p>
         </form>
       </div>

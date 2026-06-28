@@ -23,6 +23,7 @@ import { Button } from "./ui/button";
 import { cn } from "./ui/utils";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { BottomNav } from "../../components/mobile/BottomNav";
+import { NotificationsBell } from "./NotificationsBell";
 
 interface NavigationProps {
   cartCount: number;
@@ -252,6 +253,13 @@ export function Navigation({ cartCount }: NavigationProps) {
 
           {/* Desktop Right */}
           <div className="hidden items-center gap-2 md:flex">
+            {isAuthenticated && !isHomePage && (
+              <>
+                <div className="NotificationsBell">
+                  <NotificationsBell />
+                </div>
+              </>
+            )}
             {showFullActions && (
               <>
                 <Button
@@ -280,6 +288,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                 </Button>
               </>
             )}
+
             <ThemeToggle />
             {showAuthButtons && (
               <>
@@ -493,4 +502,3 @@ function Counter({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
-

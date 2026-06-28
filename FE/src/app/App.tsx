@@ -6,6 +6,9 @@ import { useMembershipStore } from "../features/membership/store/membership.stor
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AdminProvider } from "./context/AdminContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ReportProvider } from "../context/ReportContext";
+import { NotificationProvider } from "./context/NotificationContext";
+import { ReviewProvider } from "./context/ReviewContext";
 import { AppRouter } from "../routes/AppRouter";
 
 export interface CartItem {
@@ -77,25 +80,31 @@ export default function App() {
   return (
     <ThemeProvider>
       <AdminProvider>
-        <FavoritesProvider>
-          <Toaster
-            position="top-right"
-            richColors
-            visibleToasts={5}
-            gap={8}
-            offset={{ right: 16, top: 16 }}
-          />
-          <BrowserRouter>
-            <AppRouter
-              cartItems={cartItems}
-              onAddToCart={handleAddToCart}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onClearCart={handleClearCart}
-              cartCount={cartCount}
-            />
-          </BrowserRouter>
-        </FavoritesProvider>
+        <ReportProvider>
+          <NotificationProvider>
+            <ReviewProvider>
+              <FavoritesProvider>
+                <Toaster
+                  position="top-right"
+                  richColors
+                  visibleToasts={5}
+                  gap={8}
+                  offset={{ right: 16, top: 16 }}
+                />
+                <BrowserRouter>
+                  <AppRouter
+                    cartItems={cartItems}
+                    onAddToCart={handleAddToCart}
+                    onUpdateQuantity={handleUpdateQuantity}
+                    onRemoveItem={handleRemoveItem}
+                    onClearCart={handleClearCart}
+                    cartCount={cartCount}
+                  />
+                </BrowserRouter>
+              </FavoritesProvider>
+            </ReviewProvider>
+          </NotificationProvider>
+        </ReportProvider>
       </AdminProvider>
     </ThemeProvider>
   );

@@ -447,24 +447,25 @@ export function LoginPage() {
                     <span className="demo-dot dot-r" />
                     Admin
                   </div>
-                  admin@lenem.vn
+                  admin
                 </div>
                 <div className="demo-chip">
                   <div className="demo-role">
                     <span className="demo-dot dot-a" />
                     Staff
                   </div>
-                  staff@lenem.vn
+                  staff1
                 </div>
                 <div className="demo-chip">
                   <div className="demo-role">
                     <span className="demo-dot dot-p" />
-                    User
+                    Customer
                   </div>
-                  user@gmail.com
+                  customer1
                 </div>
               </div>
             </div>
+            
           </div>
         </div>
       </div>
