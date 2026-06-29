@@ -910,7 +910,7 @@ Learn
 ├── Mũ Bucket Pastel (Intermediate) — 4 lessons
 ├── Túi Tote Cá Tính (Advanced) — 4 lessons
 ├── Áo Croptop Daisy (Intermediate) — 3 lessons
-├── Mũ Bunny Idol (Beginner) — 3 lessons
+├── Mũ Bunny Tai Thỏ (Beginner) — 3 lessons
 └── Cardigan Cloud Puff (Advanced) — 5 lessons
 ```
 

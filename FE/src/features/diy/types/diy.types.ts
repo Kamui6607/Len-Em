@@ -1,6 +1,6 @@
 export interface DIYPost {
   id: string;
-  creator: { id: string; name: string; avatar: string; isIdol: boolean };
+  creator: { id: string; name: string; avatar: string };
   title: string;
   description: string;
   images: string[];

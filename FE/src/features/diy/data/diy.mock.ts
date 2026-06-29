@@ -2,15 +2,14 @@ import type { DIYPost } from "../types/diy.types";
 
 export const diyPosts: DIYPost[] = [
   {
-    id: "idol-cardigan-cloud",
+    id: "cardigan-cloud-puff",
     creator: {
-      id: "idol-mira",
+      id: "creator-mira",
       name: "Mira Moon",
       avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: true,
     },
     title: "Cardigan Cloud Puff",
-    description: "Áo cardigan bồng bềnh Mira mặc trong vlog cuối tuần. Chất len mềm, pastel nhẹ nhàng, phong cách idol.",
+    description: "Áo cardigan bồng bềnh với chất len mềm, pastel nhẹ nhàng.",
     images: [
       "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=900",
       "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=900",
@@ -28,7 +27,7 @@ export const diyPosts: DIYPost[] = [
     saveCount: 3910,
     purchaseCount: 1220,
     createdAt: "2026-06-02",
-    tags: ["idol", "cardigan", "pastel"],
+    tags: ["cardigan", "pastel"],
   },
   {
     id: "strawberry-airpods-case",
@@ -36,7 +35,6 @@ export const diyPosts: DIYPost[] = [
       id: "creator-nhi",
       name: "Nhi Stitch",
       avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: false,
     },
     title: "Ốp AirPods Dâu Tây",
     description: "Nhỏ xinh, dễ thương và hoàn hảo cho người mới muốn làm dự án giảm stress sau giờ học.",
@@ -62,7 +60,6 @@ export const diyPosts: DIYPost[] = [
       id: "creator-minh",
       name: "Minh Handmade",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: false,
     },
     title: "Túi Tote Xanh Sage",
     description: "Túi tote chắc chắn với quai gia cố cho đi học, đi chợ hoặc hội chợ handmade.",
@@ -86,19 +83,18 @@ export const diyPosts: DIYPost[] = [
     tags: ["túi", "advanced", "creator"],
   },
   {
-    id: "idol-bunny-hat",
+    id: "bunny-hat",
     creator: {
-      id: "idol-jun",
+      id: "creator-jun",
       name: "Jun Spark",
       avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: true,
     },
     title: "Mũ Bunny Tai Thỏ",
-    description: "Chiếc mũ fan meeting gây sốt với tai thỏ floppy và sọc pastel mềm mại.",
+    description: "Chiếc mũ với tai thỏ floppy và sọc pastel mềm mại.",
     images: ["https://images.unsplash.com/photo-1618354691229-88d47f285158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=900"],
     linkedCombo: {
       id: "combo-mu-bunny",
-      name: "Combo Mũ Bunny Idol",
+      name: "Combo Mũ Bunny",
       items: [
         { productId: "yarn-pastel-bundle", name: "Bộ Len Pastel Cầu Vồng", thumbnail: "https://images.unsplash.com/photo-1678443087150-4a40aa2f250a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=300", price: 349000, quantity: 1 },
         { productId: "tool-hooks-bamboo", name: "Bộ Kim Móc Tre - Cún Yêu", thumbnail: "https://images.unsplash.com/photo-1620633437938-be73c35eb77e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=300", price: 329000, quantity: 1 },
@@ -109,7 +105,7 @@ export const diyPosts: DIYPost[] = [
     saveCount: 6244,
     purchaseCount: 2340,
     createdAt: "2026-06-04",
-    tags: ["idol", "mũ", "viral"],
+    tags: ["mũ", "viral"],
   },
   {
     id: "milk-cotton-daisy-top",
@@ -117,7 +113,6 @@ export const diyPosts: DIYPost[] = [
       id: "creator-thu",
       name: "Thu Handmade",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: false,
     },
     title: "Áo Croptop Hoa Cúc",
     description: "Áo croptop mát lạnh với chất len sữa cotton siêu mềm và quai hoa cúc đáng yêu.",
@@ -143,7 +138,6 @@ export const diyPosts: DIYPost[] = [
       id: "creator-ngoc",
       name: "Ngọc Handmade",
       avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: false,
     },
     title: "Bộ Nơ Tóc Oải Hương",
     description: "Ba chiếc nơ tóc dịu dàng cho giờ giải lao 20 phút. Nhanh, mềm và làm quà tuyệt vời.",
@@ -164,15 +158,14 @@ export const diyPosts: DIYPost[] = [
     tags: ["giảm stress", "quà tặng", "beginner"],
   },
   {
-    id: "idol-phone-charm",
+    id: "phone-charm",
     creator: {
-      id: "idol-ari",
+      id: "creator-ari",
       name: "Ari Bloom",
       avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: true,
     },
     title: "Móc Khóa Điện Thoại Hoa",
-    description: "Móc khóa hoa của Ari từ livestream concert. Fan có thể làm matching charm trong một tối.",
+    description: "Móc khóa hoa xinh xắn, có thể làm matching charm trong một tối.",
     images: ["https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=900"],
     linkedCombo: {
       id: "combo-phone-charm",
@@ -187,7 +180,7 @@ export const diyPosts: DIYPost[] = [
     saveCount: 3270,
     purchaseCount: 980,
     createdAt: "2026-05-29",
-    tags: ["idol", "charm", "hoa"],
+    tags: ["charm", "hoa"],
   },
   {
     id: "checkerboard-blanket",
@@ -195,7 +188,6 @@ export const diyPosts: DIYPost[] = [
       id: "creator-minh",
       name: "Minh Handmade",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: false,
     },
     title: "Chăn Ca-rô Sofa",
     description: "Chăn phòng khách cá tính dùng len chunky và kỹ thuật ghép đơn giản.",
@@ -221,7 +213,6 @@ export const diyPosts: DIYPost[] = [
       id: "creator-linh",
       name: "Linh Creator",
       avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: false,
     },
     title: "Túi Mini Nơ Coquette",
     description: "Túi vai nhỏ với nơ xinh cho outfit soft-girl và những buổi hẹn hò cuối tuần.",
@@ -242,15 +233,14 @@ export const diyPosts: DIYPost[] = [
     tags: ["túi", "coquette", "nơ"],
   },
   {
-    id: "idol-khan-cotton",
+    id: "khan-cotton-basic",
     creator: {
-      id: "idol-sunny",
+      id: "creator-sunny",
       name: "Sunny Day",
       avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160",
-      isIdol: true,
     },
     title: "Khăn Quàng Cotton - Basic",
-    description: "Chiếc khăn basic Sunny thường đan trong lúc stream. Đơn giản, đẹp và ai cũng làm được!",
+    description: "Chiếc khăn basic đơn giản, đẹp và ai cũng làm được!",
     images: ["https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=900"],
     linkedCombo: {
       id: "combo-khan-co-ban",
@@ -265,7 +255,7 @@ export const diyPosts: DIYPost[] = [
     saveCount: 4200,
     purchaseCount: 1800,
     createdAt: "2026-06-01",
-    tags: ["idol", "khăn", "basic"],
+    tags: ["khăn", "basic"],
   },
 ];
 

@@ -191,7 +191,7 @@ export const learnCourses: Course[] = [
   },
   {
     id: "khoa-hoc-mu-bunny",
-    title: "Mũ Bunny Idol - Tai Thỏ Dễ Thương",
+    title: "Mũ Bunny Tai Thỏ",
     type: "premium",
     price: 0,
     pointReward: 200,
@@ -207,7 +207,7 @@ export const learnCourses: Course[] = [
     totalDuration: 32,
     enrolledCount: 3420,
     rating: 4.8,
-    tags: ["mũ", "bunny", "idol", "dễ thương"],
+    tags: ["mũ", "bunny", "dễ thương"],
     linkedComboIds: ["combo-mu-bunny"],
     description:
       "Làm chiếc mũ tai thỏ từng gây sốt fan meeting. Dự án nhanh, dễ thương và siêu dễ thương.",
@@ -230,10 +230,10 @@ export const learnCourses: Course[] = [
     totalDuration: 90,
     enrolledCount: 680,
     rating: 4.7,
-    tags: ["cardigan", "cloud", "ấm", "idol"],
+    tags: ["cardigan", "cloud", "ấm"],
     linkedComboIds: ["combo-cardigan-cloud"],
     description:
-      "Tạo chiếc cardigan bồng bềnh như mây - từng gây sốt trong vlog của idol. Mất vài tuần nhưng xứng đáng!",
+      "Tạo chiếc cardigan bồng bềnh như mây - từng gây sốt trong vlog. Mất vài tuần nhưng xứng đáng!",
   },
 ];
 
@@ -554,7 +554,7 @@ export const materialCombos: MaterialCombo[] = [
   },
   {
     id: "combo-mu-bunny",
-    name: "Combo Mũ Bunny Idol",
+    name: "Combo Mũ Bunny",
     level: "beginner",
     description: "Len pastel, kim tre và kim may cho chiếc mũ tai thỏ dễ thương.",
     price: 507000,
