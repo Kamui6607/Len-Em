@@ -92,5 +92,5 @@ export const linkedProducts: CreatorLinkedProduct[] = [
 export const creatorDiyPosts: CreatorDiyPost[] = [
   { id: "diy-1", title: "Cherry Bunny Keychain", image: "https://images.unsplash.com/photo-1615484477778-ca3b77940c25?auto=format&fit=crop&w=800&q=80", views: 12800, comboPurchases: 342, tag: "Viral plush" },
   { id: "diy-2", title: "Sage Campus Tote", image: "https://images.unsplash.com/photo-1607344645866-009c320f3ab8?auto=format&fit=crop&w=800&q=80", views: 8230, comboPurchases: 118, tag: "Lifestyle" },
-  { id: "diy-3", title: "Idol Lightstick Cozy", image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?auto=format&fit=crop&w=800&q=80", views: 21450, comboPurchases: 524, tag: "Idol economy" },
+  { id: "diy-3", title: "Lightstick Cozy", image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?auto=format&fit=crop&w=800&q=80", views: 21450, comboPurchases: 524, tag: "Viral" },
 ];

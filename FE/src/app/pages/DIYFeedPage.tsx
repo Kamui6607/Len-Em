@@ -77,7 +77,7 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
             Fan-made crochet inspiration you can buy instantly.
           </h1>
           <p className="max-w-3xl text-muted-foreground md:text-lg">
-            Browse creator and idol projects, save your favorites, then buy the exact material combo behind every look.
+            Browse creator projects, save your favorites, then buy the exact material combo behind every look.
           </p>
         </section>
 
@@ -95,7 +95,7 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tags: idol, bag, beginner..."
+              placeholder="Search tags: bag, beginner..."
               className="pl-9"
             />
           </div>
@@ -130,7 +130,6 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{post.creator.name}</p>
-                    {post.creator.isIdol && <Badge className="mt-1 bg-yellow-100 text-yellow-800">⭐ Idol</Badge>}
                   </div>
                 </div>
 

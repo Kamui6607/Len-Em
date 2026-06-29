@@ -47,28 +47,24 @@ const diyPosts = [
   {
     creator: "Mai Anh",
     likes: "2.4k",
-    isIdol: true,
     seed: 1062,
     avatar: 10,
   },
   {
     creator: "Linh Studio",
     likes: "986",
-    isIdol: false,
     seed: 1080,
     avatar: 20,
   },
   {
     creator: "Nắng Handmade",
     likes: "1.8k",
-    isIdol: false,
     seed: 1074,
     avatar: 30,
   },
   {
     creator: "Yarn by Vy",
     likes: "734",
-    isIdol: false,
     seed: 1059,
     avatar: 40,
   },
@@ -199,8 +195,8 @@ export function Home() {
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-7 text-[var(--color-text-muted)] md:text-lg">
-              A cozy closed-loop platform where beginners, creators, and idol
-              fans learn, buy the right materials, and share handmade pieces.
+              A cozy closed-loop platform where beginners and creators
+              learn, buy the right materials, and share handmade pieces.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -423,7 +419,7 @@ export function Home() {
               See it made. Buy the kit. Make it yours.
             </h2>
             <p className="mt-4 text-base leading-7 text-[var(--color-text-muted)]">
-              Creators and idols post their pieces with every material they
+              Creators post their pieces with every material they
               used. One tap and the full combo is in your cart.
             </p>
           </motion.div>
@@ -437,11 +433,6 @@ export function Home() {
                 key={post.creator}
                 className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-sm"
               >
-                {post.isIdol && (
-                  <div className="absolute left-3 top-3 z-10 rounded-full bg-[var(--color-accent)] px-3 py-1 text-[10px] font-extrabold text-[#7A5C00]">
-                    ⭐ Idol Pick
-                  </div>
-                )}
                 <img
                   src={img(post.seed, 600, 800)}
                   alt={`${post.creator} knitting project`}

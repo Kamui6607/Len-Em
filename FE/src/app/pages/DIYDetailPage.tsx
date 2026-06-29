@@ -85,7 +85,6 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{post.creator.name}</p>
-                      {post.creator.isIdol && <Badge className="bg-yellow-100 text-yellow-800">⭐ Idol</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">Posted {new Date(post.createdAt).toLocaleDateString()}</p>
                   </div>
