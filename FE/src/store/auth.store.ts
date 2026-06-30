@@ -85,8 +85,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    // Best effort logout API call
+    // Best-effort API logout; do not await it so UI can move to Login immediately.
     authService.logout().catch(() => {});
+
     tokenStorage.clear();
     localStorage.removeItem("lenEm_user");
     set({
