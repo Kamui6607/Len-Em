@@ -99,6 +99,10 @@ const ManageOrders = lazy(() =>
   import("../app/pages/manage/Orders").then((m) => ({ default: m.ManageOrders })),
 );
 
+const KitDetail = lazy(() =>
+  import("../app/pages/KitDetail").then((m) => ({ default: m.KitDetail })),
+);
+
 function StoreOutlet() {
   return (
     <StoreLayout>
@@ -134,6 +138,7 @@ export function AppRouter() {
         {/* ===== SHOP routes ===== */}
         <Route path="shop" element={<Shop />} />
         <Route path="shop/product/:id" element={<ProductDetail />} />
+        <Route path="kits/:id" element={<KitDetail />} />
 
         {/* ===== DIY routes ===== */}
         <Route path="diy" element={<DIYFeedPage />} />

@@ -3,6 +3,7 @@ import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminDashboard } from "./AdminDashboard";
 import { AdminUsers } from "./AdminUsers";
 import { ProductManagement } from "./ProductManagement";
+import { ProductDetail } from "./ProductDetail";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./AdminReports";
 import { Permissions } from "./Permissions";
@@ -16,6 +17,7 @@ export function AdminPage() {
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="products" element={<ProductManagement />} />
+        <Route path="products/:productId" element={<ProductDetail />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="reports" element={<AdminReports />} />
         <Route path="payments" element={<AdminOrders />} />

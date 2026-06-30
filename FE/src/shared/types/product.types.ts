@@ -9,8 +9,8 @@
  * (Frontend mock uses: yarn | tools | kit — we map accordingly in the adapter)
  */
 
-export type BackendCategory = "yarn" | "hook" | "needle" | "accessory" | "kit";
-export type FrontendCategory = "yarn" | "tools" | "kit";
+export type BackendCategory = string;
+export type FrontendCategory = string;
 
 export interface BackendProductVariant {
   _idVariants: string;
@@ -70,18 +70,7 @@ function resolveImageUrl(url: string | undefined | null): string {
 }
 
 export function mapCategory(cat: BackendCategory): FrontendCategory {
-  switch (cat) {
-    case "hook":
-    case "needle":
-    case "accessory":
-      return "tools";
-    case "kit":
-      return "kit";
-    case "yarn":
-      return "yarn";
-    default:
-      return "tools";
-  }
+  return cat;
 }
 
 /**

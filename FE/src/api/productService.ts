@@ -23,7 +23,7 @@ export interface Product {
   id?: string;
   name: string;
   description: string;
-  category: "yarn" | "hook" | "needle" | "accessory" | "kit";
+  category: string;
   image: string;
   tags: string[];
   variants: ProductVariant[];
@@ -45,6 +45,7 @@ export interface CreateProductRequest {
   description?: string;
   category: string;
   image?: string;
+  imageFile?: File | null;
   tags?: string[];
   variants: {
     color: string;
@@ -52,6 +53,7 @@ export interface CreateProductRequest {
     price: number;
     stock: number;
     image?: string;
+    imageFile?: File | null;
   }[];
   isActive?: boolean;
 }
@@ -70,6 +72,29 @@ export interface UpdateProductRequest {
     image?: string;
   }[];
   isActive?: boolean;
+}
+
+function buildProductFormData(data: CreateProductRequest): FormData {
+  const formData = new FormData();
+  const { imageFile, variants, ...productData } = data;
+  const variantsWithoutFiles = variants.map(({ imageFile: _imageFile, ...variant }) => variant);
+
+  formData.append("data", JSON.stringify({
+    ...productData,
+    variants: variantsWithoutFiles,
+  }));
+
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  variants.forEach((variant, index) => {
+    if (variant.imageFile) {
+      formData.append(`variantImage_${index}`, variant.imageFile);
+    }
+  });
+
+  return formData;
 }
 
 // ─── Service ─────────────────────────────────────────────
@@ -92,8 +117,12 @@ export const productService = {
     axiosClient.get<ApiResponse<{ product: Product }>>(`${PRODUCTS_BASE}/${productId}`),
 
   /** POST /products — Create a new product (Admin & Staff) */
-  create: (data: CreateProductRequest) =>
-    axiosClient.post<ApiResponse<{ product: Product }>>(PRODUCTS_BASE, data),
+    create: (data: CreateProductRequest) =>
+    axiosClient.post<ApiResponse<{ product: Product }>>(
+      PRODUCTS_BASE,
+      buildProductFormData(data),
+      { headers: { "Content-Type": "multipart/form-data" } }
+    ),
 
   /** PUT /products/{productId} — Update product (Admin & Staff) */
   update: (productId: string, data: UpdateProductRequest) =>

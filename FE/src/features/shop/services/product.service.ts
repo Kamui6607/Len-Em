@@ -49,13 +49,8 @@ export async function fetchProducts(
   // Build query params for the backend
   const queryParams: Record<string, string | number | boolean> = {};
 
-  if (params.category && params.category !== "all") {
-    const catMap: Record<string, string> = {
-      yarn: "yarn",
-      tools: "hook",
-      kit: "kit",
-    };
-    queryParams.category = catMap[params.category] || params.category;
+    if (params.category && params.category !== "all") {
+    queryParams.category = params.category;
   }
   if (params.search) queryParams.search = params.search;
   const mappedSort = mapSort(params.sort);

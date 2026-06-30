@@ -1,9 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit3, Trash2, X, RotateCcw, Package } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  RotateCcw,
+  Package,
+  Eye,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router";
 import { formatPrice } from "../../../lib/formatPrice";
 import { productService, type Product } from "../../../api/productService";
-import { VariantEditor, type VariantData, validateVariants, hasVariantErrors } from "../../components/admin/VariantEditor";
+import {
+  VariantEditor,
+  type VariantData,
+  validateVariants,
+  hasVariantErrors,
+} from "../../components/admin/VariantEditor";
 import { ColorSwatchList } from "../../components/ui/ColorSwatch";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -14,6 +29,7 @@ interface ProductFormData {
   description: string;
   category: string;
   image: string;
+  imageFile: File | null;
   tags: string;
   variants: VariantData[];
   isActive: boolean;
@@ -24,6 +40,7 @@ const emptyForm: ProductFormData = {
   description: "",
   category: "yarn",
   image: "",
+  imageFile: null,
   tags: "",
   variants: [{ color: "", hexCode: "#000000", price: 0, stock: 0, image: "" }],
   isActive: true,
@@ -49,13 +66,26 @@ function ConfirmDialog({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onCancel}
+      />
       <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
         <h3 className="font-bold text-lg mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground mb-6">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors">Delete</button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -65,6 +95,7 @@ function ConfirmDialog({
 // ─── Main Component ──────────────────────────────────────
 
 export function ProductManagement() {
+  const navigate = useNavigate();
   const { hasRole } = useAuth();
   const isAdminOrStaff = hasRole("admin") || hasRole("staff");
 
@@ -128,12 +159,14 @@ export function ProductManagement() {
       category: product.category,
       image: product.image,
       tags: product.tags?.join(", ") ?? "",
+      imageFile: null,
       variants: (product.variants ?? []).map((v) => ({
         color: v.color,
         hexCode: v.hexCode,
         price: v.price,
         stock: v.stock,
         image: v.image ?? "",
+        imageFile: null,
       })),
       isActive: product.isActive,
     });
@@ -155,6 +188,10 @@ export function ProductManagement() {
     }
     if (!form.category) {
       toast.error("Category is required");
+      return false;
+    }
+    if (!editingId && !form.imageFile) {
+      toast.error("Main product image is required");
       return false;
     }
     if (form.variants.length === 0) {
@@ -181,6 +218,7 @@ export function ProductManagement() {
         description: form.description.trim(),
         category: form.category,
         image: form.image.trim() || undefined,
+        imageFile: form.imageFile,
         tags: form.tags
           .split(",")
           .map((t) => t.trim())
@@ -191,12 +229,19 @@ export function ProductManagement() {
           price: v.price,
           stock: v.stock,
           image: v.image.trim() || undefined,
+          imageFile: v.imageFile ?? null,
         })),
         isActive: form.isActive,
       };
 
       if (editingId) {
-        await productService.update(editingId, payload);
+        const { imageFile: _imageFile, variants, ...updatePayload } = payload;
+        await productService.update(editingId, {
+          ...updatePayload,
+          variants: variants.map(
+            ({ imageFile: _variantImageFile, ...variant }) => variant,
+          ),
+        });
         toast.success("Product updated successfully");
       } else {
         await productService.create(payload);
@@ -205,9 +250,15 @@ export function ProductManagement() {
       closeModal();
       fetchProducts();
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      const axiosErr = err as {
+        response?: { status?: number; data?: { message?: string } };
+        message?: string;
+      };
       if (axiosErr.response?.status === 400) {
-        toast.error(axiosErr.response.data?.message || "Invalid input. Please check your data.");
+        toast.error(
+          axiosErr.response.data?.message ||
+            "Invalid input. Please check your data.",
+        );
       } else if (axiosErr.response?.status === 403) {
         toast.error("You don't have permission.");
       } else {
@@ -261,9 +312,7 @@ export function ProductManagement() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="mb-2">Product Management</h1>
-          <p className="text-muted-foreground">
-            {total} products total
-          </p>
+          <p className="text-muted-foreground">{total} products total</p>
         </div>
         {isAdminOrStaff && (
           <button
@@ -304,7 +353,9 @@ export function ProductManagement() {
       {/* Table */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground">
+            Loading...
+          </div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Package size={40} className="mx-auto mb-3 opacity-40" />
@@ -315,21 +366,41 @@ export function ProductManagement() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">Product</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Category</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Colors</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Price range</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Total stock</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[120px]">Actions</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">
+                    Product
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Category
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Colors
+                  </th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Price range
+                  </th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Total stock
+                  </th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[120px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((product) => {
                   const { min, max } = priceRange(product.variants);
-                  const totalStock = product.variants.reduce((s, v) => s + v.stock, 0);
+                  const totalStock = product.variants.reduce(
+                    (s, v) => s + v.stock,
+                    0,
+                  );
                   return (
-                    <tr key={product._id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={product._id}
+                      className="border-t border-border hover:bg-muted/30 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img
@@ -338,7 +409,9 @@ export function ProductManagement() {
                             className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                           />
                           <div className="min-w-0">
-                            <span className="font-medium block truncate">{product.name}</span>
+                            <span className="font-medium block truncate">
+                              {product.name}
+                            </span>
                             {product.tags && product.tags.length > 0 && (
                               <span className="text-xs text-muted-foreground truncate block mt-0.5">
                                 {product.tags.slice(0, 3).join(", ")}
@@ -353,7 +426,10 @@ export function ProductManagement() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <ColorSwatchList variants={product.variants} size="sm" />
+                        <ColorSwatchList
+                          variants={product.variants}
+                          size="sm"
+                        />
                       </td>
                       <td className="px-6 py-4 text-right text-sm font-semibold text-primary">
                         {min === max
@@ -361,7 +437,13 @@ export function ProductManagement() {
                           : `${formatPrice(min)} – ${formatPrice(max)}`}
                       </td>
                       <td className="px-6 py-4 text-right text-sm">
-                        <span className={totalStock < 10 ? "text-destructive font-semibold" : "text-secondary"}>
+                        <span
+                          className={
+                            totalStock < 10
+                              ? "text-destructive font-semibold"
+                              : "text-secondary"
+                          }
+                        >
                           {totalStock}
                         </span>
                       </td>
@@ -373,12 +455,23 @@ export function ProductManagement() {
                               : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-rose-500"}`} />
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
+                          />
                           {product.isActive ? "Đang bán" : "Đã ẩn"}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() =>
+                              navigate(`/admin/products/${product._id}`)
+                            }
+                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                            title="View details"
+                          >
+                            <Eye size={16} />
+                          </button>
                           <button
                             onClick={() => openEdit(product)}
                             className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
@@ -424,7 +517,9 @@ export function ProductManagement() {
           >
             Previous
           </button>
-          <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
           <button
             className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
             disabled={page >= totalPages}
@@ -438,16 +533,28 @@ export function ProductManagement() {
       {/* ─── Create / Edit Modal ───────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] pb-8 px-4">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={closeModal}
+          />
           <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10">
             <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="text-lg font-bold">{editingId ? "Edit Product" : "Create Product"}</h2>
-              <button onClick={closeModal} className="p-1.5 hover:bg-muted rounded-lg transition-colors"><X size={20} /></button>
+              <h2 className="text-lg font-bold">
+                {editingId ? "Edit Product" : "Create Product"}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
             <div className="p-6 space-y-5">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">Name *</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Name *
+                </label>
                 <input
                   type="text"
                   value={form.name}
@@ -459,10 +566,14 @@ export function ProductManagement() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">Description</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Description
+                </label>
                 <textarea
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
                   rows={3}
                   className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   placeholder="Product description"
@@ -472,32 +583,56 @@ export function ProductManagement() {
               {/* Category + Image */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Category *</label>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Category *
+                  </label>
                   <select
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value })
+                    }
                     className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary capitalize"
                   >
                     {CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Image URL</label>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Main image{" "}
+                    {!editingId && <span className="text-destructive">*</span>}
+                  </label>
                   <input
-                    type="text"
-                    value={form.image}
-                    onChange={(e) => setForm({ ...form, image: e.target.value })}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        imageFile: e.target.files?.[0] ?? null,
+                      })
+                    }
                     className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="https://..."
                   />
+                  {form.imageFile ? (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {form.imageFile.name}
+                    </p>
+                  ) : form.image ? (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      Current: {form.image}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">Tags (comma separated)</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Tags (comma separated)
+                </label>
                 <input
                   type="text"
                   value={form.tags}
@@ -518,20 +653,33 @@ export function ProductManagement() {
                 <input
                   type="checkbox"
                   checked={form.isActive}
-                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  onChange={(e) =>
+                    setForm({ ...form, isActive: e.target.checked })
+                  }
                   className="rounded border-border"
                 />
                 <div>
                   <span className="text-sm font-medium">Active</span>
-                  <p className="text-xs text-muted-foreground">Inactive products are hidden from the public shop</p>
+                  <p className="text-xs text-muted-foreground">
+                    Inactive products are hidden from the public shop
+                  </p>
                 </div>
               </label>
             </div>
 
             {/* Footer */}
             <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
-              <button onClick={closeModal} className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]"
+              >
                 {saving ? "Saving..." : editingId ? "Update" : "Create"}
               </button>
             </div>
@@ -543,7 +691,11 @@ export function ProductManagement() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete Product"
-        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"?` : ""}
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"?`
+            : ""
+        }
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />

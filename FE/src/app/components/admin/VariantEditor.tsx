@@ -11,6 +11,7 @@ export interface VariantData {
   price: number;
   stock: number;
   image: string;
+  imageFile?: File | null;
 }
 
 interface VariantEditorProps {
@@ -25,9 +26,14 @@ const emptyVariant = (): VariantData => ({
   price: 0,
   stock: 0,
   image: "",
+  imageFile: null,
 });
 
-export function VariantEditor({ variants, onChange, errors }: VariantEditorProps) {
+export function VariantEditor({
+  variants,
+  onChange,
+  errors,
+}: VariantEditorProps) {
   const addVariant = () => {
     onChange([...variants, emptyVariant()]);
   };
@@ -37,7 +43,11 @@ export function VariantEditor({ variants, onChange, errors }: VariantEditorProps
     onChange(variants.filter((_, i) => i !== index));
   };
 
-  const updateVariant = (index: number, field: keyof VariantData, value: string | number) => {
+  const updateVariant = (
+    index: number,
+    field: keyof VariantData,
+    value: string | number | File | null,
+  ) => {
     const updated = variants.map((v, i) =>
       i === index ? { ...v, [field]: value } : v,
     );
@@ -96,20 +106,26 @@ export function VariantEditor({ variants, onChange, errors }: VariantEditorProps
                     <input
                       type="color"
                       value={v.hexCode}
-                      onChange={(e) => updateVariant(i, "hexCode", e.target.value)}
+                      onChange={(e) =>
+                        updateVariant(i, "hexCode", e.target.value)
+                      }
                       className="w-9 h-9 rounded-lg border border-border cursor-pointer flex-shrink-0"
                     />
                     <input
                       type="text"
                       value={v.color}
-                      onChange={(e) => updateVariant(i, "color", e.target.value)}
+                      onChange={(e) =>
+                        updateVariant(i, "color", e.target.value)
+                      }
                       className={`w-full px-3 py-2 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
                         err.color ? "border-destructive" : "border-border"
                       }`}
                       placeholder="Color name"
                     />
                   </div>
-                  {err.color && <p className="text-xs text-destructive mt-1">{err.color}</p>}
+                  {err.color && (
+                    <p className="text-xs text-destructive mt-1">{err.color}</p>
+                  )}
                 </div>
 
                 {/* Price */}
@@ -120,14 +136,18 @@ export function VariantEditor({ variants, onChange, errors }: VariantEditorProps
                   <input
                     type="number"
                     value={v.price || ""}
-                    onChange={(e) => updateVariant(i, "price", Number(e.target.value))}
+                    onChange={(e) =>
+                      updateVariant(i, "price", Number(e.target.value))
+                    }
                     className={`w-full px-3 py-2 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
                       err.price ? "border-destructive" : "border-border"
                     }`}
                     placeholder="0"
                     min={0}
                   />
-                  {err.price && <p className="text-xs text-destructive mt-1">{err.price}</p>}
+                  {err.price && (
+                    <p className="text-xs text-destructive mt-1">{err.price}</p>
+                  )}
                 </div>
 
                 {/* Stock */}
@@ -136,29 +156,45 @@ export function VariantEditor({ variants, onChange, errors }: VariantEditorProps
                   <input
                     type="number"
                     value={v.stock ?? ""}
-                    onChange={(e) => updateVariant(i, "stock", Number(e.target.value))}
+                    onChange={(e) =>
+                      updateVariant(i, "stock", Number(e.target.value))
+                    }
                     className={`w-full px-3 py-2 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
                       err.stock ? "border-destructive" : "border-border"
                     }`}
                     placeholder="0"
                     min={0}
                   />
-                  {err.stock && <p className="text-xs text-destructive mt-1">{err.stock}</p>}
+                  {err.stock && (
+                    <p className="text-xs text-destructive mt-1">{err.stock}</p>
+                  )}
                 </div>
 
-                {/* Image URL */}
+                {/* Variant image */}
                 <div className="col-span-2 lg:col-span-2">
-                  <label className="block text-xs mb-1">Image URL</label>
+                  <label className="block text-xs mb-1">Variant image</label>
                   <input
-                    type="text"
-                    value={v.image}
-                    onChange={(e) => updateVariant(i, "image", e.target.value)}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      updateVariant(i, "imageFile", e.target.files?.[0] ?? null)
+                    }
                     className={`w-full px-3 py-2 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
                       err.image ? "border-destructive" : "border-border"
                     }`}
-                    placeholder="https://..."
                   />
-                  {err.image && <p className="text-xs text-destructive mt-1">{err.image}</p>}
+                  {v.imageFile ? (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {v.imageFile.name}
+                    </p>
+                  ) : v.image ? (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      Current: {v.image}
+                    </p>
+                  ) : null}
+                  {err.image && (
+                    <p className="text-xs text-destructive mt-1">{err.image}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -172,7 +208,9 @@ export function VariantEditor({ variants, onChange, errors }: VariantEditorProps
 /**
  * Validate variant data and return per-index error objects.
  */
-export function validateVariants(variants: VariantData[]): Record<string, string>[] {
+export function validateVariants(
+  variants: VariantData[],
+): Record<string, string>[] {
   return variants.map((v) => {
     const err: Record<string, string> = {};
     if (!v.color.trim()) err.color = "Required";

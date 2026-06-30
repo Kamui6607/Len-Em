@@ -10,7 +10,7 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   name: string;
-  category: "yarn" | "tools" | "kit";
+  category: string;
   tags: string[];
   description: string;
   image: string;
