@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit3, Trash2, X, Shield, AlertTriangle } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  Shield,
+  AlertTriangle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../hooks/useAuth";
 import {
@@ -7,6 +15,7 @@ import {
   type Permission,
   type PermissionResource,
 } from "../../../api/permissionService";
+import { AdminSelect } from "../../components/admin/AdminSelect";
 // ─── Helpers ─────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -29,12 +38,21 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onCancel}
+      />
       <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950">
@@ -112,13 +130,19 @@ function PermissionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] pb-8 px-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto z-10">
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] overflow-y-auto z-10">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <h2 className="text-lg font-bold">
             {editingId ? "Edit Permission" : "Create Permission"}
           </h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -139,7 +163,9 @@ function PermissionModal({
               placeholder="e.g. create_product"
             />
             {fieldErrors.name && (
-              <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>
+              <p className="text-xs text-destructive mt-1">
+                {fieldErrors.name}
+              </p>
             )}
           </div>
 
@@ -148,22 +174,22 @@ function PermissionModal({
             <label className="block text-sm font-medium mb-1.5">
               Resource <span className="text-destructive">*</span>
             </label>
-            <select
+            <AdminSelect
               value={form.resource}
-              onChange={(e) => onChange({ ...form, resource: e.target.value, action: "" })}
-              className={`w-full px-4 py-2.5 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary capitalize ${
-                fieldErrors.resource ? "border-destructive" : "border-border"
-              }`}
-            >
-              <option value="">Select resource</option>
-              {resources.map((r) => (
-                <option key={r.resource} value={r.resource}>
-                  {r.resource}
-                </option>
-              ))}
-            </select>
+              placeholder="Select resource"
+              options={resources.map((r) => ({
+                value: r.resource,
+                label: r.resource,
+              }))}
+              onChange={(value) =>
+                onChange({ ...form, resource: value, action: "" })
+              }
+              buttonClassName={fieldErrors.resource ? "border-destructive" : ""}
+            />
             {fieldErrors.resource && (
-              <p className="text-xs text-destructive mt-1">{fieldErrors.resource}</p>
+              <p className="text-xs text-destructive mt-1">
+                {fieldErrors.resource}
+              </p>
             )}
           </div>
 
@@ -172,32 +198,34 @@ function PermissionModal({
             <label className="block text-sm font-medium mb-1.5">
               Action <span className="text-destructive">*</span>
             </label>
-            <select
+            <AdminSelect
               value={form.action}
-              onChange={(e) => onChange({ ...form, action: e.target.value })}
-              className={`w-full px-4 py-2.5 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary capitalize ${
-                fieldErrors.action ? "border-destructive" : "border-border"
-              }`}
+              placeholder="Select action"
               disabled={!form.resource}
-            >
-              <option value="">Select action</option>
-              {filteredActions.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
+              options={filteredActions.map((action) => ({
+                value: action,
+                label: action,
+              }))}
+              onChange={(value) => onChange({ ...form, action: value })}
+              buttonClassName={fieldErrors.action ? "border-destructive" : ""}
+            />
             {fieldErrors.action && (
-              <p className="text-xs text-destructive mt-1">{fieldErrors.action}</p>
+              <p className="text-xs text-destructive mt-1">
+                {fieldErrors.action}
+              </p>
             )}
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Description</label>
+            <label className="block text-sm font-medium mb-1.5">
+              Description
+            </label>
             <textarea
               value={form.description}
-              onChange={(e) => onChange({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                onChange({ ...form, description: e.target.value })
+              }
               rows={3}
               className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
               placeholder="Optional description..."
@@ -266,10 +294,12 @@ export function Permissions() {
       .then((res) => {
         // BE returns { resources: string[], actions: string[] }
         const data = res.data.data;
-        const mapped: PermissionResource[] = (data?.resources ?? []).map((r: string) => ({
-          resource: r,
-          actions: data?.actions ?? [],
-        }));
+        const mapped: PermissionResource[] = (data?.resources ?? []).map(
+          (r: string) => ({
+            resource: r,
+            actions: data?.actions ?? [],
+          }),
+        );
         setResources(mapped);
       })
       .catch(() => {
@@ -380,7 +410,10 @@ export function Permissions() {
 
       if (axiosErr.response?.status === 400) {
         const msg = axiosErr.response.data?.message ?? "";
-        if (msg.toLowerCase().includes("name") || msg.toLowerCase().includes("duplicate")) {
+        if (
+          msg.toLowerCase().includes("name") ||
+          msg.toLowerCase().includes("duplicate")
+        ) {
           setFieldErrors({ name: msg || "This name already exists" });
         } else {
           toast.error(msg || "Invalid input. Please check your data.");
@@ -458,41 +491,43 @@ export function Permissions() {
           />
         </div>
 
-        <select
+        <AdminSelect
           value={filterResource}
-          onChange={(e) => {
-            setFilterResource(e.target.value);
+          options={[
+            { value: "", label: "All resources" },
+            ...resources.map((resource) => ({
+              value: resource.resource,
+              label: resource.resource,
+            })),
+          ]}
+          onChange={(value) => {
+            setFilterResource(value);
             setFilterAction("");
           }}
-          className="px-4 py-3 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary capitalize min-w-[130px]"
-        >
-          <option value="">All resources</option>
-          {resources.map((r) => (
-            <option key={r.resource} value={r.resource}>
-              {r.resource}
-            </option>
-          ))}
-        </select>
+          className="min-w-[170px]"
+        />
 
-        <select
+        <AdminSelect
           value={filterAction}
-          onChange={(e) => setFilterAction(e.target.value)}
-          className="px-4 py-3 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary capitalize min-w-[130px]"
           disabled={!filterResource}
-        >
-          <option value="">All actions</option>
-          {resourceActions.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: "", label: "All actions" },
+            ...resourceActions.map((action) => ({
+              value: action,
+              label: action,
+            })),
+          ]}
+          onChange={setFilterAction}
+          className="min-w-[160px]"
+        />
       </div>
 
       {/* Table */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground">
+            Loading...
+          </div>
         ) : permissions.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Shield size={40} className="mx-auto mb-3 opacity-40" />
@@ -503,11 +538,21 @@ export function Permissions() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Name</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Resource</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Action</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Description</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Created</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Name
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Resource
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Action
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Description
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Created
+                  </th>
                   {isAdmin && (
                     <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[100px]">
                       Actions

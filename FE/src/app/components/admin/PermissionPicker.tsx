@@ -12,6 +12,7 @@ interface PermissionPickerProps {
   selected: string[];
   onChange: (selected: string[]) => void;
   disabled?: boolean;
+  maxHeightClassName?: string;
 }
 
 /**
@@ -23,6 +24,7 @@ export function PermissionPicker({
   selected,
   onChange,
   disabled = false,
+  maxHeightClassName = "max-h-80",
 }: PermissionPickerProps) {
   // Group permissions by resource
   const grouped = useMemo(() => {
@@ -72,12 +74,17 @@ export function PermissionPicker({
   };
 
   return (
-    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+    <div className={`space-y-3 ${maxHeightClassName} overflow-y-auto pr-1`}>
       {grouped.length === 0 && (
-        <p className="text-sm text-muted-foreground">No permissions available</p>
+        <p className="text-sm text-muted-foreground">
+          No permissions available
+        </p>
       )}
       {grouped.map(([resource, groupPerms]) => (
-        <div key={resource} className="border border-border rounded-xl overflow-hidden">
+        <div
+          key={resource}
+          className="border border-border rounded-xl overflow-hidden"
+        >
           {/* Group header */}
           <button
             type="button"
@@ -96,13 +103,15 @@ export function PermissionPicker({
                     : "border-border"
               }`}
             >
-              {(isGroupAllSelected(groupPerms) || isGroupPartiallySelected(groupPerms)) && (
+              {(isGroupAllSelected(groupPerms) ||
+                isGroupPartiallySelected(groupPerms)) && (
                 <Check size={12} className="text-primary-foreground" />
               )}
             </div>
             <span>{resource}</span>
             <span className="ml-auto text-xs text-muted-foreground">
-              {groupPerms.filter((p) => selected.includes(p._id)).length}/{groupPerms.length}
+              {groupPerms.filter((p) => selected.includes(p._id)).length}/
+              {groupPerms.length}
             </span>
           </button>
 
@@ -128,14 +137,16 @@ export function PermissionPicker({
                   />
                   <div
                     className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${
-                      isSelected
-                        ? "bg-primary border-primary"
-                        : "border-border"
+                      isSelected ? "bg-primary border-primary" : "border-border"
                     }`}
                   >
-                    {isSelected && <Check size={12} className="text-primary-foreground" />}
+                    {isSelected && (
+                      <Check size={12} className="text-primary-foreground" />
+                    )}
                   </div>
-                  <span className="font-medium text-sm capitalize">{perm.action}</span>
+                  <span className="font-medium text-sm capitalize">
+                    {perm.action}
+                  </span>
                   {perm.description && (
                     <span className="text-xs text-muted-foreground ml-auto truncate max-w-[180px]">
                       {perm.description}
