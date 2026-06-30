@@ -12,7 +12,7 @@ import {
 } from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
-import type { CartItem } from "../App";
+import { useCart } from "../../context/CartContext";
 
 const CATEGORY_META: Record<
   string,
@@ -44,13 +44,10 @@ const SORT_OPTIONS = [
   { value: "rating", label: "Top rated" },
 ];
 
-interface ShopProps {
-  onAddToCart: (productId: string, metadata?: CartItem["metadata"]) => void;
-}
-
-export function Shop({ onAddToCart }: ShopProps) {
+export function Shop() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
 
   const {
     filters,
@@ -124,16 +121,20 @@ export function Shop({ onAddToCart }: ShopProps) {
       : filteredProducts;
 
   const addLessonProductToCart = (productId: string) => {
-    onAddToCart(
-      productId,
-      currentCourseId && currentLessonId
-        ? {
-            source: "learn",
-            courseId: currentCourseId,
-            lessonId: currentLessonId,
-          }
-        : undefined,
-    );
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    const variant = product.variants?.[0];
+    if (!variant) return;
+    addToCart({
+      productId: product.id,
+      variantId: variant.id,
+      name: product.name,
+      image: variant.images?.[0] || product.image,
+      color: variant.color || "",
+      hexCode: variant.hexCode || "#ccc",
+      price: variant.price,
+      stock: variant.stock,
+    });
   };
 
   const addAllLessonProducts = () => {
@@ -612,7 +613,6 @@ export function Shop({ onAddToCart }: ShopProps) {
                     <ProductCard
                       key={`lesson-${product.id}`}
                       product={product}
-                      onAddToCart={addLessonProductToCart}
                       relatedCourseId={currentCourseId ?? undefined}
                       relatedLessonId={currentLessonId ?? undefined}
                     />
@@ -725,7 +725,6 @@ export function Shop({ onAddToCart }: ShopProps) {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onAddToCart={onAddToCart}
                     relatedCourseId={
                       currentCourseId &&
                       product.linkedComboIds?.some((comboId) =>

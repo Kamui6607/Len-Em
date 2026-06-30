@@ -1,0 +1,520 @@
+import { useState, useEffect, useCallback } from "react";
+import { Search, Plus, Edit3, Trash2, X, Shield, AlertTriangle, Eye } from "lucide-react";
+import { toast } from "sonner";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../../hooks/useAuth";
+import { roleService, normalizeRoles } from "../../../api/roleService";
+import type { Role } from "../../../types/role";
+import { permissionService } from "../../../api/permissionService";
+import type { Permission } from "../../../types/permission";
+import { PermissionPicker } from "../../components/admin/PermissionPicker";
+
+// ─── Helpers ─────────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+// ─── Confirm Dialog ──────────────────────────────────────
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950">
+            <AlertTriangle size={20} className="text-destructive" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">{title}</h3>
+            <p className="text-sm text-muted-foreground">{message}</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={onConfirm} className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors">Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Role Modal ──────────────────────────────────────────
+
+interface RoleFormData {
+  name: string;
+  description: string;
+  isActive: boolean;
+  permissions: string[];
+}
+
+const emptyForm: RoleFormData = {
+  name: "",
+  description: "",
+  isActive: true,
+  permissions: [],
+};
+
+interface RoleModalProps {
+  open: boolean;
+  editingId: string | null;
+  form: RoleFormData;
+  allPermissions: Permission[];
+  saving: boolean;
+  fieldErrors: Record<string, string>;
+  onChange: (form: RoleFormData) => void;
+  onSave: () => void;
+  onClose: () => void;
+}
+
+function RoleModal({
+  open,
+  editingId,
+  form,
+  allPermissions,
+  saving,
+  fieldErrors,
+  onChange,
+  onSave,
+  onClose,
+}: RoleModalProps) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] pb-8 px-4">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10">
+        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <h2 className="text-lg font-bold">{editingId ? "Edit Role" : "Create Role"}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors"><X size={20} /></button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Role Name <span className="text-destructive">*</span></label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => onChange({ ...form, name: e.target.value })}
+              className={`w-full px-4 py-2.5 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary ${fieldErrors.name ? "border-destructive" : "border-border"}`}
+              placeholder="e.g. Manager"
+            />
+            {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => onChange({ ...form, description: e.target.value })}
+              rows={3}
+              className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              placeholder="Optional description..."
+            />
+          </div>
+
+          {/* isActive */}
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(e) => onChange({ ...form, isActive: e.target.checked })}
+              className="rounded border-border"
+            />
+            <span className="text-sm font-medium">Active</span>
+          </label>
+
+          {/* Permissions */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Permissions</label>
+            <PermissionPicker
+              permissions={allPermissions}
+              selected={form.permissions}
+              onChange={(perms) => onChange({ ...form, permissions: perms })}
+            />
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+          <button onClick={onSave} disabled={saving} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]">
+            {saving ? "Saving..." : editingId ? "Update" : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────
+
+export function Roles() {
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("admin");
+
+  // ── Data state ──
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 20;
+
+  // ── Filter state ──
+  const [searchName, setSearchName] = useState("");
+  const [filterActive, setFilterActive] = useState<boolean | null>(null);
+
+  // ── Modal state ──
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<RoleFormData>({ ...emptyForm });
+  const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // ── Delete confirm ──
+  const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
+
+  // ── Fetch permissions once ──
+  useEffect(() => {
+    permissionService
+      .getAll({ limit: 100 })
+      .then((res) => {
+        // BE: { status, data: { data: Permission[], total, page, limit, totalPages } }
+        const perms = res.data.data?.data ?? [];
+        setAllPermissions(perms);
+      })
+      .catch((err) => {
+        console.error("Failed to load permissions for picker:", err);
+      });
+  }, []);
+
+  // ── Fetch roles ──
+  const fetchRoles = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Only send params that are strictly needed
+      const params: Record<string, string | number> = {};
+      if (page > 1) params.page = page;
+      if (limit !== 20) params.limit = limit;
+      if (searchName.trim()) params.name = searchName.trim();
+      if (filterActive !== null) params.isActive = filterActive ? "true" : "false";
+
+      const { data: response } = await roleService.getAll(params);
+      // BE: { status, data: { message, data: { roles, total, page, limit, totalPages } } }
+      const wrapper = response.data;
+      const data = wrapper?.data;
+      const rawRoles = data?.roles ?? [];
+      setRoles(normalizeRoles(rawRoles));
+      setTotal(data?.total ?? 0);
+      setTotalPages(data?.totalPages ?? 1);
+    } catch {
+      toast.error("Failed to load roles");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, searchName, filterActive]);
+
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
+
+  // ── Reset page when filters change ──
+  useEffect(() => {
+    setPage(1);
+  }, [searchName, filterActive]);
+
+  // ── Validate ──
+  const validate = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!form.name.trim()) errors.name = "Role name is required";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // ── Open create modal ──
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setFieldErrors({});
+    setShowModal(true);
+  };
+
+  // ── Open edit modal ──
+  const openEdit = (role: Role) => {
+    setEditingId(role._id);
+    setForm({
+      name: role.name,
+      description: role.description ?? "",
+      isActive: role.isActive,
+      permissions: role.permissions ?? [],
+    });
+    setFieldErrors({});
+    setShowModal(true);
+  };
+
+  // ── Close modal ──
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setFieldErrors({});
+  };
+
+  // ── Save (Create / Update) ──
+  const handleSave = async () => {
+    if (!validate()) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        isActive: form.isActive,
+        permissions: form.permissions,
+      };
+
+      if (editingId) {
+        await roleService.update(editingId, payload);
+        toast.success("Role updated successfully");
+      } else {
+        await roleService.create(payload);
+        toast.success("Role created successfully");
+      }
+      closeModal();
+      fetchRoles();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      if (axiosErr.response?.status === 400) {
+        const msg = axiosErr.response.data?.message ?? "";
+        if (msg.toLowerCase().includes("name") || msg.toLowerCase().includes("duplicate")) {
+          setFieldErrors({ name: msg });
+        } else {
+          toast.error(msg || "Invalid input");
+        }
+      } else if (axiosErr.response?.status === 403) {
+        toast.error("You don't have permission to perform this action.");
+      } else {
+        toast.error(axiosErr.message || "Failed to save role");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Delete ──
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await roleService.delete(deleteTarget._id);
+      toast.success(`Role "${deleteTarget.name}" deleted`);
+      setDeleteTarget(null);
+      fetchRoles();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr.response?.status === 409) {
+        toast.error("Cannot delete: role is currently assigned to users.");
+      } else if (axiosErr.response?.status === 403) {
+        toast.error("You don't have permission to perform this action.");
+      } else {
+        toast.error("Failed to delete role");
+      }
+      setDeleteTarget(null);
+    }
+  };
+
+  // ── Render ──
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="mb-2">Role Management</h1>
+          <p className="text-muted-foreground">
+            {total} role{total !== 1 ? "s" : ""} total
+            {!isAdmin && <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">Read-only</span>}
+          </p>
+        </div>
+        {isAdmin && (
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all active:scale-[0.97]">
+            <Plus size={18} /> Create Role
+          </button>
+        )}
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+          />
+        </div>
+
+        <select
+          value={filterActive === null ? "" : filterActive ? "true" : "false"}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFilterActive(val === "" ? null : val === "true");
+          }}
+          className="px-4 py-3 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[130px]"
+        >
+          <option value="">All status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+        ) : roles.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Shield size={40} className="mx-auto mb-3 opacity-40" />
+            <p>No roles found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Role Name</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Permissions</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Status</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Created</th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roles.map((role) => (
+                  <tr key={role._id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-medium text-sm">{role.name}</span>
+                      {role.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[250px]">{role.description}</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm">{role.permissions?.length ?? 0} permissions</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          role.isActive
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                            : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${role.isActive ? "bg-emerald-500" : "bg-rose-500"}`} />
+                        {role.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
+                      {formatDate(role.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => navigate(`/admin/roles/${role._id}`)}
+                          className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                          title="View details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => openEdit(role)}
+                              className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                              title="Edit"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(role)}
+                              className="p-2 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </button>
+          <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+          <button
+            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
+      <RoleModal
+        open={showModal}
+        editingId={editingId}
+        form={form}
+        allPermissions={allPermissions}
+        saving={saving}
+        fieldErrors={fieldErrors}
+        onChange={setForm}
+        onSave={handleSave}
+        onClose={closeModal}
+      />
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Role"
+        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"? This will soft-delete the role.` : ""}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  );
+}

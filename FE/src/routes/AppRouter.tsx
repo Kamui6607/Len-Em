@@ -4,7 +4,6 @@ import { RequireAuth } from "../components/auth/RequireAuth";
 import { RequireRole } from "../components/auth/RequireRole";
 import { StoreLayout } from "../app/components/layout/StoreLayout";
 import { LoadingFallback } from "../app/components/LoadingFallback";
-import type { CartItem } from "../app/App";
 
 // Lazy-loaded pages
 const Home = lazy(() =>
@@ -17,9 +16,6 @@ const ProductDetail = lazy(() =>
   import("../app/pages/ProductDetail").then((m) => ({
     default: m.ProductDetail,
   })),
-);
-const Cart = lazy(() =>
-  import("../app/pages/Cart").then((m) => ({ default: m.Cart })),
 );
 const Checkout = lazy(() =>
   import("../app/pages/Checkout").then((m) => ({ default: m.Checkout })),
@@ -44,10 +40,6 @@ const CourseDetailPage = lazy(() =>
 const LessonPage = lazy(() =>
   import("../app/pages/LessonPage").then((m) => ({ default: m.LessonPage })),
 );
-// [DEPRECATED - v1] Kits page is replaced by /shop?category=combo.
-// const Kits = lazy(() =>
-//   import("../app/pages/Kits").then((m) => ({ default: m.Kits })),
-// );
 const Profile = lazy(() =>
   import("../app/pages/Profile").then((m) => ({ default: m.Profile })),
 );
@@ -79,26 +71,37 @@ const RegisterPage = lazy(() =>
   import("../pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })),
 );
 
-
 const ForgotPasswordPage = lazy(() =>
   import("../pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })),
 );
-interface AppRouterProps {
-  cartItems: CartItem[];
-  onAddToCart: (productId: string, metadata?: CartItem["metadata"]) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
-  onClearCart: () => void;
-  cartCount: number;
-}
 
-function StoreOutlet({
-  cartCount,
-}: {
-  cartCount: number;
-}) {
+// ── NEW: Shop cart page (uses CartContext) ──
+const ShopCart = lazy(() =>
+  import("../app/pages/shop/Cart").then((m) => ({ default: m.ShopCart })),
+);
+
+// ── NEW: Checkout (route /order) ──
+const ShopCheckout = lazy(() =>
+  import("../app/pages/shop/Checkout").then((m) => ({ default: m.Checkout })),
+);
+
+// ── NEW: My Orders + Order Detail ──
+const MyOrders = lazy(() =>
+  import("../app/pages/shop/MyOrders").then((m) => ({ default: m.MyOrders })),
+);
+
+const OrderDetail = lazy(() =>
+  import("../app/pages/shop/OrderDetail").then((m) => ({ default: m.OrderDetail })),
+);
+
+// ── NEW: Manage Orders (Admin/Staff) ──
+const ManageOrders = lazy(() =>
+  import("../app/pages/manage/Orders").then((m) => ({ default: m.ManageOrders })),
+);
+
+function StoreOutlet() {
   return (
-    <StoreLayout cartCount={cartCount}>
+    <StoreLayout>
       <Suspense fallback={<LoadingFallback />}>
         <Outlet />
       </Suspense>
@@ -106,47 +109,34 @@ function StoreOutlet({
   );
 }
 
-export function AppRouter({
-  cartItems,
-  onAddToCart,
-  onUpdateQuantity,
-  onRemoveItem,
-  onClearCart,
-  cartCount,
-}: AppRouterProps) {
+export function AppRouter() {
   return (
     <Routes>
       {/* ===== Landing Page — Len&Em entry point with StoreLayout ===== */}
-      <Route element={<StoreOutlet cartCount={cartCount} />}>
+      <Route element={<StoreOutlet />}>
         <Route index element={<Home />} />
 
         {/* ===== LEARN routes ===== */}
         <Route path="learn" element={<Learn />} />
         <Route
           path="learn/:courseId"
-          element={<CourseDetailPage onAddToCart={onAddToCart} />}
+          element={<CourseDetailPage />}
         />
         <Route
           path="learn/:courseId/lesson/:lessonId"
           element={
             <RequireAuth>
-              <LessonPage onAddToCart={onAddToCart} />
+              <LessonPage />
             </RequireAuth>
           }
         />
 
         {/* ===== SHOP routes ===== */}
-        <Route
-          path="shop"
-          element={<Shop onAddToCart={onAddToCart} />}
-        />
-        <Route
-          path="shop/product/:id"
-          element={<ProductDetail onAddToCart={onAddToCart} />}
-        />
+        <Route path="shop" element={<Shop />} />
+        <Route path="shop/product/:id" element={<ProductDetail />} />
 
         {/* ===== DIY routes ===== */}
-        <Route path="diy" element={<DIYFeedPage onAddToCart={onAddToCart} />} />
+        <Route path="diy" element={<DIYFeedPage />} />
         <Route
           path="diy/create"
           element={
@@ -155,18 +145,14 @@ export function AppRouter({
             </RequireAuth>
           }
         />
-        <Route path="diy/:postId" element={<DIYDetailPage onAddToCart={onAddToCart} />} />
+        <Route path="diy/:postId" element={<DIYDetailPage />} />
 
         {/* ===== Customer routes ===== */}
         <Route
           path="cart"
           element={
             <RequireAuth>
-              <Cart
-                cartItems={cartItems}
-                onUpdateQuantity={onUpdateQuantity}
-                onRemoveItem={onRemoveItem}
-              />
+              <ShopCart />
             </RequireAuth>
           }
         />
@@ -174,7 +160,34 @@ export function AppRouter({
           path="checkout"
           element={
             <RequireAuth>
-              <Checkout cartItems={cartItems} onClearCart={onClearCart} />
+              <Checkout />
+            </RequireAuth>
+          }
+        />
+        {/* [NEW] Order / Checkout page (route /order) — replaces /checkout in future */}
+        <Route
+          path="order"
+          element={
+            <RequireAuth>
+              <ShopCheckout />
+            </RequireAuth>
+          }
+        />
+        {/* [NEW] My Orders list */}
+        <Route
+          path="orders/my"
+          element={
+            <RequireAuth>
+              <MyOrders />
+            </RequireAuth>
+          }
+        />
+        {/* [NEW] Order Detail */}
+        <Route
+          path="orders/my/:id"
+          element={
+            <RequireAuth>
+              <OrderDetail />
             </RequireAuth>
           }
         />
@@ -206,7 +219,7 @@ export function AppRouter({
           path="love"
           element={
             <RequireAuth>
-              <Love onAddToCart={onAddToCart} />
+              <Love />
             </RequireAuth>
           }
         />
@@ -248,7 +261,7 @@ export function AppRouter({
         }
       />
 
-      {/* ===== Creator dashboard (no store navbar/footer) ===== */}
+      {/* ===== Creator dashboard ===== */}
       <Route
         path="creator/*"
         element={
@@ -260,11 +273,11 @@ export function AppRouter({
         }
       />
 
-      {/* ===== Admin dashboard (no store navbar/footer) ===== */}
+      {/* ===== Admin dashboard (Admin = full CRUD, Staff = read-only via component logic) ===== */}
       <Route
         path="admin/*"
         element={
-          <RequireRole allowedRoles={["admin"]}>
+          <RequireRole allowedRoles={["admin", "staff"]}>
             <Suspense fallback={<LoadingFallback fullPage />}>
               <AdminPage />
             </Suspense>
@@ -272,13 +285,25 @@ export function AppRouter({
         }
       />
 
-      {/* ===== Staff dashboard (no store navbar/footer) ===== */}
+      {/* ===== Staff dashboard ===== */}
       <Route
         path="staff"
         element={
           <RequireRole allowedRoles={["staff"]}>
             <Suspense fallback={<LoadingFallback fullPage />}>
               <StaffPage />
+            </Suspense>
+          </RequireRole>
+        }
+      />
+
+      {/* ===== Manage routes (Admin & Staff) ===== */}
+      <Route
+        path="manage/orders"
+        element={
+          <RequireRole allowedRoles={["admin", "staff"]}>
+            <Suspense fallback={<LoadingFallback fullPage />}>
+              <ManageOrders />
             </Suspense>
           </RequireRole>
         }

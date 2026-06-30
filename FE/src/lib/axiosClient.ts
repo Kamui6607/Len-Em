@@ -129,6 +129,12 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     error.message ||
     "Something went wrong";
 
+  // Skip toast for logout endpoint — backend may return 400 if no session
+  const url = error.config?.url ?? "";
+  if (url.includes("/auth/logout")) {
+    return Promise.reject(error);
+  }
+
   if (status && status !== 401) {
     const mapped: Record<number, string> = {
       400: "Invalid input. Please check your data.",

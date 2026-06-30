@@ -10,18 +10,16 @@ import { Input } from "../components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../context/CartContext";
 import { diyPosts } from "../../features/diy/data/diy.mock";
 import type { DIYPost } from "../../features/diy/types/diy.types";
 
-interface DIYFeedPageProps {
-  onAddToCart: (productId: string) => void;
-}
-
 type FeedFilter = "all" | "newest" | "purchased";
 
-export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
+export function DIYFeedPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [search, setSearch] = useState("");
   const { isDIYPostSaved, toggleDIYPostSave } = useFavorites();
@@ -56,7 +54,16 @@ export function DIYFeedPage({ onAddToCart }: DIYFeedPageProps) {
   const buyCombo = (post: DIYPost) => {
     post.linkedCombo.items.forEach((item) => {
       for (let index = 0; index < item.quantity; index += 1) {
-        onAddToCart(item.productId);
+        addToCart({
+          productId: item.productId,
+          variantId: "default",
+          name: item.name || item.productId,
+          image: post.images[0],
+          color: "",
+          hexCode: "#ccc",
+          price: 0,
+          stock: 999,
+        });
       }
     });
     toast.success(`${post.linkedCombo.name} added to cart`);

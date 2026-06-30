@@ -11,6 +11,7 @@ import { learnCourses, materialCombos, getLessonsByCourse } from "../../features
 import { formatPrice } from "../../lib/formatPrice";
 import { useLearnStore } from "../../features/learn/store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../context/CartContext";
 import type { CourseLevel } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
 
@@ -26,11 +27,8 @@ const levelStyles: Record<CourseLevel, string> = {
   advanced: "border-red-200 bg-red-100 text-red-700",
 };
 
-interface CourseDetailPageProps {
-  onAddToCart: (productId: string) => void;
-}
-
-export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
+export function CourseDetailPage() {
+  const { addToCart } = useCart();
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -69,7 +67,18 @@ export function CourseDetailPage({ onAddToCart }: CourseDetailPageProps) {
   };
 
   const addComboToCart = (productIds: string[], comboName: string) => {
-    productIds.forEach(onAddToCart);
+    productIds.forEach((productId) => {
+      addToCart({
+        productId,
+        variantId: "default",
+        name: comboName,
+        image: course.thumbnail,
+        color: "",
+        hexCode: "#ccc",
+        price: 0,
+        stock: 999,
+      });
+    });
     toast.success(`${comboName} added to cart`);
   };
 

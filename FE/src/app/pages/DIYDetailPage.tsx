@@ -16,14 +16,12 @@ import {
 import { Separator } from "../components/ui/separator";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../context/CartContext";
 import { diyPosts } from "../../features/diy/data/diy.mock";
 import { formatPrice } from "../../lib/formatPrice";
 
-interface DIYDetailPageProps {
-  onAddToCart: (productId: string) => void;
-}
-
-export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
+export function DIYDetailPage() {
+  const { addToCart } = useCart();
   const { postId } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -43,7 +41,16 @@ export function DIYDetailPage({ onAddToCart }: DIYDetailPageProps) {
   const buyCombo = () => {
     post.linkedCombo.items.forEach((item) => {
       for (let index = 0; index < item.quantity; index += 1) {
-        onAddToCart(item.productId);
+        addToCart({
+          productId: item.productId,
+          variantId: "default",
+          name: item.name || item.productId,
+          image: item.thumbnail || post.images[0],
+          color: "",
+          hexCode: "#ccc",
+          price: 0,
+          stock: 999,
+        });
       }
     });
     toast.success(`${post.linkedCombo.name} added to cart`);

@@ -2,26 +2,23 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Trash2, Plus, Minus } from "lucide-react";
 import { products } from "../data/products";
-import { learnLessons } from "../../features/learn/data/learn.mock";
 import { formatPrice } from "../../lib/formatPrice";
+import { useCart } from "../../context/CartContext";
 
-interface CartItem {
-  productId: string;
-  quantity: number;
-  metadata?: {
-    source?: "learn";
-    lessonId?: string;
-    courseId?: string;
+export function Cart() {
+  const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const onUpdateQuantity = (productId: string, quantity: number) => {
+    const item = cartItems.find(i => i.productId === productId);
+    if (item) {
+      updateQuantity(productId, item.variantId, quantity);
+    }
   };
-}
-
-interface CartProps {
-  cartItems: CartItem[];
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
-}
-
-export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
+  const onRemoveItem = (productId: string) => {
+    const item = cartItems.find(i => i.productId === productId);
+    if (item) {
+      removeFromCart(productId, item.variantId);
+    }
+  };
   const navigate = useNavigate();
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
@@ -74,10 +71,8 @@ export function Cart({ cartItems, onUpdateQuantity, onRemoveItem }: CartProps) {
       price: selectedVariant?.price ?? 0,
       variantName: selectedVariant?.color ?? null,
       variantHex: selectedVariant?.hexCode ?? null,
-      metadata: item.metadata,
-      sourceLessonName: item.metadata?.source === "learn"
-        ? learnLessons.find((lesson) => lesson.id === item.metadata?.lessonId)?.title ?? null
-        : null,
+      metadata: undefined,
+      sourceLessonName: null,
     };
   })
   .filter((item): item is NonNullable<typeof item> => item !== null);

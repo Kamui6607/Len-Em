@@ -2,30 +2,31 @@ import { memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Heart, ShoppingCart } from "lucide-react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import type { Product } from "../data/products";
 import { getBasePrice } from "../data/products";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../context/CartContext";
 import { Button } from "./ui/button";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart?: (productId: string) => void;
   relatedLessonId?: string;
   relatedCourseId?: string;
 }
 
 export const ProductCard = memo(function ProductCard({
   product,
-  onAddToCart,
   relatedLessonId,
   relatedCourseId,
 }: ProductCardProps) {
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAuthenticated } = useAuth();
+  const { addToCart, isInCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
 
   const prices = product.variants?.map((variant) => variant.price) ?? [
@@ -49,7 +50,26 @@ export const ProductCard = memo(function ProductCard({
 
   const handleAddClick = (event: React.MouseEvent) => {
     event.preventDefault();
-    requireAuth(() => onAddToCart?.(product.id));
+    requireAuth(() => {
+      const variant = product.variants?.[0];
+      if (!variant) return;
+      const inCart = isInCart(product.id, variant.id);
+      if (inCart) {
+        toast.success("Sản phẩm đã có trong giỏ hàng");
+        return;
+      }
+      addToCart({
+        productId: product.id,
+        variantId: variant.id,
+        name: product.name,
+        image: variant.images?.[0] || product.image,
+        color: variant.color || "",
+        hexCode: variant.hexCode || "#ccc",
+        price: variant.price,
+        stock: variant.stock,
+      });
+      toast.success("Đã thêm vào giỏ hàng");
+    });
   };
 
   const handleProductClick = (event: React.MouseEvent) => {
@@ -156,7 +176,6 @@ export const ProductCard = memo(function ProductCard({
             size="sm"
             onClick={handleAddClick}
             className="rounded-full bg-[var(--color-primary)] px-4 font-bold text-white shadow-sm hover:shadow-lg hover:scale-[1.05] hover:bg-[var(--color-primary-light)] active:scale-95 transition-all duration-200"
-            disabled={!onAddToCart}
           >
             <ShoppingCart className="size-4" />
             Add
