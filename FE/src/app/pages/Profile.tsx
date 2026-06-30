@@ -2,8 +2,19 @@ import { useState, useCallback, useRef } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useMembershipStore } from "../../features/membership/store/membership.store";
 import {
-  Mail, Phone, Calendar, MapPin, ChevronRight, Pencil, ShieldCheck,
-  KeyRound, Bell, LogOut, Eye, EyeOff, Loader as Loader2,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  ChevronRight,
+  Pencil,
+  ShieldCheck,
+  KeyRound,
+  Bell,
+  LogOut,
+  Eye,
+  EyeOff,
+  Loader as Loader2,
   Camera,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
@@ -104,7 +115,8 @@ export function Profile({ embedded = false }: ProfileProps) {
     setSaving(true);
     try {
       const payload: Record<string, string> = {};
-      if (editForm.fullName !== user.fullName) payload.fullName = editForm.fullName;
+      if (editForm.fullName !== user.fullName)
+        payload.fullName = editForm.fullName;
       if (editForm.phone !== user.phone) payload.phone = editForm.phone;
       if (editForm.address !== user.address) payload.address = editForm.address;
       if (editForm.gender !== user.gender) payload.gender = editForm.gender;
@@ -168,7 +180,11 @@ export function Profile({ embedded = false }: ProfileProps) {
   const handleChangePassword = useCallback(async () => {
     if (!user) return;
 
-    if (!pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmNewPassword) {
+    if (
+      !pwdForm.oldPassword ||
+      !pwdForm.newPassword ||
+      !pwdForm.confirmNewPassword
+    ) {
       toast.error("Please fill in all password fields");
       return;
     }
@@ -206,7 +222,7 @@ export function Profile({ embedded = false }: ProfileProps) {
       // Best effort
     }
     signOut();
-    navigate("/login");
+    navigate("/auth/login");
   }, [signOut, navigate]);
 
   if (!user) return null;
@@ -314,7 +330,9 @@ export function Profile({ embedded = false }: ProfileProps) {
                   </button>
                 </div>
 
-                <h2 className="text-base font-bold leading-tight">{user.fullName}</h2>
+                <h2 className="text-base font-bold leading-tight">
+                  {user.fullName}
+                </h2>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="text-xs text-muted-foreground capitalize px-2 py-0.5 bg-muted rounded-full">
                     {user.roleId}
@@ -348,7 +366,9 @@ export function Profile({ embedded = false }: ProfileProps) {
                       <p className="text-[10px] text-muted-foreground leading-none mb-0.5">
                         {row.label}
                       </p>
-                      <p className="text-sm font-medium truncate">{row.value}</p>
+                      <p className="text-sm font-medium truncate">
+                        {row.value}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -373,13 +393,16 @@ export function Profile({ embedded = false }: ProfileProps) {
                 </div>
                 <MembershipCard
                   onViewHistory={() =>
-                    (window.location.href = "/my-account/membership?tab=history")
+                    (window.location.href =
+                      "/my-account/membership?tab=history")
                   }
                   onViewBenefits={() =>
-                    (window.location.href = "/my-account/membership?tab=benefits")
+                    (window.location.href =
+                      "/my-account/membership?tab=benefits")
                   }
                   onViewTimeline={() =>
-                    (window.location.href = "/my-account/membership?tab=timeline")
+                    (window.location.href =
+                      "/my-account/membership?tab=timeline")
                   }
                 />
               </div>
@@ -398,8 +421,12 @@ export function Profile({ embedded = false }: ProfileProps) {
                         <ShieldCheck className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <p className="text-[11px] text-muted-foreground leading-none mb-0.5">Current role</p>
-                        <p className="text-sm font-semibold capitalize">{user.roleId}</p>
+                        <p className="text-[11px] text-muted-foreground leading-none mb-0.5">
+                          Current role
+                        </p>
+                        <p className="text-sm font-semibold capitalize">
+                          {user.roleId}
+                        </p>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
@@ -482,11 +509,15 @@ export function Profile({ embedded = false }: ProfileProps) {
           <div className="space-y-4 py-2">
             {/* Full Name */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Full Name</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Full Name
+              </label>
               <input
                 type="text"
                 value={editForm.fullName}
-                onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, fullName: e.target.value }))
+                }
                 className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Your full name"
               />
@@ -494,11 +525,15 @@ export function Profile({ embedded = false }: ProfileProps) {
 
             {/* Phone */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Phone</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Phone
+              </label>
               <input
                 type="tel"
                 value={editForm.phone}
-                onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, phone: e.target.value }))
+                }
                 className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Your phone number"
               />
@@ -506,11 +541,15 @@ export function Profile({ embedded = false }: ProfileProps) {
 
             {/* Address */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Address</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Address
+              </label>
               <input
                 type="text"
                 value={editForm.address}
-                onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, address: e.target.value }))
+                }
                 className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Your address"
               />
@@ -518,10 +557,17 @@ export function Profile({ embedded = false }: ProfileProps) {
 
             {/* Gender */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Gender</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Gender
+              </label>
               <select
                 value={editForm.gender}
-                onChange={(e) => setEditForm((f) => ({ ...f, gender: e.target.value as "MALE" | "FEMALE" | "OTHER" }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
+                  }))
+                }
                 className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               >
                 <option value="MALE">Male</option>
@@ -532,11 +578,15 @@ export function Profile({ embedded = false }: ProfileProps) {
 
             {/* Date of Birth */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Date of Birth (MM/DD/YYYY)</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Date of Birth (MM/DD/YYYY)
+              </label>
               <input
                 type="text"
                 value={editForm.dateOfBirth}
-                onChange={(e) => setEditForm((f) => ({ ...f, dateOfBirth: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, dateOfBirth: e.target.value }))
+                }
                 className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="MM/DD/YYYY"
               />
@@ -578,12 +628,16 @@ export function Profile({ embedded = false }: ProfileProps) {
           <div className="space-y-4 py-2">
             {/* Old Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Current Password</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Current Password
+              </label>
               <div className="relative">
                 <input
                   type={showOldPwd ? "text" : "password"}
                   value={pwdForm.oldPassword}
-                  onChange={(e) => setPwdForm((f) => ({ ...f, oldPassword: e.target.value }))}
+                  onChange={(e) =>
+                    setPwdForm((f) => ({ ...f, oldPassword: e.target.value }))
+                  }
                   className="w-full px-3 py-2.5 pr-10 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   placeholder="Enter current password"
                 />
@@ -593,19 +647,27 @@ export function Profile({ embedded = false }: ProfileProps) {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showOldPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showOldPwd ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* New Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">New Password</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                New Password
+              </label>
               <div className="relative">
                 <input
                   type={showNewPwd ? "text" : "password"}
                   value={pwdForm.newPassword}
-                  onChange={(e) => setPwdForm((f) => ({ ...f, newPassword: e.target.value }))}
+                  onChange={(e) =>
+                    setPwdForm((f) => ({ ...f, newPassword: e.target.value }))
+                  }
                   className="w-full px-3 py-2.5 pr-10 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   placeholder="Enter new password (min 6 chars)"
                 />
@@ -615,18 +677,29 @@ export function Profile({ embedded = false }: ProfileProps) {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showNewPwd ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Confirm New Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Confirm New Password</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Confirm New Password
+              </label>
               <input
                 type="password"
                 value={pwdForm.confirmNewPassword}
-                onChange={(e) => setPwdForm((f) => ({ ...f, confirmNewPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPwdForm((f) => ({
+                    ...f,
+                    confirmNewPassword: e.target.value,
+                  }))
+                }
                 className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Re-enter new password"
               />
@@ -645,7 +718,11 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={() => {
                 setPwdOpen(false);
-                setPwdForm({ oldPassword: "", newPassword: "", confirmNewPassword: "" });
+                setPwdForm({
+                  oldPassword: "",
+                  newPassword: "",
+                  confirmNewPassword: "",
+                });
               }}
               className="px-4 py-2.5 rounded-xl text-sm border border-border hover:bg-muted transition-colors text-muted-foreground"
               disabled={changingPwd}

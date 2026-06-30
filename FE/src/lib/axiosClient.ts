@@ -158,7 +158,7 @@ function forceLogout(): void {
   tokenStorage.clear();
   localStorage.removeItem("lenEm_user");
   toast.error("Session expired. Please sign in again.");
-  window.location.href = "/";
+  window.location.href = "/auth/login";
 }
 
 export default axiosClient;

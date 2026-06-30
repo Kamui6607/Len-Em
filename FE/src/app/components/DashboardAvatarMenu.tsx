@@ -9,7 +9,9 @@ interface DashboardAvatarMenuProps {
   accentColor?: "primary" | "secondary";
 }
 
-export function DashboardAvatarMenu({ accentColor = "primary" }: DashboardAvatarMenuProps) {
+export function DashboardAvatarMenu({
+  accentColor = "primary",
+}: DashboardAvatarMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, signOut } = useAuth();
@@ -30,10 +32,15 @@ export function DashboardAvatarMenu({ accentColor = "primary" }: DashboardAvatar
   const handleLogout = () => {
     signOut();
     setIsOpen(false);
-    navigate("/");
+    navigate("/auth/login");
   };
 
-  const roleLabel = user.roleId === "admin" ? "Administrator" : user.roleId === "staff" ? "Staff Member" : "User";
+  const roleLabel =
+    user.roleId === "admin"
+      ? "Administrator"
+      : user.roleId === "staff"
+        ? "Staff Member"
+        : "User";
   const RoleIcon = user.roleId === "admin" ? Shield : Users;
   const roleBadgeClass =
     user.roleId === "admin"
@@ -85,8 +92,12 @@ export function DashboardAvatarMenu({ accentColor = "primary" }: DashboardAvatar
                     className="w-12 h-12 rounded-full border-2 border-border object-cover"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">{user.fullName}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
+                    <p className="font-semibold text-foreground truncate">
+                      {user.fullName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {user.email}
+                    </p>
                     <span
                       className={`inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-full ${roleBadgeClass}`}
                     >
