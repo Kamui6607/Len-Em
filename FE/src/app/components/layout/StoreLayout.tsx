@@ -6,16 +6,16 @@ import { Footer } from "../Footer";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useSwipeBack } from "../../../hooks/useSwipeBack";
 import { ScrollToTop } from "../../../components/mobile/ScrollToTop";
+import { useCart } from "../../../context/CartContext";
 
 interface StoreLayoutProps {
   children: ReactNode;
-  cartCount: number;
 }
 
 export function StoreLayout({
   children,
-  cartCount,
 }: StoreLayoutProps) {
+  const { totalItems: cartCount } = useCart();
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const shouldReduceMotion = useReducedMotion();

@@ -7,6 +7,8 @@ import {
   DollarSign,
   Activity,
   Flag,
+  Shield,
+  ShieldCheck,
 } from "lucide-react";
 import { DashboardShell } from "../dashboard/DashboardShell";
 import type { NavItem } from "../dashboard/Sidebar";
@@ -22,6 +24,8 @@ const navItems: NavItem[] = [
   { path: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { path: "/admin/reports", label: "Reports", icon: Flag },
   { path: "/admin/payments", label: "Payments", icon: DollarSign },
+  { path: "/admin/roles", label: "Roles", icon: ShieldCheck },
+  { path: "/admin/permissions", label: "Permissions", icon: Shield },
   { path: "/admin/activity", label: "Activity Logs", icon: Activity },
 ];
 

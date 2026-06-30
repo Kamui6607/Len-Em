@@ -1,161 +1,84 @@
 /**
  * Product service — provides a clean API for fetching products.
  *
- * Currently uses local mock data so the frontend works without a backend.
- * When the backend is ready, uncomment the axios import and switch to real API calls.
+ * Fetches from the real backend at GET /api/v1/products.
+ * No mock fallback — errors propagate to the caller.
  */
 
-import type { PaginatedResponse, ProductQueryParams } from "../../../shared/types/api.types";
+import type { PaginatedResponse } from "../../../shared/types/api.types";
 import type { Product } from "../../../app/data/products";
-import { products, getDynamicFilters } from "../../../app/data/products";
-import { getBasePrice } from "../../../app/data/products";
-import { mockPaginatedResponse } from "../../../shared/services/api";
+import axiosClient from "../../../lib/axiosClient";
+import { adaptBackendProduct } from "../../../shared/types/product.types";
+import type { BackendPaginatedProducts, BackendSingleProduct } from "../../../shared/types/product.types";
 
 // ============================================================
 // 1. Fetch products with filters, sorting, and pagination
 // ============================================================
 
-export interface FetchProductsParams extends ProductQueryParams {
+export interface FetchProductsParams {
   category?: string;
   search?: string;
-  color?: string;
-  material?: string;
-  weight?: string;
-  difficulty?: string;
   sort?: string;
   page?: number;
   limit?: number;
-  minPrice?: number;
-  maxPrice?: number;
 }
 
 /**
- * Fetch products with full filter + sort + pagination support.
- *
- * Currently uses local mock data with simulated pagination.
- * Replace the body with a real axios call when backend is ready:
- *
- *   const { data } = await api.get<PaginatedResponse<Product>>(
- *     `/products?${buildQueryString(params)}`
- *   );
- *   return data;
+ * Map frontend sort value to backend sort value.
+ * Backend supports: newest, price-asc, price-desc, rating
+ * "popular" is not supported — fallback to no sort param.
+ */
+function mapSort(sort: string | undefined): string | undefined {
+  if (!sort) return undefined;
+  // Only pass through sort values the backend actually supports
+  const validSorts = ["newest", "price-asc", "price-desc", "rating"];
+  if (validSorts.includes(sort)) return sort;
+  // "popular" is not supported by the backend — omit sort entirely
+  return undefined;
+}
+
+/**
+ * Fetch products from the real backend with full filter + sort + pagination.
+ * Throws on error — no mock fallback.
+ * Only sends query params the backend actually supports:
+ *   category, search, sort, page, limit
  */
 export async function fetchProducts(
   params: FetchProductsParams = {}
 ): Promise<PaginatedResponse<Product>> {
-  const {
-    category,
-    search,
-    color,
-    material,
-    weight,
-    difficulty,
-    sort = "popular",
-    page = 1,
-    limit = 12,
-    minPrice,
-    maxPrice,
-  } = params;
+  // Build query params for the backend
+  const queryParams: Record<string, string | number | boolean> = {};
 
-  // --- Filtering (mirrors backend logic) ---
-  let result = [...products];
-
-  // Category
-  if (category && category !== "all") {
-    result = result.filter((p) => p.category === category);
+  if (params.category && params.category !== "all") {
+    const catMap: Record<string, string> = {
+      yarn: "yarn",
+      tools: "hook",
+      kit: "kit",
+    };
+    queryParams.category = catMap[params.category] || params.category;
   }
+  if (params.search) queryParams.search = params.search;
+  const mappedSort = mapSort(params.sort);
+  if (mappedSort) queryParams.sort = mappedSort;
+  if (params.page) queryParams.page = params.page;
+  if (params.limit) queryParams.limit = params.limit;
 
-  // Search (name, description, tags, material, difficulty, variant colors)
-  if (search) {
-    const query = search.toLowerCase();
-    result = result.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query) ||
-        p.tags.some((t) => t.toLowerCase().includes(query)) ||
-        p.category.toLowerCase().includes(query) ||
-        (p.material && p.material.toLowerCase().includes(query)) ||
-        (p.difficulty && p.difficulty.toLowerCase().includes(query)) ||
-        p.variants?.some((v) => v.color && v.color.toLowerCase().includes(query))
-    );
-  }
+  const { data: response } = await axiosClient.get("/products", {
+    params: queryParams,
+  });
 
-  // Color (comma-separated: "Blush Pink,Cream")
-  if (color) {
-    const colors = color.split(",").map((c) => c.trim()).filter(Boolean);
-    if (colors.length > 0) {
-      result = result.filter((p) =>
-        p.variants?.some((v) => v.color && colors.includes(v.color))
-      );
-    }
-  }
+  // Backend returns: { status: "success", data: { products: [...], total, page, limit, totalPages } }
+  const backendData: BackendPaginatedProducts = response.data;
 
-  // Material (comma-separated)
-  if (material) {
-    const materials = material.split(",").map((m) => m.trim()).filter(Boolean);
-    if (materials.length > 0) {
-      result = result.filter(
-        (p) => p.material && materials.includes(p.material)
-      );
-    }
-  }
+  // Adapt backend products to frontend Product shape
+  const adaptedProducts: Product[] = backendData.products.map(adaptBackendProduct);
 
-  // Weight (comma-separated)
-  if (weight) {
-    const weights = weight.split(",").map((w) => w.trim()).filter(Boolean);
-    if (weights.length > 0) {
-      result = result.filter(
-        (p) => p.weight && weights.includes(p.weight)
-      );
-    }
-  }
-
-  // Difficulty (comma-separated)
-  if (difficulty) {
-    const difficulties = difficulty.split(",").map((d) => d.trim()).filter(Boolean);
-    if (difficulties.length > 0) {
-      result = result.filter(
-        (p) => p.difficulty && difficulties.includes(p.difficulty)
-      );
-    }
-  }
-
-  // Price range
-  if (minPrice !== undefined && minPrice > 0) {
-    result = result.filter((p) =>
-      Math.max(...(p.variants?.map((v) => v.price) ?? [0])) >= minPrice
-    );
-  }
-  if (maxPrice !== undefined && maxPrice > 0) {
-    result = result.filter((p) =>
-      Math.min(...(p.variants?.map((v) => v.price) ?? [0])) <= maxPrice
-    );
-  }
-
-  // --- Sorting ---
-  switch (sort) {
-    case "newest":
-      result.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      break;
-    case "price-low":
-      result.sort((a, b) => getBasePrice(a) - getBasePrice(b));
-      break;
-    case "price-high":
-      result.sort((a, b) => getBasePrice(b) - getBasePrice(a));
-      break;
-    case "popular":
-      result.sort((a, b) => b.popularity - a.popularity);
-      break;
-    case "rating":
-      result.sort((a, b) => b.rating - a.rating);
-      break;
-  }
-
-  // --- Pagination via mock adapter ---
-  return mockPaginatedResponse(result, page, limit);
+  return {
+    data: adaptedProducts,
+    page: backendData.page,
+    totalPages: backendData.totalPages,
+    totalItems: backendData.total,
+  };
 }
 
 // ============================================================
@@ -163,9 +86,10 @@ export async function fetchProducts(
 // ============================================================
 
 export async function fetchProductById(id: string): Promise<Product | null> {
-  // Mock: find in local data
-  // Real: const { data } = await api.get<Product>(`/products/${id}`); return data.data;
-  return products.find((p) => p.id === id) ?? null;
+  const { data: response } = await axiosClient.get(`/products/${id}`);
+  // Backend returns: { status: "success", data: { product: {...} } }
+  const backendData: BackendSingleProduct = response.data;
+  return adaptBackendProduct(backendData.product);
 }
 
 // ============================================================
@@ -179,16 +103,75 @@ export interface DynamicFilterOptions {
   difficulties: { name: string; count: number }[];
 }
 
+// ============================================================
+// 4. Admin CRUD operations
+// ============================================================
+
+export interface CreateProductData {
+  name: string;
+  description: string;
+  category: string;
+  image: string;
+  tags?: string[];
+  variants: {
+    color: string;
+    hexCode: string;
+    price: number;
+    stock: number;
+    image: string;
+  }[];
+  isActive?: boolean;
+}
+
+export interface UpdateProductData {
+  name?: string;
+  description?: string;
+  category?: string;
+  image?: string;
+  tags?: string[];
+  variants?: {
+    color: string;
+    hexCode: string;
+    price: number;
+    stock: number;
+    image: string;
+  }[];
+  isActive?: boolean;
+}
+
 /**
- * Returns available filter options derived from the current product set.
- * In a real backend, this would be: GET /api/products/filters
+ * Create a new product (Admin only)
  */
-export function fetchFilterOptions(): DynamicFilterOptions {
-  return getDynamicFilters(products);
+export async function createProduct(data: CreateProductData): Promise<BackendSingleProduct> {
+  const { data: response } = await axiosClient.post("/products", data);
+  return response.data;
+}
+
+/**
+ * Update an existing product (Admin only)
+ */
+export async function updateProduct(id: string, data: UpdateProductData): Promise<BackendSingleProduct> {
+  const { data: response } = await axiosClient.put(`/products/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Soft delete a product (Admin only) — sets isActive = false
+ */
+export async function deleteProduct(id: string): Promise<void> {
+  await axiosClient.delete(`/products/${id}`);
+}
+
+/**
+ * Restore a soft-deleted product (Admin only) — sets isActive = true
+ */
+export async function restoreProduct(id: string): Promise<BackendSingleProduct> {
+  const { data: response } = await axiosClient.patch(`/products/${id}`);
+  return response.data;
 }
 
 // ============================================================
-// 4. Export for future use
+// 5. Export
 // ============================================================
 
 export type { Product };

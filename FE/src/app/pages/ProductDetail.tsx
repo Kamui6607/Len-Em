@@ -1,16 +1,16 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../context/CartContext";
 import { cn } from "../components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
+import { fetchProductById } from "../../features/shop/services/product.service";
 import type { ProductVariantUI } from "../components/ProductVariantSelector";
-
-interface ProductDetailProps {
-  onAddToCart: (productId: string) => void;
-}
+import type { Product } from "../data/products";
 
 const difficultyBadgeColors: Record<string, string> = {
   beginner: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -43,16 +43,40 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
   );
 }
 
-export function ProductDetail({ onAddToCart }: ProductDetailProps) {
+export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const product = products.find((p) => p.id === id);
+  const { addToCart } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantUI | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    // First check mock data
+    const mockProduct = products.find((p) => p.id === id);
+    if (mockProduct) {
+      setProduct(mockProduct);
+      setLoading(false);
+      return;
+    }
+    // Fallback to API fetch
+    fetchProductById(id)
+      .then((apiProduct) => {
+        if (apiProduct) {
+          setProduct(apiProduct);
+        } else {
+          setProduct(null);
+        }
+      })
+      .catch(() => setProduct(null))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -84,7 +108,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
   const currentPrice = selectedVariant?.price ?? variantItems[0]?.price ?? 0;
   const currentStock = selectedVariant?.stock ?? 0;
   const currentColor = selectedVariant?.color;
-  const totalStock = product ? getTotalStock(product) : 0;
+  const totalStock = product ? getTotalStock(product as Product) : 0;
 
   const handleVariantChange = useCallback((variant: ProductVariantUI) => {
     setSelectedVariant(variant);
@@ -97,13 +121,40 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
       navigate("/auth/login");
       return;
     }
-    // Pass the variant-specific identifier if available
-    const cartId = selectedVariant
-      ? `${product.id}-${selectedVariant.id}`
-      : product.id;
-    onAddToCart(cartId);
-    navigate("/cart");
+    const variant = selectedVariant || product.variants?.[0];
+    if (variant) {
+      addToCart({
+        productId: product.id,
+        variantId: variant.id,
+        name: product.name,
+        image: variant.images?.[0] || product.image,
+        color: variant.color || "",
+        hexCode: variant.hexCode || "#ccc",
+        price: variant.price,
+        stock: variant.stock,
+      });
+    } else {
+      addToCart({
+        productId: product.id,
+        variantId: "default",
+        name: product.name,
+        image: product.image,
+        color: "",
+        hexCode: "#ccc",
+        price: 0,
+        stock: 999,
+      });
+    }
+    toast.success("Đã thêm vào giỏ hàng");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -454,7 +505,7 @@ export function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 return (
                   <Link
                     key={related.id}
-                    to={`/product/${related.id}`}
+                    to={`/shop/product/${related.id}`}
                     className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20 shrink-0 w-[180px] md:w-auto"
                     style={{
                       boxShadow: "0 0 0 transparent",

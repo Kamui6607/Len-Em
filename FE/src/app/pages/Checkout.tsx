@@ -8,12 +8,8 @@ import { products } from "../data/products";
 import { formatPrice } from "../../lib/formatPrice";
 import { CoinUsage } from "../components/membership/CoinUsage";
 import { orderService } from "../../features/orders/services/order.service";
+import { useCart } from "../../context/CartContext";
 import type { CreateOrderRequest } from "../../features/orders/types/order.types";
-
-interface CheckoutProps {
-  cartItems: { productId: string; quantity: number }[];
-  onClearCart: () => void;
-}
 
 type Payment = "bank" | "cash";
 
@@ -22,7 +18,9 @@ const BANK_NAME = "Vietcombank";
 const BANK_ACCOUNT = "101 123 4567";
 const BANK_HOLDER = "LEN & EM CO., LTD";
 
-export function Checkout({ cartItems, onClearCart }: CheckoutProps) {
+export function Checkout() {
+  const { cartItems, clearCart } = useCart();
+  const onClearCart = clearCart;
   const [payment, setPayment] = useState<Payment | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

@@ -10,14 +10,13 @@ import { learnCourses, getLessonsByCourse } from "../../features/learn/data/lear
 import { useLearnStore as useFeatureLearnStore } from "../../features/learn/store/learn.store";
 import { useLearnStore } from "../../store/learn.store";
 import { formatPrice } from "../../lib/formatPrice";
+import { useCart } from "../../context/CartContext";
+import { products } from "../data/products";
 import type { LinkedProduct } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
 
-interface LessonPageProps {
-  onAddToCart: (productId: string, metadata?: { source?: "learn"; lessonId?: string; courseId?: string }) => void;
-}
-
-export function LessonPage({ onAddToCart }: LessonPageProps) {
+export function LessonPage() {
+  const { addToCart } = useCart();
   const { courseId, lessonId } = useParams();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
@@ -61,21 +60,42 @@ export function LessonPage({ onAddToCart }: LessonPageProps) {
     setActiveProductId(currentProduct?.productId ?? null);
   };
 
-  const addProductToCart = (product: LinkedProduct) => {
-    onAddToCart(product.productId, {
-      source: "learn",
-      courseId: course.id,
-      lessonId: lesson.id,
+  const addProductToCart = (linkedProduct: LinkedProduct) => {
+    const product = products.find((p) => p.id === linkedProduct.productId);
+    if (!product) {
+      toast.error("Product not found");
+      return;
+    }
+    const variant = product.variants?.[0];
+    addToCart({
+      productId: product.id,
+      variantId: variant?.id || "default",
+      name: product.name,
+      image: product.image,
+      color: variant?.color || "",
+      hexCode: variant?.hexCode || "#ccc",
+      price: variant?.price || 0,
+      stock: variant?.stock || 999,
     });
     toast.success(`${product.name} added to cart`);
   };
 
   const addAllToCart = () => {
-    sortedProducts.forEach((product) => onAddToCart(product.productId, {
-      source: "learn",
-      courseId: course.id,
-      lessonId: lesson.id,
-    }));
+    sortedProducts.forEach((linkedProduct) => {
+      const product = products.find((p) => p.id === linkedProduct.productId);
+      if (!product) return;
+      const variant = product.variants?.[0];
+      addToCart({
+        productId: product.id,
+        variantId: variant?.id || "default",
+        name: product.name,
+        image: product.image,
+        color: variant?.color || "",
+        hexCode: variant?.hexCode || "#ccc",
+        price: variant?.price || 0,
+        stock: variant?.stock || 999,
+      });
+    });
     toast.success("All lesson materials added to cart");
   };
 

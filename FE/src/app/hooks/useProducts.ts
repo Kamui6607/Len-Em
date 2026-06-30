@@ -63,18 +63,17 @@ export function useProducts() {
         const result = await fetchProducts({
           category: filters.category === "all" ? undefined : filters.category,
           search: debouncedSearch || undefined,
-          color: filters.color.length > 0 ? filters.color.join(",") : undefined,
-          material: filters.material.length > 0 ? filters.material.join(",") : undefined,
-          weight: filters.weight.length > 0 ? filters.weight.join(",") : undefined,
-          difficulty: filters.difficulty.length > 0 ? filters.difficulty.join(",") : undefined,
           sort: filters.sort,
           page: filters.page,
           limit: 12,
-          minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
-          maxPrice: filters.maxPrice > 0 ? filters.maxPrice : undefined,
         });
         if (!cancelled) {
           setPaginatedResult(result);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("Failed to fetch products:", error);
+          setPaginatedResult(null);
         }
       } finally {
         if (!cancelled) setIsLoading(false);
