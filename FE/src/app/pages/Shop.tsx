@@ -1,7 +1,7 @@
-import { Package, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
@@ -13,6 +13,8 @@ import {
 import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
+import { formatPrice } from "../../lib/formatPrice";
+import { kitService, type Kit } from "../../api/kitService";
 
 const CATEGORY_META: Record<
   string,
@@ -68,11 +70,53 @@ export function Shop() {
   } = useProducts();
 
   const [filterOpen, setFilterOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"products" | "combo">("products");
+  const [kits, setKits] = useState<Kit[]>([]);
+  const [kitsLoading, setKitsLoading] = useState(false);
+
+  // Fetch kits when switching to combo view
+  useEffect(() => {
+    if (viewMode === "combo") {
+      setKitsLoading(true);
+      kitService
+        .getAll({ page: 1, limit: 50 })
+        .then((res) => setKits(res.data.data?.kits ?? []))
+        .catch(() => toast.error("Failed to load kits"))
+        .finally(() => setKitsLoading(false));
+    }
+  }, [viewMode]);
   const [recommendationsDismissed, setRecommendationsDismissed] = useState(
     () => localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true",
   );
   const [lessonFilterActive, setLessonFilterActive] = useState(false);
-  const meta = CATEGORY_META[filters.category] ?? CATEGORY_META.all;
+  const selectedCategory = dynamicFilters.categories.find(
+    (category) => category.value === filters.category,
+  );
+  const meta =
+    filters.category === "all"
+      ? CATEGORY_META.all
+      : {
+          label: selectedCategory?.label ?? filters.category,
+          desc: `Products in ${selectedCategory?.label ?? filters.category}`,
+          emoji: CATEGORY_META[filters.category]?.emoji ?? "🛍️",
+        };
+  const categoryOptions = useMemo(
+    () => [
+      ["all", CATEGORY_META.all] as const,
+      ...dynamicFilters.categories.map(
+        (category) =>
+          [
+            category.value,
+            {
+              label: category.label,
+              desc: category.label,
+              emoji: CATEGORY_META[category.value]?.emoji ?? "🛍️",
+            },
+          ] as const,
+      ),
+    ],
+    [dynamicFilters.categories],
+  );
   const currentCourseId = useLearnStore((state) => state.currentCourseId);
   const currentLessonId = useLearnStore((state) => state.currentLessonId);
 
@@ -192,7 +236,7 @@ export function Shop() {
       <div className="filter-group">
         <span className="filter-group-label">Category</span>
         <div className="filter-chip-group">
-          {Object.entries(CATEGORY_META).map(([key, cat]) => (
+          {categoryOptions.map(([key, cat]) => (
             <button
               key={key}
               className={`chip-filter ${filters.category === key ? "active" : ""}`}
@@ -621,176 +665,274 @@ export function Shop() {
               </section>
             )}
 
-          {/* Sort bar */}
-          <div className="sort-bar">
-            <div className="sort-bar-left">
-              {/* Mobile filter button */}
-              <button
-                className="filter-fab"
-                onClick={() => setFilterOpen(true)}
-              >
-                <SlidersHorizontal size={14} />
-                Filters
-                {hasActiveFilters && (
-                  <span
-                    style={{
-                      background: "var(--primary)",
-                      color: "var(--primary-foreground)",
-                      borderRadius: "50%",
-                      width: 16,
-                      height: 16,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.65rem",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {activeChips.length}
-                  </span>
-                )}
-              </button>
-
-              <div className="results-count">
-                <span className="results-dot" />
-                {!hasActiveFilters && resultCount === totalCount ? (
-                  <span>
-                    All <strong>{totalCount}</strong> products
-                  </span>
-                ) : (
-                  <span>
-                    <strong>{displayedProducts.length}</strong> of {totalCount}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <select
-              className="sort-select"
-              value={filters.sort}
-              onChange={(e) => updateFilter("sort", e.target.value)}
+          {/* View mode toggle */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setViewMode("products")}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                viewMode === "products"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card border border-border text-foreground hover:bg-muted"
+              }`}
             >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              🛍️ Products
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("combo")}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                viewMode === "combo"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card border border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              🎁 Combo
+            </button>
           </div>
 
-          {/* Active chips */}
-          <AnimatePresence>
-            {activeChips.length > 0 && (
-              <motion.div
-                className="filter-strip"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.22 }}
-              >
-                <span className="filter-group-label">Active:</span>
-                {activeChips.map((chip) => (
-                  <motion.span
-                    key={chip.value + chip.type}
-                    className="active-chip"
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    {chip.label}
-                    <span
-                      className="chip-x"
-                      onClick={() => removeChip(chip.type, chip.value)}
-                    >
-                      ×
-                    </span>
-                  </motion.span>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Products */}
-          {isLoading ? (
-            <div className="loading-dots">
-              <div className="loading-dot" />
-              <div className="loading-dot" />
-              <div className="loading-dot" />
-            </div>
-          ) : displayedProducts.length > 0 ? (
-            <>
-              <div className="product-grid">
-                {displayedProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    relatedCourseId={
-                      currentCourseId &&
-                      product.linkedComboIds?.some((comboId) =>
-                        currentCourseComboIds.includes(comboId),
-                      )
-                        ? currentCourseId
-                        : undefined
-                    }
-                    relatedLessonId={
-                      currentLessonId &&
-                      currentLesson?.linkedProducts.some(
-                        (linkedProduct) =>
-                          linkedProduct.productId === product.id,
-                      )
-                        ? currentLessonId
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="pagination">
+          {/* Products content — only show if viewMode === "products" */}
+          {viewMode === "products" && (
+            <div>
+              <div className="sort-bar">
+                <div className="sort-bar-left">
                   <button
-                    className="page-btn"
-                    disabled={currentPage <= 1}
-                    onClick={() => goToPage(currentPage - 1)}
+                    className="filter-fab"
+                    onClick={() => setFilterOpen(true)}
                   >
-                    ‹
+                    <SlidersHorizontal size={14} />
+                    Filters
+                    {hasActiveFilters && (
+                      <span
+                        style={{
+                          background: "var(--primary)",
+                          color: "var(--primary-foreground)",
+                          borderRadius: "50%",
+                          width: 16,
+                          height: 16,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {activeChips.length}
+                      </span>
+                    )}
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i + 1}
-                      className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
-                      onClick={() => goToPage(i + 1)}
-                    >
-                      {i + 1}
-                    </button>
+                  <div className="results-count">
+                    <span className="results-dot" />
+                    {!hasActiveFilters && resultCount === totalCount ? (
+                      <span>
+                        All <strong>{totalCount}</strong> products
+                      </span>
+                    ) : (
+                      <span>
+                        <strong>{displayedProducts.length}</strong> of{" "}
+                        {totalCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <select
+                  className="sort-select"
+                  value={filters.sort}
+                  onChange={(e) => updateFilter("sort", e.target.value)}
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
-                  <button
-                    className="page-btn"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => goToPage(currentPage + 1)}
+                </select>
+              </div>
+              <AnimatePresence>
+                {activeChips.length > 0 && (
+                  <motion.div
+                    className="filter-strip"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.22 }}
                   >
-                    ›
-                  </button>
+                    <span className="filter-group-label">Active:</span>
+                    {activeChips.map((chip) => (
+                      <motion.span
+                        key={chip.value + chip.type}
+                        className="active-chip"
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.85 }}
+                        transition={{ duration: 0.18 }}
+                      >
+                        {chip.label}
+                        <span
+                          className="chip-x"
+                          onClick={() => removeChip(chip.type, chip.value)}
+                        >
+                          ×
+                        </span>
+                      </motion.span>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {isLoading ? (
+                <div className="loading-dots">
+                  <div className="loading-dot" />
+                  <div className="loading-dot" />
+                  <div className="loading-dot" />
+                </div>
+              ) : displayedProducts.length > 0 ? (
+                <>
+                  <div className="product-grid">
+                    {displayedProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        relatedCourseId={
+                          currentCourseId &&
+                          product.linkedComboIds?.some((comboId) =>
+                            currentCourseComboIds.includes(comboId),
+                          )
+                            ? currentCourseId
+                            : undefined
+                        }
+                        relatedLessonId={
+                          currentLessonId &&
+                          currentLesson?.linkedProducts.some(
+                            (linkedProduct) =>
+                              linkedProduct.productId === product.id,
+                          )
+                            ? currentLessonId
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="pagination">
+                      <button
+                        className="page-btn"
+                        disabled={currentPage <= 1}
+                        onClick={() => goToPage(currentPage - 1)}
+                      >
+                        ‹
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <button
+                          key={i + 1}
+                          className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
+                          onClick={() => goToPage(i + 1)}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                      <button
+                        className="page-btn"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => goToPage(currentPage + 1)}
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "4rem 1rem",
+                    color: "var(--muted-foreground)",
+                  }}
+                >
+                  <Package
+                    size={44}
+                    style={{ margin: "0 auto 1rem", opacity: 0.3 }}
+                  />
+                  <p style={{ fontWeight: 500, marginBottom: 4 }}>
+                    {getEmptyStateMessage()}
+                  </p>
+                  <p style={{ fontSize: "0.83rem" }}>
+                    Try adjusting your filters
+                  </p>
                 </div>
               )}
-            </>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "4rem 1rem",
-                color: "var(--muted-foreground)",
-              }}
-            >
-              <Package
-                size={44}
-                style={{ margin: "0 auto 1rem", opacity: 0.3 }}
-              />
-              <p style={{ fontWeight: 500, marginBottom: 4 }}>
-                {getEmptyStateMessage()}
-              </p>
-              <p style={{ fontSize: "0.83rem" }}>Try adjusting your filters</p>
             </div>
+          )}
+
+          {/* Combo (Kits) content — only show if viewMode === "combo" */}
+          {viewMode === "combo" && (
+            <>
+              {kitsLoading ? (
+                <div className="loading-dots">
+                  <div className="loading-dot" />
+                  <div className="loading-dot" />
+                  <div className="loading-dot" />
+                </div>
+              ) : kits.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Package size={44} className="mx-auto mb-3 opacity-40" />
+                  <p>No kits found</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {kits.length} kits available
+                  </p>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {kits.map((kit) => (
+                      <Link
+                        key={kit._id}
+                        to={`/kits/${kit._id}`}
+                        className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={`Xem chi tiết combo ${kit.name}`}
+                      >
+                        <div className="aspect-[4/3] overflow-hidden bg-muted">
+                          <img
+                            src={kit.thumbnail}
+                            alt={kit.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (!target.dataset.fallback) {
+                                target.dataset.fallback = "true";
+                                target.src = `https://picsum.photos/seed/${kit._id}/400/300`;
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="p-4 space-y-2">
+                          <h3 className="font-semibold group-hover:text-primary">
+                            {kit.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {kit.description}
+                          </p>
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-lg font-bold text-primary">
+                              {formatPrice(kit.price)}
+                            </span>
+                            <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
+                              {kit.level}
+                            </span>
+                          </div>
+                          <div className="pt-1 flex items-center justify-between gap-3">
+                            <p className="text-xs text-muted-foreground">
+                              {kit.productIds.length} products included
+                            </p>
+                            <span className="text-xs font-medium text-primary">
+                              Xem chi tiết →
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
