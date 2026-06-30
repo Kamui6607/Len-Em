@@ -87,7 +87,7 @@ export function UserMenu({
   const handleLogout = () => {
     signOut();
     setIsOpen(false);
-    navigate("/");
+    navigate("/auth/login");
   };
 
   const isAdmin = user.roleId === "admin";

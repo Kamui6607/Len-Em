@@ -479,7 +479,7 @@ export function Navigation({ cartCount }: NavigationProps) {
             type="button"
             onClick={() => {
               signOut();
-              navigate("/");
+              navigate("/auth/login");
             }}
             className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-bold text-[var(--color-text-muted)] transition-colors hover:bg-destructive/10 min-h-[44px]"
           >
