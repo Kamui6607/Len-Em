@@ -4,7 +4,7 @@
 
 import { create } from "zustand";
 import { authService } from "../services/auth.service";
-import { tokenStorage } from "../lib/axiosClient";
+import { markVoluntaryLogout, tokenStorage } from "../lib/axiosClient";
 import { isAuthenticated as hasValidToken } from "../lib/authUtils";
 import type { AuthState, LoginRequest, RegisterRequest, User } from "../types/auth.types";
 import { normalizeApiUserProfile } from "../types/auth.types";
@@ -85,9 +85,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    // Best-effort API logout; do not await it so UI can move to Login immediately.
-    authService.logout().catch(() => {});
-
+    // Local logout only. Mark it so pending protected requests do not show
+    // session-expired toasts or force a second redirect while the app moves to Login.
+    markVoluntaryLogout();
     tokenStorage.clear();
     localStorage.removeItem("lenEm_user");
     set({

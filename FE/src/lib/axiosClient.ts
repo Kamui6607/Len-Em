@@ -14,6 +14,16 @@ const API_BASE_URL =
 
 const TOKEN_KEY = "lenEm_accessToken";
 const REFRESH_KEY = "lenEm_refreshToken";
+const VOLUNTARY_LOGOUT_KEY = "lenEm_voluntaryLogout";
+
+export function markVoluntaryLogout(): void {
+  sessionStorage.setItem(VOLUNTARY_LOGOUT_KEY, "true");
+  window.setTimeout(() => sessionStorage.removeItem(VOLUNTARY_LOGOUT_KEY), 2000);
+}
+
+function isVoluntaryLogout(): boolean {
+  return sessionStorage.getItem(VOLUNTARY_LOGOUT_KEY) === "true";
+}
 
 export const tokenStorage = {
   getAccess: (): string | null => localStorage.getItem(TOKEN_KEY),
@@ -121,6 +131,10 @@ axiosClient.interceptors.response.use(
 // ---- Error handler ----
 
 function handleAxiosError(error: AxiosError): Promise<never> {
+  if (isVoluntaryLogout()) {
+    return Promise.reject(error);
+  }
+
   const status = error.response?.status;
   const data = error.response?.data as Record<string, unknown> | undefined;
   const message =
@@ -157,6 +171,11 @@ function handleAxiosError(error: AxiosError): Promise<never> {
 function forceLogout(): void {
   tokenStorage.clear();
   localStorage.removeItem("lenEm_user");
+
+  if (isVoluntaryLogout()) {
+    return;
+  }
+
   toast.error("Session expired. Please sign in again.");
   window.location.href = "/auth/login";
 }
