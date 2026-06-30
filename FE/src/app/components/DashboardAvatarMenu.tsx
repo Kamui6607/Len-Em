@@ -32,7 +32,7 @@ export function DashboardAvatarMenu({
   const handleLogout = () => {
     signOut();
     setIsOpen(false);
-    navigate("/auth/login");
+    navigate("/auth/login", { replace: true });
   };
 
   const roleLabel =

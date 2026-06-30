@@ -215,14 +215,9 @@ export function Profile({ embedded = false }: ProfileProps) {
   }, [user, pwdForm]);
 
   // ── Logout ──
-  const handleLogout = useCallback(async () => {
-    try {
-      await authService.logout();
-    } catch {
-      // Best effort
-    }
+  const handleLogout = useCallback(() => {
     signOut();
-    navigate("/auth/login");
+    navigate("/auth/login", { replace: true });
   }, [signOut, navigate]);
 
   if (!user) return null;
