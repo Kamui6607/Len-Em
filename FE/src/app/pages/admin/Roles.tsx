@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit3, Trash2, X, Shield, AlertTriangle, Eye } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  Shield,
+  AlertTriangle,
+  Eye,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../../hooks/useAuth";
@@ -8,6 +17,7 @@ import type { Role } from "../../../types/role";
 import { permissionService } from "../../../api/permissionService";
 import type { Permission } from "../../../types/permission";
 import { PermissionPicker } from "../../components/admin/PermissionPicker";
+import { AdminSelect } from "../../components/admin/AdminSelect";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -31,11 +41,20 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onCancel}
+      />
       <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950">
@@ -47,8 +66,18 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDia
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors">Delete</button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -98,17 +127,29 @@ function RoleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] pb-8 px-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10">
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-y-auto z-10">
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-lg font-bold">{editingId ? "Edit Role" : "Create Role"}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors"><X size={20} /></button>
+          <h2 className="text-lg font-bold">
+            {editingId ? "Edit Role" : "Create Role"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 pb-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Role Name <span className="text-destructive">*</span></label>
+            <label className="block text-sm font-medium mb-1.5">
+              Role Name <span className="text-destructive">*</span>
+            </label>
             <input
               type="text"
               value={form.name}
@@ -116,15 +157,23 @@ function RoleModal({
               className={`w-full px-4 py-2.5 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary ${fieldErrors.name ? "border-destructive" : "border-border"}`}
               placeholder="e.g. Manager"
             />
-            {fieldErrors.name && <p className="text-xs text-destructive mt-1">{fieldErrors.name}</p>}
+            {fieldErrors.name && (
+              <p className="text-xs text-destructive mt-1">
+                {fieldErrors.name}
+              </p>
+            )}
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Description</label>
+            <label className="block text-sm font-medium mb-1.5">
+              Description
+            </label>
             <textarea
               value={form.description}
-              onChange={(e) => onChange({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                onChange({ ...form, description: e.target.value })
+              }
               rows={3}
               className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
               placeholder="Optional description..."
@@ -136,7 +185,9 @@ function RoleModal({
             <input
               type="checkbox"
               checked={form.isActive}
-              onChange={(e) => onChange({ ...form, isActive: e.target.checked })}
+              onChange={(e) =>
+                onChange({ ...form, isActive: e.target.checked })
+              }
               className="rounded border-border"
             />
             <span className="text-sm font-medium">Active</span>
@@ -144,18 +195,30 @@ function RoleModal({
 
           {/* Permissions */}
           <div>
-            <label className="block text-sm font-medium mb-2">Permissions</label>
+            <label className="block text-sm font-medium mb-2">
+              Permissions
+            </label>
             <PermissionPicker
               permissions={allPermissions}
               selected={form.permissions}
               onChange={(perms) => onChange({ ...form, permissions: perms })}
+              maxHeightClassName="max-h-56"
             />
           </div>
         </div>
 
         <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-          <button onClick={onSave} disabled={saving} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]">
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]"
+          >
             {saving ? "Saving..." : editingId ? "Update" : "Create"}
           </button>
         </div>
@@ -217,7 +280,8 @@ export function Roles() {
       if (page > 1) params.page = page;
       if (limit !== 20) params.limit = limit;
       if (searchName.trim()) params.name = searchName.trim();
-      if (filterActive !== null) params.isActive = filterActive ? "true" : "false";
+      if (filterActive !== null)
+        params.isActive = filterActive ? "true" : "false";
 
       const { data: response } = await roleService.getAll(params);
       // BE: { status, data: { message, data: { roles, total, page, limit, totalPages } } }
@@ -303,10 +367,16 @@ export function Roles() {
       closeModal();
       fetchRoles();
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      const axiosErr = err as {
+        response?: { status?: number; data?: { message?: string } };
+        message?: string;
+      };
       if (axiosErr.response?.status === 400) {
         const msg = axiosErr.response.data?.message ?? "";
-        if (msg.toLowerCase().includes("name") || msg.toLowerCase().includes("duplicate")) {
+        if (
+          msg.toLowerCase().includes("name") ||
+          msg.toLowerCase().includes("duplicate")
+        ) {
           setFieldErrors({ name: msg });
         } else {
           toast.error(msg || "Invalid input");
@@ -351,11 +421,18 @@ export function Roles() {
           <h1 className="mb-2">Role Management</h1>
           <p className="text-muted-foreground">
             {total} role{total !== 1 ? "s" : ""} total
-            {!isAdmin && <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">Read-only</span>}
+            {!isAdmin && (
+              <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">
+                Read-only
+              </span>
+            )}
           </p>
         </div>
         {isAdmin && (
-          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all active:scale-[0.97]">
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all active:scale-[0.97]"
+          >
             <Plus size={18} /> Create Role
           </button>
         )}
@@ -374,24 +451,26 @@ export function Roles() {
           />
         </div>
 
-        <select
+        <AdminSelect
           value={filterActive === null ? "" : filterActive ? "true" : "false"}
-          onChange={(e) => {
-            const val = e.target.value;
-            setFilterActive(val === "" ? null : val === "true");
-          }}
-          className="px-4 py-3 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[130px]"
-        >
-          <option value="">All status</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
+          options={[
+            { value: "", label: "All status" },
+            { value: "true", label: "Active", dotClassName: "bg-emerald-500" },
+            { value: "false", label: "Inactive", dotClassName: "bg-rose-500" },
+          ]}
+          onChange={(val) =>
+            setFilterActive(val === "" ? null : val === "true")
+          }
+          className="min-w-[160px]"
+        />
       </div>
 
       {/* Table */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading...</div>
+          <div className="p-8 text-center text-muted-foreground">
+            Loading...
+          </div>
         ) : roles.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Shield size={40} className="mx-auto mb-3 opacity-40" />
@@ -402,24 +481,41 @@ export function Roles() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Role Name</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Permissions</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">Created</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">Actions</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Role Name
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Permissions
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
+                    Created
+                  </th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {roles.map((role) => (
-                  <tr key={role._id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                  <tr
+                    key={role._id}
+                    className="border-t border-border hover:bg-muted/30 transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <span className="font-medium text-sm">{role.name}</span>
                       {role.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[250px]">{role.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[250px]">
+                          {role.description}
+                        </p>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm">{role.permissions?.length ?? 0} permissions</span>
+                      <span className="text-sm">
+                        {role.permissions?.length ?? 0} permissions
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -429,7 +525,9 @@ export function Roles() {
                             : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${role.isActive ? "bg-emerald-500" : "bg-rose-500"}`} />
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${role.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
+                        />
                         {role.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
@@ -483,7 +581,9 @@ export function Roles() {
           >
             Previous
           </button>
-          <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
           <button
             className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
             disabled={page >= totalPages}
@@ -511,7 +611,11 @@ export function Roles() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete Role"
-        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"? This will soft-delete the role.` : ""}
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"? This will soft-delete the role.`
+            : ""
+        }
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />

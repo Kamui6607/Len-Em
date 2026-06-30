@@ -21,6 +21,7 @@ import {
 } from "../../components/admin/VariantEditor";
 import { ColorSwatchList } from "../../components/ui/ColorSwatch";
 import { useAuth } from "../../../hooks/useAuth";
+import { AdminSelect } from "../../components/admin/AdminSelect";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -537,7 +538,7 @@ export function ProductManagement() {
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={closeModal}
           />
-          <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10">
+          <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-y-auto z-10">
             <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-lg font-bold">
                 {editingId ? "Edit Product" : "Create Product"}
@@ -586,19 +587,14 @@ export function ProductManagement() {
                   <label className="block text-sm font-medium mb-1.5">
                     Category *
                   </label>
-                  <select
+                  <AdminSelect
                     value={form.category}
-                    onChange={(e) =>
-                      setForm({ ...form, category: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary capitalize"
-                  >
-                    {CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                    options={CATEGORY_OPTIONS.map((category) => ({
+                      value: category,
+                      label: category,
+                    }))}
+                    onChange={(value) => setForm({ ...form, category: value })}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
