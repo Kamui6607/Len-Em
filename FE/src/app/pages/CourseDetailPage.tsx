@@ -180,7 +180,7 @@ export function CourseDetailPage() {
                     <span>{formatPrice(combo.price)}</span>
                   </div>
                   <Button className="w-full" onClick={() => requireAuth(() => addComboToCart(combo.productIds, combo.name))}>
-                    <ShoppingCart className="size-4" /> Add all to cart
+                    <ShoppingCart className="size-4" /> Add to cart
                   </Button>
                 </CardContent>
               </Card>

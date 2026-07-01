@@ -9,6 +9,28 @@
 import axiosClient from "../lib/axiosClient";
 import type { ApiResponse } from "../types/auth.types";
 
+export interface KitProduct {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  image: string;
+  tags: string[];
+  variants: {
+    _id: string;
+    color: string;
+    hexCode: string;
+    price: number;
+    stock: number;
+    image: string;
+    size?: string;
+  }[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
 export interface Kit {
   _id: string;
   name: string;
@@ -16,10 +38,11 @@ export interface Kit {
   thumbnail: string;
   level: "beginner" | "intermediate" | "advanced";
   price: number;
-  productIds: string[];
+  productIds: KitProduct[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  __v: number;
 }
 
 interface RawKitListResponse {
