@@ -25,6 +25,21 @@ export interface CartItem {
   stock: number;
 }
 
+export interface CartKitItem {
+  kitId: string;
+  name: string;
+  thumbnail: string;
+  price: number;
+  productCount: number;
+  products: {
+    productId: string;
+    variantId: string;
+    name: string;
+    image: string;
+    price: number;
+  }[];
+}
+
 interface AddToCartPayload {
   productId: string;
   variantId: string;
@@ -37,18 +52,37 @@ interface AddToCartPayload {
   stock: number;
 }
 
+interface AddKitToCartPayload {
+  kitId: string;
+  name: string;
+  thumbnail: string;
+  price: number;
+  products: {
+    productId: string;
+    variantId: string;
+    name: string;
+    image: string;
+    price: number;
+  }[];
+}
+
 interface CartContextType {
   cartItems: CartItem[];
+  cartKits: CartKitItem[];
   addToCart: (product: AddToCartPayload, quantity?: number) => void;
+  addKitToCart: (kit: AddKitToCartPayload) => void;
   removeFromCart: (productId: string, variantId: string) => void;
+  removeKitFromCart: (kitId: string) => void;
   updateQuantity: (productId: string, variantId: string, quantity: number) => void;
   clearCart: () => void;
   isInCart: (productId: string, variantId: string) => boolean;
+  isKitInCart: (kitId: string) => boolean;
   totalItems: number;
   totalPrice: number;
 }
 
 const CART_STORAGE_KEY = "yarn_shop_cart";
+const CART_KITS_STORAGE_KEY = "yarn_shop_cart_kits";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -61,17 +95,31 @@ function loadCart(): CartItem[] {
   }
 }
 
+function loadCartKits(): CartKitItem[] {
+  try {
+    const saved = localStorage.getItem(CART_KITS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
 function makeKey(productId: string, variantId: string): string {
   return `${productId}::${variantId}`;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(loadCart);
+  const [cartKits, setCartKits] = useState<CartKitItem[]>(loadCartKits);
 
   // Sync to localStorage whenever cart changes
   useEffect(() => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
   }, [cartItems]);
+
+  useEffect(() => {
+    localStorage.setItem(CART_KITS_STORAGE_KEY, JSON.stringify(cartKits));
+  }, [cartKits]);
 
   const addToCart = useCallback(
     (product: AddToCartPayload, quantity: number = 1) => {
@@ -132,6 +180,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => {
     setCartItems([]);
+    setCartKits([]);
   }, []);
 
   const isInCart = useCallback(
@@ -143,24 +192,51 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const totalItems = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
-    [cartItems]
+    () => cartItems.reduce((sum, item) => sum + item.quantity, 0) + cartKits.length,
+    [cartItems, cartKits]
   );
 
   const totalPrice = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    [cartItems]
+    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + cartKits.reduce((sum, kit) => sum + kit.price, 0),
+    [cartItems, cartKits]
+  );
+
+  const addKitToCart = useCallback((kit: AddKitToCartPayload) => {
+    setCartKits((prev) => {
+      const existing = prev.find((item) => item.kitId === kit.kitId);
+      if (existing) {
+        return prev.map((item) =>
+          item.kitId === kit.kitId ? { ...kit, productCount: kit.products.length } : item
+        );
+      }
+      return [...prev, { ...kit, productCount: kit.products.length }];
+    });
+  }, []);
+
+  const removeKitFromCart = useCallback((kitId: string) => {
+    setCartKits((prev) => prev.filter((item) => item.kitId !== kitId));
+  }, []);
+
+  const isKitInCart = useCallback(
+    (kitId: string): boolean => {
+      return cartKits.some((item) => item.kitId === kitId);
+    },
+    [cartKits]
   );
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
+        cartKits,
         addToCart,
+        addKitToCart,
         removeFromCart,
+        removeKitFromCart,
         updateQuantity,
         clearCart,
         isInCart,
+        isKitInCart,
         totalItems,
         totalPrice,
       }}

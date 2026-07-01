@@ -5,6 +5,10 @@ interface FavoritesContextType {
   favorites: string[];
   toggleFavorite: (productId: string) => void;
   isFavorite: (productId: string) => boolean;
+  favoriteKits: string[];
+  toggleFavoriteKit: (kitId: string) => void;
+  isFavoriteKit: (kitId: string) => boolean;
+  clearAllFavorites: () => void;
   savedDIYPosts: string[];
   toggleDIYPostSave: (postId: string) => void;
   isDIYPostSaved: (postId: string) => boolean;
@@ -17,6 +21,10 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem("lenEm_favorites");
     return saved ? JSON.parse(saved) : [];
   });
+  const [favoriteKits, setFavoriteKits] = useState<string[]>(() => {
+    const saved = localStorage.getItem("lenEm_favorite_kits");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [savedDIYPosts, setSavedDIYPosts] = useState<string[]>(() => {
     const saved = localStorage.getItem("lenem_saved_diy_posts");
     return saved ? JSON.parse(saved) : [];
@@ -25,6 +33,10 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("lenEm_favorites", JSON.stringify(favorites));
   }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem("lenEm_favorite_kits", JSON.stringify(favoriteKits));
+  }, [favoriteKits]);
 
   useEffect(() => {
     localStorage.setItem("lenem_saved_diy_posts", JSON.stringify(savedDIYPosts));
@@ -40,6 +52,23 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
   const isFavorite = (productId: string) => {
     return favorites.includes(productId);
+  };
+
+  const toggleFavoriteKit = (kitId: string) => {
+    setFavoriteKits((prev) =>
+      prev.includes(kitId)
+        ? prev.filter((id) => id !== kitId)
+        : [...prev, kitId]
+    );
+  };
+
+  const isFavoriteKit = (kitId: string) => {
+    return favoriteKits.includes(kitId);
+  };
+
+  const clearAllFavorites = () => {
+    setFavorites([]);
+    setFavoriteKits([]);
   };
 
   const toggleDIYPostSave = (postId: string) => {
@@ -60,6 +89,10 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
         favorites,
         toggleFavorite,
         isFavorite,
+        favoriteKits,
+        toggleFavoriteKit,
+        isFavoriteKit,
+        clearAllFavorites,
         savedDIYPosts,
         toggleDIYPostSave,
         isDIYPostSaved,

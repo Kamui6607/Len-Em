@@ -199,7 +199,7 @@ export function LessonPage() {
             </div>
 
             <Button className="mt-5 w-full" onClick={addAllToCart}>
-              <ShoppingCart className="size-4" /> Add all to cart
+              <ShoppingCart className="size-4" /> Add to cart
             </Button>
           </aside>
         </div>

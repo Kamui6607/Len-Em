@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Package, Search, SlidersHorizontal, X } from "lucide-react";
+import { Package, Search, SlidersHorizontal, X, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
@@ -13,8 +13,10 @@ import {
 import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit } from "../../api/kitService";
+import { cn } from "../components/ui/utils";
 
 const CATEGORY_META: Record<
   string,
@@ -50,6 +52,7 @@ export function Shop() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
+  const { isFavoriteKit, toggleFavoriteKit } = useFavorites();
 
   const {
     filters,
@@ -650,7 +653,7 @@ export function Shop() {
                     e.currentTarget.style.boxShadow = "";
                   }}
                 >
-                  Add all to cart
+                  Add to cart
                 </button>
                 <div className="lesson-banner-grid">
                   {recommendedProducts.map((product) => (
@@ -879,56 +882,90 @@ export function Shop() {
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {kits.length} kits available
+                    {kits.length} combos available
                   </p>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {kits.map((kit) => (
-                      <Link
-                        key={kit._id}
-                        to={`/kits/${kit._id}`}
-                        className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        aria-label={`Xem chi tiết combo ${kit.name}`}
-                      >
-                        <div className="aspect-[4/3] overflow-hidden bg-muted">
-                          <img
-                            src={kit.thumbnail}
-                            alt={kit.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (!target.dataset.fallback) {
-                                target.dataset.fallback = "true";
-                                target.src = `https://picsum.photos/seed/${kit._id}/400/300`;
-                              }
-                            }}
-                          />
-                        </div>
-                        <div className="p-4 space-y-2">
-                          <h3 className="font-semibold group-hover:text-primary">
-                            {kit.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {kit.description}
-                          </p>
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-lg font-bold text-primary">
-                              {formatPrice(kit.price)}
-                            </span>
-                            <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
-                              {kit.level}
-                            </span>
+                    {kits.map((kit) => {
+                      const isFavorite = isFavoriteKit(kit._id);
+                      
+                      return (
+                        <Link
+                          key={kit._id}
+                          to={`/kits/${kit._id}`}
+                          className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          aria-label={`Xem chi tiết combo ${kit.name}`}
+                        >
+                          <div className="aspect-[4/3] overflow-hidden bg-muted relative">
+                            <img
+                              src={kit.thumbnail}
+                              alt={kit.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.fallback) {
+                                  target.dataset.fallback = "true";
+                                  target.src = `https://picsum.photos/seed/${kit._id}/400/300`;
+                                }
+                              }}
+                            />
+                            {/* Favorite button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleFavoriteKit(kit._id);
+                                toast.success(
+                                  isFavorite
+                                    ? "Đã xoá khỏi danh sách yêu thích"
+                                    : "Đã thêm vào danh sách yêu thích"
+                                );
+                              }}
+                              className="absolute top-3 right-3 w-9 h-9 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
+                              style={{
+                                background: "var(--card)",
+                                opacity: 0.9,
+                                touchAction: "manipulation",
+                                WebkitTapHighlightColor: "transparent",
+                              }}
+                            >
+                              <Heart
+                                className={cn(
+                                  "w-4 h-4 transition-colors",
+                                  isFavorite
+                                    ? "fill-destructive text-destructive"
+                                    : "text-muted-foreground hover:text-destructive"
+                                )}
+                              />
+                            </button>
                           </div>
-                          <div className="pt-1 flex items-center justify-between gap-3">
-                            <p className="text-xs text-muted-foreground">
-                              {kit.productIds.length} products included
+                          <div className="p-4 space-y-2">
+                            <h3 className="font-semibold group-hover:text-primary">
+                              {kit.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {kit.description}
                             </p>
-                            <span className="text-xs font-medium text-primary">
-                              Xem chi tiết →
-                            </span>
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="text-lg font-bold text-primary">
+                                {formatPrice(kit.price)}
+                              </span>
+                              <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
+                                {kit.level}
+                              </span>
+                            </div>
+                            <div className="pt-1 flex items-center justify-between gap-3">
+                              <p className="text-xs text-muted-foreground">
+                                {kit.productIds.length} products included
+                              </p>
+                              <span className="text-xs font-medium text-primary">
+                                Xem chi tiết →
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </>
               )}

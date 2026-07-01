@@ -73,7 +73,7 @@ export function Navigation({ cartCount }: NavigationProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { favorites } = useFavorites();
+  const { favorites, favoriteKits } = useFavorites();
   const { isAuthenticated, signOut } = useAuth();
   const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -270,8 +270,8 @@ export function Navigation({ cartCount }: NavigationProps) {
                 >
                   <Link to="/love" aria-label="Favorites">
                     <Heart className="size-5" />
-                    {favorites.length > 0 && (
-                      <Counter>{favorites.length}</Counter>
+                    {(favorites.length + favoriteKits.length) > 0 && (
+                      <Counter>{favorites.length + favoriteKits.length}</Counter>
                     )}
                   </Link>
                 </Button>
@@ -453,7 +453,7 @@ export function Navigation({ cartCount }: NavigationProps) {
               className="rounded-full min-h-[44px]"
             >
               <Link to="/love" onClick={() => setIsMobileMenuOpen(false)}>
-                Saved ({favorites.length})
+                Saved ({favorites.length + favoriteKits.length})
               </Link>
             </Button>
             <Button
