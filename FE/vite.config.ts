@@ -19,6 +19,13 @@ export default defineConfig({
   server: {
     port: 5000,
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'https://yarn-shop-be.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 
   build: {
