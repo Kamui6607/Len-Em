@@ -42,12 +42,14 @@ export interface UserDetailResponse {
 }
 
 export interface UpdateUserRequest {
+  username?: string;
   email?: string;
   fullName?: string;
   phone?: string;
   address?: string;
   gender?: UserGender;
   dateOfBirth?: string;
+  subscription?: string;
 }
 
 export interface UpdateStatusRequest {
@@ -95,6 +97,12 @@ export const userService = {
   updateUser: (userId: string, data: UpdateUserRequest) =>
     axiosClient.patch<ApiResponse<{ updatedResult: UserDetailResponse["result"] }>>(
       `${USERS_BASE}/${userId}`, { userData: data }
+    ),
+
+  /** PATCH /users/admin-update/{queryUserId} — Admin/Staff update any user's data (except role & status) */
+  adminUpdateUser: (queryUserId: string, data: UpdateUserRequest) =>
+    axiosClient.patch<ApiResponse<{ updatedResult: UserDetailResponse["result"] }>>(
+      `${USERS_BASE}/admin-update/${queryUserId}`, { userData: data }
     ),
 
   /** DELETE /users/{userId} — Soft delete user (Admin only) */
