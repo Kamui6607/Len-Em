@@ -121,6 +121,7 @@ axiosClient.interceptors.response.use(
       return axiosClient(original);
     } catch (refreshError) {
       flushQueue(refreshError, null);
+      forceLogout();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
