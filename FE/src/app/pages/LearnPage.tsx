@@ -13,6 +13,7 @@ import { learnCourses, freeVideos } from "../../features/learn/data/learn.mock";
 import { useAuth } from "../../hooks/useAuth";
 import type { CourseLevel } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
+import { formatPrice } from "../../lib/formatPrice";
 
 const levelLabels: Record<CourseLevel, string> = {
   beginner: "Beginner",
@@ -179,7 +180,7 @@ export function LearnPage() {
                       </Badge>
                       {course.price && course.price > 0 && (
                         <Badge className="absolute right-3 top-3 border-amber-200 bg-amber-100 text-amber-800">
-                          {course.price.toLocaleString()}₫
+                          {formatPrice(course.price)}
                         </Badge>
                       )}
                       {course.price === 0 && (
@@ -223,7 +224,7 @@ export function LearnPage() {
                             }
                           }}
                         >
-                          {course.price && course.price > 0 ? `Mua ngay ${course.price.toLocaleString()}₫` : "Bắt đầu học"}
+                          {course.price && course.price > 0 ? `Mua ngay ${formatPrice(course.price)}` : "Bắt đầu học"}
                         </Link>
                       </Button>
                     </CardContent>
