@@ -9,6 +9,7 @@ import { fetchProductById } from "../../features/shop/services/product.service";
 import { ProductCard } from "../components/ProductCard";
 import { kitService } from "../../api/kitService";
 import { cn } from "../components/ui/utils";
+import { formatPrice } from "../../lib/formatPrice";
 import type { Product } from "../data/products";
 import type { Kit } from "../../api/kitService";
 
@@ -228,10 +229,7 @@ export function Love() {
                     </p>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-lg font-bold text-primary">
-                        {new Intl.NumberFormat("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        }).format(kit.price)}
+                        {formatPrice(kit.price)}
                       </span>
                       <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
                         {kit.level}

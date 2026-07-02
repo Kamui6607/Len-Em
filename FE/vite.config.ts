@@ -16,6 +16,11 @@ export default defineConfig({
 
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
+  server: {
+    port: 5000,
+    allowedHosts: true,
+  },
+
   build: {
     rollupOptions: {
       output: {
