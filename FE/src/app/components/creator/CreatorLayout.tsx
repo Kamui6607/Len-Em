@@ -33,7 +33,7 @@ export function CreatorLayout({ children }: CreatorLayoutProps) {
         {children}
       </DashboardShell>
 
-      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl border border-[#d9c8ae] bg-[#fff8ed]/95 p-2 shadow-2xl shadow-[#8f4f3d]/15 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl border border-[var(--color-warm-border)] bg-[var(--color-warm-bg)]/95 p-2 shadow-2xl shadow-[#8f4f3d]/15 backdrop-blur md:hidden">
         {mobileItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -43,7 +43,7 @@ export function CreatorLayout({ children }: CreatorLayoutProps) {
               to={item.path}
               className={cn(
                 "flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition",
-                active ? "bg-[#b7664e] text-white" : "text-[#6d5c4d] hover:bg-[#eadcc7]",
+                active ? "bg-[var(--color-warm-accent)] text-white" : "text-[var(--color-warm-text-secondary)] hover:bg-[var(--color-warm-surface)]",
               )}
             >
               <Icon className="h-4 w-4" />

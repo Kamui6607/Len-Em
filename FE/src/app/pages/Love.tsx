@@ -260,10 +260,27 @@ export function Love() {
                         });
                         toast.success(`Đã thêm combo "${kit.name}" vào giỏ hàng`);
                       }}
-                      className="w-full mt-3 bg-primary text-primary-foreground py-2 px-4 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                      className="add-to-cart-btn mt-3"
                     >
-                      <ShoppingCart className="w-4 h-4" />
-                      Add to cart
+                      <div className="btn-text">
+                        <ShoppingCart className="w-4 h-4" />
+                        Add to cart
+                      </div>
+                      <div className="btn-icon">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="9" cy="21" r="1" />
+                          <circle cx="20" cy="21" r="1" />
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                        </svg>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -281,13 +298,30 @@ export function Love() {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Wishlist:</p>
               <p className="text-base font-bold text-primary">{resolvedProducts.length} items</p>
             </div>
-            <button
-              onClick={addAllToCart}
-              className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 hover:shadow-lg active:scale-[0.97] transition-all duration-200 shadow-sm"
-            >
-              <ShoppingCart className="size-4" />
-              Add to cart
-            </button>
+             <button
+               onClick={addAllToCart}
+               className="add-to-cart-btn"
+             >
+               <div className="btn-text">
+                 <ShoppingCart className="size-4" />
+                 Add to cart
+               </div>
+               <div className="btn-icon">
+                 <svg
+                   xmlns="http://www.w3.org/2000/svg"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   strokeWidth="2.5"
+                   strokeLinecap="round"
+                   strokeLinejoin="round"
+                 >
+                   <circle cx="9" cy="21" r="1" />
+                   <circle cx="20" cy="21" r="1" />
+                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                 </svg>
+               </div>
+             </button>
           </div>
         </div>
       )}

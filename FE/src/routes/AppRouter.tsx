@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router";
+import { AnimatedBackground } from "../components/motion/AnimatedBackground";
 import { RequireAuth } from "../components/auth/RequireAuth";
 import { RequireRole } from "../components/auth/RequireRole";
 import { StoreLayout } from "../app/components/layout/StoreLayout";
@@ -16,9 +17,6 @@ const ProductDetail = lazy(() =>
   import("../app/pages/ProductDetail").then((m) => ({
     default: m.ProductDetail,
   })),
-);
-const Checkout = lazy(() =>
-  import("../app/pages/Checkout").then((m) => ({ default: m.Checkout })),
 );
 const DIYFeedPage = lazy(() =>
   import("../app/pages/DIYFeedPage").then((m) => ({ default: m.DIYFeedPage })),
@@ -77,12 +75,17 @@ const ForgotPasswordPage = lazy(() =>
 
 // ── NEW: Shop cart page (uses CartContext) ──
 const ShopCart = lazy(() =>
-  import("../app/pages/shop/Cart").then((m) => ({ default: m.ShopCart })),
+  import("../app/pages/shop/CartPage").then((m) => ({ default: m.CartPage })),
 );
 
 // ── NEW: Checkout (route /order) ──
 const ShopCheckout = lazy(() =>
   import("../app/pages/shop/Checkout").then((m) => ({ default: m.Checkout })),
+);
+
+// ── NEW: Order Success (route /order/success) ──
+const OrderSuccess = lazy(() =>
+  import("../app/pages/shop/OrderSuccess").then((m) => ({ default: m.OrderSuccess })),
 );
 
 // ── NEW: My Orders + Order Detail ──
@@ -102,6 +105,9 @@ const ManageOrders = lazy(() =>
 const KitDetail = lazy(() =>
   import("../app/pages/KitDetail").then((m) => ({ default: m.KitDetail })),
 );
+const MyReportsPage = lazy(() =>
+  import("../app/pages/MyReportsPage").then((m) => ({ default: m.MyReportsPage })),
+);
 
 function StoreOutlet() {
   return (
@@ -115,7 +121,10 @@ function StoreOutlet() {
 
 export function AppRouter() {
   return (
-    <Routes>
+    <>
+      {/* Global background — applies to all pages, theme-aware */}
+      <AnimatedBackground />
+      <Routes>
       {/* ===== Landing Page — Len&Em entry point with StoreLayout ===== */}
       <Route element={<StoreOutlet />}>
         <Route index element={<Home />} />
@@ -161,11 +170,12 @@ export function AppRouter() {
             </RequireAuth>
           }
         />
+        {/* [REDIRECT] Legacy /checkout → /order */}
         <Route
           path="checkout"
           element={
             <RequireAuth>
-              <Checkout />
+              <Navigate to="/order" replace />
             </RequireAuth>
           }
         />
@@ -175,6 +185,15 @@ export function AppRouter() {
           element={
             <RequireAuth>
               <ShopCheckout />
+            </RequireAuth>
+          }
+        />
+        {/* [NEW] Order Success (route /order/success) */}
+        <Route
+          path="order/success"
+          element={
+            <RequireAuth>
+              <OrderSuccess />
             </RequireAuth>
           }
         />
@@ -193,6 +212,15 @@ export function AppRouter() {
           element={
             <RequireAuth>
               <OrderDetail />
+            </RequireAuth>
+          }
+        />
+        {/* [NEW] My Reports */}
+        <Route
+          path="orders/reports"
+          element={
+            <RequireAuth>
+              <MyReportsPage />
             </RequireAuth>
           }
         />
@@ -301,6 +329,26 @@ export function AppRouter() {
           </RequireRole>
         }
       />
+      <Route
+        path="staff/diy"
+        element={
+          <RequireRole allowedRoles={["staff"]}>
+            <Suspense fallback={<LoadingFallback fullPage />}>
+              <AdminPage />
+            </Suspense>
+          </RequireRole>
+        }
+      />
+      <Route
+        path="staff/reports"
+        element={
+          <RequireRole allowedRoles={["staff"]}>
+            <Suspense fallback={<LoadingFallback fullPage />}>
+              <AdminPage />
+            </Suspense>
+          </RequireRole>
+        }
+      />
 
       {/* ===== Manage routes (Admin & Staff) ===== */}
       <Route
@@ -317,5 +365,6 @@ export function AppRouter() {
       {/* ===== Catch-all ===== */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

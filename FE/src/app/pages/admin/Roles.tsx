@@ -6,8 +6,9 @@ import {
   Trash2,
   X,
   Shield,
-  AlertTriangle,
   Eye,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
@@ -18,6 +19,9 @@ import { permissionService } from "../../../api/permissionService";
 import type { Permission } from "../../../types/permission";
 import { PermissionPicker } from "../../components/admin/PermissionPicker";
 import { AdminSelect } from "../../components/admin/AdminSelect";
+
+type SortField = "name" | "permissions" | "status" | "created";
+type SortDirection = "asc" | "desc";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -41,48 +45,47 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-function ConfirmDialog({
-  open,
-  title,
-  message,
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onCancel}
-      />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950">
-            <AlertTriangle size={20} className="text-destructive" />
+  function ConfirmDialog({
+    open,
+    title,
+    message,
+    onConfirm,
+    onCancel,
+  }: ConfirmDialogProps) {
+    if (!open) return null;
+    return (
+      <div className="admin-dialog-overlay" onClick={onCancel}>
+        <div
+          className="admin-dialog-content max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="admin-dialog-header">
+            <h3 className="text-base font-semibold">{title}</h3>
           </div>
-          <div>
-            <h3 className="font-bold text-lg">{title}</h3>
+          <div className="admin-dialog-body">
             <p className="text-sm text-muted-foreground">{message}</p>
           </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors"
-          >
-            Delete
-          </button>
+          <div className="admin-dialog-footer">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="btn-modal-cancel"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="btn-modal-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 // ─── Role Modal ──────────────────────────────────────────
 
@@ -112,120 +115,127 @@ interface RoleModalProps {
   onClose: () => void;
 }
 
-function RoleModal({
-  open,
-  editingId,
-  form,
-  allPermissions,
-  saving,
-  fieldErrors,
-  onChange,
-  onSave,
-  onClose,
-}: RoleModalProps) {
-  if (!open) return null;
+  function RoleModal({
+    open,
+    editingId,
+    form,
+    allPermissions,
+    saving,
+    fieldErrors,
+    onChange,
+    onSave,
+    onClose,
+  }: RoleModalProps) {
+    if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] pb-8 px-4">
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-y-auto z-10">
-        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-lg font-bold">
-            {editingId ? "Edit Role" : "Create Role"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-muted rounded-lg transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5 pb-4">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Role Name <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => onChange({ ...form, name: e.target.value })}
-              className={`w-full px-4 py-2.5 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary ${fieldErrors.name ? "border-destructive" : "border-border"}`}
-              placeholder="e.g. Manager"
-            />
-            {fieldErrors.name && (
-              <p className="text-xs text-destructive mt-1">
-                {fieldErrors.name}
-              </p>
-            )}
+    return (
+      <div className="admin-dialog-overlay" onClick={onClose}>
+        <div
+          className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="admin-dialog-header">
+            <h3 className="text-base font-semibold">
+              {editingId ? "Edit Role" : "Create Role"}
+            </h3>
+            <button
+              onClick={onClose}
+              style={{ color: "var(--foreground-muted)" }}
+              className="admin-action-btn absolute top-4 right-4"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
+          <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+            <div className="admin-dialog-body space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Role Name <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => onChange({ ...form, name: e.target.value })}
+                  className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
+                  placeholder="e.g. Manager"
+                />
+                {fieldErrors.name && (
+                  <p className="text-xs text-destructive mt-1">
+                    {fieldErrors.name}
+                  </p>
+                )}
+              </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Description
-            </label>
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                onChange({ ...form, description: e.target.value })
-              }
-              rows={3}
-              className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              placeholder="Optional description..."
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Description
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) =>
+                    onChange({ ...form, description: e.target.value })
+                  }
+                  rows={3}
+                  className="input w-full resize-none"
+                  placeholder="Optional description..."
+                />
+              </div>
 
-          {/* isActive */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) =>
-                onChange({ ...form, isActive: e.target.checked })
-              }
-              className="rounded border-border"
-            />
-            <span className="text-sm font-medium">Active</span>
-          </label>
+              {/* isActive */}
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) =>
+                    onChange({ ...form, isActive: e.target.checked })
+                  }
+                  className="rounded border-border"
+                />
+                <div>
+                  <span className="text-sm font-medium">Active</span>
+                  <p className="text-xs text-muted-foreground">
+                    Inactive roles cannot be assigned to users
+                  </p>
+                </div>
+              </label>
 
-          {/* Permissions */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Permissions
-            </label>
-            <PermissionPicker
-              permissions={allPermissions}
-              selected={form.permissions}
-              onChange={(perms) => onChange({ ...form, permissions: perms })}
-              maxHeightClassName="max-h-56"
-            />
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]"
-          >
-            {saving ? "Saving..." : editingId ? "Update" : "Create"}
-          </button>
+              {/* Permissions */}
+              <div>
+                <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
+                  Permissions
+                </label>
+                <PermissionPicker
+                  permissions={allPermissions}
+                  selected={form.permissions}
+                  onChange={(perms) => onChange({ ...form, permissions: perms })}
+                  maxHeightClassName="max-h-56"
+                />
+              </div>
+            </div>
+            <div className="admin-dialog-footer">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="btn-modal-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-modal-primary"
+              >
+                {saving ? "Saving…" : editingId ? "Update Role" : "Create Role"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 // ─── Main Component ──────────────────────────────────────
 
@@ -246,6 +256,8 @@ export function Roles() {
   // ── Filter state ──
   const [searchName, setSearchName] = useState("");
   const [filterActive, setFilterActive] = useState<boolean | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   // ── Modal state ──
   const [showModal, setShowModal] = useState(false);
@@ -412,11 +424,53 @@ export function Roles() {
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
+    const active = sortField === field;
+    return (
+      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+        <button
+          type="button"
+          onClick={() => handleSort(field)}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+        >
+          {label}
+          <span className="flex flex-col items-center justify-center -space-y-[3px]">
+            <ChevronUp className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+            <ChevronDown className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+          </span>
+        </button>
+      </th>
+    );
+  }
+
+  const sortedRoles = [...roles].sort((a, b) => {
+    if (!sortField) return 0;
+    const getValue = (role: Role) => {
+      switch (sortField) {
+        case "name": return role.name;
+        case "permissions": return role.permissions?.length ?? 0;
+        case "status": return role.isActive ? "active" : "inactive";
+        case "created": return new Date(role.createdAt).getTime();
+      }
+    };
+    const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
+    return sortDirection === "asc" ? cmp : -cmp;
+  });
+
   // ── Render ──
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="mb-2">Role Management</h1>
           <p className="text-muted-foreground">
@@ -429,80 +483,77 @@ export function Roles() {
           </p>
         </div>
         {isAdmin && (
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all active:scale-[0.97]"
-          >
-            <Plus size={18} /> Create Role
-          </button>
-        )}
-      </div>
-
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          />
-        </div>
-
-        <AdminSelect
-          value={filterActive === null ? "" : filterActive ? "true" : "false"}
-          options={[
-            { value: "", label: "All status" },
-            { value: "true", label: "Active", dotClassName: "bg-emerald-500" },
-            { value: "false", label: "Inactive", dotClassName: "bg-rose-500" },
-          ]}
-          onChange={(val) =>
-            setFilterActive(val === "" ? null : val === "true")
-          }
-          className="min-w-[160px]"
-        />
+           <button
+             onClick={openCreate}
+             className="btn-create"
+           >
+             <Plus size={18} />
+             Create
+           </button>
+         )}
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
+        {/* Filters */}
+        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                className="input w-full"
+                style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
+              />
+            </div>
+
+            <AdminSelect
+              value={filterActive === null ? "" : filterActive ? "true" : "false"}
+              options={[
+                { value: "", label: "All status" },
+                { value: "true", label: "Active", dotClassName: "bg-emerald-500" },
+                { value: "false", label: "Inactive", dotClassName: "bg-rose-500" },
+              ]}
+              onChange={(val) =>
+                setFilterActive(val === "" ? null : val === "true")
+              }
+              className="min-w-[160px]"
+            />
+          </div>
+        </div>
+
+        {/* Table Body */}
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             Loading...
           </div>
         ) : roles.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Shield size={40} className="mx-auto mb-3 opacity-40" />
             <p>No roles found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
+          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+            <table className="admin-table w-full">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Role Name
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Permissions
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Created
-                  </th>
+                  <SortableHeader label="Role Name" field="name" />
+                  <SortableHeader label="Permissions" field="permissions" align="right" />
+                  <SortableHeader label="Status" field="status" />
+                  <SortableHeader label="Created" field="created" />
                   <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {roles.map((role) => (
+                {sortedRoles.map((role) => (
                   <tr
                     key={role._id}
-                    className="border-t border-border hover:bg-muted/30 transition-colors"
+                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
                   >
                     <td className="px-6 py-4">
                       <span className="font-medium text-sm">{role.name}</span>
@@ -519,10 +570,8 @@ export function Roles() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          role.isActive
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                            : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+                        className={`badge ${
+                          role.isActive ? "badge-green" : "badge-red"
                         }`}
                       >
                         <span
@@ -538,7 +587,7 @@ export function Roles() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => navigate(`/admin/roles/${role._id}`)}
-                          className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                          className="admin-action-btn view"
                           title="View details"
                         >
                           <Eye size={16} />
@@ -547,14 +596,14 @@ export function Roles() {
                           <>
                             <button
                               onClick={() => openEdit(role)}
-                              className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                              className="admin-action-btn edit"
                               title="Edit"
                             >
                               <Edit3 size={16} />
                             </button>
                             <button
                               onClick={() => setDeleteTarget(role)}
-                              className="p-2 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
+                              className="admin-action-btn delete"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -575,7 +624,7 @@ export function Roles() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="btn-secondary"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -585,7 +634,7 @@ export function Roles() {
             Page {page} of {totalPages}
           </span>
           <button
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="btn-secondary"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

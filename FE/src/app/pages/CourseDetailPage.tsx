@@ -1,19 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
-import { BookOpen, Clock, Play, ShoppingCart, Star, Users } from "lucide-react";
+import { BookOpen, Clock, Play, Star, Users, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { learnCourses, materialCombos, getLessonsByCourse } from "../../features/learn/data/learn.mock";
-import { formatPrice } from "../../lib/formatPrice";
-import { useLearnStore } from "../../features/learn/store/learn.store";
+import { courseService } from "../../api/courseService";
+import { lessonService } from "../../api/lessonService";
+import { kitService, type Kit } from "../../api/kitService";
+import { productService, type Product } from "../../api/productService";
+import { materialCombos } from "../../features/learn/data/learn.mock";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
-import type { CourseLevel } from "../../features/learn/types/learn.types";
+import type { Course, CourseLevel, Lesson } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
+import { formatPrice } from "../../lib/formatPrice";
 
 const levelLabels: Record<CourseLevel, string> = {
   beginner: "Beginner",
@@ -27,17 +28,198 @@ const levelStyles: Record<CourseLevel, string> = {
   advanced: "border-red-200 bg-red-100 text-red-700",
 };
 
+/**
+ * Extract ID from various reference formats.
+ * Handles: string ID, { comboId }, { kitId }, { productId }, { _id }, { id }, or populated objects.
+ */
+function extractId(ref: unknown): string | null {
+  if (!ref) return null;
+  
+  // String ID
+  if (typeof ref === "string") {
+    return ref;
+  }
+  
+  // Object reference
+  if (typeof ref === "object") {
+    const obj = ref as Record<string, unknown>;
+    
+    // Check for common ID field names
+    const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
+    if (typeof id === "string" && id.length > 0) {
+      return id;
+    }
+    
+    // If object has _id or id but no specific field, it might be a populated object
+    // Return the object's _id or id as the reference ID
+    if (obj._id && typeof obj._id === "string") {
+      return obj._id;
+    }
+    if (obj.id && typeof obj.id === "string") {
+      return obj.id;
+    }
+  }
+  
+  return null;
+}
+
 export function CourseDetailPage() {
-  const { addToCart } = useCart();
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const setCurrentCourse = useLearnStore((state) => state.setCurrentCourse);
-  const course = learnCourses.find((item) => item.id === courseId);
+  const { isAuthenticated, user, setUser } = useAuth();
+  const { addKitToCart, addToCart } = useCart();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [kits, setKits] = useState<Kit[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
+
+  // Get enrolled courses from user profile
+  const enrolledCourses = user?.enrolled || [];
+
+  // Check if current course is enrolled
+  const isEnrolled = courseId ? enrolledCourses.includes(courseId) : false;
 
   useEffect(() => {
-    if (courseId) setCurrentCourse(courseId);
-  }, [courseId, setCurrentCourse]);
+    if (!courseId) return;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const courseRes = await courseService.getById(courseId);
+        const courseData = courseRes.data.data.course;
+        setCourse(courseData);
+
+        // linkedLessons from API may be:
+        // 1. Populated lesson objects (full data) — use directly
+        // 2. String IDs — fetch individually
+        const rawLessons = courseData.linkedLessons || [];
+        const populatedLessons: Lesson[] = [];
+        const lessonIdsToFetch: string[] = [];
+
+        for (const item of rawLessons) {
+          if (!item) continue;
+
+          // Case 1: It's a populated lesson object (has title/videoUrl)
+          if (typeof item === "object") {
+            const obj = item as Record<string, unknown>;
+            if (obj.title && typeof obj.title === "string") {
+              populatedLessons.push(item as unknown as Lesson);
+              continue;
+            }
+            // Try to extract _id from object
+            const rawId = obj._id || obj.id;
+            if (typeof rawId === "string" && rawId.length > 0) {
+              lessonIdsToFetch.push(rawId);
+            }
+            continue;
+          }
+
+          // Case 2: It's a string ID
+          if (typeof item === "string" && item.length > 0) {
+            lessonIdsToFetch.push(item);
+          }
+        }
+
+        // Fetch any remaining lesson IDs
+        if (lessonIdsToFetch.length > 0) {
+          const lessonPromises = lessonIdsToFetch.map((id) =>
+            lessonService.getById(id).then((res) => res.data.data.lesson).catch(() => null)
+          );
+          const fetchedLessons = (await Promise.all(lessonPromises)).filter((l): l is Lesson => l !== null);
+          populatedLessons.push(...fetchedLessons);
+        }
+
+        const courseLessons = populatedLessons.sort((a, b) => a.order - b.order);
+        setLessons(courseLessons);
+
+        // Fetch linked combos from API using kitService.getById for each comboId
+        const comboRefs = courseData.linkedCombo || [];
+        const comboIds: string[] = comboRefs.map((ref) => extractId(ref)).filter((id): id is string => id !== null);
+        // Also check for kitId field in case API uses different naming
+        const kitIdsFromRefs: string[] = comboRefs.map((ref) => {
+          if (typeof ref === "object" && ref !== null) {
+            const obj = ref as Record<string, unknown>;
+            if (typeof obj.kitId === "string") return obj.kitId;
+          }
+          return null;
+        }).filter((id): id is string => id !== null);
+        // Merge comboIds and kitIds, removing duplicates
+        const allComboIds = [...new Set([...comboIds, ...kitIdsFromRefs])];
+
+        // Fetch each kit by ID
+        if (allComboIds.length > 0) {
+          try {
+            const kitPromises = allComboIds.map((id) =>
+              kitService.getById(id).then((res) => res.data.data?.kit).catch(() => null)
+            );
+            const fetchedKits = (await Promise.all(kitPromises)).filter((k): k is Kit => k !== null);
+            setKits(fetchedKits);
+          } catch {
+            // Fallback to mock data
+            const mockKits = materialCombos
+              .filter((c) => allComboIds.includes(c.id))
+              .map((c) => ({
+                _id: c.id,
+                name: c.name,
+                description: c.description,
+                thumbnail: c.thumbnail,
+                level: c.level,
+                price: c.price,
+                productIds: c.productIds.map((pid) => ({
+                  _id: pid,
+                  name: pid,
+                  description: "",
+                  category: "",
+                  image: "",
+                  tags: [],
+                  variants: [{ _id: "default", color: "", hexCode: "#ccc", price: 0, stock: 0, image: "" }],
+                  isActive: true,
+                  createdAt: "",
+                  updatedAt: "",
+                  __v: 0,
+                })),
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+                __v: 0,
+              } as Kit));
+            setKits(mockKits);
+          }
+        }
+
+        // Fetch linked products from lessons' linkedProduct
+        const productIdsFromLessons = new Set<string>();
+        for (const lesson of courseLessons) {
+          if (lesson.linkedProduct) {
+            for (const lp of lesson.linkedProduct) {
+              const extractedId = extractId(lp);
+              if (extractedId) {
+                productIdsFromLessons.add(extractedId);
+              }
+            }
+          }
+        }
+
+        if (productIdsFromLessons.size > 0) {
+          try {
+            const productPromises = Array.from(productIdsFromLessons).map((id) =>
+              productService.getById(id).then((res) => res.data.data?.product).catch(() => null)
+            );
+            const fetchedProducts = (await Promise.all(productPromises)).filter((p): p is Product => p !== null);
+            setProducts(fetchedProducts);
+          } catch {
+            // Silently fail - products are optional
+          }
+        }
+      } catch {
+        toast.error("Failed to load course");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [courseId]);
 
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
@@ -52,41 +234,136 @@ export function CourseDetailPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (!course) return <Navigate to="/learn" replace />;
-
-  const lessons = getLessonsByCourse(course.id);
-  const firstLesson = lessons[0];
-  const combos = materialCombos.filter((combo) => course.linkedComboIds.includes(combo.id));
-
-  const requireAuth = (action: () => void) => {
+  const handleEnrollAndStart = useCallback(async (event: React.MouseEvent) => {
     if (!isAuthenticated) {
+      event.preventDefault();
       navigate("/auth/login");
       return;
     }
-    action();
-  };
 
-  const addComboToCart = (productIds: string[], comboName: string) => {
-    productIds.forEach((productId) => {
-      addToCart({
-        productId,
-        variantId: "default",
-        name: comboName,
-        image: course.thumbnail,
-        color: "",
-        hexCode: "#ccc",
-        price: 0,
-        stock: 999,
-      });
+    if (isEnrolled || !courseId) {
+      // Already enrolled — just navigate to first lesson
+      const fl = lessons[0];
+      if (fl) {
+        navigate(`/learn/${courseId}/lesson/${fl._id}`);
+      }
+      return;
+    }
+
+    event.preventDefault();
+    try {
+      setEnrolling(true);
+      const res = await courseService.enroll(courseId);
+      const { enrolledCount } = res.data.data;
+
+      // Update course enrolledCount
+      if (course) {
+        setCourse({ ...course, enrolledCount });
+      }
+
+      // Update user's enrolled array in auth store
+      if (user) {
+        setUser({
+          ...user,
+          enrolled: [...enrolledCourses, courseId],
+        });
+      }
+
+      toast.success("Enrolled successfully!");
+      const fl = lessons[0];
+      if (fl) {
+        navigate(`/learn/${courseId}/lesson/${fl._id}`);
+      }
+    } catch (error) {
+      // Check if already enrolled from error response
+      const err = error as { response?: { data?: { message?: string } } };
+      if (err?.response?.data?.message === "Already enrolled") {
+        // Still navigate to course to sync with backend
+        const fl = lessons[0];
+        if (fl) {
+          navigate(`/learn/${courseId}/lesson/${fl._id}`);
+        }
+      } else {
+        toast.error("Failed to enroll");
+      }
+    } finally {
+      setEnrolling(false);
+    }
+  }, [isAuthenticated, isEnrolled, courseId, navigate, lessons, course, user, enrolledCourses, setUser]);
+
+  // Get unique products from lessons (for display)
+  const uniqueProducts = useMemo(() => {
+    const seen = new Set<string>();
+    return products.filter((p) => {
+      if (seen.has(p._id)) return false;
+      seen.add(p._id);
+      return true;
     });
-    toast.success(`${comboName} added to cart`);
-  };
+  }, [products]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background px-4 py-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex items-center justify-center py-20 text-muted-foreground">Loading course...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) return <Navigate to="/learn" replace />;
+
+  const firstLesson = lessons[0];
 
   const handleStartLearning = (event: React.MouseEvent) => {
     if (!isAuthenticated) {
       event.preventDefault();
       navigate("/auth/login");
     }
+  };
+
+  const handleAddKitToCart = (kit: Kit) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    const kitProducts = kit.productIds.map((product) => {
+      const variant = product.variants[0];
+      return {
+        productId: product._id,
+        variantId: variant?._id || "",
+        name: product.name,
+        image: variant?.image || product.image,
+        price: variant?.price || 0,
+      };
+    });
+    addKitToCart({
+      kitId: kit._id,
+      name: kit.name,
+      thumbnail: kit.thumbnail,
+      price: kit.price,
+      products: kitProducts,
+    });
+    toast.success(`Added "${kit.name}" to cart`);
+  };
+
+  const handleAddProductToCart = (product: Product) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    const variant = product.variants[0];
+    addToCart({
+      productId: product._id,
+      variantId: variant?._idVariants || "default",
+      name: product.name,
+      image: variant?.image || product.image,
+      color: variant?.color || "",
+      hexCode: variant?.hexCode || "#ccc",
+      price: variant?.price || 0,
+      stock: variant?.stock || 999,
+    });
+    toast.success(`Added "${product.name}" to cart`);
   };
 
   return (
@@ -105,16 +382,6 @@ export function CourseDetailPage() {
               </div>
               <div className="space-y-6 p-6 md:p-8">
                 <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-11">
-                      <AvatarImage src={course.creator.avatar} alt={course.creator.name} />
-                      <AvatarFallback>{course.creator.name.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Creator</p>
-                      <p className="font-medium">{course.creator.name}</p>
-                    </div>
-                  </div>
                   <Stat icon={Users} label={`${course.enrolledCount.toLocaleString()} enrolled`} />
                   <Stat icon={Star} label={`${course.rating} rating`} className="text-yellow-500" />
                   <Stat icon={Clock} label={`${course.totalDuration} min`} />
@@ -130,9 +397,13 @@ export function CourseDetailPage() {
                 </div>
 
                 {firstLesson && (
-                  <Button asChild size="lg">
-                    <Link to={`/learn/${course.id}/lesson/${firstLesson.id}`} onClick={handleStartLearning}>
-                      <Play className="size-4" /> Start Learning
+                  <Button asChild size="lg" disabled={enrolling}>
+                    <Link
+                      to={isEnrolled ? `/learn/${course._id}/lesson/${firstLesson._id}` : "#"}
+                      onClick={handleEnrollAndStart}
+                    >
+                      <Play className="size-4" />
+                      {enrolling ? "Enrolling..." : isEnrolled ? "Start" : "Bắt đầu học"}
                     </Link>
                   </Button>
                 )}
@@ -141,9 +412,9 @@ export function CourseDetailPage() {
 
             <section className="rounded-2xl border bg-card p-6 mb-20 md:mb-0">
               <h2 className="mb-4 text-2xl font-semibold">Lessons</h2>
-              <Accordion type="single" collapsible defaultValue={lessons[0]?.id}>
+              <Accordion type="single" collapsible defaultValue={lessons[0]?._id}>
                 {lessons.map((lesson) => (
-                  <AccordionItem key={lesson.id} value={lesson.id}>
+                  <AccordionItem key={lesson._id} value={lesson._id}>
                     <AccordionTrigger>
                       <div className="flex flex-1 items-center justify-between pr-4">
                         <span>{lesson.order}. {lesson.title}</span>
@@ -152,9 +423,9 @@ export function CourseDetailPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground">
-                        <span>{lesson.linkedProducts.length} tagged material suggestions in this lesson.</span>
+                        <span>{lesson.linkedProduct?.length ?? 0} tagged material suggestions in this lesson.</span>
                         <Button asChild variant="outline" size="sm">
-                          <Link to={`/learn/${course.id}/lesson/${lesson.id}`} onClick={handleStartLearning}>Watch lesson</Link>
+                          <Link to={`/learn/${course._id}/lesson/${lesson._id}`} onClick={handleStartLearning}>Watch lesson</Link>
                         </Button>
                       </div>
                     </AccordionContent>
@@ -164,27 +435,316 @@ export function CourseDetailPage() {
             </section>
           </main>
 
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
-            <h2 className="text-xl font-semibold">Suggested material combo</h2>
-            {combos.map((combo) => (
-              <Card key={combo.id} className="overflow-hidden">
-                <img src={combo.thumbnail} alt={combo.name} className="h-44 w-full object-cover" />
-                <CardContent className="space-y-4 p-5">
-                  <Badge className={cn("border", levelStyles[combo.level])}>{levelLabels[combo.level]}</Badge>
-                  <div>
-                    <h3 className="font-semibold">{combo.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{combo.description}</p>
+          <aside className="space-y-6 lg:sticky lg:top-24 lg:h-fit">
+            {/* ── Suggested Material Combos (Kits) ── */}
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <h2
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontSize: "1.15rem",
+                    fontWeight: 600,
+                    color: "var(--foreground)",
+                    letterSpacing: "-0.015em",
+                    margin: 0,
+                  }}
+                >
+                  Suggested material combo
+                </h2>
+                {kits.length > 0 && (
+                  <span
+                    style={{
+                      fontFamily: "'Caveat', cursive",
+                      fontSize: "0.85rem",
+                      color: "var(--primary)",
+                    }}
+                  >
+                    {kits.length} combo{kits.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+
+              {kits.length === 0 && (
+                <p
+                  style={{
+                    fontFamily: "'Caveat', cursive",
+                    fontSize: "0.9rem",
+                    color: "var(--foreground-muted)",
+                  }}
+                >
+                  No material combos linked to this course.
+                </p>
+              )}
+
+              <div className="space-y-4">
+                {kits.map((kit) => (
+                  <div
+                    key={kit._id}
+                    style={{
+                      borderRadius: "20px",
+                      overflow: "hidden",
+                      border: "1px solid var(--border)",
+                      background: "var(--surface)",
+                      boxShadow: "var(--shadow-card)",
+                    }}
+                  >
+                    <Link to={`/kits/${kit._id}`} style={{ display: "block" }}>
+                      <div style={{ position: "relative", aspectRatio: "16 / 9", overflow: "hidden", background: "var(--background)" }}>
+                        <img
+                          src={kit.thumbnail}
+                          alt={kit.name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "10px",
+                            left: "10px",
+                            padding: "3px 10px",
+                            borderRadius: "999px",
+                            background: "var(--bg-overlay-90)",
+                            backdropFilter: "blur(6px)",
+                            border: "1px solid var(--border)",
+                            fontFamily: "'Poppins', sans-serif",
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            color: "var(--primary)",
+                          }}
+                        >
+                          {kit.level}
+                        </div>
+                      </div>
+                    </Link>
+
+                    <div style={{ padding: "18px 20px 20px" }}>
+                      <Link to={`/kits/${kit._id}`} style={{ textDecoration: "none" }}>
+                        <h3
+                          style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "1rem",
+                            fontWeight: 600,
+                            color: "var(--foreground)",
+                            letterSpacing: "-0.01em",
+                            lineHeight: 1.25,
+                            margin: "0 0 6px",
+                          }}
+                        >
+                          {kit.name}
+                        </h3>
+                      </Link>
+                      <p
+                        style={{
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: "0.8rem",
+                          color: "var(--foreground-muted)",
+                          lineHeight: 1.5,
+                          margin: "0 0 16px",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical" as const,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {kit.description}
+                      </p>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          justifyContent: "space-between",
+                          marginBottom: "14px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "'Inter', sans-serif",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            color: "var(--foreground-muted)",
+                          }}
+                        >
+                          Total
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "1.25rem",
+                            fontWeight: 700,
+                            color: "var(--primary)",
+                            letterSpacing: "-0.02em",
+                          }}
+                        >
+                          {formatPrice(kit.price)}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleAddKitToCart(kit)}
+                        className="add-to-cart-btn"
+                      >
+                        <div className="btn-text">
+                          <ShoppingCart className="size-4" />
+                          Add to cart
+                        </div>
+                        <div className="btn-icon">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                          </svg>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between font-medium">
-                    <span>Total</span>
-                    <span>{formatPrice(combo.price)}</span>
-                  </div>
-                  <Button className="w-full" onClick={() => requireAuth(() => addComboToCart(combo.productIds, combo.name))}>
-                    <ShoppingCart className="size-4" /> Add to cart
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                ))}
+              </div>
+            </div>
+
+            {/* ── Linked Products ── */}
+            {uniqueProducts.length > 0 && (
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <h2
+                    style={{
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                      fontSize: "1.15rem",
+                      fontWeight: 600,
+                      color: "var(--foreground)",
+                      letterSpacing: "-0.015em",
+                      margin: 0,
+                    }}
+                  >
+                    Suggested materials
+                  </h2>
+                  <span
+                    style={{
+                      fontFamily: "'Caveat', cursive",
+                      fontSize: "0.85rem",
+                      color: "var(--primary)",
+                    }}
+                  >
+                    {uniqueProducts.length} item{uniqueProducts.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {uniqueProducts.map((product) => (
+                    <div
+                      key={product._id}
+                      style={{
+                        display: "flex",
+                        gap: "14px",
+                        alignItems: "center",
+                        padding: "12px",
+                        borderRadius: "16px",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface)",
+                      }}
+                    >
+                      <Link to={`/shop/product/${product._id}`} style={{ flexShrink: 0 }}>
+                        <img
+                          src={product.image || product.variants[0]?.image}
+                          alt={product.name}
+                          style={{
+                            width: "64px",
+                            height: "64px",
+                            borderRadius: "12px",
+                            objectFit: "cover",
+                            border: "1px solid var(--border)",
+                            display: "block",
+                          }}
+                        />
+                      </Link>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Link to={`/shop/product/${product._id}`} style={{ textDecoration: "none" }}>
+                          <h3
+                            style={{
+                              fontFamily: "'Playfair Display', serif",
+                              fontSize: "0.9rem",
+                              fontWeight: 600,
+                              color: "var(--foreground)",
+                              lineHeight: 1.2,
+                              margin: "0 0 3px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <p
+                          style={{
+                            fontFamily: "'Inter', sans-serif",
+                            fontSize: "0.72rem",
+                            color: "var(--foreground-muted)",
+                            margin: "0 0 6px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {product.description}
+                        </p>
+                        <span
+                          style={{
+                            fontFamily: "'Playfair Display', serif",
+                            fontSize: "0.88rem",
+                            fontWeight: 700,
+                            color: "var(--primary)",
+                          }}
+                        >
+                          {formatPrice(product.variants[0]?.price || 0)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleAddProductToCart(product)}
+                        className="add-to-cart-btn"
+                        aria-label={`Add ${product.name} to cart`}
+                        style={{
+                          flexShrink: 0,
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "50%",
+                        }}
+                      >
+                        <div className="btn-text">
+                          <ShoppingCart className="size-4" />
+                        </div>
+                        <div className="btn-icon">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                          </svg>
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       </div>
@@ -199,11 +759,11 @@ export function CourseDetailPage() {
             </div>
             {firstLesson && (
               <Link
-                to={`/learn/${course.id}/lesson/${firstLesson.id}`}
-                onClick={handleStartLearning}
+                to={isEnrolled ? `/learn/${course._id}/lesson/${firstLesson._id}` : "#"}
+                onClick={handleEnrollAndStart}
                 className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm text-center"
               >
-                Start Learning →
+                {enrolling ? "Enrolling..." : isEnrolled ? "Start →" : "Bắt đầu học →"}
               </Link>
             )}
           </div>

@@ -26,6 +26,7 @@ export interface ApiUser {
   dateOfBirth?: string;
   status: UserStatus;
   roleId: UserRoleRef | string;
+  avatar?: string | { url: string; publicId: string };
 }
 
 export interface UsersListResponse {

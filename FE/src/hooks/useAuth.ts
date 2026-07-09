@@ -62,5 +62,6 @@ export function useAuth() {
     login: store.login,
     logout: store.logout,
     initialize: store.initialize,
+    setUser: store.setUser,
   };
 }

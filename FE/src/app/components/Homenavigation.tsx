@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface HomeNavigationProps {
   activeSlide: number;
@@ -20,7 +21,6 @@ export function HomeNavigation({
   activeSlide,
   isDark,
   onGoTo,
-  onToggleDark,
   isAuthOpen = false,
 }: HomeNavigationProps) {
   const { isAuthenticated } = useAuth();
@@ -37,29 +37,32 @@ export function HomeNavigation({
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap');
 
         .hn-root {
-          --hn-rose:         #F2A7B2;
-          --hn-lav:          #C4B5E0;
-          --hn-sage:         #6FA08A;
-          --hn-cream:        #FDF8F2;
-          --hn-ink:          #2A2220;
+          --hn-rose:         var(--accent-blush);
+          --hn-lav:          var(--accent-lavender);
+          --hn-sage:         var(--accent-green-text);
+          --hn-warm:         var(--accent-warm);
+          --hn-cream:        var(--bg-1);
+          --hn-ink:          var(--foreground);
 
-          --hn-text:         #2A2220;
-          --hn-text2:        #7A6E6B;
-          --hn-border:       rgba(242,167,178,0.22);
-          --hn-nav-bg:       rgba(253,248,242,0.93);
-          --hn-link-active:  rgba(242,167,178,0.13);
-          --hn-link-hover:   rgba(242,167,178,0.07);
-          --hn-theme-border: rgba(242,167,178,0.22);
+          --hn-text:         var(--foreground);
+          --hn-text2:        var(--foreground-muted);
+          --hn-border:       color-mix(in srgb, var(--accent-blush) 22%, transparent);
+          --hn-nav-bg:       rgba(var(--bg-1-rgb), 0.93);
+          --hn-link-active:  color-mix(in srgb, var(--accent-blush) 13%, transparent);
+          --hn-link-hover:   color-mix(in srgb, var(--accent-blush) 7%, transparent);
         }
 
         .hn-root.hn-dark {
-          --hn-text:         #F0E8E4;
-          --hn-text2:        #A0908C;
-          --hn-border:       rgba(242,167,178,0.1);
-          --hn-nav-bg:       rgba(20,12,10,0.93);
-          --hn-link-active:  rgba(242,167,178,0.1);
-          --hn-link-hover:   rgba(242,167,178,0.05);
-          --hn-theme-border: rgba(242,167,178,0.12);
+          --hn-rose:         var(--accent-pink);
+          --hn-lav:          var(--primary);
+          --hn-sage:         var(--accent-green-text);
+          --hn-warm:         var(--accent-warm-soft);
+          --hn-text:         var(--foreground);
+          --hn-text2:        var(--foreground-muted);
+          --hn-border:       color-mix(in srgb, var(--accent-pink) 10%, transparent);
+          --hn-nav-bg:       rgba(28, 21, 38, 0.93);
+          --hn-link-active:  color-mix(in srgb, var(--accent-pink) 10%, transparent);
+          --hn-link-hover:   color-mix(in srgb, var(--accent-pink) 5%, transparent);
         }
 
         .hn-root.hn-auth-open {
@@ -103,12 +106,12 @@ export function HomeNavigation({
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #F9DDE2, #F2A7B2);
+          background: linear-gradient(135deg, var(--accent-blush), var(--accent-pink));
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 17px;
-          border: 1.5px solid rgba(242,167,178,0.4);
+          border: 1.5px solid color-mix(in srgb, var(--accent-blush) 40%, transparent);
           flex-shrink: 0;
         }
 
@@ -180,40 +183,19 @@ export function HomeNavigation({
           gap: 10px;
         }
 
-        .hn-theme-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          border: 1.5px solid var(--hn-theme-border);
-          background: transparent;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 14px;
-          color: var(--hn-text2);
-          transition: border-color 0.2s, background 0.2s, transform 0.25s;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .hn-theme-btn:hover {
-          border-color: rgba(242,167,178,0.55);
-          background: rgba(242,167,178,0.08);
-          transform: rotate(18deg);
-        }
-
         /* Sign In — prominent gradient pill */
         .hn-btn-signin {
           padding: 8px 20px;
           font-family: 'DM Sans', sans-serif;
           font-size: 0.85rem;
           font-weight: 500;
-          color: #FDF8F2;
-          background: linear-gradient(135deg, #C4B5E0 0%, #F2A7B2 55%, #F9A86C 100%);
+          color: var(--primary-foreground);
+          background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--accent-blush) 55%, var(--accent-warm) 100%);
           border: none;
           border-radius: 100px;
           cursor: pointer;
           letter-spacing: 0.01em;
-          box-shadow: 0 2px 14px rgba(242,167,178,0.35);
+          box-shadow: 0 2px 14px color-mix(in srgb, var(--accent-blush) 35%, transparent);
           transition: opacity 0.22s, transform 0.22s, box-shadow 0.22s;
           -webkit-tap-highlight-color: transparent;
           position: relative;
@@ -230,9 +212,17 @@ export function HomeNavigation({
         .hn-btn-signin:hover {
           opacity: 0.9;
           transform: translateY(-1.5px);
-          box-shadow: 0 4px 20px rgba(242,167,178,0.5);
+          box-shadow: 0 4px 20px color-mix(in srgb, var(--accent-blush) 50%, transparent);
         }
         .hn-btn-signin:active { transform: translateY(0); opacity: 1; }
+
+        .hn-root.hn-dark .hn-btn-signin {
+          background: linear-gradient(135deg, var(--primary) 0%, var(--accent-pink) 55%, var(--accent-warm-soft) 100%);
+          box-shadow: 0 2px 14px rgba(155, 111, 214, 0.35);
+        }
+        .hn-root.hn-dark .hn-btn-signin:hover {
+          box-shadow: 0 4px 20px rgba(155, 111, 214, 0.45);
+        }
 
         /* Shop now (authenticated) */
         .hn-btn-shop {
@@ -240,8 +230,8 @@ export function HomeNavigation({
           font-family: 'DM Sans', sans-serif;
           font-size: 0.85rem;
           font-weight: 500;
-          color: #FDF8F2;
-          background: linear-gradient(135deg, #2A2220 0%, #3d2e2b 100%);
+          color: var(--primary-foreground);
+          background: linear-gradient(135deg, var(--foreground) 0%, var(--foreground-secondary) 100%);
           border: none;
           border-radius: 100px;
           cursor: pointer;
@@ -250,9 +240,13 @@ export function HomeNavigation({
         }
         .hn-btn-shop:hover { opacity: 0.82; transform: translateY(-1px); }
 
+        .hn-root.hn-dark .hn-btn-shop {
+          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        }
+
         .hn-progress {
           height: 2px;
-          background: rgba(242,167,178,0.15);
+          background: color-mix(in srgb, var(--accent-blush) 15%, transparent);
         }
         .hn-progress-fill {
           height: 100%;
@@ -293,14 +287,10 @@ export function HomeNavigation({
 
           {/* Actions */}
           <div className="hn-actions">
-            <button
-              className="hn-theme-btn"
-              onClick={onToggleDark}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              title={isDark ? "Light mode" : "Dark mode"}
-            >
-              {isDark ? "🌙" : "☀️"}
-            </button>
+            {/* Shared Uiverse-style theme switch — same control used in Navigation.tsx.
+                It reads/writes ThemeContext directly, so it stays in sync with isDark
+                regardless of the onToggleDark prop passed down from the page. */}
+            <ThemeToggle size="sm" />
 
             {!isAuthenticated && (
               <button

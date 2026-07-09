@@ -20,6 +20,10 @@ export const authService = {
   register: (data: RegisterRequest) =>
     axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/signup`, data),
 
+  /** POST /auth/register  → { status, data: { userId, username, email, subscription } } (Admin only) */
+  adminRegister: (data: RegisterRequest & { roleId: string }) =>
+    axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/register`, data),
+
   /** POST /auth/refresh-token  → { status, data: { accessToken, refreshToken } }
    *  Body: { oldRefreshToken } — token rotation (old one revoked) */
   refreshToken: (oldRefreshToken: string) =>

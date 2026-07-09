@@ -5,7 +5,7 @@
 export interface Permission {
   _id: string;
   name: string;
-  resource: string;  // User, Role, Permission, Kit, Course, Lesson, Product, Video, Category, DIYPost, Order, Log, Mail
+  resource: string;  // User, Role, Permission, Kit, Course, Lesson, Product, Video, Category, DIYPost, Order, OrderReport, Log, Mail
   action: 'create' | 'read' | 'update' | 'delete' | 'manage';
   description?: string;
   createdAt: string;

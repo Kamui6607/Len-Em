@@ -56,72 +56,126 @@ export function AdminDashboard() {
       title: "Total Users",
       value: totalUsers,
       icon: Users,
-      color: "bg-primary/10 text-primary",
+      bgColor: "var(--primary-light)",
+      borderColor: "var(--primary-soft)",
+      iconBg: "var(--primary-soft)",
+      iconColor: "var(--primary)",
+      textColor: "var(--primary)",
       change: "+12%",
     },
     {
       title: "Total Products",
       value: products.length,
       icon: Package,
-      color: "bg-secondary/10 text-secondary",
+      bgColor: "var(--accent-blush)",
+      borderColor: "var(--secondary)",
+      iconBg: "var(--card)",
+      iconColor: "var(--primary)",
+      textColor: "var(--primary)",
       change: "+3",
     },
     {
       title: "Total Orders",
       value: orders.length,
       icon: ShoppingCart,
-      color: "bg-accent/10 text-accent",
+      bgColor: "var(--accent-butter)",
+      borderColor: "var(--accent-yellow)",
+      iconBg: "var(--card)",
+      iconColor: "var(--primary)",
+      textColor: "var(--primary)",
       change: `${pendingOrders} pending`,
     },
     {
       title: "Total Revenue",
       value: formatPrice(totalRevenue),
       icon: DollarSign,
-      color: "bg-primary/10 text-primary",
+      bgColor: "var(--accent-green)",
+      borderColor: "var(--accent-green-text)",
+      iconBg: "var(--card)",
+      iconColor: "var(--accent-green-text)",
+      textColor: "var(--accent-green-text)",
       change: "+18%",
     },
   ];
   const recentActivities = activities.slice(0, 10);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="mb-2">Dashboard Overview</h1>
         <p className="text-muted-foreground">
           Welcome back! Here's what's happening with your store today.
         </p>
       </div>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      {/* Stats Grid */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
             <div
               key={i}
-              className="bg-card rounded-2xl p-6 border border-border hover:shadow-lg transition-shadow"
+              className="admin-panel-glow group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              style={{ 
+                background: stat.bgColor, 
+                borderColor: stat.borderColor 
+              }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center ${stat.color}`}
-                >
-                  <Icon className="w-6 h-6" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      background: stat.iconBg,
+                      color: stat.iconColor,
+                    }}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span 
+                    className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "var(--card)",
+                      color: stat.textColor,
+                    }}
+                  >
+                    {stat.change}
+                  </span>
                 </div>
-                <span className="text-sm text-secondary">{stat.change}</span>
+                <h3 className="text-2xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
+                  {stat.value}
+                </h3>
+                <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
+                  {stat.title}
+                </p>
               </div>
-              <h3 className="text-3xl font-bold mb-1">{stat.value}</h3>
-              <p className="text-sm text-muted-foreground">{stat.title}</p>
             </div>
           );
         })}
       </div>
+
+      {/* Activity & Statistics */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-card rounded-2xl p-6 border border-border">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <Activity className="w-5 h-5 text-primary" />
+        {/* Recent Activity */}
+        <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border-light)" }}>
+          <div
+            className="p-6 border-b border-[var(--border-light)]"
+            style={{ background: "var(--surface)" }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
+                background: "var(--accent-blush)",
+                color: "var(--primary)"
+              }}>
+                <Activity className="w-5 h-5" />
+              </div>
+              <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+                Recent Activity
+              </h2>
             </div>
-            <h2>Recent Activity</h2>
           </div>
-          <div className="space-y-4">
+          <div className="p-6 space-y-4" style={{ background: "var(--card)" }}>
             {recentActivities.length > 0 ? (
               recentActivities.map((a) => (
                 <div
@@ -144,36 +198,50 @@ export function AdminDashboard() {
             )}
           </div>
         </div>
-        <div className="bg-card rounded-2xl p-6 border border-border">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-secondary" />
+
+        {/* Order Statistics */}
+        <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border-light)" }}>
+          <div
+            className="p-6 border-b border-[var(--border-light)]"
+            style={{ background: "var(--surface)" }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
+                background: "var(--accent-butter)",
+                color: "var(--primary)"
+              }}>
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+                Order Statistics
+              </h2>
             </div>
-            <h2>Order Statistics</h2>
           </div>
-          <div className="space-y-4">
+          <div className="p-6 space-y-4" style={{ background: "var(--card)" }}>
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Delivered Orders</span>
-              <span className="font-semibold text-lg">{confirmedOrders}</span>
+              <span style={{ color: "var(--foreground-muted)" }}>Delivered Orders</span>
+              <span className="font-semibold text-lg" style={{ color: "var(--foreground)" }}>
+                {confirmedOrders}
+              </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Pending Orders</span>
-              <span className="font-semibold text-lg text-accent">
+              <span style={{ color: "var(--foreground-muted)" }}>Pending Orders</span>
+              <span className="font-semibold text-lg" style={{ color: "var(--primary)" }}>
                 {pendingOrders}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Cancelled Orders</span>
-              <span className="font-semibold text-lg text-destructive">
+              <span style={{ color: "var(--foreground-muted)" }}>Cancelled Orders</span>
+              <span className="font-semibold text-lg" style={{ color: "var(--destructive)" }}>
                 {cancelledOrders}
               </span>
             </div>
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t" style={{ borderColor: "var(--border-light)" }}>
               <div className="flex justify-between items-center">
-                <span className="text-foreground font-medium">
+                <span className="font-medium" style={{ color: "var(--foreground)" }}>
                   Total Revenue
                 </span>
-                <span className="font-bold text-xl text-primary">
+                <span className="font-bold text-xl" style={{ color: "var(--primary)" }}>
                   {formatPrice(totalRevenue)}
                 </span>
               </div>

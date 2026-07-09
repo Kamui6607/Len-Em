@@ -151,6 +151,10 @@ function handleAxiosError(error: AxiosError): Promise<never> {
   }
 
   if (status && status !== 401) {
+    // Skip toast for /kits 404s — combos may not exist on backend yet
+    if (status === 404 && url.includes("/kits/")) {
+      return Promise.reject(error);
+    }
     const mapped: Record<number, string> = {
       400: "Invalid input. Please check your data.",
       403: "You don't have permission to do that.",

@@ -70,27 +70,27 @@ export function SortDropdown({
           justify-content: center;
           width: 36px;
           height: 36px;
-          background: var(--surface, #FFF9F5);
-          border: 1.5px solid rgba(193,96,78,0.22);
+          background: var(--color-warm-bg);
+          border: 1.5px solid var(--color-warm-border);
           border-radius: 12px;
           cursor: pointer;
-          color: #C1604E;
+          color: var(--color-warm-accent);
           transition: border-color 0.2s, background 0.2s, transform 0.15s;
           flex-shrink: 0;
         }
         .sort-direction-btn:hover {
-          border-color: rgba(193,96,78,0.5);
-          background: #F9EDE8;
+          border-color: var(--color-warm-border-hover);
+          background: var(--color-warm-surface);
         }
         .sort-direction-btn:active { transform: scale(0.92); }
         .dark .sort-direction-btn {
-          background: rgba(255,249,245,0.06);
-          border-color: rgba(232,153,122,0.2);
-          color: #E8997A;
+          background: var(--color-warm-bg);
+          border-color: var(--color-warm-border);
+          color: var(--color-warm-accent);
         }
         .dark .sort-direction-btn:hover {
-          background: rgba(232,153,122,0.12);
-          border-color: rgba(232,153,122,0.4);
+          background: var(--color-warm-surface);
+          border-color: var(--color-warm-border-hover);
         }
 
         .sort-direction-icon {
@@ -105,41 +105,41 @@ export function SortDropdown({
           align-items: center;
           gap: 8px;
           padding: 9px 14px 9px 12px;
-          background: var(--surface, #FFF9F5);
-          border: 1.5px solid rgba(193,96,78,0.22);
+          background: var(--color-warm-bg);
+          border: 1.5px solid var(--color-warm-border);
           border-radius: 14px;
           cursor: pointer;
           font-family: 'DM Sans', sans-serif;
           font-size: 0.85rem;
           font-weight: 400;
-          color: #2A1A14;
+          color: var(--color-warm-text);
           transition: border-color 0.2s, background 0.2s;
           white-space: nowrap;
           min-width: 148px;
           justify-content: space-between;
         }
         .sort-trigger:hover {
-          border-color: rgba(193,96,78,0.5);
-          background: #F9EDE8;
+          border-color: var(--color-warm-border-hover);
+          background: var(--color-warm-surface);
         }
         .sort-trigger.is-open {
-          border-color: #C1604E;
-          box-shadow: 0 0 0 3px rgba(193,96,78,0.14);
-          background: #F9EDE8;
+          border-color: var(--color-warm-accent);
+          box-shadow: 0 0 0 3px var(--color-warm-ring);
+          background: var(--color-warm-surface);
         }
         .dark .sort-trigger {
-          background: rgba(255,249,245,0.06);
-          border-color: rgba(232,153,122,0.2);
-          color: #F5EDE8;
+          background: var(--color-warm-bg);
+          border-color: var(--color-warm-border);
+          color: var(--color-warm-text);
         }
         .dark .sort-trigger:hover {
-          background: rgba(232,153,122,0.1);
-          border-color: rgba(232,153,122,0.38);
+          background: var(--color-warm-surface);
+          border-color: var(--color-warm-border-hover);
         }
         .dark .sort-trigger.is-open {
-          border-color: #E8997A;
-          box-shadow: 0 0 0 3px rgba(232,153,122,0.15);
-          background: rgba(232,153,122,0.1);
+          border-color: var(--color-warm-accent);
+          box-shadow: 0 0 0 3px var(--color-warm-ring);
+          background: var(--color-warm-surface);
         }
 
         .sort-trigger-left {
@@ -149,12 +149,12 @@ export function SortDropdown({
         }
 
         .sort-chevron {
-          color: #8A6860;
+          color: var(--color-warm-muted);
           flex-shrink: 0;
           transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
         }
         .sort-chevron.rotated { transform: rotate(180deg); }
-        .dark .sort-chevron { color: #9A7870; }
+        .dark .sort-chevron { color: var(--color-warm-muted); }
 
         @keyframes sortFadeIn {
           from { opacity: 0; transform: translateY(-6px) scale(0.97); }
@@ -166,8 +166,8 @@ export function SortDropdown({
           top: calc(100% + 8px);
           right: 0;
           min-width: 200px;
-          background: #FFF9F5;
-          border: 1.5px solid rgba(193,96,78,0.18);
+          background: var(--color-warm-bg);
+          border: 1.5px solid var(--color-warm-border);
           border-radius: 18px;
           padding: 6px;
           z-index: 999;
@@ -175,8 +175,8 @@ export function SortDropdown({
           animation: sortFadeIn 0.22s cubic-bezier(0.16,1,0.3,1) both;
         }
         .dark .sort-panel {
-          background: #1A110E;
-          border-color: rgba(232,153,122,0.18);
+          background: var(--color-warm-bg);
+          border-color: var(--color-warm-border);
           box-shadow: 0 8px 28px rgba(0,0,0,0.45);
         }
 
@@ -192,43 +192,43 @@ export function SortDropdown({
           font-family: 'DM Sans', sans-serif;
           font-size: 0.85rem;
           font-weight: 400;
-          color: #2A1A14;
+          color: var(--color-warm-text);
           cursor: pointer;
           text-align: left;
           transition: background 0.15s, color 0.15s;
           gap: 8px;
         }
-        .sort-option:hover { background: #F9EDE8; }
+        .sort-option:hover { background: var(--color-warm-surface); }
         .sort-option.selected {
-          background: rgba(232,153,122,0.18);
-          color: #2A1A14;
+          background: var(--color-warm-surface);
+          color: var(--color-warm-accent);
           font-weight: 500;
         }
-        .dark .sort-option { color: #F0E0D8; }
-        .dark .sort-option:hover { background: rgba(232,153,122,0.1); }
+        .dark .sort-option { color: var(--color-warm-text); }
+        .dark .sort-option:hover { background: var(--color-warm-surface); }
         .dark .sort-option.selected {
-          background: rgba(232,153,122,0.16);
-          color: #F5EDE8;
+          background: var(--color-warm-surface);
+          color: var(--color-warm-highlight);
         }
 
         .sort-check {
           width: 18px;
           height: 18px;
           border-radius: 6px;
-          background: #C1604E;
+          background: var(--color-warm-accent);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
         }
-        .dark .sort-check { background: #E8997A; }
+        .dark .sort-check { background: var(--color-warm-highlight); }
 
         .sort-divider {
           height: 1px;
-          background: rgba(193,96,78,0.12);
+          background: var(--color-warm-border);
           margin: 4px 8px;
         }
-        .dark .sort-divider { background: rgba(232,153,122,0.12); }
+        .dark .sort-divider { background: var(--color-warm-border); }
       `}</style>
 
       <div ref={ref} className={cn("sort-wrap", className)}>

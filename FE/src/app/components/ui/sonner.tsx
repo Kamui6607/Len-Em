@@ -10,7 +10,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <>
       <style>{`
-        /* ── Container: never block interactions ── */
         [data-sonner-toaster] {
           pointer-events: none !important;
         }
@@ -18,7 +17,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
           pointer-events: auto !important;
         }
 
-        /* ── Desktop: top-right ── */
         @media (min-width: 769px) {
           [data-sonner-toaster] {
             right: 16px !important;
@@ -32,7 +30,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
           }
         }
 
-        /* ── Mobile: top-center, avoid bottom nav ── */
         @media (max-width: 768px) {
           [data-sonner-toaster] {
             left: 50% !important;
@@ -47,10 +44,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
             width: 100% !important;
             max-width: 400px !important;
             font-size: 0.875rem !important;
-            padding: 10px 14px !important;
-            border-radius: 12px !important;
+            padding: 12px 16px !important;
+            border-radius: 14px !important;
           }
-          /* Compact close button on mobile */
           [data-sonner-toaster] [data-sonner-toast] [data-close-button] {
             transform: scale(0.85) !important;
           }
@@ -67,13 +63,23 @@ const Toaster = ({ ...props }: ToasterProps) => {
         toastOptions={{
           style: {
             pointerEvents: "auto",
+            background: "var(--card)",
+            color: "var(--foreground)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-lg)",
+            borderRadius: "16px",
+            padding: "14px 18px",
           },
         }}
         style={
           {
-            "--normal-bg": "var(--popover)",
-            "--normal-text": "var(--popover-foreground)",
-            "--normal-border": "var(--border)",
+            "--normal-bg": "var(--card) !important",
+            "--normal-text": "var(--foreground) !important",
+            "--normal-border": "var(--border) !important",
+            "--success-bg": "var(--accent-green) !important",
+            "--success-text": "var(--accent-green-text) !important",
+            "--error-bg": "var(--accent-red) !important",
+            "--error-text": "var(--accent-red-text) !important",
             pointerEvents: "none",
           } as React.CSSProperties
         }

@@ -9,6 +9,7 @@ import {
   Flag,
   Shield,
   ShieldCheck,
+  Scissors,
 } from "lucide-react";
 import { DashboardShell } from "../dashboard/DashboardShell";
 import type { NavItem } from "../dashboard/Sidebar";
@@ -22,7 +23,8 @@ const navItems: NavItem[] = [
   { path: "/admin/users", label: "Users", icon: Users },
   { path: "/admin/products", label: "Products", icon: Package },
   { path: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { path: "/admin/reports", label: "Reports", icon: Flag },
+  { path: "/admin/diy-posts", label: "DIY Management", icon: Scissors },
+  { path: "/admin/reports", label: "Report Management", icon: Flag },
   { path: "/admin/payments", label: "Payments", icon: DollarSign },
   { path: "/admin/roles", label: "Roles", icon: ShieldCheck },
   { path: "/admin/permissions", label: "Permissions", icon: Shield },

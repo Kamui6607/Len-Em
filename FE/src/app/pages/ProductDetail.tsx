@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw, Minus, Plus } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
 import { useAuth } from "../../hooks/useAuth";
@@ -47,14 +47,27 @@ export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantUI | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
 
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
+
+  // Get current cart item quantity for this variant
+  const currentCartItem = useMemo(() => {
+    if (!selectedVariant) return null;
+    return cartItems.find(item => item.productId === product?.id && item.variantId === selectedVariant.id);
+  }, [cartItems, product?.id, selectedVariant]);
+
+  const maxAvailableQuantity = useMemo(() => {
+    if (!selectedVariant) return 0;
+    const inCart = currentCartItem?.quantity || 0;
+    return Math.max(0, selectedVariant.stock - inCart);
+  }, [selectedVariant, currentCartItem]);
 
   useEffect(() => {
     if (!id) return;
@@ -132,7 +145,7 @@ export function ProductDetail() {
         hexCode: variant.hexCode || "#ccc",
         price: variant.price,
         stock: variant.stock,
-      });
+      }, quantity);
     } else {
       addToCart({
         productId: product.id,
@@ -143,9 +156,9 @@ export function ProductDetail() {
         hexCode: "#ccc",
         price: 0,
         stock: 999,
-      });
+      }, quantity);
     }
-    toast.success("Đã thêm vào giỏ hàng");
+    toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
 
   if (loading) {
@@ -212,10 +225,13 @@ export function ProductDetail() {
               <button
                 type="button"
                 title="Toggle favorite"
-                className="absolute top-4 right-4 w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
+                className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors"
                 style={{
-                  background: "var(--card)",
-                  opacity: 0.9,
+                  background: "var(--card-glass)",
+                  backdropFilter: "blur(14px) saturate(160%)",
+                  WebkitBackdropFilter: "blur(14px) saturate(160%)",
+                  border: "1px solid var(--border-subtle)",
+                  boxShadow: "var(--shadow-md)",
                   touchAction: "manipulation",
                   WebkitTapHighlightColor: "transparent",
                 }}
@@ -225,8 +241,14 @@ export function ProductDetail() {
               {/* Color indicator on image */}
               {currentColor && selectedVariant?.hexCode && (
                 <div
-                  className="absolute bottom-4 left-4 flex items-center gap-2 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs shadow-sm"
-                  style={{ background: "var(--card)", opacity: 0.9 }}
+                  className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
+                  style={{
+                    background: "var(--card-glass)",
+                    backdropFilter: "blur(14px) saturate(160%)",
+                    WebkitBackdropFilter: "blur(14px) saturate(160%)",
+                    border: "1px solid var(--border-subtle)",
+                    boxShadow: "var(--shadow-md)",
+                  }}
                 >
                   <span
                     className="w-3 h-3 rounded-full"
@@ -363,11 +385,12 @@ export function ProductDetail() {
               <div
                 className="space-y-3 p-5 rounded-2xl"
                 style={{
-                  background: "color-mix(in srgb, var(--muted) 50%, transparent)",
-                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  border: "1px solid var(--border-subtle)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
-                <h3 className="text-sm font-medium">Yarn Specifications</h3>
+                <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Yarn Specifications</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {product.material && (
                     <div className="space-y-1">
@@ -402,11 +425,12 @@ export function ProductDetail() {
               <div
                 className="space-y-3 p-5 rounded-2xl"
                 style={{
-                  background: "color-mix(in srgb, var(--muted) 50%, transparent)",
-                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  border: "1px solid var(--border-subtle)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
-                <h3 className="text-sm font-medium">Kit Details</h3>
+                <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Kit Details</h3>
                 {product.difficulty && (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Difficulty:</span>
@@ -442,6 +466,42 @@ export function ProductDetail() {
               </div>
             )}
 
+            {/* Quantity Selector */}
+            {currentStock > 0 && (
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium">Quantity</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                    className={cn(
+                      "w-10 h-10 rounded-full border flex items-center justify-center transition-all duration-200",
+                      quantity <= 1
+                        ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
+                        : "border-border hover:bg-muted hover:shadow-sm active:scale-90"
+                    )}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-8 text-center font-medium">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.min(maxAvailableQuantity, quantity + 1))}
+                    disabled={quantity >= maxAvailableQuantity}
+                    className={cn(
+                      "w-10 h-10 rounded-full border flex items-center justify-center transition-all duration-200",
+                      quantity >= maxAvailableQuantity
+                        ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
+                        : "border-border hover:bg-muted hover:shadow-sm active:scale-90"
+                    )}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Add to Cart */}
             <div className="space-y-3 pt-2">
               <button
@@ -449,29 +509,33 @@ export function ProductDetail() {
                 onClick={handleAddToCart}
                 disabled={currentStock === 0}
                 className={cn(
-                  "w-full min-h-11 py-4 rounded-full flex items-center justify-center gap-2 text-base font-medium transition-all duration-200",
-                  currentStock > 0
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                  "add-to-cart-btn",
+                  currentStock === 0 && "opacity-50 cursor-not-allowed"
                 )}
                 style={{
                   touchAction: "manipulation",
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <ShoppingCart className="w-5 h-5" />
-                {currentStock > 0 ? "Add to Cart" : "Sold Out"}
-              </button>
-              <button
-                type="button"
-                className="w-full min-h-11 bg-card text-foreground py-4 rounded-full border border-border hover:bg-muted hover:shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 transition-all duration-200"
-                style={{
-                  touchAction: "manipulation",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Heart className="w-5 h-5" />
-                Add to Wishlist
+                <div className="btn-text">
+                  <ShoppingCart className="w-5 h-5" />
+                  {currentStock > 0 ? "Add to Cart" : "Sold Out"}
+                </div>
+                <div className="btn-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="9" cy="21" r="1" />
+                    <circle cx="20" cy="21" r="1" />
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                  </svg>
+                </div>
               </button>
             </div>
 
@@ -539,19 +603,40 @@ export function ProductDetail() {
 
       {/* ── Mobile sticky bottom bar ── */}
       {!scrolledToBottom && (
-        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/97 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Price:</p>
               <p className="text-base font-bold text-primary">{formatPrice(currentPrice)}</p>
             </div>
-            <button
-              onClick={handleAddToCart}
-              disabled={currentStock === 0}
-              className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm hover:bg-primary/90 hover:shadow-lg active:scale-[0.97] transition-all duration-200 shadow-sm disabled:opacity-50"
-            >
-              {currentStock > 0 ? "Add to Cart" : "Sold Out"}
-            </button>
+             <button
+               onClick={handleAddToCart}
+               disabled={currentStock === 0}
+               className={cn(
+                 "add-to-cart-btn",
+                 currentStock === 0 && "opacity-50 cursor-not-allowed"
+               )}
+             >
+               <div className="btn-text">
+                 <ShoppingCart className="w-5 h-5" />
+                 {currentStock > 0 ? "Add to Cart" : "Sold Out"}
+               </div>
+               <div className="btn-icon">
+                 <svg
+                   xmlns="http://www.w3.org/2000/svg"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   strokeWidth="2.5"
+                   strokeLinecap="round"
+                   strokeLinejoin="round"
+                 >
+                   <circle cx="9" cy="21" r="1" />
+                   <circle cx="20" cy="21" r="1" />
+                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                 </svg>
+               </div>
+             </button>
           </div>
         </div>
       )}

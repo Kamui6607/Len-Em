@@ -10,6 +10,8 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { products } from "../data/products";
 import { formatPrice } from "../../lib/formatPrice";
+import { diyService } from "../../features/diy/services/diy.service";
+import type { CreateDIYPostDTO } from "../../features/diy/types/diy.types";
 
 interface ComboItem {
   productId: string;
@@ -25,8 +27,10 @@ export function DIYCreatePage() {
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [comboItems, setComboItems] = useState<ComboItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const searchableProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
@@ -57,6 +61,39 @@ export function DIYCreatePage() {
     const files = Array.from(event.target.files ?? []);
     const previews = files.map((file) => URL.createObjectURL(file));
     setImagePreviews((prev) => [...prev, ...previews]);
+    setSelectedFiles((prev) => [...prev, ...files]);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!title.trim() || !description.trim() || selectedFiles.length === 0 || comboItems.length === 0) {
+      toast.error("Please add a title, description, image, and at least one material");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data: CreateDIYPostDTO = {
+        title: title.trim(),
+        description: description.trim(),
+        tags: tags.length > 0 ? tags : undefined,
+        linkedProduct: comboItems.map((item) => ({ productId: item.productId })),
+      };
+      await diyService.createPost(data, selectedFiles);
+      toast.success("DIY post submitted successfully");
+      setTitle("");
+      setDescription("");
+      setTags([]);
+      setTagInput("");
+      setImagePreviews([]);
+      setSelectedFiles([]);
+      setComboItems([]);
+      setProductSearch("");
+    } catch {
+      toast.error("Failed to submit DIY post");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addTag = () => {
@@ -91,23 +128,6 @@ export function DIYCreatePage() {
 
   const removeComboItem = (productId: string) => {
     setComboItems((prev) => prev.filter((item) => item.productId !== productId));
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!title.trim() || !description.trim() || imagePreviews.length === 0 || comboItems.length === 0) {
-      toast.error("Please add a title, description, image, and at least one material");
-      return;
-    }
-
-    toast.success("DIY post submitted successfully");
-    setTitle("");
-    setDescription("");
-    setTags([]);
-    setTagInput("");
-    setImagePreviews([]);
-    setComboItems([]);
-    setProductSearch("");
   };
 
   return (
@@ -258,8 +278,8 @@ export function DIYCreatePage() {
               <span>{formatPrice(comboTotal)}</span>
             </div>
 
-            <Button type="submit" size="lg" className="w-full">
-              <Send className="size-4" /> Submit DIY post
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              <Send className="size-4" /> {loading ? "Submitting..." : "Submit DIY post"}
             </Button>
           </aside>
         </div>

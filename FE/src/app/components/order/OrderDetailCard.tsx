@@ -21,12 +21,14 @@ import {
 } from "../../../constants/orderStatus";
 import type { Order, OrderStatus } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
+import { ReportButton } from "../ReportButton";
 
 interface OrderDetailCardProps {
   order: Order;
   isAdminView?: boolean;
   onStatusChange?: (orderId: string, newStatus: OrderStatus) => Promise<void>;
   onCancel?: (orderId: string, reason: string) => Promise<void>;
+  onReport?: (orderId: string) => void;
 }
 
 export function OrderDetailCard({
@@ -97,6 +99,13 @@ export function OrderDetailCard({
               >
                 Huỷ đơn
               </button>
+            )}
+            {!isAdminView && (
+              <ReportButton
+                targetType="purchased_order"
+                targetId={normalized._id}
+                targetTitle={`Order ${normalized._id}`}
+              />
             )}
           </div>
         </div>

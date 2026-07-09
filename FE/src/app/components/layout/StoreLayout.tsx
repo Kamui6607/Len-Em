@@ -5,7 +5,7 @@ import { Navigation } from "../Navigation";
 import { Footer } from "../Footer";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useSwipeBack } from "../../../hooks/useSwipeBack";
-import { ScrollToTop } from "../../../components/mobile/ScrollToTop";
+import { BackToTop } from "../../../components/motion/BackToTop";
 import { useCart } from "../../../context/CartContext";
 
 interface StoreLayoutProps {
@@ -28,30 +28,32 @@ export function StoreLayout({
   }, [location.pathname]);
 
   return (
-    <motion.div className="min-h-screen bg-background flex flex-col">
-      <Navigation cartCount={cartCount} />
+    <motion.div className="min-h-screen flex flex-col">
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <Navigation cartCount={cartCount} />
 
-      <div className="main-content flex-1 pb-20 md:pb-0">
-        {isMobile && !shouldReduceMotion ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="min-h-full"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          children
-        )}
+        <div className="main-content flex-1 pb-20 md:pb-0">
+          {isMobile && !shouldReduceMotion ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="min-h-full"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          ) : (
+            children
+          )}
+        </div>
+
+        <BackToTop />
+        {location.pathname !== "/" && <Footer />}
       </div>
-
-      <ScrollToTop />
-      <Footer />
     </motion.div>
   );
 }

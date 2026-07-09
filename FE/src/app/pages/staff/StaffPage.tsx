@@ -13,7 +13,9 @@ import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { toast } from "sonner";
 
 const navItems: NavItem[] = [
-  { path: "/staff", label: "Cash Orders", icon: ShoppingCart },
+  { path: "/staff", label: "Pending Orders", icon: ShoppingCart },
+  { path: "/staff/diy", label: "DIY Management", icon: Package },
+  { path: "/staff/reports", label: "Report Management", icon: Flag },
 ];
 
 export function StaffPage() {
@@ -42,8 +44,8 @@ export function StaffPage() {
     loadOrders();
   }, []);
 
-  const cashOrders = orders.filter(
-    (o) => o.payment.method === "CASH" && o.orderStatus === "PENDING",
+  const pendingOrders = orders.filter(
+    (o) => o.orderStatus === "PENDING",
   );
 
   const handleConfirmCashPayment = async (orderId: string) => {
@@ -79,9 +81,9 @@ export function StaffPage() {
       return (
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl mb-2">Cash Payment Orders</h1>
+            <h1 className="text-2xl mb-2">Pending Orders</h1>
             <p className="text-muted-foreground">
-              Confirm cash payments received at the store
+              Confirm and process pending orders
             </p>
           </div>
 
@@ -89,9 +91,9 @@ export function StaffPage() {
             <div className="flex justify-center py-12">
               <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
             </div>
-          ) : cashOrders.length > 0 ? (
+          ) : pendingOrders.length > 0 ? (
             <div className="grid gap-4">
-              {cashOrders.map((order) => (
+              {pendingOrders.map((order) => (
                 <div
                   key={order._id}
                   className="bg-card rounded-2xl p-6 border border-border"
@@ -111,7 +113,7 @@ export function StaffPage() {
                         {formatPrice(order.totalPrice)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Cash Payment
+                        {order.payment.method === "VNPAY" ? "Online Payment" : "Payment"}
                       </p>
                     </div>
                   </div>
@@ -132,8 +134,8 @@ export function StaffPage() {
                     onClick={() => handleConfirmCashPayment(order._id)}
                     className="w-full bg-secondary text-secondary-foreground px-6 py-3 rounded-full hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2"
                   >
-                    <CheckCircle className="w-4 h-4" />
-                    Confirm Cash Payment
+                      <CheckCircle className="w-4 h-4" />
+                      Confirm Order
                   </button>
                 </div>
               ))}
@@ -141,10 +143,10 @@ export function StaffPage() {
           ) : (
             <div className="bg-card rounded-2xl p-12 text-center border border-border">
               <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="mb-2">No pending cash orders</h3>
-              <p className="text-muted-foreground">
-                All cash payments have been processed.
-              </p>
+            <h3 className="mb-2">No pending orders</h3>
+            <p className="text-muted-foreground">
+              All orders have been processed.
+            </p>
             </div>
           )}
         </div>
@@ -235,9 +237,9 @@ export function StaffPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${activeTab === tab ? "bg-secondary text-secondary-foreground shadow-sm" : "bg-card text-foreground border border-border hover:bg-muted"}`}
             >
               {icons[tab]}
-              <span className="capitalize">
-                {tab === "orders" ? "Cash Orders" : tab}
-              </span>
+                <span className="capitalize">
+                  {tab === "orders" ? "Pending Orders" : tab}
+                </span>
             </button>
           );
         })}

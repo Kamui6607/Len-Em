@@ -26,6 +26,7 @@ export interface ApiUserProfile {
   avatar?: string | { url: string; publicId: string };
   createdAt?: string;
   updatedAt?: string;
+  enrolled?: string[];
 }
 
 export interface User {
@@ -43,6 +44,7 @@ export interface User {
   avatar?: string;
   createdAt?: string;
   updatedAt?: string;
+  enrolled?: string[];
 }
 
 export interface AuthTokens { accessToken: string; refreshToken: string; }
@@ -92,7 +94,6 @@ export function normalizeApiUserProfile(profile: ApiUserProfile): User {
 
   return {
 
-
     id: userId,
     userId,
     email: profile.email,
@@ -107,6 +108,7 @@ export function normalizeApiUserProfile(profile: ApiUserProfile): User {
     avatar,
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
+    enrolled: profile.enrolled || [],
   };
 }
 

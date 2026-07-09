@@ -66,25 +66,31 @@ function ConfirmDialog({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div className="admin-dialog-overlay" onClick={onCancel}>
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onCancel}
-      />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
-        <h3 className="font-bold text-lg mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-6">{message}</p>
-        <div className="flex justify-end gap-3">
+        className="admin-dialog-content max-w-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="admin-dialog-header">
+          <h3 className="text-base font-semibold">{title}</h3>
+        </div>
+        <div className="admin-dialog-body">
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </div>
+        <div className="admin-dialog-footer">
           <button
+            type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+            className="btn-modal-cancel"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={onConfirm}
-            className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors"
+            className="btn-modal-destructive"
           >
+            <Trash2 className="w-4 h-4" />
             Delete
           </button>
         </div>
@@ -236,12 +242,14 @@ export function ProductManagement() {
       };
 
       if (editingId) {
-        const { imageFile: _imageFile, variants, ...updatePayload } = payload;
+        const { variants, ...updatePayload } = payload;
         await productService.update(editingId, {
           ...updatePayload,
-          variants: variants.map(
-            ({ imageFile: _variantImageFile, ...variant }) => variant,
-          ),
+          variants: variants.map((variant) => {
+            const { imageFile, ...rest } = variant;
+            void imageFile;
+            return rest;
+          }),
         });
         toast.success("Product updated successfully");
       } else {
@@ -315,57 +323,62 @@ export function ProductManagement() {
           <h1 className="mb-2">Product Management</h1>
           <p className="text-muted-foreground">{total} products total</p>
         </div>
-        {isAdminOrStaff && (
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all active:scale-[0.97]"
-          >
-            <Plus size={18} /> Add Product
-          </button>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          />
-        </div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showInactive}
-            onChange={(e) => {
-              setShowInactive(e.target.checked);
-              setPage(1);
-            }}
-            className="rounded border-border"
-          />
-          Show inactive
-        </label>
+{isAdminOrStaff && (
+           <button
+             onClick={openCreate}
+             className="btn-create"
+           >
+             <Plus size={18} />
+             +create
+           </button>
+         )}
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
+        {/* Table Header */}
+        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input w-full"
+              style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
+            />
+          </div>
+          <div className="mt-3">
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => {
+                  setShowInactive(e.target.checked);
+                  setPage(1);
+                }}
+                className="rounded border-border"
+              />
+              Show inactive
+            </label>
+          </div>
+        </div>
+
+        {/* Table Body */}
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             Loading...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Package size={40} className="mx-auto mb-3 opacity-40" />
             <p>No products found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
+          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+            <table className="admin-table w-full">
+              <thead className="bg-muted">
                 <tr>
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">
                     Product
@@ -400,7 +413,7 @@ export function ProductManagement() {
                   return (
                     <tr
                       key={product._id}
-                      className="border-t border-border hover:bg-muted/30 transition-colors"
+                      className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -441,7 +454,7 @@ export function ProductManagement() {
                         <span
                           className={
                             totalStock < 10
-                              ? "text-destructive font-semibold"
+                              ? "text-accent-red font-semibold"
                               : "text-secondary"
                           }
                         >
@@ -450,10 +463,8 @@ export function ProductManagement() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                            product.isActive
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                              : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
+                          className={`badge ${
+                            product.isActive ? "badge-green" : "badge-red"
                           }`}
                         >
                           <span
@@ -468,14 +479,14 @@ export function ProductManagement() {
                             onClick={() =>
                               navigate(`/admin/products/${product._id}`)
                             }
-                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                            className="admin-action-btn view"
                             title="View details"
                           >
                             <Eye size={16} />
                           </button>
                           <button
                             onClick={() => openEdit(product)}
-                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                            className="admin-action-btn edit"
                             title="Edit"
                           >
                             <Edit3 size={16} />
@@ -483,7 +494,7 @@ export function ProductManagement() {
                           {product.isActive ? (
                             <button
                               onClick={() => setDeleteTarget(product)}
-                              className="p-2 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
+                              className="admin-action-btn delete"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -491,7 +502,7 @@ export function ProductManagement() {
                           ) : (
                             <button
                               onClick={() => handleRestore(product._id)}
-                              className="p-2 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition-colors text-muted-foreground hover:text-emerald-600"
+                              className="admin-action-btn edit"
                               title="Restore"
                             >
                               <RotateCcw size={16} />
@@ -512,7 +523,7 @@ export function ProductManagement() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="btn-secondary"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -522,7 +533,7 @@ export function ProductManagement() {
             Page {page} of {totalPages}
           </span>
           <button
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="btn-secondary"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
@@ -533,152 +544,153 @@ export function ProductManagement() {
 
       {/* ─── Create / Edit Modal ───────────────────────────── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] pb-8 px-4">
+        <div className="admin-dialog-overlay" onClick={closeModal}>
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={closeModal}
-          />
-          <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-y-auto z-10">
-            <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="text-lg font-bold">
+            className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="admin-dialog-header">
+              <h3 className="text-base font-semibold">
                 {editingId ? "Edit Product" : "Create Product"}
-              </h2>
+              </h3>
               <button
                 onClick={closeModal}
-                className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                style={{ color: "var(--foreground-muted)" }}
+                className="admin-action-btn absolute top-4 right-4"
+                aria-label="Close"
               >
-                <X size={20} />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 space-y-5">
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Product name"
-                />
-              </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+              <div className="admin-dialog-body space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                      Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="input w-full"
+                      placeholder="Product name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                      Category *
+                    </label>
+                    <AdminSelect
+                      value={form.category}
+                      options={CATEGORY_OPTIONS.map((category) => ({
+                        value: category,
+                        label: category,
+                      }))}
+                      onChange={(value) => setForm({ ...form, category: value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                      Description
+                    </label>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) =>
+                        setForm({ ...form, description: e.target.value })
+                      }
+                      rows={3}
+                      className="input w-full resize-none"
+                      placeholder="Product description"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                      Main image {!editingId && <span className="text-destructive">*</span>}
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          imageFile: e.target.files?.[0] ?? null,
+                        })
+                      }
+                      className="input w-full"
+                    />
+                    {form.imageFile ? (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {form.imageFile.name}
+                      </p>
+                    ) : form.image ? (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        Current: {form.image}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                      Tags (comma separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={form.tags}
+                      onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                      className="input w-full"
+                      placeholder="acrylic, bền, tươi sáng"
+                    />
+                  </div>
+                </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Description
-                </label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  placeholder="Product description"
-                />
-              </div>
-
-              {/* Category + Image */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Variants */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Category *
+                  <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
+                    Variants *
                   </label>
-                  <AdminSelect
-                    value={form.category}
-                    options={CATEGORY_OPTIONS.map((category) => ({
-                      value: category,
-                      label: category,
-                    }))}
-                    onChange={(value) => setForm({ ...form, category: value })}
+                  <VariantEditor
+                    variants={form.variants}
+                    onChange={(variants) => setForm({ ...form, variants })}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Main image{" "}
-                    {!editingId && <span className="text-destructive">*</span>}
-                  </label>
+
+                {/* isActive toggle */}
+                <label className="flex items-center gap-3 cursor-pointer select-none">
                   <input
-                    type="file"
-                    accept="image/*"
+                    type="checkbox"
+                    checked={form.isActive}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        imageFile: e.target.files?.[0] ?? null,
-                      })
+                      setForm({ ...form, isActive: e.target.checked })
                     }
-                    className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="rounded border-border"
                   />
-                  {form.imageFile ? (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {form.imageFile.name}
+                  <div>
+                    <span className="text-sm font-medium">Active</span>
+                    <p className="text-xs text-muted-foreground">
+                      Inactive products are hidden from the public shop
                     </p>
-                  ) : form.image ? (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      Current: {form.image}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Tags (comma separated)
+                  </div>
                 </label>
-                <input
-                  type="text"
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="acrylic, bền, tươi sáng"
-                />
               </div>
-
-              {/* Variants */}
-              <VariantEditor
-                variants={form.variants}
-                onChange={(variants) => setForm({ ...form, variants })}
-              />
-
-              {/* isActive toggle */}
-              <label className="flex items-center gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) =>
-                    setForm({ ...form, isActive: e.target.checked })
-                  }
-                  className="rounded border-border"
-                />
-                <div>
-                  <span className="text-sm font-medium">Active</span>
-                  <p className="text-xs text-muted-foreground">
-                    Inactive products are hidden from the public shop
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            {/* Footer */}
-            <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]"
-              >
-                {saving ? "Saving..." : editingId ? "Update" : "Create"}
-              </button>
-            </div>
+              <div className="admin-dialog-footer">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={saving}
+                  className="btn-modal-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-modal-primary"
+                >
+                  {saving ? "Saving…" : editingId ? "Update Product" : "Create Product"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
