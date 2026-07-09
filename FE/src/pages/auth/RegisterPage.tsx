@@ -11,49 +11,30 @@ import {
   User as UserIcon,
   Phone,
   AtSign,
-  Check,
   MapPin,
+  Sparkles,
 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 import { toast } from "sonner";
+import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
+import { CursorEffects } from "../../components/motion/CursorEffects";
+import { useTheme } from "../../app/context/ThemeContext";
 
-/* ─── Design tokens (shared với LoginPage) ─── */
-const T = {
-  ink: "#2C2C28", // sidebar background (dark olive)
-  inkHover: "#3a3a34",
-  cream: "#F5F0EA", // form background
-  surface: "#FFFFFF",
-  sage: "#4A7C65", // accent xanh rêu
-  sageLight: "rgba(74,124,101,0.12)",
-  gold: "#C8974A", // accent italic "journey"
-  muted: "#7A6E6B",
-  mutedLight: "rgba(122,110,107,0.35)",
-  border: "rgba(42,34,32,0.12)",
-  borderFocus: "#4A7C65",
-  errorRed: "#C0392B",
-  errorBg: "rgba(192,57,43,0.07)",
-  errorBorder: "rgba(192,57,43,0.25)",
-  textLight: "#F0EDE6",
-  textMuted: "rgba(240,237,230,0.45)",
-} as const;
-
-/* ─── Shared input style factory ─── */
 const inputStyle = (hasIcon = true, hasError = false): React.CSSProperties => ({
   width: "100%",
   height: 46,
   padding: hasIcon ? "0 14px 0 42px" : "0 14px",
-  border: `1.5px solid ${hasError ? T.errorRed : T.border}`,
-  borderRadius: 10,
+  border: `1.5px solid ${hasError ? "var(--destructive)" : "var(--border)"}`,
+  borderRadius: "var(--radius-lg)",
   fontSize: 14,
-  background: T.surface,
-  color: T.ink,
+  background: "var(--input-bg)",
+  color: "var(--foreground)",
   outline: "none",
-  fontFamily: "inherit",
+  fontFamily: "var(--font-body)",
   boxSizing: "border-box",
-  transition: "border 0.18s, box-shadow 0.18s",
+  transition: "all 0.3s var(--ease-out)",
 });
 
-/* ─── Field component ─── */
 function Field({
   label,
   icon: Icon,
@@ -89,29 +70,20 @@ function Field({
           display: "block",
           fontSize: 12.5,
           fontWeight: 600,
-          color: T.ink,
+          color: "var(--foreground)",
           marginBottom: 5,
         }}
       >
         {label}
         {optional ? (
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 400,
-              color: T.muted,
-              marginLeft: 4,
-            }}
-          >
+          <span style={{ fontSize: 11, fontWeight: 400, color: "var(--foreground-muted)", marginLeft: 4 }}>
             (optional)
           </span>
         ) : (
-          <span style={{ color: "#C0392B", marginLeft: 2 }}>*</span>
+          <span style={{ color: "var(--destructive)", marginLeft: 2 }}>*</span>
         )}
       </label>
-      <div
-        style={{ position: "relative", display: "flex", alignItems: "center" }}
-      >
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
         {Icon && (
           <Icon
             size={15}
@@ -120,7 +92,7 @@ function Field({
               left: 13,
               top: "50%",
               transform: "translateY(-50%)",
-              color: focused ? T.sage : T.muted,
+              color: focused ? "var(--primary)" : "var(--foreground-muted)",
               opacity: focused ? 1 : 0.6,
               pointerEvents: "none",
               transition: "color 0.18s",
@@ -140,10 +112,10 @@ function Field({
             ...(rightSlot ? { paddingRight: 44 } : {}),
             ...(focused
               ? {
-                  border: `1.5px solid ${hasError ? T.errorRed : T.borderFocus}`,
+                  border: `1.5px solid ${hasError ? "var(--destructive)" : "var(--primary)"}`,
                   boxShadow: hasError
-                    ? `0 0 0 3px ${T.errorBg}`
-                    : `0 0 0 3px ${T.sageLight}`,
+                    ? "0 0 0 3px color-mix(in srgb, var(--destructive) 15%, transparent)"
+                    : "0 0 0 3px rgba(107,63,160,0.08)",
                 }
               : {}),
             ...extraInputStyle,
@@ -152,14 +124,7 @@ function Field({
         {rightSlot}
       </div>
       {hasError && (
-        <div
-          style={{
-            fontSize: 11,
-            color: T.errorRed,
-            marginTop: 4,
-            paddingLeft: 2,
-          }}
-        >
+        <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4, paddingLeft: 2 }}>
           {fe[k]}
         </div>
       )}
@@ -167,10 +132,10 @@ function Field({
   );
 }
 
-/* ─── Main component ─── */
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuthStore();
+  const { isDark } = useTheme();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -188,13 +153,10 @@ export function RegisterPage() {
   const [error, setError] = useState("");
   const [fe, setFe] = useState<Record<string, string>>({});
   const [step, setStep] = useState<1 | 2>(1);
-
-  /* ─── Date of birth picker state ─── */
   const [dobMonth, setDobMonth] = useState("");
   const [dobDay, setDobDay] = useState("");
   const [dobYear, setDobYear] = useState("");
 
-  /** Combine 3 dropdown values into MM/DD/YYYY string for the API */
   const getDobString = () => {
     if (!dobMonth || !dobDay || !dobYear) return "";
     return `${dobMonth.padStart(2, "0")}/${dobDay.padStart(2, "0")}/${dobYear}`;
@@ -216,7 +178,7 @@ export function RegisterPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errors.email = "Please enter a valid email address.";
     if (form.phone && !/^[0-9]{10,11}$/.test(form.phone.replace(/\s/g, "")))
-      errors.phone = "Enter a valid 10–11 digit phone number.";
+      errors.phone = "Enter a valid 10-11 digit phone number.";
     if (form.dateOfBirth) {
       const dobRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
       if (!dobRegex.test(form.dateOfBirth)) {
@@ -314,374 +276,146 @@ export function RegisterPage() {
           ? 1
           : 2;
   const pwLabel = pwScore <= 0 ? "Weak" : pwScore === 1 ? "Fair" : "Strong";
-  const pwColor = pwScore <= 0 ? "#C0392B" : pwScore === 1 ? "#C8974A" : T.sage;
-
-  /* ─── Sidebar step indicator ─── */
-  const steps = [
-    { n: "01", title: "Your info", desc: "Name, email, address & more" },
-    { n: "02", title: "Set password", desc: "Secure your account" },
-  ];
+  const pwColor = pwScore <= 0 ? "var(--destructive)" : pwScore === 1 ? "var(--warning-text)" : "var(--primary)";
 
   return (
     <>
+      <AnimatedBackgroundAuth />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; }
-        .rp-root { min-height: 100vh; display: flex; font-family: 'DM Sans', system-ui, sans-serif; }
-        .rp-left { width: 42%; min-height: 100vh; background: ${T.ink}; display: flex; flex-direction: column; justify-content: space-between; padding: 44px 40px; position: relative; overflow: hidden; }
-        .rp-right { flex: 1; background: ${T.cream}; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 48px; overflow-y: auto; }
-        .rp-left-blob1 { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: ${T.sage}; opacity: 0.08; top: -80px; right: -60px; filter: blur(60px); pointer-events: none; }
-        .rp-left-blob2 { position: absolute; width: 180px; height: 180px; border-radius: 50%; background: ${T.gold}; opacity: 0.07; bottom: 20px; left: -30px; filter: blur(50px); pointer-events: none; }
-        .rp-subbtn { width: 100%; height: 48px; border-radius: 100px; border: none; background: ${T.ink}; color: white; font-size: 14.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: transform 0.2s, box-shadow 0.2s; }
-        .rp-subbtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(44,44,40,0.22); }
+        .rp-root {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: var(--font-body);
+          padding: 24px;
+          background: var(--background);
+        }
+        .rp-card {
+          width: 100%;
+          max-width: 460px;
+          background: var(--dropdown-bg);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-3xl);
+          box-shadow: var(--shadow-float);
+          padding: 40px 36px;
+          position: relative;
+          overflow: hidden;
+          backdrop-filter: blur(20px) saturate(180%);
+          -webkit-backdrop-filter: blur(20px) saturate(180%);
+        }
+        .rp-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: var(--cta-gradient);
+          opacity: 0.8;
+        }
+        .rp-subbtn {
+          width: 100%;
+          height: 48px;
+          border-radius: var(--radius-lg);
+          border: none;
+          background: var(--cta-gradient);
+          color: var(--primary-foreground);
+          font-size: 14.5px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          font-family: var(--font-body);
+          transition: all 0.3s var(--ease-out);
+          box-shadow: var(--cta-shadow);
+          position: relative;
+          overflow: hidden;
+        }
+        .rp-subbtn::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        .rp-subbtn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: var(--cta-shadow-hover);
+        }
+        .rp-subbtn:hover::before { opacity: 1; }
         .rp-subbtn:active:not(:disabled) { transform: scale(0.97); }
         .rp-subbtn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .rp-back { flex: 1; height: 48px; border-radius: 100px; border: 1.5px solid ${T.border}; background: transparent; font-size: 14px; font-weight: 500; color: ${T.muted}; cursor: pointer; font-family: inherit; transition: border-color 0.18s, color 0.18s; }
-        .rp-back:hover { border-color: ${T.ink}; color: ${T.ink}; }
-        .rp-input-focus:focus { border-color: ${T.borderFocus} !important; box-shadow: 0 0 0 3px ${T.sageLight} !important; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 768px) {
-          .rp-left { display: none; }
-          .rp-right { padding: 32px 24px; }
+        .rp-back {
+          flex: 1;
+          height: 48px;
+          border-radius: var(--radius-lg);
+          border: 1.5px solid var(--primary);
+          background: transparent;
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--primary);
+          cursor: pointer;
+          font-family: var(--font-body);
+          transition: all 0.3s var(--ease-out);
         }
+        .rp-back:hover {
+          background: rgba(107, 63, 160, 0.06);
+          transform: translateY(-1px);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
+      <CursorEffects isDark={isDark} />
       <div className="rp-root">
-        {/* ── LEFT SIDEBAR ── */}
-        <div className="rp-left">
-          <div className="rp-left-blob1" />
-          <div className="rp-left-blob2" />
-
-          {/* Logo */}
+        <div className="rp-card">
+          {/* Decorative glow */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              position: "relative",
-              zIndex: 1,
+              position: "absolute",
+              top: "-80px",
+              right: "-80px",
+              width: "200px",
+              height: "200px",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, var(--primary) 0%, transparent 70%)",
+              opacity: 0.08,
+              pointerEvents: "none",
             }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 14,
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-              }}
-            >
-              🧶
-            </div>
-            <div>
-              <div
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  fontSize: 19,
-                  fontWeight: 700,
-                  color: T.textLight,
-                  letterSpacing: "-0.2px",
-                }}
-              >
-                Len&amp;Em
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.textMuted,
-                  fontWeight: 300,
-                  marginTop: 1,
-                }}
-              >
-                your craft, your story
-              </div>
-            </div>
-          </div>
+          />
 
-          {/* Headline */}
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              padding: "40px 0",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                color: T.sage,
-                fontWeight: 500,
-                marginBottom: 16,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <div style={{ width: 20, height: 1, background: T.sage }} />
-              Join our community
-            </div>
-            <div
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: "clamp(28px, 3vw, 38px)",
-                fontWeight: 900,
-                color: T.textLight,
-                lineHeight: 1.12,
-                marginBottom: 14,
-              }}
-            >
-              Start your
-              <br />
-              crafting
-              <br />
-              <em style={{ fontStyle: "italic", color: T.gold }}>journey</em>
-            </div>
-            <p
-              style={{
-                fontSize: 13.5,
-                color: T.textMuted,
-                lineHeight: 1.75,
-                fontWeight: 300,
-                maxWidth: 260,
-                marginBottom: 36,
-              }}
-            >
-              Create your account in two simple steps and unlock a world of cozy
-              crochet.
-            </p>
-
-            {/* Step indicator */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {steps.map((s, i) => {
-                const isActive = step === i + 1;
-                const isDone = step > i + 1;
-                return (
-                  <div
-                    key={s.n}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          flexShrink: 0,
-                          background: isDone
-                            ? T.sage
-                            : isActive
-                              ? T.sage
-                              : "transparent",
-                          border: `2px solid ${isActive || isDone ? T.sage : "rgba(240,237,230,0.2)"}`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color:
-                            isActive || isDone
-                              ? "white"
-                              : "rgba(240,237,230,0.3)",
-                        }}
-                      >
-                        {isDone ? <Check size={11} strokeWidth={3} /> : i + 1}
-                      </div>
-                      {i < steps.length - 1 && (
-                        <div
-                          style={{
-                            width: 2,
-                            height: 32,
-                            background: isDone
-                              ? T.sage
-                              : "rgba(240,237,230,0.1)",
-                            margin: "3px 0",
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        paddingTop: 2,
-                        paddingBottom: i < steps.length - 1 ? 0 : 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: isActive
-                            ? T.textLight
-                            : isDone
-                              ? T.sage
-                              : "rgba(240,237,230,0.4)",
-                        }}
-                      >
-                        Step {s.n} — {s.title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: isActive
-                            ? "rgba(240,237,230,0.55)"
-                            : "rgba(240,237,230,0.25)",
-                          fontWeight: 300,
-                          marginTop: 1,
-                        }}
-                      >
-                        {s.desc}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Trust badges */}
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 14,
-              padding: "14px 16px",
-            }}
-          >
-            {[
-              "Free to join, no credit card needed",
-              "Your data is safe & never sold",
-              "Cancel or delete account anytime",
-            ].map((t) => (
-              <div
-                key={t}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 9,
-                  marginBottom: 8,
-                }}
-              >
-                <div
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    background: "rgba(74,124,101,0.25)",
-                    border: "1px solid rgba(74,124,101,0.4)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Check size={10} color={T.sage} strokeWidth={3} />
-                </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: "rgba(240,237,230,0.5)",
-                    fontWeight: 300,
-                  }}
-                >
-                  {t}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── RIGHT FORM ── */}
-        <div className="rp-right">
           {/* Progress bar */}
-          <div style={{ width: "100%", maxWidth: 440, marginBottom: 36 }}>
+          <div style={{ width: "100%", marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
-                style={{
-                  flex: 1,
-                  height: 3,
-                  borderRadius: 2,
-                  background: T.sage,
-                  transition: "background 0.3s",
-                }}
-              />
-              <div
-                style={{
-                  flex: 1,
-                  height: 3,
-                  borderRadius: 2,
-                  background: step === 2 ? T.sage : "rgba(42,34,32,0.12)",
-                  transition: "background 0.3s",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 12,
-                  color: T.muted,
-                  whiteSpace: "nowrap",
-                  marginLeft: 8,
-                }}
-              >
+              <div style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--primary)", transition: "background 0.3s" }} />
+              <div style={{ flex: 1, height: 3, borderRadius: 2, background: step === 2 ? "var(--primary)" : "var(--border)", transition: "background 0.3s" }} />
+              <span style={{ fontSize: 12, color: "var(--foreground-muted)", whiteSpace: "nowrap", marginLeft: 8, fontWeight: 500 }}>
                 Step {step} of 2
               </span>
             </div>
           </div>
 
-          <div style={{ width: "100%", maxWidth: 440 }}>
+          <div style={{ width: "100%" }}>
             {/* Form header */}
-            <div style={{ marginBottom: 28 }}>
-              <div
-                style={{
-                  fontSize: 10.5,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: T.sage,
-                  fontWeight: 600,
-                  marginBottom: 8,
-                }}
-              >
-                + {step === 1 ? "Create account" : "Set password"}
+            <div style={{ marginBottom: 28, textAlign: "center" }}>
+              <div style={{
+                fontSize: 13, fontWeight: 600, color: "var(--primary)", marginBottom: 8,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, letterSpacing: "0.04em",
+              }}>
+                <Sparkles size={14} />
+                {step === 1 ? "Create account" : "Set password"}
               </div>
-              <h1
-                style={{
-                  fontFamily: "'Playfair Display', serif",
-                  fontSize: 30,
-                  fontWeight: 900,
-                  color: T.ink,
-                  margin: "0 0 6px",
-                  lineHeight: 1.1,
-                }}
-              >
+              <h1 style={{
+                fontFamily: "var(--font-heading)", fontSize: 28, fontWeight: 700,
+                color: "var(--foreground)", margin: "0 0 6px", lineHeight: 1.1, letterSpacing: "-0.025em",
+              }}>
                 {step === 1 ? "Tell us about you" : "Keep your account safe"}
               </h1>
-              <p
-                style={{
-                  fontSize: 13.5,
-                  color: T.muted,
-                  margin: 0,
-                  lineHeight: 1.6,
-                }}
-              >
+              <p style={{ fontSize: 14, color: "var(--foreground-muted)", margin: 0, lineHeight: 1.6 }}>
                 {step === 1
                   ? "We just need a few details to get you set up"
                   : "Choose a strong password you'll remember"}
@@ -690,290 +424,78 @@ export function RegisterPage() {
 
             {/* Error banner */}
             {error && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 9,
-                  background: T.errorBg,
-                  border: `1.5px solid ${T.errorBorder}`,
-                  borderRadius: 10,
-                  padding: "10px 14px",
-                  marginBottom: 16,
-                  fontSize: 13,
-                  color: T.errorRed,
-                }}
-              >
-                <AlertCircle
-                  size={15}
-                  style={{ flexShrink: 0, marginTop: 1 }}
-                />
-                {error}
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 9,
+                background: "color-mix(in srgb, var(--destructive) 10%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--destructive) 25%, transparent)",
+                borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 16,
+                fontSize: 13, color: "var(--destructive)",
+              }}>
+                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{error}</span>
               </div>
             )}
 
             {/* STEP 1 */}
             {step === 1 && (
               <form onSubmit={handleNext}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
-                >
-                  <Field
-                    label="Full name"
-                    icon={UserIcon}
-                    k="fullName"
-                    placeholder="Nguyen Van A"
-                    form={form}
-                    fe={fe}
-                    upd={upd}
-                  />
-                  <Field
-                    label="Username"
-                    icon={AtSign}
-                    k="username"
-                    placeholder="your_username"
-                    form={form}
-                    fe={fe}
-                    upd={upd}
-                  />
-                  <Field
-                    label="Email"
-                    icon={Mail}
-                    k="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    form={form}
-                    fe={fe}
-                    upd={upd}
-                  />
-                  <Field
-                    label="Phone"
-                    icon={Phone}
-                    k="phone"
-                    type="tel"
-                    placeholder="0912 345 678"
-                    optional
-                    form={form}
-                    fe={fe}
-                    upd={upd}
-                  />
-                  <Field
-                    label="Address"
-                    icon={MapPin}
-                    k="address"
-                    placeholder="123 Main Street, District 1, Ho Chi Minh City"
-                    optional
-                    form={form}
-                    fe={fe}
-                    upd={upd}
-                  />
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <Field label="Full name" icon={UserIcon} k="fullName" placeholder="Nguyen Van A" form={form} fe={fe} upd={upd} />
+                  <Field label="Username" icon={AtSign} k="username" placeholder="your_username" form={form} fe={fe} upd={upd} />
+                  <Field label="Email" icon={Mail} k="email" type="email" placeholder="you@example.com" form={form} fe={fe} upd={upd} />
+                  <Field label="Phone" icon={Phone} k="phone" type="tel" placeholder="0912 345 678" optional form={form} fe={fe} upd={upd} />
+                  <Field label="Address" icon={MapPin} k="address" placeholder="123 Main Street, District 1" optional form={form} fe={fe} upd={upd} />
 
-                  {/* Gender — custom radio buttons */}
+                  {/* Gender */}
                   <div style={{ marginBottom: 4 }}>
-                    <label
-                      style={{
-                        display: "block",
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        color: T.ink,
-                        marginBottom: 8,
-                      }}
-                    >
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
                       Gender
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 400,
-                          color: T.muted,
-                          marginLeft: 4,
-                        }}
-                      >
-                        (optional)
-                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 400, color: "var(--foreground-muted)", marginLeft: 4 }}>(optional)</span>
                     </label>
                     <div style={{ display: "flex", gap: 8 }}>
-                      {(
-                        [
-                          { value: "MALE", label: "Male" },
-                          { value: "FEMALE", label: "Female" },
-                          { value: "OTHER", label: "Other" },
-                        ] as const
-                      ).map(({ value, label }) => (
+                      {(["MALE","FEMALE","OTHER"] as const).map((value) => (
                         <button
                           key={value}
                           type="button"
-                          onClick={() => {
-                            setForm((f) => ({ ...f, gender: value }));
-                            setFe((prev) => ({ ...prev, gender: "" }));
-                            setError("");
-                          }}
+                          onClick={() => { setForm((f) => ({ ...f, gender: value })); setFe((prev) => ({ ...prev, gender: "" })); setError(""); }}
                           style={{
-                            flex: 1,
-                            height: 46,
-                            borderRadius: 10,
-                            border: `1.5px solid ${
-                              form.gender === value ? T.sage : T.border
-                            }`,
-                            background:
-                              form.gender === value ? T.sageLight : T.surface,
-                            color: form.gender === value ? T.sage : T.muted,
-                            fontSize: 14,
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            fontFamily: "inherit",
-                            transition: "all 0.18s",
+                            flex: 1, height: 44, borderRadius: "var(--radius-md)",
+                            border: `1.5px solid ${form.gender === value ? "var(--primary)" : "var(--border)"}`,
+                            background: form.gender === value ? "rgba(107,63,160,0.06)" : "transparent",
+                            color: form.gender === value ? "var(--primary)" : "var(--foreground-muted)",
+                            fontSize: 14, fontWeight: 500, cursor: "pointer",
+                            fontFamily: "var(--font-body)", transition: "all 0.18s",
                           }}
                         >
-                          {label}
+                          {value.charAt(0) + value.slice(1).toLowerCase()}
                         </button>
                       ))}
                     </div>
-                    {fe.gender && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: T.errorRed,
-                          marginTop: 4,
-                          paddingLeft: 2,
-                        }}
-                      >
-                        {fe.gender}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Date of Birth — 3 dropdowns */}
+                  {/* Date of birth */}
                   <div style={{ marginBottom: 4 }}>
-                    <label
-                      style={{
-                        display: "block",
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        color: T.ink,
-                        marginBottom: 8,
-                      }}
-                    >
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
                       Date of birth
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 400,
-                          color: T.muted,
-                          marginLeft: 4,
-                        }}
-                      >
-                        (optional)
-                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 400, color: "var(--foreground-muted)", marginLeft: 4 }}>(optional)</span>
                     </label>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <select
-                        value={dobMonth}
-                        onChange={(e) => {
-                          setDobMonth(e.target.value);
-                          setFe((prev) => ({ ...prev, dateOfBirth: "" }));
-                          setError("");
-                        }}
-                        style={{
-                          flex: 1,
-                          height: 46,
-                          padding: "0 10px",
-                          border: `1.5px solid ${fe.dateOfBirth ? T.errorRed : T.border}`,
-                          borderRadius: 10,
-                          fontSize: 14,
-                          background: T.surface,
-                          color: dobMonth ? T.ink : T.muted,
-                          fontFamily: "inherit",
-                          cursor: "pointer",
-                          outline: "none",
-                        }}
-                      >
+                      <select value={dobMonth} onChange={(e) => { setDobMonth(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
+                        style={{ flex: 1, height: 46, padding: "0 10px", border: `1.5px solid ${fe.dateOfBirth ? "var(--destructive)" : "var(--border)"}`, borderRadius: "var(--radius-md)", fontSize: 14, background: "var(--input-bg)", color: dobMonth ? "var(--foreground)" : "var(--foreground-muted)", fontFamily: "var(--font-body)", cursor: "pointer", outline: "none" }}>
                         <option value="">Month</option>
-                        {Array.from({ length: 12 }, (_, i) => {
-                          const m = String(i + 1);
-                          return (
-                            <option key={m} value={m}>
-                              {m.padStart(2, "0")}
-                            </option>
-                          );
-                        })}
+                        {Array.from({ length: 12 }, (_, i) => <option key={i+1} value={String(i+1)}>{(i+1).toString().padStart(2,"0")}</option>)}
                       </select>
-
-                      <select
-                        value={dobDay}
-                        onChange={(e) => {
-                          setDobDay(e.target.value);
-                          setFe((prev) => ({ ...prev, dateOfBirth: "" }));
-                          setError("");
-                        }}
-                        style={{
-                          flex: 1,
-                          height: 46,
-                          padding: "0 10px",
-                          border: `1.5px solid ${fe.dateOfBirth ? T.errorRed : T.border}`,
-                          borderRadius: 10,
-                          fontSize: 14,
-                          background: T.surface,
-                          color: dobDay ? T.ink : T.muted,
-                          fontFamily: "inherit",
-                          cursor: "pointer",
-                          outline: "none",
-                        }}
-                      >
+                      <select value={dobDay} onChange={(e) => { setDobDay(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
+                        style={{ flex: 1, height: 46, padding: "0 10px", border: `1.5px solid ${fe.dateOfBirth ? "var(--destructive)" : "var(--border)"}`, borderRadius: "var(--radius-md)", fontSize: 14, background: "var(--input-bg)", color: dobDay ? "var(--foreground)" : "var(--foreground-muted)", fontFamily: "var(--font-body)", cursor: "pointer", outline: "none" }}>
                         <option value="">Day</option>
-                        {Array.from({ length: 31 }, (_, i) => {
-                          const d = String(i + 1);
-                          return (
-                            <option key={d} value={d}>
-                              {d.padStart(2, "0")}
-                            </option>
-                          );
-                        })}
+                        {Array.from({ length: 31 }, (_, i) => <option key={i+1} value={String(i+1)}>{(i+1).toString().padStart(2,"0")}</option>)}
                       </select>
-
-                      <select
-                        value={dobYear}
-                        onChange={(e) => {
-                          setDobYear(e.target.value);
-                          setFe((prev) => ({ ...prev, dateOfBirth: "" }));
-                          setError("");
-                        }}
-                        style={{
-                          flex: 1,
-                          height: 46,
-                          padding: "0 10px",
-                          border: `1.5px solid ${fe.dateOfBirth ? T.errorRed : T.border}`,
-                          borderRadius: 10,
-                          fontSize: 14,
-                          background: T.surface,
-                          color: dobYear ? T.ink : T.muted,
-                          fontFamily: "inherit",
-                          cursor: "pointer",
-                          outline: "none",
-                        }}
-                      >
+                      <select value={dobYear} onChange={(e) => { setDobYear(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
+                        style={{ flex: 1, height: 46, padding: "0 10px", border: `1.5px solid ${fe.dateOfBirth ? "var(--destructive)" : "var(--border)"}`, borderRadius: "var(--radius-md)", fontSize: 14, background: "var(--input-bg)", color: dobYear ? "var(--foreground)" : "var(--foreground-muted)", fontFamily: "var(--font-body)", cursor: "pointer", outline: "none" }}>
                         <option value="">Year</option>
-                        {Array.from({ length: 100 }, (_, i) => {
-                          const y = String(new Date().getFullYear() - i);
-                          return (
-                            <option key={y} value={y}>
-                              {y}
-                            </option>
-                          );
-                        })}
+                        {Array.from({ length: 100 }, (_, i) => <option key={i} value={String(new Date().getFullYear() - i)}>{new Date().getFullYear() - i}</option>)}
                       </select>
                     </div>
-                    {fe.dateOfBirth && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: T.errorRed,
-                          marginTop: 4,
-                          paddingLeft: 2,
-                        }}
-                      >
-                        {fe.dateOfBirth}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div style={{ marginTop: 24 }}>
@@ -987,35 +509,13 @@ export function RegisterPage() {
             {/* STEP 2 */}
             {step === 2 && (
               <form onSubmit={handleSubmit}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
-                >
-                  {/* Password */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ marginBottom: 4 }}>
-                    <label
-                      style={{
-                        display: "block",
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        color: T.ink,
-                        marginBottom: 5,
-                      }}
-                    >
-                      Password <span style={{ color: "#C0392B" }}>*</span>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 5 }}>
+                      Password <span style={{ color: "var(--destructive)" }}>*</span>
                     </label>
                     <div style={{ position: "relative" }}>
-                      <Lock
-                        size={15}
-                        style={{
-                          position: "absolute",
-                          left: 13,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          color: T.muted,
-                          opacity: 0.6,
-                          pointerEvents: "none",
-                        }}
-                      />
+                      <Lock size={15} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", opacity: 0.6, pointerEvents: "none" }} />
                       <input
                         type={showPw ? "text" : "password"}
                         placeholder="Create a strong password"
@@ -1023,263 +523,91 @@ export function RegisterPage() {
                         onChange={upd("password")}
                         required
                         autoComplete="new-password"
-                        className="rp-input-focus"
-                        style={{
-                          ...inputStyle(true, !!fe.password),
-                          paddingRight: 44,
-                          width: "100%",
-                          borderColor: fe.password ? T.errorRed : T.border,
-                        }}
+                        style={{ ...inputStyle(true, !!fe.password), paddingRight: 44, width: "100%", borderColor: fe.password ? "var(--destructive)" : "var(--border)" }}
+                        onFocus={(e) => { e.target.style.borderColor = "var(--primary)"; e.target.style.boxShadow = "0 0 0 3px rgba(107,63,160,0.08)"; }}
+                        onBlur={(e) => { e.target.style.borderColor = fe.password ? "var(--destructive)" : "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPw(!showPw)}
-                        style={{
-                          position: "absolute",
-                          right: 10,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 4,
-                          color: T.muted,
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                      >
+                      <button type="button" onClick={() => setShowPw(!showPw)}
+                        style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--foreground-muted)", display: "flex", alignItems: "center", borderRadius: 6 }}>
                         {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
-                    {fe.password && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: T.errorRed,
-                          marginTop: 4,
-                          paddingLeft: 2,
-                        }}
-                      >
-                        {fe.password}
-                      </div>
-                    )}
+                    {fe.password && <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4, paddingLeft: 2 }}>{fe.password}</div>}
                     {form.password.length > 0 && (
                       <>
                         <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
                           {[0, 1, 2].map((i) => (
-                            <div
-                              key={i}
-                              style={{
-                                height: 3,
-                                flex: 1,
-                                borderRadius: 2,
-                                background: i <= pwScore ? pwColor : T.border,
-                                transition: "background 0.25s",
-                              }}
-                            />
+                            <div key={i} style={{ height: 3, flex: 1, borderRadius: 2, background: i <= pwScore ? pwColor : "var(--border)", transition: "background 0.25s" }} />
                           ))}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: pwColor,
-                            marginTop: 3,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {pwLabel}
-                          {pwScore < 2 ? " — add numbers or uppercase" : ""}
+                        <div style={{ fontSize: 11, color: pwColor, marginTop: 3, fontWeight: 500 }}>
+                          {pwLabel}{pwScore < 2 ? " — add numbers or uppercase" : ""}
                         </div>
                       </>
                     )}
                   </div>
 
-                  {/* Confirm password */}
                   <div style={{ marginBottom: 4 }}>
-                    <label
-                      style={{
-                        display: "block",
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        color: T.ink,
-                        marginBottom: 5,
-                      }}
-                    >
-                      Confirm password{" "}
-                      <span style={{ color: "#C0392B" }}>*</span>
+                    <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 5 }}>
+                      Confirm password <span style={{ color: "var(--destructive)" }}>*</span>
                     </label>
                     <div style={{ position: "relative" }}>
-                      <Lock
-                        size={15}
-                        style={{
-                          position: "absolute",
-                          left: 13,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          color: T.muted,
-                          opacity: 0.6,
-                          pointerEvents: "none",
-                        }}
-                      />
+                      <Lock size={15} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", opacity: 0.6, pointerEvents: "none" }} />
                       <input
                         type={showCp ? "text" : "password"}
                         placeholder="Repeat your password"
                         value={form.confirmPassword}
                         onChange={upd("confirmPassword")}
                         required
-                        className="rp-input-focus"
-                        style={{
-                          ...inputStyle(true, !!fe.confirmPassword),
-                          paddingRight: 44,
-                          width: "100%",
-                          borderColor: fe.confirmPassword
-                            ? T.errorRed
-                            : T.border,
-                        }}
+                        style={{ ...inputStyle(true, !!fe.confirmPassword), paddingRight: 44, width: "100%", borderColor: fe.confirmPassword ? "var(--destructive)" : "var(--border)" }}
+                        onFocus={(e) => { e.target.style.borderColor = "var(--primary)"; e.target.style.boxShadow = "0 0 0 3px rgba(107,63,160,0.08)"; }}
+                        onBlur={(e) => { e.target.style.borderColor = fe.confirmPassword ? "var(--destructive)" : "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowCp(!showCp)}
-                        style={{
-                          position: "absolute",
-                          right: 10,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 4,
-                          color: T.muted,
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                      >
+                      <button type="button" onClick={() => setShowCp(!showCp)}
+                        style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--foreground-muted)", display: "flex", alignItems: "center", borderRadius: 6 }}>
                         {showCp ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
-                    {fe.confirmPassword && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: T.errorRed,
-                          marginTop: 4,
-                          paddingLeft: 2,
-                        }}
-                      >
-                        {fe.confirmPassword}
-                      </div>
-                    )}
+                    {fe.confirmPassword && <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4, paddingLeft: 2 }}>{fe.confirmPassword}</div>}
                     {form.confirmPassword.length > 0 && !fe.confirmPassword && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          marginTop: 3,
-                          fontWeight: 500,
-                          color:
-                            form.password === form.confirmPassword
-                              ? T.sage
-                              : T.muted,
-                        }}
-                      >
-                        {form.password === form.confirmPassword
-                          ? "✓ Passwords match"
-                          : "Passwords don't match yet"}
+                      <div style={{ fontSize: 11, marginTop: 3, fontWeight: 500, color: form.password === form.confirmPassword ? "var(--primary)" : "var(--foreground-muted)" }}>
+                        {form.password === form.confirmPassword ? "✓ Passwords match" : "Passwords don't match yet"}
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-                  <button
-                    type="button"
-                    className="rp-back"
-                    onClick={() => {
-                      setError("");
-                      setStep(1);
-                    }}
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="rp-subbtn"
-                    disabled={isLoading}
-                    style={{ flex: 2 }}
-                  >
+                  <button type="button" className="rp-back" onClick={() => { setError(""); setStep(1); }}>← Back</button>
+                  <button type="submit" className="rp-subbtn" disabled={isLoading} style={{ flex: 2 }}>
                     {isLoading ? (
-                      <>
-                        <Loader
-                          size={16}
-                          style={{ animation: "spin 0.8s linear infinite" }}
-                        />{" "}
-                        Creating…
-                      </>
+                      <><Loader size={16} style={{ animation: "spin 0.8s linear infinite" }} /> Creating…</>
                     ) : (
-                      <>
-                        Create account <ArrowRight size={16} />
-                      </>
+                      <>Create account <ArrowRight size={16} /></>
                     )}
                   </button>
                 </div>
 
-                <p
-                  style={{
-                    fontSize: 11.5,
-                    color: T.muted,
-                    textAlign: "center",
-                    marginTop: 16,
-                    lineHeight: 1.6,
-                  }}
-                >
+                <p style={{ fontSize: 11.5, color: "var(--foreground-muted)", textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
                   By creating an account you agree to our{" "}
-                  <a href="#" style={{ color: T.ink, fontWeight: 500 }}>
-                    Terms
-                  </a>{" "}
-                  and{" "}
-                  <a href="#" style={{ color: T.ink, fontWeight: 500 }}>
-                    Privacy Policy
-                  </a>
-                  .
+                  <a href="#" style={{ color: "var(--primary)", fontWeight: 500 }}>Terms</a> and{" "}
+                  <a href="#" style={{ color: "var(--primary)", fontWeight: 500 }}>Privacy Policy</a>.
                 </p>
               </form>
             )}
 
-            {/* Sign in link */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                margin: "24px 0 12px",
-              }}
-            >
-              <div style={{ flex: 1, height: 1, background: T.border }} />
-              <span
-                style={{ fontSize: 12, color: T.muted, whiteSpace: "nowrap" }}
-              >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 12px" }}>
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              <span style={{ fontSize: 13, color: "var(--foreground-muted)", whiteSpace: "nowrap", fontWeight: 500 }}>
                 Already have an account?
               </span>
-              <div style={{ flex: 1, height: 1, background: T.border }} />
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             </div>
-            <p
-              style={{
-                textAlign: "center",
-                fontSize: 13.5,
-                color: T.muted,
-                margin: 0,
-              }}
-            >
-              <Link
-                to="/auth/login"
-                style={{
-                  color: T.sage,
-                  fontWeight: 600,
-                  textDecoration: "none",
-                }}
-              >
+            <p style={{ textAlign: "center", fontSize: 13.5, color: "var(--foreground-muted)", margin: 0 }}>
+              <Link to="/auth/login" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
                 Sign in here
               </Link>{" "}
-              and continue your journey +
+              and continue your journey ✦
             </p>
           </div>
         </div>

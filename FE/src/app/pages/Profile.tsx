@@ -282,7 +282,7 @@ export function Profile({ embedded = false }: ProfileProps) {
           {/* ── Left column ── */}
           <div className="lg:col-span-3 space-y-4">
             {/* Avatar card */}
-            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="glass-panel-solid rounded-2xl overflow-hidden">
               {/* Banner */}
               <div className="h-20 bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/10" />
 
@@ -340,7 +340,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             </div>
 
             {/* Info card */}
-            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="glass-panel-solid rounded-2xl overflow-hidden">
               <div className="px-5 pt-4 pb-2">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Personal Information
@@ -350,7 +350,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                 {infoRows.map((row) => (
                   <div
                     key={row.label}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors"
                   >
                     <div
                       className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${row.color}`}
@@ -404,7 +404,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             ) : (
               <div className="space-y-4">
                 {/* Role card */}
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div className="glass-panel-solid rounded-2xl overflow-hidden">
                   <div className="px-5 pt-4 pb-2">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Role & Access
@@ -433,7 +433,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                 </div>
 
                 {/* Quick actions */}
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div className="glass-panel-solid rounded-2xl overflow-hidden">
                   <div className="px-5 pt-4 pb-2">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Account Actions
@@ -444,7 +444,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     <button
                       type="button"
                       onClick={() => setPwdOpen(true)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-colors group cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors group cursor-pointer text-left"
                     >
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-primary bg-primary/10">
                         <KeyRound className="w-4 h-4" />
@@ -458,7 +458,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     {/* Notification settings */}
                     <button
                       type="button"
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-colors group cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors group cursor-pointer text-left"
                     >
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-secondary bg-secondary/10">
                         <Bell className="w-4 h-4" />
@@ -473,7 +473,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/40 transition-colors group cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors group cursor-pointer text-left"
                     >
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-rose-500 bg-rose-500/10">
                         <LogOut className="w-4 h-4" />
@@ -493,18 +493,18 @@ export function Profile({ embedded = false }: ProfileProps) {
 
       {/* ── Edit Profile Modal ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-panel-solid">
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold">Edit Profile</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Update your personal information below.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-5 py-4">
             {/* Full Name */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Full Name
               </label>
               <input
@@ -513,14 +513,14 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, fullName: e.target.value }))
                 }
-                className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Your full name"
               />
             </div>
 
             {/* Phone */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Phone
               </label>
               <input
@@ -529,14 +529,14 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, phone: e.target.value }))
                 }
-                className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Your phone number"
               />
             </div>
 
             {/* Address */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Address
               </label>
               <input
@@ -545,14 +545,14 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, address: e.target.value }))
                 }
-                className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Your address"
               />
             </div>
 
             {/* Gender */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Gender
               </label>
               <select
@@ -563,7 +563,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
                   }))
                 }
-                className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               >
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
@@ -572,8 +572,8 @@ export function Profile({ embedded = false }: ProfileProps) {
             </div>
 
             {/* Date of Birth */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Date of Birth (MM/DD/YYYY)
               </label>
               <input
@@ -582,17 +582,17 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, dateOfBirth: e.target.value }))
                 }
-                className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="MM/DD/YYYY"
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <button
               type="button"
               onClick={() => setEditOpen(false)}
-              className="px-4 py-2.5 rounded-xl text-sm border border-border hover:bg-muted transition-colors text-muted-foreground"
+              className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium"
               disabled={saving}
             >
               Cancel
@@ -601,7 +601,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={handleEditSubmit}
               disabled={saving}
-              className="px-4 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {saving ? "Saving..." : "Save Changes"}
@@ -612,18 +612,18 @@ export function Profile({ embedded = false }: ProfileProps) {
 
       {/* ── Change Password Modal ── */}
       <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-panel-solid">
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold">Change Password</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Enter your current password and a new password.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-5 py-4">
             {/* Old Password */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Current Password
               </label>
               <div className="relative">
@@ -633,7 +633,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   onChange={(e) =>
                     setPwdForm((f) => ({ ...f, oldPassword: e.target.value }))
                   }
-                  className="w-full px-3 py-2.5 pr-10 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  className="w-full px-4 py-3 pr-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   placeholder="Enter current password"
                 />
                 <button
@@ -652,8 +652,8 @@ export function Profile({ embedded = false }: ProfileProps) {
             </div>
 
             {/* New Password */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 New Password
               </label>
               <div className="relative">
@@ -663,7 +663,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   onChange={(e) =>
                     setPwdForm((f) => ({ ...f, newPassword: e.target.value }))
                   }
-                  className="w-full px-3 py-2.5 pr-10 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  className="w-full px-4 py-3 pr-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   placeholder="Enter new password (min 6 chars)"
                 />
                 <button
@@ -682,8 +682,8 @@ export function Profile({ embedded = false }: ProfileProps) {
             </div>
 
             {/* Confirm New Password */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Confirm New Password
               </label>
               <input
@@ -695,13 +695,13 @@ export function Profile({ embedded = false }: ProfileProps) {
                     confirmNewPassword: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder="Re-enter new password"
               />
             </div>
           </div>
 
-          <DialogFooter className="items-center">
+          <DialogFooter className="items-center gap-2">
             <Link
               to="/auth/forgot-password"
               onClick={() => setPwdOpen(false)}
@@ -719,7 +719,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   confirmNewPassword: "",
                 });
               }}
-              className="px-4 py-2.5 rounded-xl text-sm border border-border hover:bg-muted transition-colors text-muted-foreground"
+              className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium"
               disabled={changingPwd}
             >
               Cancel
@@ -728,7 +728,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={handleChangePassword}
               disabled={changingPwd}
-              className="px-4 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
             >
               {changingPwd && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {changingPwd ? "Changing..." : "Change Password"}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Check, Banknote, QrCode, DollarSign } from "lucide-react";
+import { Check, QrCode } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
 import { useKeyboardAvoidance } from "../../hooks/useKeyboardAvoidance";
@@ -11,7 +11,7 @@ import { orderService } from "../../features/orders/services/order.service";
 import { useCart } from "../../context/CartContext";
 import type { CreateOrderRequest } from "../../features/orders/types/order.types";
 
-type Payment = "bank" | "cash";
+type Payment = "bank";
 
 const DELIVERY_FEE_PERCENT = 15;
 const BANK_NAME = "Vietcombank";
@@ -21,7 +21,7 @@ const BANK_HOLDER = "LEN & EM CO., LTD";
 export function Checkout() {
   const { cartItems, clearCart } = useCart();
   const onClearCart = clearCart;
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<Payment | null>("bank");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -127,7 +127,8 @@ export function Checkout() {
           district: "",
           city: "",
         },
-        paymentMethod: payment === "bank" ? "VNPAY" : "CASH",
+        paymentMethod: "VNPAY",
+        shippingFee: deliveryFee,
       };
       const { data: result } = await orderService.createOrder(payload);
       onClearCart();
@@ -232,53 +233,31 @@ export function Checkout() {
                 Giao hàng
               </span>
             </button>
-            <button
-              onClick={() => setPayment("cash")}
-              className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${payment === "cash" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-            >
-              {payment === "cash" && (
-                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center">
-                  <Check className="w-3 h-3" />
-                </span>
-              )}
-              <DollarSign className="w-7 h-7 text-primary" />
-              <span className="text-xs font-semibold text-center">
-                COD +<br />
-                Giao hàng
-              </span>
-            </button>
+            {/* Cash on delivery removed - only VNPAY supported */}
           </div>
 
-          {payment === "bank" && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-xl border border-border">
-              <div className="flex items-center gap-3 mb-3">
-                <Banknote className="w-5 h-5 text-primary" />
-                <span className="font-medium text-sm">
-                  Thông tin chuyển khoản
+          <div className="mt-4 p-4 bg-muted/50 rounded-xl border border-border">
+            <div className="space-y-1 text-sm">
+              <p>
+                <span className="text-muted-foreground">Ngân hàng: </span>
+                <span className="font-medium">{BANK_NAME}</span>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Số tài khoản: </span>
+                <span className="font-medium">{BANK_ACCOUNT}</span>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Chủ tài khoản: </span>
+                <span className="font-medium">{BANK_HOLDER}</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Nội dung:{" "}
+                <span className="font-mono text-foreground">
+                  Họ tên + SĐT
                 </span>
-              </div>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Ngân hàng: </span>
-                  <span className="font-medium">{BANK_NAME}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Số tài khoản: </span>
-                  <span className="font-medium">{BANK_ACCOUNT}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Chủ tài khoản: </span>
-                  <span className="font-medium">{BANK_HOLDER}</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Nội dung:{" "}
-                  <span className="font-mono text-foreground">
-                    Họ tên + SĐT
-                  </span>
-                </p>
-              </div>
+              </p>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Order Summary */}

@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Flag } from "lucide-react";
+import { Flag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth";
-import { useReports } from "../../context/ReportContext";
-import { useNotifications } from "../context/NotificationContext";
 import { useNavigate } from "react-router";
+import { orderReportService } from "../../features/orderReport/services/orderReport.service";
 import type { ReportTargetType } from "../../types/report.types";
 
 interface ReportButtonProps {
@@ -16,44 +15,48 @@ interface ReportButtonProps {
 
 export function ReportButton({ targetType, targetId, targetTitle, className = "" }: ReportButtonProps) {
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
-  const { user, isAuthenticated } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { createReport } = useReports();
-  const { addNotification } = useNotifications();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
       navigate("/auth/login");
       return;
     }
-    if (!reason.trim()) {
-      toast.error("Please select a reason");
+    if (!description.trim()) {
+      toast.error("Please provide a description");
       return;
     }
 
-    createReport({
-      targetType,
-      targetId,
-      targetTitle,
-      reason: reason.trim(),
-      description: description.trim(),
-      reporterId: user?.email || "unknown",
-      reporterName: user?.fullName || "Unknown User",
-    });
+    setSubmitting(true);
+    try {
+      // For purchased orders, use the real OrderReport API
+      if (targetType === "purchased_order") {
+        await orderReportService.create({
+          orderId: targetId,
+          title: `Report for ${targetTitle}`,
+          description: description.trim(),
+        });
+      } else {
+        // For DIY posts, use the real OrderReport API with the post ID
+        await orderReportService.create({
+          orderId: targetId,
+          title: `Report for ${targetTitle}`,
+          description: description.trim(),
+        });
+      }
 
-    addNotification({
-      type: "report_update",
-      title: "Report Submitted",
-      message: `Your report on "${targetTitle}" has been submitted for review.`,
-    });
-
-    toast.success("Report submitted. Our team will review it.");
-    setOpen(false);
-    setReason("");
-    setDescription("");
+      toast.success("Report submitted. Our team will review it.");
+      setOpen(false);
+      setDescription("");
+    } catch {
+      toast.error("Failed to submit report. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -78,29 +81,11 @@ export function ReportButton({ targetType, targetId, targetTitle, className = ""
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5">Reason *</label>
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  aria-label="Report reason"
-                  className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select a reason...</option>
-                  <option value="inappropriate">Inappropriate content</option>
-                  <option value="spam">Spam</option>
-                  <option value="misleading">Misleading or false information</option>
-                  <option value="copyright">Copyright violation</option>
-                  <option value="harassment">Harassment or hate speech</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Description (optional)</label>
+                <label className="block text-sm font-medium mb-1.5">Description *</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Provide more details..."
+                  placeholder="Tell us what's wrong with this item..."
                   rows={3}
                   className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
@@ -116,8 +101,10 @@ export function ReportButton({ targetType, targetId, targetTitle, className = ""
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-full text-sm font-medium bg-destructive text-white hover:bg-destructive/90 transition-colors"
+                  disabled={submitting || !description.trim()}
+                  className="flex-1 py-2.5 rounded-full text-sm font-medium bg-destructive text-white hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
+                  {submitting && <Loader2 className="size-4 animate-spin" />}
                   Submit Report
                 </button>
               </div>

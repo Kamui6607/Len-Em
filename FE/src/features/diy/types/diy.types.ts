@@ -1,15 +1,39 @@
 export interface DIYPost {
-  id: string;
-  creator: { id: string; name: string; avatar: string };
+  _id: string;
+  creatorId: string;
   title: string;
   description: string;
   images: string[];
-  linkedCombo: DIYCombo;
-  likeCount: number;
-  saveCount: number;
-  createdAt: string;
   tags: string[];
-  purchaseCount?: number;
+  linkedProduct: { productId: string }[];
+  linkedCombo: { comboId: string }[];
+  likeCount: number;
+  saveCount?: number;
+  purchaseCount: number;
+  price?: number;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DIYPostFormData {
+  title: string;
+  description: string;
+  images: File[];
+  tags: string[];
+  linkedProduct?: { productId: string }[];
+  linkedCombo?: { comboId: string }[];
+  price?: number;
+}
+
+export interface CreateDIYPostDTO {
+  title: string;
+  description: string;
+  tags?: string[];
+  linkedProduct?: { productId: string }[];
+  linkedCombo?: { comboId: string }[];
+  price?: number;
+  status?: "pending" | "approved" | "rejected";
 }
 
 export interface DIYCombo {

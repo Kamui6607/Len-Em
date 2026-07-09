@@ -6,7 +6,7 @@ import {
   Trash2,
   X,
   Shield,
-  AlertTriangle,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../hooks/useAuth";
@@ -28,7 +28,7 @@ function formatDate(dateStr: string): string {
   }
 }
 
-// ─── Props for ConfirmDialog ─────────────────────────────
+// ─── Confirm Dialog ──────────────────────────────────────
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -38,49 +38,47 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-function ConfirmDialog({
-  open,
-  title,
-  message,
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onCancel}
-      />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950">
-            <AlertTriangle size={20} className="text-destructive" />
+  function ConfirmDialog({
+    open,
+    title,
+    message,
+    onConfirm,
+    onCancel,
+  }: ConfirmDialogProps) {
+    if (!open) return null;
+    return (
+      <div className="admin-dialog-overlay" onClick={onCancel}>
+        <div
+          className="admin-dialog-content max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="admin-dialog-header">
+            <h3 className="text-base font-semibold">{title}</h3>
           </div>
-          <div>
-            <h3 className="font-bold text-lg">{title}</h3>
+          <div className="admin-dialog-body">
             <p className="text-sm text-muted-foreground">{message}</p>
           </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-colors"
-          >
-            Delete
-          </button>
+          <div className="admin-dialog-footer">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="btn-modal-cancel"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="btn-modal-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 // ─── Permission Form Data ────────────────────────────────
 
@@ -112,146 +110,144 @@ interface PermissionModalProps {
   onClose: () => void;
 }
 
-function PermissionModal({
-  open,
-  editingId,
-  form,
-  resources,
-  saving,
-  fieldErrors,
-  onChange,
-  onSave,
-  onClose,
-}: PermissionModalProps) {
-  if (!open) return null;
+  function PermissionModal({
+    open,
+    editingId,
+    form,
+    resources,
+    saving,
+    fieldErrors,
+    onChange,
+    onSave,
+    onClose,
+  }: PermissionModalProps) {
+    if (!open) return null;
 
-  const filteredActions =
-    resources.find((r) => r.resource === form.resource)?.actions ?? [];
+    const filteredActions =
+      resources.find((r) => r.resource === form.resource)?.actions ?? [];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] pb-8 px-4">
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[calc(100vh-4rem)] overflow-y-auto z-10">
-        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-lg font-bold">
-            {editingId ? "Edit Permission" : "Create Permission"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-muted rounded-lg transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Permission Name <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => onChange({ ...form, name: e.target.value })}
-              className={`w-full px-4 py-2.5 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary ${
-                fieldErrors.name ? "border-destructive" : "border-border"
-              }`}
-              placeholder="e.g. create_product"
-            />
-            {fieldErrors.name && (
-              <p className="text-xs text-destructive mt-1">
-                {fieldErrors.name}
-              </p>
-            )}
+    return (
+      <div className="admin-dialog-overlay" onClick={onClose}>
+        <div
+          className="admin-dialog-content max-w-lg max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="admin-dialog-header">
+            <h3 className="text-base font-semibold">
+              {editingId ? "Edit Permission" : "Create Permission"}
+            </h3>
+            <button
+              onClick={onClose}
+              style={{ color: "var(--foreground-muted)" }}
+              className="admin-action-btn absolute top-4 right-4"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
+          <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+            <div className="admin-dialog-body space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Permission Name <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => onChange({ ...form, name: e.target.value })}
+                  className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
+                  placeholder="e.g. create_product"
+                />
+                {fieldErrors.name && (
+                  <p className="text-xs text-destructive mt-1">
+                    {fieldErrors.name}
+                  </p>
+                )}
+              </div>
 
-          {/* Resource */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Resource <span className="text-destructive">*</span>
-            </label>
-            <AdminSelect
-              value={form.resource}
-              placeholder="Select resource"
-              options={resources.map((r) => ({
-                value: r.resource,
-                label: r.resource,
-              }))}
-              onChange={(value) =>
-                onChange({ ...form, resource: value, action: "" })
-              }
-              buttonClassName={fieldErrors.resource ? "border-destructive" : ""}
-            />
-            {fieldErrors.resource && (
-              <p className="text-xs text-destructive mt-1">
-                {fieldErrors.resource}
-              </p>
-            )}
-          </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Resource <span className="text-destructive">*</span>
+                </label>
+                <AdminSelect
+                  value={form.resource}
+                  placeholder="Select resource"
+                  options={resources.map((r) => ({
+                    value: r.resource,
+                    label: r.resource,
+                  }))}
+                  onChange={(value) =>
+                    onChange({ ...form, resource: value, action: "" })
+                  }
+                  buttonClassName={fieldErrors.resource ? "border-destructive" : ""}
+                />
+                {fieldErrors.resource && (
+                  <p className="text-xs text-destructive mt-1">
+                    {fieldErrors.resource}
+                  </p>
+                )}
+              </div>
 
-          {/* Action */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Action <span className="text-destructive">*</span>
-            </label>
-            <AdminSelect
-              value={form.action}
-              placeholder="Select action"
-              disabled={!form.resource}
-              options={filteredActions.map((action) => ({
-                value: action,
-                label: action,
-              }))}
-              onChange={(value) => onChange({ ...form, action: value })}
-              buttonClassName={fieldErrors.action ? "border-destructive" : ""}
-            />
-            {fieldErrors.action && (
-              <p className="text-xs text-destructive mt-1">
-                {fieldErrors.action}
-              </p>
-            )}
-          </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Action <span className="text-destructive">*</span>
+                </label>
+                <AdminSelect
+                  value={form.action}
+                  placeholder="Select action"
+                  disabled={!form.resource}
+                  options={filteredActions.map((action) => ({
+                    value: action,
+                    label: action,
+                  }))}
+                  onChange={(value) => onChange({ ...form, action: value })}
+                  buttonClassName={fieldErrors.action ? "border-destructive" : ""}
+                />
+                {fieldErrors.action && (
+                  <p className="text-xs text-destructive mt-1">
+                    {fieldErrors.action}
+                  </p>
+                )}
+              </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Description
-            </label>
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                onChange({ ...form, description: e.target.value })
-              }
-              rows={3}
-              className="w-full px-4 py-2.5 bg-input-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              placeholder="Optional description..."
-            />
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]"
-          >
-            {saving ? "Saving..." : editingId ? "Update" : "Create"}
-          </button>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Description
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) =>
+                    onChange({ ...form, description: e.target.value })
+                  }
+                  rows={3}
+                  className="input w-full resize-none"
+                  placeholder="Optional description..."
+                />
+              </div>
+            </div>
+            <div className="admin-dialog-footer">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="btn-modal-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-modal-primary"
+              >
+                {saving ? "Saving…" : editingId ? "Update Permission" : "Create Permission"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 // ─── Main Component ──────────────────────────────────────
 
@@ -468,75 +464,81 @@ export function Permissions() {
           </p>
         </div>
         {isAdmin && (
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all active:scale-[0.97]"
-          >
-            <Plus size={18} />
-            Create Permission
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openCreate}
+              className="btn-create"
+            >
+              <Plus size={18} />
+              +create
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          />
+      {/* Table */}
+      <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
+        {/* Filters */}
+        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                className="input w-full"
+                style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
+              />
+            </div>
+
+            <AdminSelect
+              value={filterResource}
+              options={[
+                { value: "", label: "All resources" },
+                ...resources.map((resource) => ({
+                  value: resource.resource,
+                  label: resource.resource,
+                })),
+              ]}
+              onChange={(value) => {
+                setFilterResource(value);
+                setFilterAction("");
+              }}
+              className="min-w-[170px]"
+            />
+
+            <AdminSelect
+              value={filterAction}
+              disabled={!filterResource}
+              options={[
+                { value: "", label: "All actions" },
+                ...resourceActions.map((action) => ({
+                  value: action,
+                  label: action,
+                })),
+              ]}
+              onChange={setFilterAction}
+              className="min-w-[160px]"
+            />
+          </div>
         </div>
 
-        <AdminSelect
-          value={filterResource}
-          options={[
-            { value: "", label: "All resources" },
-            ...resources.map((resource) => ({
-              value: resource.resource,
-              label: resource.resource,
-            })),
-          ]}
-          onChange={(value) => {
-            setFilterResource(value);
-            setFilterAction("");
-          }}
-          className="min-w-[170px]"
-        />
-
-        <AdminSelect
-          value={filterAction}
-          disabled={!filterResource}
-          options={[
-            { value: "", label: "All actions" },
-            ...resourceActions.map((action) => ({
-              value: action,
-              label: action,
-            })),
-          ]}
-          onChange={setFilterAction}
-          className="min-w-[160px]"
-        />
-      </div>
-
-      {/* Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        {/* Table Body */}
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             Loading...
           </div>
         ) : permissions.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Shield size={40} className="mx-auto mb-3 opacity-40" />
             <p>No permissions found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
+          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+            <table className="admin-table w-full">
+              <thead className="bg-muted">
                 <tr>
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                     Name
@@ -564,7 +566,7 @@ export function Permissions() {
                 {permissions.map((perm) => (
                   <tr
                     key={perm._id}
-                    className="border-t border-border hover:bg-muted/30 transition-colors"
+                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
                   >
                     <td className="px-6 py-4">
                       <span className="font-medium text-sm">{perm.name}</span>
@@ -587,15 +589,22 @@ export function Permissions() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
+                            onClick={() => {}}
+                            className="admin-action-btn view"
+                            title="View Detail"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
                             onClick={() => openEdit(perm)}
-                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                            className="admin-action-btn edit"
                             title="Edit"
                           >
                             <Edit3 size={16} />
                           </button>
                           <button
                             onClick={() => setDeleteTarget(perm)}
-                            className="p-2 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
+                            className="admin-action-btn delete"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -615,7 +624,7 @@ export function Permissions() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="btn-secondary"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -625,7 +634,7 @@ export function Permissions() {
             Page {page} of {totalPages}
           </span>
           <button
-            className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="btn-secondary"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

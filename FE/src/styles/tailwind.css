@@ -1,4 +1,37 @@
 @import 'tailwindcss' source(none);
+@config "../../tailwind.config.ts";
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @import 'tw-animate-css';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--foreground-muted);
+  --color-accent: var(--chip-active-bg);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input-border);
+  --color-ring: var(--primary);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--popover-bg);
+  --color-popover-foreground: var(--foreground);
+  --color-success: var(--success-bg);
+  --color-success-foreground: var(--success-text);
+  --color-warning: var(--warning-bg);
+  --color-warning-foreground: var(--warning-text);
+  --color-error: var(--error-bg);
+  --color-error-foreground: var(--error-text);
+  --color-info: var(--info-bg);
+  --color-info-foreground: var(--info-text);
+  --color-warm: var(--accent-warm);
+  --color-warm-soft: var(--accent-warm-soft);
+}

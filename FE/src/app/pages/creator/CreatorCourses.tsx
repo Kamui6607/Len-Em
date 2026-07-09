@@ -15,12 +15,12 @@ export function CreatorCourses() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#3f342c]">Course Management</h1>
+          <h1 className="text-3xl font-bold text-[var(--color-warm-text)]">Course Management</h1>
           <p className="text-muted-foreground">Build skill paths and publish lessons with linked material combos.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-full bg-[#b7664e] hover:bg-[#9f5844]"><Plus className="mr-2 h-4 w-4" />Create new course</Button>
+            <Button className="rounded-full bg-[var(--color-warm-accent)] hover:bg-[var(--color-warm-accent-hover)]"><Plus className="mr-2 h-4 w-4" />Create new course</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -31,12 +31,12 @@ export function CreatorCourses() {
               <div className="grid gap-2"><Label htmlFor="course-name">Course name</Label><Input id="course-name" placeholder="Cozy flower bouquet" /></div>
               <div className="grid gap-2"><Label htmlFor="course-level">Level</Label><Input id="course-level" placeholder="Beginner / Intermediate / Advanced" /></div>
             </div>
-            <DialogFooter><Button onClick={() => setOpen(false)} className="bg-[#b7664e] hover:bg-[#9f5844]">Save draft</Button></DialogFooter>
+            <DialogFooter><Button onClick={() => setOpen(false)} className="bg-[var(--color-warm-accent)] hover:bg-[var(--color-warm-accent-hover)]">Save draft</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="rounded-3xl border border-[#eadcc7] bg-card p-4 shadow-sm">
+      <div className="rounded-3xl border border-[var(--color-warm-border)] bg-card p-4 shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -46,11 +46,11 @@ export function CreatorCourses() {
           <TableBody>
             {creatorCourses.map((course) => (
               <TableRow key={course.id}>
-                <TableCell className="font-semibold text-[#3f342c]"><Link className="hover:text-[#b7664e]" to={`/creator/lessons/${course.id}`}>{course.name}</Link></TableCell>
+                <TableCell className="font-semibold text-[var(--color-warm-text)]"><Link className="hover:text-[var(--color-warm-accent)]" to={`/creator/lessons/${course.id}`}>{course.name}</Link></TableCell>
                 <TableCell>{course.level}</TableCell>
                 <TableCell>{course.lessonCount}</TableCell>
                 <TableCell>{course.enrolledStudents.toLocaleString()}</TableCell>
-                <TableCell><span className={`rounded-full px-3 py-1 text-xs font-semibold ${course.status === "Published" ? "bg-[#7f9b73]/15 text-[#5f7f54]" : "bg-[#eadcc7] text-[#7b6858]"}`}>{course.status}</span></TableCell>
+                <TableCell><span className={`rounded-full px-3 py-1 text-xs font-semibold ${course.status === "Published" ? "bg-[var(--color-success)]/15 text-[var(--color-success)]" : "bg-[var(--color-warm-surface)] text-[var(--color-warm-text-secondary)]"}`}>{course.status}</span></TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" size="sm"><Edit className="h-4 w-4" />Edit</Button>

@@ -75,26 +75,42 @@ export function AdminSelect({
           if (!open) updateCoords();
           setOpen((current) => !current);
         }}
-        className={`w-full flex items-center justify-between gap-3 px-4 py-3 bg-card border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ${
-          open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground/40"
+        style={{ background: "var(--select-bg)", color: "var(--foreground)" }}
+        className={`w-full flex items-center justify-between gap-3 px-4 py-3 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ${
+          open ? "border-primary ring-2 ring-primary/20" : "hover:border-[var(--input-hover-border)]"
         } ${buttonClassName}`}
       >
         <span className="flex items-center gap-2 min-w-0">
           {selected?.dotClassName && (
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${selected.dotClassName}`} />
           )}
-          <span className={`truncate ${selected ? "text-foreground" : "text-muted-foreground"}`}>
+          <span
+            className="truncate"
+            style={{ color: selected ? "var(--foreground)" : "var(--foreground-placeholder)" }}
+          >
             {selected?.label ?? placeholder}
           </span>
         </span>
-        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${open ? "rotate-180" : ""}`}
+          style={{ color: "var(--foreground-muted)" }}
+        />
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
         <div
           ref={menuRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, width: coords.width, zIndex: 9999 }}
-          className="bg-card border border-border rounded-xl shadow-lg overflow-hidden py-1"
+          style={{ 
+            position: "fixed", 
+            top: coords.top, 
+            left: coords.left, 
+            width: coords.width, 
+            zIndex: 9999,
+            maxHeight: "300px",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+          className="glass-panel-solid py-1"
         >
           {options.map((option) => (
             <button
@@ -106,15 +122,20 @@ export function AdminSelect({
                 onChange(option.value);
                 setOpen(false);
               }}
-              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-muted/60 disabled:opacity-45 disabled:cursor-not-allowed ${
-                option.value === value ? "text-foreground font-medium" : "text-muted-foreground"
-              }`}
+              style={{
+                color: option.value === value ? "var(--foreground)" : "var(--foreground-muted)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--dropdown-hover-bg)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
             >
               {option.dotClassName && (
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${option.dotClassName}`} />
               )}
               <span className="flex-1 text-left truncate">{option.label}</span>
-              {option.value === value && <Check className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />}
+              {option.value === value && (
+                <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--primary)" }} />
+              )}
             </button>
           ))}
         </div>,

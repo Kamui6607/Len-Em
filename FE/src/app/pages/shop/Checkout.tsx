@@ -9,12 +9,13 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { toast } from "sonner";
-import { Check, QrCode, DollarSign, ArrowLeft } from "lucide-react";
+import { Check, QrCode, ArrowLeft } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useAuthStore } from "../../../store/auth.store";
 import { orderApi } from "../../../api/orderService";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../../components/ui/ColorSwatch";
+import { CoinUsage } from "../../components/membership/CoinUsage";
 import type { CreateOrderRequest } from "../../../features/orders/types/order.types";
 
 // ── Validation schema ──
@@ -29,18 +30,28 @@ const shippingSchema = yup.object({
 
 type ShippingFormData = yup.InferType<typeof shippingSchema>;
 
-// ── Payment method config (linh hoạt, có thể thêm/sửa) ──
+// ── Payment method config ──
 const PAYMENT_METHODS = [
-  { value: "VNPAY" as const, label: "VNPAY", icon: QrCode, description: "Thanh toán qua VNPAY" },
-  { value: "CASH" as const, label: "Tiền mặt (COD)", icon: DollarSign, description: "Thanh toán khi nhận hàng" },
+  {
+    value: "VNPAY" as const,
+    label: "VNPAY",
+    icon: QrCode,
+    description: "Thanh toán qua VNPAY",
+  },
 ];
 
 export function Checkout() {
   const navigate = useNavigate();
   const { cartItems, totalItems, totalPrice, clearCart } = useCart();
   const user = useAuthStore((s) => s.user);
-  const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "CASH">("CASH");
+  const [paymentMethod, setPaymentMethod] = useState<"VNPAY">("VNPAY");
   const [submitting, setSubmitting] = useState(false);
+  const [coinDiscount, setCoinDiscount] = useState(0);
+
+  const DELIVERY_FEE_PERCENT = 15;
+  const subtotal = totalPrice;
+  const deliveryFee = (subtotal * DELIVERY_FEE_PERCENT) / 100;
+  const grandTotal = Math.max(0, subtotal + deliveryFee - coinDiscount);
 
   const {
     register,
@@ -91,6 +102,8 @@ export function Checkout() {
           city: "",
         },
         paymentMethod,
+        shippingFee: deliveryFee,
+        ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
       };
 
       const response = await orderApi.createOrder(payload);
@@ -102,12 +115,23 @@ export function Checkout() {
         return;
       }
 
-      // COD: clear cart and go to success
+      // Order created: clear cart and go to success page
       clearCart();
-      toast.success("Đặt hàng thành công!");
-      navigate(`/orders/my`);
+      const orderId = result?.order?._id || "";
+      const date = new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      navigate(
+        `/order/success?orderId=${orderId}&date=${encodeURIComponent(date)}`,
+      );
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
+      const axiosError = error as {
+        response?: {
+          data?: { message?: string; errors?: Record<string, string[]> };
+        };
+      };
       const errData = axiosError?.response?.data;
       if (errData?.message) {
         toast.error(errData.message);
@@ -129,7 +153,9 @@ export function Checkout() {
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <h2 className="text-2xl font-semibold mb-3">Giỏ hàng trống</h2>
-          <p className="text-muted-foreground mb-6">Vui lòng thêm sản phẩm vào giỏ trước khi đặt hàng.</p>
+          <p className="text-muted-foreground mb-6">
+            Vui lòng thêm sản phẩm vào giỏ trước khi đặt hàng.
+          </p>
           <Link
             to="/shop"
             className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-full hover:bg-primary/90 transition-colors font-medium"
@@ -161,7 +187,9 @@ export function Checkout() {
             <div className="lg:col-span-3 space-y-6">
               {/* Shipping Address */}
               <div className="bg-card rounded-2xl border border-border p-6">
-                <h2 className="text-lg font-semibold mb-4">Thông tin giao hàng</h2>
+                <h2 className="text-lg font-semibold mb-4">
+                  Thông tin giao hàng
+                </h2>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
@@ -175,7 +203,9 @@ export function Checkout() {
                       }`}
                     />
                     {errors.fullName && (
-                      <p className="text-destructive text-xs mt-1">{errors.fullName.message}</p>
+                      <p className="text-destructive text-xs mt-1">
+                        {errors.fullName.message}
+                      </p>
                     )}
                   </div>
 
@@ -191,7 +221,9 @@ export function Checkout() {
                       }`}
                     />
                     {errors.phone && (
-                      <p className="text-destructive text-xs mt-1">{errors.phone.message}</p>
+                      <p className="text-destructive text-xs mt-1">
+                        {errors.phone.message}
+                      </p>
                     )}
                   </div>
 
@@ -207,7 +239,9 @@ export function Checkout() {
                       }`}
                     />
                     {errors.address && (
-                      <p className="text-destructive text-xs mt-1">{errors.address.message}</p>
+                      <p className="text-destructive text-xs mt-1">
+                        {errors.address.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -215,7 +249,9 @@ export function Checkout() {
 
               {/* Payment Method */}
               <div className="bg-card rounded-2xl border border-border p-6">
-                <h2 className="text-lg font-semibold mb-4">Phương thức thanh toán</h2>
+                <h2 className="text-lg font-semibold mb-4">
+                  Phương thức thanh toán
+                </h2>
                 <div className="grid grid-cols-2 gap-3">
                   {PAYMENT_METHODS.map((method) => {
                     const Icon = method.icon;
@@ -245,6 +281,13 @@ export function Checkout() {
                   })}
                 </div>
               </div>
+
+              {/* Coin Usage */}
+              <CoinUsage
+                orderTotal={subtotal}
+                onCoinApplied={setCoinDiscount}
+                onCoinRemoved={() => setCoinDiscount(0)}
+              />
             </div>
 
             {/* ── Right: Order Summary ── */}
@@ -272,10 +315,18 @@ export function Checkout() {
                         }}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        <p className="text-sm font-medium truncate">
+                          {item.name}
+                        </p>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <ColorSwatch hexCode={item.hexCode} colorName={item.color} size="sm" />
-                          <span className="text-xs text-muted-foreground">{item.color}</span>
+                          <ColorSwatch
+                            hexCode={item.hexCode}
+                            colorName={item.color}
+                            size="sm"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {item.color}
+                          </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           SL: {item.quantity} x {formatPrice(item.price)}
@@ -292,11 +343,21 @@ export function Checkout() {
                 <div className="space-y-2 pt-3 border-t border-border">
                   <div className="flex justify-between text-muted-foreground text-sm">
                     <span>Tạm tính ({totalItems} sản phẩm)</span>
-                    <span>{formatPrice(totalPrice)}</span>
+                    <span>{formatPrice(subtotal)}</span>
                   </div>
+                  <div className="flex justify-between text-muted-foreground text-sm">
+                    <span>Phí vận chuyển ({DELIVERY_FEE_PERCENT}%)</span>
+                    <span>{formatPrice(deliveryFee)}</span>
+                  </div>
+                  {coinDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-primary">
+                      <span>Giảm giá Coin</span>
+                      <span>-{formatPrice(coinDiscount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border">
                     <span>Tổng cộng</span>
-                    <span className="text-primary">{formatPrice(totalPrice)}</span>
+                    <span className="text-primary">{formatPrice(grandTotal)}</span>
                   </div>
                 </div>
 

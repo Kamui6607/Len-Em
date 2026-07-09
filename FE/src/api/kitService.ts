@@ -66,4 +66,8 @@ export const kitService = {
   /** GET /kits/{id} — Get kit by ID */
   getById: (id: string) =>
     axiosClient.get<ApiResponse<{ kit: Kit }>>(`${KITS_BASE}/${id}`),
+
+  /** GET /kits?ids= — Get kits by IDs (comma-separated) */
+  getByIds: (ids: string[]) =>
+    axiosClient.get<ApiResponse<RawKitListResponse>>(KITS_BASE, { params: { ids: ids.join(",") } }),
 };

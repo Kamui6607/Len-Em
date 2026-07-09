@@ -54,7 +54,7 @@ export function DashboardAvatarMenu({
   return (
     <div className="flex items-center gap-2">
       {/* Theme toggle to the LEFT of avatar */}
-      <ThemeToggle size="sm" />
+      <ThemeToggle />
 
       <div className="relative" ref={menuRef}>
         <button

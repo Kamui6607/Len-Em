@@ -74,20 +74,45 @@ export function Shop() {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"products" | "combo">("products");
-  const [kits, setKits] = useState<Kit[]>([]);
-  const [kitsLoading, setKitsLoading] = useState(false);
+const [kits, setKits] = useState<Kit[]>([]);
+const [kitsLoading, setKitsLoading] = useState(false);
+const [kitLevel, setKitLevel] = useState<string>("all");
+const [kitMinPrice, setKitMinPrice] = useState<number>(0);
+const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
 
-  // Fetch kits when switching to combo view
-  useEffect(() => {
-    if (viewMode === "combo") {
-      setKitsLoading(true);
-      kitService
-        .getAll({ page: 1, limit: 50 })
-        .then((res) => setKits(res.data.data?.kits ?? []))
-        .catch(() => toast.error("Failed to load kits"))
-        .finally(() => setKitsLoading(false));
-    }
-  }, [viewMode]);
+// Kit level options for combo filter
+const KIT_LEVEL_OPTIONS = [
+  { value: "all", label: "All Levels", emoji: "🎁" },
+  { value: "beginner", label: "Beginner", emoji: "🌱" },
+  { value: "intermediate", label: "Intermediate", emoji: "🌿" },
+  { value: "advanced", label: "Advanced", emoji: "🌳" },
+];
+
+// Check if kit level filter is active
+const hasActiveKitLevel = kitLevel !== "all";
+
+// Filter kits by price range
+const filteredKits = useMemo(() => {
+  if (kitMinPrice <= 0 && kitMaxPrice <= 0) return kits;
+  return kits.filter((kit) => {
+    return (
+      (kitMinPrice <= 0 || kit.price >= kitMinPrice) &&
+      (kitMaxPrice <= 0 || kit.price <= kitMaxPrice)
+    );
+  });
+}, [kits, kitMinPrice, kitMaxPrice]);
+
+// Fetch kits when switching to combo view
+useEffect(() => {
+  if (viewMode === "combo") {
+    setKitsLoading(true);
+    kitService
+      .getAll({ page: 1, limit: 50, level: kitLevel === "all" ? undefined : kitLevel })
+      .then((res) => setKits(res.data.data?.kits ?? []))
+      .catch(() => toast.error("Failed to load kits"))
+      .finally(() => setKitsLoading(false));
+  }
+}, [viewMode, kitLevel]);
   const [recommendationsDismissed, setRecommendationsDismissed] = useState(
     () => localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true",
   );
@@ -142,7 +167,7 @@ export function Shop() {
     return materialCombos
       .filter((combo) =>
         currentLessons.some((lesson) =>
-          lesson.linkedProducts.some((linkedProduct) =>
+          lesson.linkedProducts?.some((linkedProduct) =>
             combo.productIds.includes(linkedProduct.productId),
           ),
         ),
@@ -151,9 +176,9 @@ export function Shop() {
   }, [currentCourseId, currentLessons]);
   const recommendedProducts = useMemo(() => {
     if (!currentLesson) return [];
-    const lessonProductIds = currentLesson.linkedProducts.map(
+    const lessonProductIds = currentLesson.linkedProducts?.map(
       (product) => product.productId,
-    );
+    ) ?? [];
     return products
       .filter((product) => lessonProductIds.includes(product.id))
       .slice(0, 4);
@@ -196,7 +221,7 @@ export function Shop() {
     setRecommendationsDismissed(true);
   };
 
-  const getEmptyStateMessage = () => {
+const getEmptyStateMessage = () => {
     if (filters.search) return `No products found for "${filters.search}"`;
     if (filters.color.length > 0) return "No products in the selected color";
     if (filters.material.length > 0)
@@ -207,15 +232,97 @@ export function Shop() {
     return "No products found";
   };
 
+  // Kit filter content for combo view
+  const KitFilterContent = ({ showHeader = true }: { showHeader?: boolean }) => (
+    <>
+      {showHeader && (
+        <div className="filter-header">
+          <span className="filter-title">Filters</span>
+          {hasActiveKitLevel && (
+            <motion.button
+              type="button"
+              onClick={() => setKitLevel("all")}
+              className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
+              style={{
+                borderColor: "var(--clear-btn-border)",
+                background: "var(--clear-btn-bg)",
+                color: "var(--clear-btn-text)",
+              }}
+              whileHover={{ 
+                scale: 1.05,
+                boxShadow: "0 4px 12px var(--clear-btn-glow)"
+              }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Clear all
+            </motion.button>
+          )}
+        </div>
+      )}
+
+      {/* Level filter for kits */}
+      <div className="filter-group">
+        <span className="filter-group-label">Level</span>
+        <div className="filter-chip-group">
+          {KIT_LEVEL_OPTIONS.map((level) => (
+            <button
+              key={level.value}
+              className={`chip-filter ${kitLevel === level.value ? "active" : ""}`}
+              onClick={() => setKitLevel(level.value)}
+            >
+              {level.emoji} {level.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Price range for kits */}
+      <div className="filter-group">
+        <span className="filter-group-label">Price range</span>
+        <div className="price-inputs">
+          <input
+            className="price-input"
+            type="number"
+            placeholder="Min"
+            value={kitMinPrice || ""}
+            onChange={(e) => setKitMinPrice(Number(e.target.value))}
+          />
+          <span className="price-sep">–</span>
+          <input
+            className="price-input"
+            type="number"
+            placeholder="Max"
+            value={kitMaxPrice || ""}
+            onChange={(e) => setKitMaxPrice(Number(e.target.value))}
+          />
+        </div>
+      </div>
+    </>
+  );
+
   const FilterContent = ({ showHeader = true }: { showHeader?: boolean }) => (
     <>
       {showHeader && (
         <div className="filter-header">
           <span className="filter-title">Filters</span>
           {hasActiveFilters && (
-            <button className="filter-clear" onClick={clearFilters}>
+            <motion.button
+              type="button"
+              onClick={clearFilters}
+              className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
+              style={{
+                borderColor: "var(--clear-btn-border)",
+                background: "var(--clear-btn-bg)",
+                color: "var(--clear-btn-text)",
+              }}
+              whileHover={{ 
+                scale: 1.05,
+                boxShadow: "0 4px 12px var(--clear-btn-glow)"
+              }}
+              whileTap={{ scale: 0.95 }}
+            >
               Clear all
-            </button>
+            </motion.button>
           )}
         </div>
       )}
@@ -360,6 +467,39 @@ export function Shop() {
   return (
     <div className="min-h-screen bg-background">
       <style>{`
+        /* ── View mode toggle buttons ── */
+        .shop-mode-btn {
+          border: 2px solid var(--primary);
+          transition: all 0.2s ease;
+          background: var(--card);
+          color: var(--foreground);
+        }
+        .shop-mode-btn:hover {
+          background: var(--accent-blush) !important;
+          color: var(--foreground) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(240, 196, 224, 0.4);
+        }
+        .shop-mode-btn.shop-mode-active {
+          background: var(--accent-blush);
+          color: var(--foreground);
+          box-shadow: 0 2px 8px rgba(240, 196, 224, 0.4);
+        }
+        .dark .shop-mode-btn {
+          border-color: var(--primary);
+          color: var(--primary);
+        }
+        .dark .shop-mode-btn:hover {
+          background: var(--primary) !important;
+          color: var(--primary-foreground) !important;
+          box-shadow: 0 4px 12px rgba(155, 111, 214, 0.35);
+        }
+        .dark .shop-mode-btn.shop-mode-active {
+          background: var(--primary);
+          color: var(--primary-foreground);
+          box-shadow: 0 2px 8px rgba(155, 111, 214, 0.3);
+        }
+
         /* ── Top bar ── */
         .shop-top {
           background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -388,13 +528,16 @@ export function Shop() {
         }
         .search-input {
           width: 100%; padding: 10px 12px 10px 40px;
-          background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.22);
+          backdrop-filter: blur(14px) saturate(160%);
+          -webkit-backdrop-filter: blur(14px) saturate(160%);
+          border: 1.5px solid rgba(255,255,255,0.32);
           border-radius: 100px; outline: none; font-family: inherit;
           font-size: 0.9rem; color: #fff; transition: all 0.25s;
           -webkit-appearance: none;
         }
-        .search-input::placeholder { color: rgba(255,255,255,0.45); }
-        .search-input:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.4); }
+        .search-input::placeholder { color: rgba(255,255,255,0.65); }
+        .search-input:focus { background: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.55); }
 
         /* ── Body layout ── */
         .shop-body {
@@ -412,6 +555,10 @@ export function Shop() {
           padding: 1rem; height: fit-content;
           position: sticky; top: 5rem;
         }
+        .dark .filter-panel { background: var(--surface) !important; border-color: rgba(155,111,214,0.15) !important; }
+        .dark .filter-panel .filter-group-label { color: var(--foreground-muted) !important; }
+        .dark .filter-panel .filter-title { color: var(--foreground) !important; }
+        .dark .filter-panel .filter-clear { color: var(--primary) !important; }
         @media (max-width: 768px) {
           .filter-panel { display: none; }
         }
@@ -444,6 +591,7 @@ export function Shop() {
           /* safe area for iPhone home indicator */
           padding-bottom: calc(2rem + env(safe-area-inset-bottom));
         }
+        .dark .drawer { background: var(--surface) !important; }
         .drawer-handle {
           width: 36px; height: 4px; border-radius: 2px;
           background: var(--border); margin: 12px auto 16px;
@@ -451,7 +599,7 @@ export function Shop() {
         .drawer-close {
           position: absolute; top: 12px; right: 14px;
           background: none; border: none; cursor: pointer;
-          color: var(--muted-foreground); padding: 4px;
+          color: var(--foreground-muted); padding: 4px;
         }
 
         /* ── Filter internals ── */
@@ -462,7 +610,7 @@ export function Shop() {
         .filter-title { font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--foreground); }
         .filter-clear { font-size: 0.75rem; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
         .filter-group { margin-bottom: 0.9rem; }
-        .filter-group-label { font-size: 0.76rem; font-weight: 500; color: var(--muted-foreground); display: block; margin-bottom: 0.35rem; }
+        .filter-group-label { font-size: 0.76rem; font-weight: 500; color: var(--foreground-muted); display: block; margin-bottom: 0.35rem; }
         .filter-chip-group { display: flex; flex-wrap: wrap; gap: 4px; }
         .chip-filter {
           display: inline-flex; align-items: center; gap: 4px;
@@ -470,12 +618,37 @@ export function Shop() {
           font-size: 0.76rem; font-weight: 500;
           border: 1px solid var(--border); background: var(--card);
           color: var(--foreground); cursor: pointer; transition: all 0.2s;
-          /* prevent tap highlight on iOS */
           -webkit-tap-highlight-color: transparent;
           touch-action: manipulation;
         }
-        .chip-filter:hover, .chip-filter:active { border-color: var(--primary); background: var(--primary-foreground); }
-        .chip-filter.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+        .chip-filter:hover, .chip-filter:active { border-color: var(--primary); background: var(--accent-blush); color: var(--foreground); }
+        .dark .chip-filter { background: var(--surface); color: var(--foreground); border-color: rgba(155,111,214,0.15); }
+        .dark .chip-filter:hover, .dark .chip-filter:active { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
+        .chip-filter.active { background: var(--accent-blush); color: var(--foreground); border-color: var(--primary); }
+        .dark .chip-filter.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+
+        /* Add to cart button - same style as enroll */
+        .add-cart-btn {
+          background: var(--accent-blush);
+          color: var(--foreground);
+          border: 2px solid var(--primary);
+          transition: all 0.2s ease;
+        }
+        .add-cart-btn:hover {
+          background: var(--accent-pink);
+          color: var(--foreground);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(240, 196, 224, 0.4);
+        }
+        .dark .add-cart-btn {
+          background: var(--primary);
+          color: var(--primary-foreground);
+          border-color: var(--primary);
+        }
+        .dark .add-cart-btn:hover {
+          background: var(--primary-hover);
+          box-shadow: 0 4px 12px rgba(155, 111, 214, 0.35);
+        }
 
         /* ── Price range ── */
         .price-inputs { display: flex; gap: 6px; align-items: center; }
@@ -486,7 +659,7 @@ export function Shop() {
           outline: none; -webkit-appearance: none;
         }
         .price-input:focus { border-color: var(--primary); }
-        .price-sep { color: var(--muted-foreground); font-size: 0.75rem; }
+        .price-sep { color: var(--foreground-muted); font-size: 0.75rem; }
 
         /* ── Sort / results bar ── */
         .sort-bar {
@@ -506,7 +679,7 @@ export function Shop() {
         }
         .results-count {
           display: flex; align-items: center; gap: 6px;
-          font-size: 0.83rem; color: var(--muted-foreground);
+          font-size: 0.83rem; color: var(--foreground-muted);
         }
         .results-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
 
@@ -543,6 +716,7 @@ export function Shop() {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 0.75rem;
+          align-items: start;
         }
         @media (min-width: 480px) {
           .product-grid { gap: 1rem; }
@@ -610,11 +784,11 @@ export function Shop() {
         </div>
       </div>
 
-      {/* ── BODY ── */}
+{/* ── BODY ── */}
       <div className="shop-body">
-        {/* Desktop sidebar */}
+        {/* Desktop sidebar - show different filters based on viewMode */}
         <aside className="filter-panel">
-          <FilterContent />
+          {viewMode === "products" ? <FilterContent /> : <KitFilterContent />}
         </aside>
 
         {/* Main content */}
@@ -653,7 +827,7 @@ export function Shop() {
                     e.currentTarget.style.boxShadow = "";
                   }}
                 >
-                  Add to cart
+                  <span style={{ position: "relative", zIndex: 1 }}>Add to cart</span>
                 </button>
                 <div className="lesson-banner-grid">
                   {recommendedProducts.map((product) => (
@@ -668,15 +842,13 @@ export function Shop() {
               </section>
             )}
 
-          {/* View mode toggle */}
+          {/* View mode toggle - dùng CSS class thuần để tránh lỗi inline style */}
           <div className="flex items-center gap-2 mb-3">
             <button
               type="button"
               onClick={() => setViewMode("products")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                viewMode === "products"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card border border-border text-foreground hover:bg-muted"
+              className={`px-4 py-2 rounded-full text-sm font-medium shop-mode-btn ${
+                viewMode === "products" ? "shop-mode-active" : ""
               }`}
             >
               🛍️ Products
@@ -684,10 +856,8 @@ export function Shop() {
             <button
               type="button"
               onClick={() => setViewMode("combo")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                viewMode === "combo"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card border border-border text-foreground hover:bg-muted"
+              className={`px-4 py-2 rounded-full text-sm font-medium shop-mode-btn ${
+                viewMode === "combo" ? "shop-mode-active" : ""
               }`}
             >
               🎁 Combo
@@ -804,7 +974,7 @@ export function Shop() {
                         }
                         relatedLessonId={
                           currentLessonId &&
-                          currentLesson?.linkedProducts.some(
+                          currentLesson?.linkedProducts?.some(
                             (linkedProduct) =>
                               linkedProduct.productId === product.id,
                           )
@@ -847,7 +1017,7 @@ export function Shop() {
                   style={{
                     textAlign: "center",
                     padding: "4rem 1rem",
-                    color: "var(--muted-foreground)",
+                    color: "var(--foreground-muted)",
                   }}
                 >
                   <Package
@@ -865,27 +1035,59 @@ export function Shop() {
             </div>
           )}
 
-          {/* Combo (Kits) content — only show if viewMode === "combo" */}
+{/* Combo (Kits) content — only show if viewMode === "combo" */}
           {viewMode === "combo" && (
             <>
+              <div className="sort-bar">
+                <div className="sort-bar-left">
+                  <button
+                    className="filter-fab"
+                    onClick={() => setFilterOpen(true)}
+                  >
+                    <SlidersHorizontal size={14} />
+                    Filters
+                    {hasActiveKitLevel && (
+                      <span
+                        style={{
+                          background: "var(--primary)",
+                          color: "var(--primary-foreground)",
+                          borderRadius: "50%",
+                          width: 16,
+                          height: 16,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        1
+                      </span>
+                    )}
+                  </button>
+                  <div className="results-count">
+                    <span className="results-dot" />
+                    <span>
+                      <strong>{filteredKits.length}</strong> combos available
+                    </span>
+                  </div>
+                </div>
+              </div>
               {kitsLoading ? (
                 <div className="loading-dots">
                   <div className="loading-dot" />
                   <div className="loading-dot" />
                   <div className="loading-dot" />
                 </div>
-              ) : kits.length === 0 ? (
+              ) : filteredKits.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Package size={44} className="mx-auto mb-3 opacity-40" />
                   <p>No kits found</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {kits.length} combos available
-                  </p>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {kits.map((kit) => {
+                    {filteredKits.map((kit) => {
                       const isFavorite = isFavoriteKit(kit._id);
                       
                       return (
@@ -921,10 +1123,13 @@ export function Shop() {
                                     : "Đã thêm vào danh sách yêu thích"
                                 );
                               }}
-                              className="absolute top-3 right-3 w-9 h-9 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
+                              className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
                               style={{
-                                background: "var(--card)",
-                                opacity: 0.9,
+                                background: "var(--card-glass)",
+                                backdropFilter: "blur(14px) saturate(160%)",
+                                WebkitBackdropFilter: "blur(14px) saturate(160%)",
+                                border: "1px solid var(--border-subtle)",
+                                boxShadow: "var(--shadow-md)",
                                 touchAction: "manipulation",
                                 WebkitTapHighlightColor: "transparent",
                               }}
@@ -974,7 +1179,7 @@ export function Shop() {
         </div>
       </div>
 
-      {/* ── Mobile filter drawer ── */}
+{/* ── Mobile filter drawer ── */}
       <AnimatePresence>
         {filterOpen && (
           <>
@@ -1000,7 +1205,7 @@ export function Shop() {
               >
                 <X size={20} />
               </button>
-              <FilterContent />
+              {viewMode === "products" ? <FilterContent /> : <KitFilterContent />}
               <button
                 onClick={() => setFilterOpen(false)}
                 style={{
@@ -1027,7 +1232,10 @@ export function Shop() {
                   e.currentTarget.style.boxShadow = "";
                 }}
               >
-                Show {resultCount} results
+                {viewMode === "products" 
+                  ? `Show ${resultCount} results`
+                  : `Show ${filteredKits.length} results`
+                }
               </button>
             </motion.div>
           </>

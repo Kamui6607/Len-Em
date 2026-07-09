@@ -22,12 +22,12 @@ export function CreatorLessons() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#b7664e]">Lesson Management</p>
-        <h1 className="text-3xl font-bold text-[#3f342c]">{course.name}</h1>
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--color-warm-accent)]">Lesson Management</p>
+        <h1 className="text-3xl font-bold text-[var(--color-warm-text)]">{course.name}</h1>
         <p className="text-muted-foreground">Reorder lessons with arrows, edit content, and link shop products directly inside videos.</p>
       </div>
 
-      <div className="rounded-3xl border border-[#eadcc7] bg-card p-4 shadow-sm">
+      <div className="rounded-3xl border border-[var(--color-warm-border)] bg-card p-4 shadow-sm">
         <Table>
           <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Lesson name</TableHead><TableHead>Duration</TableHead><TableHead>Linked products</TableHead><TableHead>Views</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
@@ -40,7 +40,7 @@ export function CreatorLessons() {
                     <Button variant="ghost" size="icon" onClick={() => moveLesson(index, 1)} disabled={index === lessons.length - 1}><ChevronDown className="h-4 w-4" /></Button>
                   </div>
                 </TableCell>
-                <TableCell className="font-semibold text-[#3f342c]">{lesson.name}</TableCell>
+                <TableCell className="font-semibold text-[var(--color-warm-text)]">{lesson.name}</TableCell>
                 <TableCell>{lesson.duration}</TableCell>
                 <TableCell>{lesson.linkedProducts}</TableCell>
                 <TableCell>{lesson.views.toLocaleString()}</TableCell>

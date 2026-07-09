@@ -12,7 +12,7 @@ export type OrderStatus =
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type PaymentMethod = "VNPAY" | "CASH";
+export type PaymentMethod = "VNPAY";
 
 export interface OrderUser {
   _id: string;
@@ -84,6 +84,7 @@ export interface CreateOrderRequest {
   }[];
   shippingAddress: ShippingAddress;
   paymentMethod: PaymentMethod;
+  shippingFee: number;
   note?: string;
   coinUsed?: number;
 }

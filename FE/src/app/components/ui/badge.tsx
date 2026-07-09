@@ -5,18 +5,38 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring-color)] transition-all overflow-hidden leading-[1.4]",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+          "border-transparent bg-[var(--cta-gradient)] text-primary-foreground shadow-[var(--cta-shadow)]",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+          "border-transparent bg-secondary text-secondary-foreground",
         destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border-transparent bg-destructive text-destructive-foreground",
         outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+          "text-foreground border-[var(--border)]",
+        success:
+          "border-transparent bg-[var(--accent-green)] text-[var(--accent-green-text)]",
+        warning:
+          "border-transparent bg-[var(--accent-orange)] text-[var(--accent-orange-text)]",
+        error:
+          "border-transparent bg-[var(--accent-red)] text-[var(--accent-red-text)]",
+        info:
+          "border-transparent bg-[var(--accent-blue)] text-[var(--accent-blue-text)]",
+        pink:
+          "border-transparent bg-[var(--badge-pink-bg)] text-[var(--badge-pink-text)]",
+        yellow:
+          "border-transparent bg-[var(--badge-yellow-bg)] text-[var(--badge-yellow-text)]",
+        peach:
+          "border-transparent bg-[var(--badge-peach-bg)] text-[var(--badge-peach-text)]",
+        warm:
+          "border-transparent bg-[var(--badge-warm-bg)] text-[var(--badge-warm-text)]",
+        gray:
+          "border-transparent bg-[var(--accent-gray)] text-[var(--accent-gray-text)]",
+        lavender:
+          "border-transparent bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)]",
       },
     },
     defaultVariants: {

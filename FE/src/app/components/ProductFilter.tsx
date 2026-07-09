@@ -46,18 +46,18 @@ const difficultyMeta: Record<
 > = {
   beginner: {
     label: "Beginner",
-    bg: "rgba(167,210,181,0.25)",
-    color: "#3d8a5e",
+    bg: "var(--success-bg)",
+    color: "var(--success-text)",
   },
   intermediate: {
     label: "Intermediate",
-    bg: "rgba(245,230,163,0.3)",
-    color: "#a07c1a",
+    bg: "var(--warning-bg)",
+    color: "var(--warning-text)",
   },
   advanced: {
     label: "Advanced",
-    bg: "rgba(232,153,122,0.25)",
-    color: "#C1604E",
+    bg: "var(--error-bg)",
+    color: "var(--error-text)",
   },
 };
 
@@ -175,8 +175,8 @@ export function ProductFilter({
             {dynamicFilters.difficulties.map((d) => {
               const meta = difficultyMeta[d.name] ?? {
                 label: d.name,
-                bg: "rgba(196,181,224,0.2)",
-                color: "#6B5EA8",
+                bg: "var(--primary-soft)",
+                color: "var(--primary)",
               };
               const isSelected = filters.difficulty.includes(d.name);
               return (
@@ -243,56 +243,56 @@ export function ProductFilter({
           gap: 6px;
           padding: 8px 16px;
           border-radius: 100px;
-          border: 1.5px solid rgba(193,96,78,0.2);
-          background: var(--surface, #FFF9F5);
+          border: 1.5px solid var(--color-warm-border);
+          background: var(--color-warm-bg);
           font-family: 'DM Sans', sans-serif;
           font-size: 0.85rem;
           font-weight: 400;
-          color: #2A1A14;
+          color: var(--color-warm-text);
           cursor: pointer;
           white-space: nowrap;
           flex-shrink: 0;
           transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
         }
         .pf-cat:hover {
-          border-color: rgba(193,96,78,0.5);
-          background: #F9EDE8;
+          border-color: var(--color-warm-border-hover);
+          background: var(--color-warm-surface);
           transform: translateY(-1px);
         }
         .pf-cat.active {
-          background: #2A1A14;
-          color: #FFF9F5;
-          border-color: #2A1A14;
+          background: var(--color-warm-text);
+          color: var(--color-warm-bg);
+          border-color: var(--color-warm-text);
         }
         .dark .pf-cat {
-          background: rgba(255,249,245,0.05);
-          border-color: rgba(232,153,122,0.2);
-          color: #C8A99A;
+          background: var(--color-warm-bg);
+          border-color: var(--color-warm-border);
+          color: var(--color-warm-text-secondary);
         }
         .dark .pf-cat:hover {
-          background: rgba(232,153,122,0.1);
-          border-color: rgba(232,153,122,0.4);
-          color: #F0C4B0;
+          background: var(--color-warm-surface);
+          border-color: var(--color-warm-border-hover);
+          color: var(--color-warm-highlight);
         }
         .dark .pf-cat.active {
-          background: #F5EDE8;
-          color: #2A1A14;
-          border-color: #F5EDE8;
+          background: var(--color-warm-highlight);
+          color: var(--color-warm-bg);
+          border-color: var(--color-warm-highlight);
         }
         .pf-cat-emoji { font-size: 1rem; line-height: 1; }
 
         /* ── Filter stack card ── */
         .pf-filter-stack {
-          border: 1.5px solid rgba(193,96,78,0.13);
+          border: 1.5px solid var(--color-warm-border);
           border-radius: 16px;
           overflow: hidden;
-          background: var(--surface, #FFF9F5);
+          background: var(--color-warm-bg);
           margin-bottom: 14px;
           transition: background 0.3s, border-color 0.3s;
         }
         .dark .pf-filter-stack {
-          background: rgba(26,17,14,0.9);
-          border-color: rgba(232,153,122,0.13);
+          background: var(--color-warm-bg);
+          border-color: var(--color-warm-border);
         }
 
         /* ── Each filter row ── */
@@ -301,11 +301,11 @@ export function ProductFilter({
           align-items: center;
           gap: 12px;
           padding: 10px 16px;
-          border-bottom: 1px solid rgba(193,96,78,0.09);
+          border-bottom: 1px solid var(--color-warm-border);
           min-height: 46px;
         }
         .pf-filter-row:last-child { border-bottom: none; }
-        .dark .pf-filter-row { border-bottom-color: rgba(232,153,122,0.09); }
+        .dark .pf-filter-row { border-bottom-color: var(--color-warm-border); }
 
         /* Row label */
         .pf-row-label {
@@ -314,12 +314,12 @@ export function ProductFilter({
           font-weight: 500;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: #8A6860;
+          color: var(--color-warm-muted);
           white-space: nowrap;
           min-width: 80px;
           flex-shrink: 0;
         }
-        .dark .pf-row-label { color: #7A5E58; }
+        .dark .pf-row-label { color: var(--color-warm-muted); }
 
         /* Items wrap */
         .pf-row-items {
@@ -345,14 +345,14 @@ export function ProductFilter({
         }
         .pf-color-dot:hover {
           transform: scale(1.18);
-          outline-color: rgba(193,96,78,0.4);
+          outline-color: var(--color-warm-border-hover);
         }
         .pf-color-dot.pf-color-dot-active {
-          outline-color: #C1604E;
+          outline-color: var(--color-warm-accent);
           border-color: white;
           transform: scale(1.12);
         }
-        .dark .pf-color-dot.pf-color-dot-active { border-color: #1A110E; }
+        .dark .pf-color-dot.pf-color-dot-active { border-color: var(--color-warm-bg); }
 
         /* ── Pills ── */
         .pf-pill {
@@ -361,9 +361,9 @@ export function ProductFilter({
           gap: 3px;
           padding: 4px 12px;
           border-radius: 100px;
-          border: 1.5px solid rgba(193,96,78,0.22);
+          border: 1.5px solid var(--color-warm-border);
           background: transparent;
-          color: #7A6460;
+          color: var(--color-warm-muted);
           font-size: 0.8rem;
           font-family: 'DM Sans', sans-serif;
           font-weight: 400;
@@ -372,29 +372,29 @@ export function ProductFilter({
           transition: all 0.18s;
         }
         .pf-pill:hover {
-          border-color: rgba(193,96,78,0.48);
-          color: #C1604E;
-          background: rgba(193,96,78,0.06);
+          border-color: var(--color-warm-border-hover);
+          color: var(--color-warm-accent);
+          background: var(--color-warm-surface);
         }
         .pf-pill.pf-pill-active {
-          border-color: rgba(193,96,78,0.55);
-          background: rgba(193,96,78,0.12);
-          color: #C1604E;
+          border-color: var(--color-warm-border-active);
+          background: var(--color-warm-surface);
+          color: var(--color-warm-accent);
           font-weight: 500;
         }
         .dark .pf-pill {
-          border-color: rgba(232,153,122,0.2);
-          color: #9A7870;
+          border-color: var(--color-warm-border);
+          color: var(--color-warm-muted);
         }
         .dark .pf-pill:hover {
-          border-color: rgba(232,153,122,0.44);
-          color: #F0C4B0;
-          background: rgba(232,153,122,0.08);
+          border-color: var(--color-warm-border-hover);
+          color: var(--color-warm-highlight);
+          background: var(--color-warm-surface);
         }
         .dark .pf-pill.pf-pill-active {
-          border-color: rgba(232,153,122,0.52);
-          background: rgba(232,153,122,0.14);
-          color: #F0C4B0;
+          border-color: var(--color-warm-border-active);
+          background: var(--color-warm-surface);
+          color: var(--color-warm-highlight);
         }
         .pf-pill-count {
           opacity: 0.45;
@@ -406,7 +406,7 @@ export function ProductFilter({
         .pf-clear-inline {
           font-family: 'DM Sans', sans-serif;
           font-size: 0.76rem;
-          color: #8A6860;
+          color: var(--color-warm-muted);
           background: none;
           border: none;
           cursor: pointer;
@@ -414,9 +414,9 @@ export function ProductFilter({
           border-radius: 8px;
           transition: color 0.18s, background 0.18s;
         }
-        .pf-clear-inline:hover { color: #C1604E; background: rgba(193,96,78,0.07); }
-        .dark .pf-clear-inline { color: #7A5E58; }
-        .dark .pf-clear-inline:hover { color: #F0C4B0; background: rgba(232,153,122,0.08); }
+        .pf-clear-inline:hover { color: var(--color-warm-accent); background: var(--color-warm-surface); }
+        .dark .pf-clear-inline { color: var(--color-warm-muted); }
+        .dark .pf-clear-inline:hover { color: var(--color-warm-highlight); background: var(--color-warm-surface); }
 
         /* ── Active chips bar ── */
         .pf-chips {
@@ -430,21 +430,21 @@ export function ProductFilter({
           align-items: center;
           padding: 5px 12px;
           border-radius: 100px;
-          border: 1.5px dashed rgba(193,96,78,0.35);
+          border: 1.5px dashed var(--color-warm-border);
           background: transparent;
           font-family: 'DM Sans', sans-serif;
           font-size: 0.78rem;
-          color: #8A6860;
+          color: var(--color-warm-muted);
           cursor: pointer;
           transition: all 0.2s;
         }
         .pf-chips-clear:hover {
-          color: #C1604E;
-          border-color: rgba(193,96,78,0.5);
-          background: rgba(193,96,78,0.06);
+          color: var(--color-warm-accent);
+          border-color: var(--color-warm-border-hover);
+          background: var(--color-warm-surface);
         }
-        .dark .pf-chips-clear { border-color: rgba(232,153,122,0.25); color: #9A7870; }
-        .dark .pf-chips-clear:hover { color: #F0C4B0; border-color: rgba(232,153,122,0.5); background: rgba(232,153,122,0.08); }
+        .dark .pf-chips-clear { border-color: var(--color-warm-border); color: var(--color-warm-muted); }
+        .dark .pf-chips-clear:hover { color: var(--color-warm-highlight); border-color: var(--color-warm-border-hover); background: var(--color-warm-surface); }
 
         @media (max-width: 640px) {
           .pf-row-label { min-width: 64px; font-size: 0.66rem; }
@@ -530,7 +530,7 @@ export function ProductFilter({
               fontWeight: 500,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: "var(--muted, #7A6460)",
+              color: "var(--foreground-muted)",
               marginBottom: 8,
               fontFamily: "'DM Sans', sans-serif",
             }}

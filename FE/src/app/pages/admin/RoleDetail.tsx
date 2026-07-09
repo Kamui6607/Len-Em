@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Save, Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../hooks/useAuth";
-import { roleService, type RoleDetail as RoleDetailType } from "../../../api/roleService";
-import { permissionService, type Permission } from "../../../api/permissionService";
+import {
+  roleService,
+  type RoleDetail as RoleDetailType,
+} from "../../../api/roleService";
+import {
+  permissionService,
+  type Permission,
+} from "../../../api/permissionService";
 import { PermissionPicker } from "../../components/admin/PermissionPicker";
 
 export function RoleDetail() {
@@ -15,9 +21,10 @@ export function RoleDetail() {
 
   const [role, setRole] = useState<RoleDetailType | null>(null);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
-  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   // Fetch role detail & permissions
   useEffect(() => {
@@ -67,34 +74,11 @@ export function RoleDetail() {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [roleId, navigate]);
 
-  // Save updated permissions
-  const handleSave = async () => {
-    if (!roleId || !role) return;
-    setSaving(true);
-    try {
-      await roleService.update(roleId, {
-        name: role.name,
-        description: role.description,
-        isActive: role.isActive,
-        permissions: selectedPermissionIds,
-      });
-      toast.success("Role permissions updated successfully");
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
-      if (axiosErr.response?.status === 403) {
-        toast.error("You don't have permission to perform this action.");
-      } else if (axiosErr.response?.status === 400) {
-        toast.error(axiosErr.response.data?.message || "Invalid data");
-      } else {
-        toast.error(axiosErr.message || "Failed to update role");
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -141,39 +125,35 @@ export function RoleDetail() {
                     : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${role.isActive ? "bg-emerald-500" : "bg-rose-500"}`} />
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${role.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
+                />
                 {role.isActive ? "Active" : "Inactive"}
               </span>
             </p>
           </div>
         </div>
 
-        {isAdmin && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.97]"
-          >
-            <Save size={18} />
-            {saving ? "Saving..." : "Save Permissions"}
-          </button>
-        )}
       </div>
 
       {/* Permission Assignment */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="text-lg font-bold mb-1">Assigned Permissions</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          {selectedPermissionIds.length} permission{selectedPermissionIds.length !== 1 ? "s" : ""} selected
-          {!isAdmin && " (read-only)"}
-        </p>
-
-        <PermissionPicker
-          permissions={allPermissions}
-          selected={selectedPermissionIds}
-          onChange={setSelectedPermissionIds}
-          disabled={!isAdmin}
-        />
+      <div>
+        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
+          <h2 className="text-lg font-bold mb-1">Assigned Permissions</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {selectedPermissionIds.length} permission
+            {selectedPermissionIds.length !== 1 ? "s" : ""} selected
+            {!isAdmin && " (read-only)"}
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto relative z-10" style={{ background: "var(--card)" }}>
+          <PermissionPicker
+            permissions={allPermissions}
+            selected={selectedPermissionIds}
+            onChange={setSelectedPermissionIds}
+            disabled={true}
+          />
+        </div>
       </div>
     </div>
   );

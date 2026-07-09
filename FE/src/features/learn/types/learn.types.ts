@@ -2,21 +2,37 @@ export type CourseLevel = "beginner" | "intermediate" | "advanced";
 
 export interface Course {
   id: string;
+  _id: string;
   title: string;
+  description: string;
   thumbnail: string;
   level: CourseLevel;
-  type: "premium" | "free_video";  // ← NEW: phân loại
-  price?: number;                   // ← NEW: giá cho premium
-  pointReward?: number;            // ← NEW: points khi hoàn thành
-  purchasedBy?: string[];          // ← NEW: danh sách đã mua
-  creator: { id: string; name: string; avatar: string };
-  totalLessons: number;
-  totalDuration: number; // in minutes
-  enrolledCount: number;
-  rating: number;
+  linkedLessons: string[];
   tags: string[];
-  linkedComboIds: string[];
-  description?: string;
+  linkedCombo: { comboId: string }[];
+  creatorId: string;
+  totalDuration: number;
+  totalLessons: number;
+  rating: number;
+  enrolledCount: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Extend with creator details populated when available
+  creator?: { id: string; name: string; avatar: string };
+  price?: number;
+  pointReward?: number;
+  purchasedBy?: string[];
+}
+
+export interface CourseListResponse {
+  courses: Course[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface FreeVideo {
@@ -24,7 +40,7 @@ export interface FreeVideo {
   title: string;
   description: string;
   videoUrl: string;
-  duration: number;               // phút
+  duration: number;
   level: CourseLevel;
   thumbnail: string;
   creator: { id: string; name: string; avatar: string };
@@ -36,12 +52,19 @@ export interface FreeVideo {
 
 export interface Lesson {
   id: string;
+  _id: string;
   courseId: string;
   title: string;
   videoUrl: string;
   duration: number;
   order: number;
-  linkedProducts: LinkedProduct[];
+  linkedProduct: { productId: string }[];
+  linkedCombo: { comboId: string }[];
+  isPreview: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Populated data
+  linkedProducts?: LinkedProduct[];
 }
 
 export interface LinkedProduct {
@@ -60,4 +83,65 @@ export interface MaterialCombo {
   price: number;
   thumbnail: string;
   productIds: string[];
+}
+
+// API Request types
+export interface CreateCourseRequest {
+  title: string;
+  description?: string;
+  thumbnail?: string;
+  level: CourseLevel;
+  linkedLessons?: string[];
+  tags?: string[];
+  linkedCombo?: string[];
+  isPublished?: boolean;
+}
+
+export interface UpdateCourseRequest {
+  title?: string;
+  description?: string;
+  thumbnail?: string;
+  level?: CourseLevel;
+  linkedLessons?: string[];
+  tags?: string[];
+  linkedCombo?: string[];
+  isPublished?: boolean;
+}
+
+export interface CreateLessonRequest {
+  title: string;
+  order: number;
+  videoUrl: string;
+  duration: number;
+  linkedProduct?: { productId: string }[];
+  linkedCombo?: { comboId: string }[];
+  isPreview?: boolean;
+}
+
+export interface UpdateLessonRequest {
+  title?: string;
+  order?: number;
+  videoUrl?: string;
+  duration?: number;
+  linkedProduct?: { productId: string }[];
+  linkedCombo?: { comboId: string }[];
+  isPreview?: boolean;
+}
+
+export interface CourseFormData {
+  title: string;
+  description: string;
+  thumbnail: string;
+  level: CourseLevel;
+  tags: string[];
+  linkedCombo: string[];
+  isPublished: boolean;
+}
+
+export interface LessonFormData {
+  title: string;
+  order: number;
+  videoUrl: string;
+  duration: number;
+  isPreview: boolean;
 }
