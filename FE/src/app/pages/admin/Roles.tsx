@@ -487,14 +487,14 @@ export function Roles() {
              onClick={openCreate}
              className="btn-create"
            >
-             <Plus size={18} />
-             Create
+            <Plus size={16} />
+            +create
            </button>
          )}
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
+      <div className="admin-panel-glow rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
         {/* Filters */}
         <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
           <div className="flex items-center gap-3 flex-wrap">

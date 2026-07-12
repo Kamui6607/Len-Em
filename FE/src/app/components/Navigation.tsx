@@ -45,24 +45,38 @@ const homeNavLinks = [
     protected: false,
   },
   {
+    label: "HOW IT WORKS",
+    href: "/",
+    icon: Sparkles,
+    sectionId: "section-how-it-works",
+    protected: false,
+  },
+  {
     label: "LEARN",
-    href: "/learn",
+    href: "/",
     icon: BookOpen,
     sectionId: "section-learn",
     protected: false,
   },
   {
     label: "SHOP",
-    href: "/shop",
+    href: "/",
     icon: ShoppingBag,
     sectionId: "section-shop",
-    protected: true,
+    protected: false,
   },
   {
     label: "DIY",
-    href: "/diy",
+    href: "/",
     icon: Palette,
     sectionId: "section-diy",
+    protected: false,
+  },
+  {
+    label: "ABOUT US",
+    href: "/about",
+    icon: Heart,
+    sectionId: undefined,
     protected: false,
   },
 ];
@@ -105,9 +119,12 @@ export function Navigation({ cartCount }: NavigationProps) {
   }, []);
 
   const isHomePage = location.pathname === "/";
-  const displayedNavLinks = isHomePage ? homeNavLinks : navLinks;
+  const isAboutPage = location.pathname === "/about";
+  
+  // Only use homeNavLinks on Home and About Us pages, otherwise use navLinks
+  const displayedNavLinks = (isHomePage || isAboutPage) ? homeNavLinks : navLinks;
 
-  const showFullActions = isAuthenticated && !isHomePage;
+  const showFullActions = isAuthenticated && !isHomePage && !isAboutPage;
   const showAuthButtons = !isAuthenticated;
 
   // Navbar "nổi" chỉ khi đang ở đầu trang Home, chưa cuộn
@@ -143,7 +160,7 @@ export function Navigation({ cartCount }: NavigationProps) {
       },
       { threshold: 0.4 },
     );
-    ["section-learn", "section-shop", "section-diy"].forEach((id) => {
+    ["section-how-it-works", "section-learn", "section-shop", "section-diy"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
@@ -172,10 +189,36 @@ export function Navigation({ cartCount }: NavigationProps) {
 
   const navigateTo = (href: string, sectionId?: string) => {
     setIsMobileMenuOpen(false);
+    
+    // If clicking HOME (href="/"), always scroll to top
+    if (href === "/" && !sectionId) {
+      if (!isHomePage) {
+        navigate("/");
+        setTimeout(() => {
+          scrollToSection("top");
+        }, 100);
+      } else {
+        scrollToSection("top");
+      }
+      return;
+    }
+    
+    // If on About Us page and clicking a section link, go to Home first then scroll
+    if (isAboutPage && sectionId) {
+      navigate("/");
+      setTimeout(() => {
+        scrollToSection(sectionId);
+      }, 100);
+      return;
+    }
+    
+    // If on Home page and clicking a section link, just scroll
     if (isHomePage && sectionId) {
       scrollToSection(sectionId);
       return;
     }
+    
+    // Otherwise, navigate to the href
     navigate(href);
   };
 
@@ -334,7 +377,7 @@ export function Navigation({ cartCount }: NavigationProps) {
 
           {/* Desktop Right */}
           <div className="hidden items-center gap-2 md:flex">
-            {isAuthenticated && !isHomePage && (
+            {isAuthenticated && !isHomePage && !isAboutPage && (
               <motion.div
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
@@ -415,7 +458,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                 </motion.button>
               </>
             )}
-            {isAuthenticated && !isHomePage && (
+            {isAuthenticated && !isHomePage && !isAboutPage && (
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -426,9 +469,9 @@ export function Navigation({ cartCount }: NavigationProps) {
                 </div>
               </motion.div>
             )}
-            {isAuthenticated && isHomePage && (
+            {(isAuthenticated && isHomePage) || (isAuthenticated && isAboutPage) ? (
               <ShimmerCTA onClick={() => navigate("/learn")} />
-            )}
+            ) : null}
           </div>
 
           {/* Mobile hamburger ⇄ X morph */}
@@ -578,7 +621,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                   </>
                 )}
 
-                {isAuthenticated && isHomePage && (
+                {(isAuthenticated && isHomePage) || (isAuthenticated && isAboutPage) ? (
                   <motion.div variants={drawerItemVariants} className="pt-2">
                     <ShimmerCTA
                       full
@@ -588,7 +631,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                       }}
                     />
                   </motion.div>
-                )}
+                ) : null}
               </motion.nav>
 
               {showFullActions && (

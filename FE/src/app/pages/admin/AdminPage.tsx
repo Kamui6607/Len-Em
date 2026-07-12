@@ -14,6 +14,7 @@ import { CourseFormPage } from "./CourseFormPage";
 import { AdminLessons } from "./AdminLessons";
 import { LessonFormPage } from "./LessonFormPage";
 import { AdminDIYPosts } from "./AdminDIYPosts";
+import { DIYFormPage } from "./DIYFormPage";
 
 export function AdminPage() {
   return (
@@ -27,6 +28,7 @@ export function AdminPage() {
         <Route path="reports" element={<AdminReports />} />
         <Route path="payments" element={<AdminOrders />} />
         <Route path="diy-posts" element={<AdminDIYPosts />} />
+        <Route path="diy-posts/new" element={<DIYFormPage />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="roles" element={<Roles />} />
         <Route path="roles/:roleId" element={<RoleDetail />} />

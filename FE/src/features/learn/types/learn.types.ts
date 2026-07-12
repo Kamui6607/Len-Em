@@ -18,7 +18,6 @@ export interface Course {
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
-  // Extend with creator details populated when available
   creator?: { id: string; name: string; avatar: string };
   price?: number;
   pointReward?: number;
@@ -63,7 +62,6 @@ export interface Lesson {
   isPreview: boolean;
   createdAt: string;
   updatedAt: string;
-  // Populated data
   linkedProducts?: LinkedProduct[];
 }
 
@@ -134,6 +132,7 @@ export interface CourseFormData {
   thumbnail: string;
   level: CourseLevel;
   tags: string[];
+  linkedLessons: string[];
   linkedCombo: string[];
   isPublished: boolean;
 }
@@ -143,5 +142,7 @@ export interface LessonFormData {
   order: number;
   videoUrl: string;
   duration: number;
+  linkedProduct: { productId: string }[];
+  linkedCombo: { comboId: string }[];
   isPreview: boolean;
 }

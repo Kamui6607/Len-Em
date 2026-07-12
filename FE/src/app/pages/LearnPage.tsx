@@ -15,6 +15,7 @@ import { courseService } from "../../api/courseService";
 import { useAuth } from "../../hooks/useAuth";
 import type { Course, CourseLevel } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
+import { ProductSkeleton } from "../../components/skeletons/ProductSkeleton";
 
 const levelLabels: Record<CourseLevel, string> = {
   beginner: "Beginner",
@@ -129,12 +130,13 @@ export function LearnPage() {
   }, [isAuthenticated, enrolledCourses, navigate, user, setUser]);
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <style>{`
         .learn-filter-panel label {
           cursor: pointer; transition: all 0.2s ease;
         }
         .learn-filter-panel label:hover { color: var(--accent-peach); }
+        .learn-filter-panel h3 { font-family: var(--font-heading); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; }
         .dark .learn-filter-panel { background: var(--surface) !important; border-color: rgba(155,111,214,0.15) !important; }
         .dark .learn-filter-panel label:hover { color: var(--primary); }
         .dark .learn-filter-panel .text-muted-foreground { color: var(--foreground-muted) !important; }
@@ -277,8 +279,10 @@ export function LearnPage() {
               </div>
 
               {loading ? (
-                <div className="flex items-center justify-center py-20 text-muted-foreground">
-                  Loading courses...
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <ProductSkeleton key={i} />
+                  ))}
                 </div>
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

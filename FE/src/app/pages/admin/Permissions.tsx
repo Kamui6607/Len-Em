@@ -464,15 +464,10 @@ export function Permissions() {
           </p>
         </div>
         {isAdmin && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={openCreate}
-              className="btn-create"
-            >
-              <Plus size={18} />
-              +create
-            </button>
-          </div>
+          <button onClick={openCreate} className="btn-create">
+            <Plus size={18} />
+            +create
+          </button>
         )}
       </div>
 

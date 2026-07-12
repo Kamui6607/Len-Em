@@ -331,9 +331,13 @@ export function LessonPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background px-4 py-8">
+      <div className="min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
         <div className="mx-auto max-w-7xl">
-          <div className="flex items-center justify-center py-20 text-muted-foreground">Loading lesson...</div>
+          <div className="mb-8 overflow-hidden rounded-2xl border bg-black shadow-sm">
+            <div className="aspect-video w-full bg-muted/50 flex items-center justify-center text-muted-foreground/40 text-sm">
+              Loading lesson...
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -465,7 +469,7 @@ export function LessonPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
+    <div className="min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -481,9 +485,9 @@ export function LessonPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(320px,3fr)]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
           <main className="space-y-5">
-            <div className="overflow-hidden rounded-2xl border bg-black shadow-sm">
+            <div className="w-full overflow-hidden rounded-2xl border bg-black shadow-sm">
               {isYouTube ? (
                 <iframe
                   ref={videoRef}

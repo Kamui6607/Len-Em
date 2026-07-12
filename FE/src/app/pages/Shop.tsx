@@ -17,6 +17,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit } from "../../api/kitService";
 import { cn } from "../components/ui/utils";
+import { ProductSkeleton, ProductGridSkeleton } from "../../components/skeletons/ProductSkeleton";
 
 const CATEGORY_META: Record<
   string,
@@ -465,7 +466,7 @@ const getEmptyStateMessage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom)+8px)] md:pb-8">
       <style>{`
         /* ── View mode toggle buttons ── */
         .shop-mode-btn {
@@ -553,7 +554,9 @@ const getEmptyStateMessage = () => {
           background: var(--card-bg, var(--card));
           border-radius: 14px; border: 1px solid var(--border);
           padding: 1rem; height: fit-content;
-          position: sticky; top: 5rem;
+          position: sticky; top: 6rem;
+          max-height: calc(100vh - 8rem);
+          overflow-y: auto;
         }
         .dark .filter-panel { background: var(--surface) !important; border-color: rgba(155,111,214,0.15) !important; }
         .dark .filter-panel .filter-group-label { color: var(--foreground-muted) !important; }
@@ -607,15 +610,15 @@ const getEmptyStateMessage = () => {
           display: flex; align-items: center; justify-content: space-between;
           margin-bottom: 0.75rem;
         }
-        .filter-title { font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--foreground); }
-        .filter-clear { font-size: 0.75rem; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
-        .filter-group { margin-bottom: 0.9rem; }
-        .filter-group-label { font-size: 0.76rem; font-weight: 500; color: var(--foreground-muted); display: block; margin-bottom: 0.35rem; }
-        .filter-chip-group { display: flex; flex-wrap: wrap; gap: 4px; }
+        .filter-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--foreground); font-family: var(--font-heading); }
+        .filter-clear { font-size: 0.78rem; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; font-weight: 500; }
+        .filter-group { margin-bottom: 1rem; }
+        .filter-group-label { font-size: 0.8rem; font-weight: 600; color: var(--foreground-secondary); display: block; margin-bottom: 0.45rem; letter-spacing: 0.02em; }
+        .filter-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
         .chip-filter {
-          display: inline-flex; align-items: center; gap: 4px;
-          padding: 5px 10px; border-radius: 20px;
-          font-size: 0.76rem; font-weight: 500;
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 6px 12px; border-radius: 20px;
+          font-size: 0.8rem; font-weight: 500;
           border: 1px solid var(--border); background: var(--card);
           color: var(--foreground); cursor: pointer; transition: all 0.2s;
           -webkit-tap-highlight-color: transparent;
@@ -952,11 +955,7 @@ const getEmptyStateMessage = () => {
                 )}
               </AnimatePresence>
               {isLoading ? (
-                <div className="loading-dots">
-                  <div className="loading-dot" />
-                  <div className="loading-dot" />
-                  <div className="loading-dot" />
-                </div>
+                <ProductGridSkeleton count={8} columns={4} />
               ) : displayedProducts.length > 0 ? (
                 <>
                   <div className="product-grid">
@@ -1074,10 +1073,10 @@ const getEmptyStateMessage = () => {
                 </div>
               </div>
               {kitsLoading ? (
-                <div className="loading-dots">
-                  <div className="loading-dot" />
-                  <div className="loading-dot" />
-                  <div className="loading-dot" />
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <ProductSkeleton key={i} />
+                  ))}
                 </div>
               ) : filteredKits.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">

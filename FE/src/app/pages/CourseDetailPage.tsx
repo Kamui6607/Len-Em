@@ -302,10 +302,67 @@ export function CourseDetailPage() {
   }, [products]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background px-4 py-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex items-center justify-center py-20 text-muted-foreground">Loading course...</div>
+  return (
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+      <style>{`
+        .learn-start-btn {
+          background: var(--accent-blush);
+          color: var(--foreground);
+          border: 2px solid var(--primary);
+          box-shadow: 0 4px 16px var(--glow-pink);
+        }
+        .learn-start-btn:hover:not(:disabled) {
+          background: var(--accent-pink);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(240,196,224,0.45);
+        }
+        .learn-start-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .dark .learn-start-btn {
+          background: var(--primary);
+          color: var(--primary-foreground);
+          border-color: var(--primary);
+          box-shadow: 0 4px 16px rgba(155,111,214,0.3);
+        }
+        .dark .learn-start-btn:hover:not(:disabled) {
+          background: var(--primary-hover);
+          box-shadow: 0 8px 24px rgba(155,111,214,0.45);
+        }
+      `}</style>
+      <div className="mx-auto max-w-7xl">
+          <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+            <main className="space-y-8">
+              <section className="overflow-hidden rounded-3xl border bg-card">
+                <div className="relative aspect-[16/9] md:h-96 bg-muted/60" />
+                <div className="space-y-6 p-6 md:p-8">
+                  <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
+                    {[1,2,3,4].map((i) => (
+                      <div key={i} className="h-4 w-24 rounded bg-muted/60 animate-pulse" />
+                    ))}
+                  </div>
+                  <div className="h-16 w-full rounded-lg bg-muted/60 animate-pulse" />
+                  <div className="flex flex-wrap gap-2">
+                    {[1,2,3].map((i) => (
+                      <div key={i} className="h-6 w-16 rounded-full bg-muted/60 animate-pulse" />
+                    ))}
+                  </div>
+                  <div className="h-12 w-36 rounded-full bg-muted/60 animate-pulse" />
+                </div>
+              </section>
+              <section className="rounded-2xl border bg-card p-6">
+                <div className="h-6 w-24 rounded bg-muted/60 animate-pulse mb-4" />
+                {[1,2,3].map((i) => (
+                  <div key={i} className="h-12 w-full rounded-lg bg-muted/60 animate-pulse mb-3" />
+                ))}
+              </section>
+            </main>
+            <aside className="space-y-6">
+              <div className="h-6 w-40 rounded bg-muted/60 animate-pulse mb-4" />
+              <div className="h-64 w-full rounded-2xl bg-muted/60 animate-pulse" />
+            </aside>
+          </div>
         </div>
       </div>
     );
@@ -367,13 +424,13 @@ export function CourseDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
           <main className="space-y-8">
             <section className="overflow-hidden rounded-3xl border bg-card">
-              <div className="relative aspect-[16/9] md:h-96 bg-muted">
-                <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover" />
+              <div className="relative w-full bg-muted">
+                <img src={course.thumbnail} alt={course.title} className="w-full object-fill" style={{ minHeight: "240px", maxHeight: "400px" }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
                   <Badge className={cn("mb-4 border", levelStyles[course.level])}>{levelLabels[course.level]}</Badge>
@@ -397,15 +454,31 @@ export function CourseDetailPage() {
                 </div>
 
                 {firstLesson && (
-                  <Button asChild size="lg" disabled={enrolling}>
-                    <Link
-                      to={isEnrolled ? `/learn/${course._id}/lesson/${firstLesson._id}` : "#"}
-                      onClick={handleEnrollAndStart}
-                    >
-                      <Play className="size-4" />
-                      {enrolling ? "Enrolling..." : isEnrolled ? "Start" : "Bắt đầu học"}
-                    </Link>
-                  </Button>
+                  <button
+                    type="button"
+                    disabled={enrolling}
+                    onClick={(e) => handleEnrollAndStart(e)}
+                    className="learn-start-btn inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold transition-all"
+                    style={{
+                      background: "var(--accent-blush)",
+                      color: "var(--foreground)",
+                      border: "2px solid var(--primary)",
+                      boxShadow: "0 4px 16px var(--glow-pink)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "var(--accent-pink)";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 8px 24px rgba(240,196,224,0.45)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "var(--accent-blush)";
+                      e.currentTarget.style.transform = "";
+                      e.currentTarget.style.boxShadow = "0 4px 16px var(--glow-pink)";
+                    }}
+                  >
+                    <Play className="size-4" />
+                    {enrolling ? "Enrolling..." : isEnrolled ? "Start" : "Bắt đầu học"}
+                  </button>
                 )}
               </div>
             </section>

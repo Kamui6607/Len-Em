@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Check, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -17,7 +17,8 @@ import {
 } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { courseService } from "../../../api/courseService";
-import type { CourseLevel, CourseFormData } from "../../../features/learn/types/learn.types";
+import { lessonService } from "../../../api/lessonService";
+import type { CourseLevel, CourseFormData, Lesson } from "../../../features/learn/types/learn.types";
 
 const levelOptions: { value: CourseLevel; label: string }[] = [
   { value: "beginner", label: "Beginner" },
@@ -32,16 +33,36 @@ export function CourseFormPage() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [allLessons, setAllLessons] = useState<Lesson[]>([]);
+  const [lessonsLoading, setLessonsLoading] = useState(false);
+  const [lessonSearch, setLessonSearch] = useState("");
   const [form, setForm] = useState<CourseFormData>({
     title: "",
     description: "",
     thumbnail: "",
     level: "beginner",
     tags: [],
+    linkedLessons: [],
     linkedCombo: [],
     isPublished: false,
   });
   const [tagInput, setTagInput] = useState("");
+
+  // Fetch all lessons for linking
+  useEffect(() => {
+    const fetchLessons = async () => {
+      setLessonsLoading(true);
+      try {
+        const res = await lessonService.getAll();
+        setAllLessons(res.data.data.lessons ?? []);
+      } catch {
+        // silently fail
+      } finally {
+        setLessonsLoading(false);
+      }
+    };
+    fetchLessons();
+  }, []);
 
   useEffect(() => {
     if (!courseId) return;
@@ -56,6 +77,7 @@ export function CourseFormPage() {
           thumbnail: course.thumbnail || "",
           level: course.level,
           tags: course.tags || [],
+          linkedLessons: course.linkedLessons ?? [],
           linkedCombo: (course.linkedCombo || []).map((c) => c.comboId),
           isPublished: course.isPublished,
         });
@@ -80,6 +102,15 @@ export function CourseFormPage() {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   };
 
+  const toggleLesson = (lessonId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      linkedLessons: prev.linkedLessons.includes(lessonId)
+        ? prev.linkedLessons.filter((id) => id !== lessonId)
+        : [...prev.linkedLessons, lessonId],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
@@ -96,6 +127,7 @@ export function CourseFormPage() {
           thumbnail: form.thumbnail,
           level: form.level,
           tags: form.tags,
+          linkedLessons: form.linkedLessons,
           linkedCombo: form.linkedCombo,
           isPublished: form.isPublished,
         });
@@ -107,6 +139,7 @@ export function CourseFormPage() {
           thumbnail: form.thumbnail,
           level: form.level,
           tags: form.tags,
+          linkedLessons: form.linkedLessons,
           linkedCombo: form.linkedCombo,
           isPublished: form.isPublished,
         });
@@ -128,6 +161,10 @@ export function CourseFormPage() {
     );
   }
 
+  const filteredLessons = allLessons.filter((lesson) =>
+    lesson.title.toLowerCase().includes(lessonSearch.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -142,7 +179,7 @@ export function CourseFormPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_340px]">
+      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <main className="space-y-6">
           <Card>
             <CardContent className="space-y-5 p-6">
@@ -152,7 +189,7 @@ export function CourseFormPage() {
                   id="title"
                   value={form.title}
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Complete Skincare Routine for Oily Skin"
+                  placeholder="e.g. Complete Crochet Course for Beginners"
                   required
                 />
               </div>
@@ -247,10 +284,68 @@ export function CourseFormPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={saving}>
+              <button type="submit" className="btn-modal-primary w-full" disabled={saving}>
                 <Save className="size-4" />
                 {saving ? "Saving..." : isEditing ? "Update Course" : "Create Course"}
-              </Button>
+              </button>
+            </CardContent>
+          </Card>
+
+          {/* Linked Lessons */}
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-center justify-between">
+                <Label>Linked Lessons</Label>
+                <Badge variant="outline">{form.linkedLessons.length}</Badge>
+              </div>
+              <div className="relative w-full">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <Search className="h-4 w-4 text-muted-foreground/60" />
+                </div>
+                <input
+                  type="text"
+                  value={lessonSearch}
+                  onChange={(e) => setLessonSearch(e.target.value)}
+                  placeholder="Search lessons..."
+                  className="input w-full !rounded-xl !pl-10 !py-2.5 text-sm"
+                  style={{ background: "var(--input-bg)", borderColor: "var(--border)" }}
+                />
+              </div>
+              <div className="max-h-[300px] overflow-y-auto space-y-1" style={{ minHeight: "100px" }}>
+                {lessonsLoading ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Loading lessons...</p>
+                ) : filteredLessons.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {lessonSearch ? "No lessons match" : "No lessons available"}
+                  </p>
+                ) : (
+                  filteredLessons.map((lesson) => {
+                    const selected = form.linkedLessons.includes(lesson._id);
+                    return (
+                      <button
+                        key={lesson._id}
+                        type="button"
+                        onClick={() => toggleLesson(lesson._id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
+                          selected
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-[var(--surface-secondary)] text-foreground"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          selected ? "border-primary bg-primary" : "border-border"
+                        }`}>
+                          {selected && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-xs">{lesson.title}</p>
+                          <p className="text-[10px] text-muted-foreground">Order {lesson.order} • {lesson.duration} min</p>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </CardContent>
           </Card>
         </aside>
