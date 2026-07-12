@@ -29,10 +29,12 @@ export function Home() {
         transition={{ duration: 0.4 }}
       >
         {/* ── Hero: nền sáng nhất (AnimatedBackground tự xử lý) ── */}
-        <HeroSection stackMode="collapsed" />
+        <div id="section-hero">
+          <HeroSection stackMode="collapsed" />
+        </div>
 
         {/* ── How It Works: bg-surface — tối hơn 1 bậc ── */}
-        <div className="bg-surface">
+        <div id="section-how-it-works" className="bg-surface">
           <SectionDivider accent="var(--accent-pink)" />
           <Reveal>
             <HowItWorksSection />
@@ -40,7 +42,7 @@ export function Home() {
         </div>
 
         {/* ── Learn: bg-background (ấm hơn 1 chút) ── */}
-        <div className="bg-background">
+        <div id="section-learn" className="bg-background">
           <SectionDivider accent="var(--accent-yellow)" />
           <Reveal delay={0.05} y={36}>
             <LearnSection />
@@ -48,7 +50,7 @@ export function Home() {
         </div>
 
         {/* ── Shop: bg-surface (tối hơn nữa) ── */}
-        <div className="bg-surface">
+        <div id="section-shop" className="bg-surface">
           <SectionDivider accent="var(--primary)" />
           <Reveal delay={0.05} y={40}>
             <ShopSection />
@@ -56,7 +58,7 @@ export function Home() {
         </div>
 
         {/* ── DIY: bg-muted — tối nhất trước khi vào CTA ── */}
-        <div className="bg-muted">
+        <div id="section-diy" className="bg-muted">
           <SectionDivider accent="var(--accent-pink)" />
           <Reveal delay={0.05} y={24}>
             <DIYSection />

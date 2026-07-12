@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
 export interface AdminSelectOption {
@@ -29,52 +28,27 @@ export function AdminSelect({
   buttonClassName = "",
 }: AdminSelectProps) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((option) => option.value === value);
-
-  const updateCoords = () => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
-  };
 
   useEffect(() => {
     function handleMouseDown(event: MouseEvent) {
       const target = event.target as Node;
-      const outsideTrigger = triggerRef.current && !triggerRef.current.contains(target);
-      const outsideMenu = menuRef.current && !menuRef.current.contains(target);
-      if (outsideTrigger && outsideMenu) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setOpen(false);
+      }
     }
-
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const close = () => setOpen(false);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [open]);
-
   return (
-    <div className={className}>
+    <div ref={containerRef} className={`relative ${className}`}>
       <button
-        ref={triggerRef}
         type="button"
         disabled={disabled}
-        onClick={() => {
-          if (disabled) return;
-          if (!open) updateCoords();
-          setOpen((current) => !current);
-        }}
+        onClick={() => setOpen((current) => !current)}
         style={{ background: "var(--select-bg)", color: "var(--foreground)" }}
         className={`w-full flex items-center justify-between gap-3 px-4 py-3 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ${
           open ? "border-primary ring-2 ring-primary/20" : "hover:border-[var(--input-hover-border)]"
@@ -97,21 +71,29 @@ export function AdminSelect({
         />
       </button>
 
-      {open && typeof document !== "undefined" && createPortal(
+      {open && (
         <div
-          ref={menuRef}
           style={{ 
-            position: "fixed", 
-            top: coords.top, 
-            left: coords.left, 
-            width: coords.width, 
-            zIndex: 9999,
-            maxHeight: "300px",
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            width: "100%",
+            zIndex: 999,
+            maxHeight: "280px",
             overflowY: "auto",
             overflowX: "hidden",
+            background: "var(--dropdown-bg)",
+            border: "1px solid var(--border)",
+            borderRadius: "12px",
+            boxShadow: "var(--shadow-float)",
           }}
-          className="glass-panel-solid py-1"
+          className="py-1"
         >
+          {options.length === 0 && (
+            <div className="px-4 py-3 text-sm" style={{ color: "var(--foreground-muted)" }}>
+              No options
+            </div>
+          )}
           {options.map((option) => (
             <button
               key={option.value}
@@ -138,8 +120,7 @@ export function AdminSelect({
               )}
             </button>
           ))}
-        </div>,
-        document.body,
+        </div>
       )}
     </div>
   );

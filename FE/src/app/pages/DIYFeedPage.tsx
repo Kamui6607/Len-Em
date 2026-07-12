@@ -5,6 +5,7 @@ import { Heart, Search, ShoppingBag, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
+import { ProductSkeleton } from "../../components/skeletons/ProductSkeleton";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -121,14 +122,31 @@ export function DIYFeedPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+        <div className="mx-auto max-w-7xl">
+          <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
+            <Badge variant="secondary" className="mb-4">DIY</Badge>
+            <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
+              Fan-made crochet inspiration you can buy instantly.
+            </h1>
+            <p className="max-w-3xl text-muted-foreground md:text-lg">
+              Browse creator projects, save your favorites, then buy the exact material combo behind every look.
+            </p>
+          </section>
+          <div className="columns-2 gap-4 md:columns-3 xl:columns-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-sm">
+                <ProductSkeleton className="w-full rounded-none" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
+    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <div className="mx-auto max-w-7xl">
         <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
           <Badge variant="secondary" className="mb-4">DIY</Badge>

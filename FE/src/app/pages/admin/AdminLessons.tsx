@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
 import { Edit, Plus, Search, Trash2, Video, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -121,13 +120,14 @@ export function AdminLessons() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="mb-2">Lesson Management</h1>
           <p className="text-muted-foreground">Manage all standalone lessons</p>
         </div>
         <Link to="/admin/lessons/new" className="btn-create">
-          <Plus className="size-4" /> New Lesson
+          <Plus size={18} />
+          +create
         </Link>
       </div>
 
@@ -157,7 +157,7 @@ export function AdminLessons() {
                 <SortableHeader label="Duration" field="duration" align="right" />
                 <SortableHeader label="Products" field="products" align="right" />
                 <SortableHeader label="Preview" field="preview" />
-                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[120px]">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -179,9 +179,9 @@ export function AdminLessons() {
                     <td className="px-6 py-4 text-sm text-muted-foreground">{lesson.duration} min</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{lesson.linkedProduct?.length ?? 0}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={lesson.isPreview ? "default" : "secondary"}>
+                      <span className={`badge ${lesson.isPreview ? "badge-green" : "badge-red"}`}>
                         {lesson.isPreview ? "Preview" : "Locked"}
-                      </Badge>
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">

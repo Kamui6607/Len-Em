@@ -1217,7 +1217,7 @@ export function AdminUsers() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="mb-2">User Management</h1>
           <p className="text-muted-foreground">
@@ -1225,13 +1225,9 @@ export function AdminUsers() {
           </p>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-create"
-          >
-            <span className="btn-create-ring" />
-            <Plus className="w-4 h-4" />
-            <span>Create</span>
+          <button onClick={() => setShowCreateModal(true)} className="btn-create">
+            <Plus size={18} />
+            +create
           </button>
         )}
       </div>

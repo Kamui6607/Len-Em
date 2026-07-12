@@ -133,13 +133,14 @@ export function AdminCourses() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="mb-2">Course Management</h1>
           <p className="text-muted-foreground">Manage all courses in your store</p>
         </div>
         <Link to="/admin/courses/new" className="btn-create">
-          <Plus className="size-4" /> New Course
+          <Plus size={18} />
+          +create
         </Link>
       </div>
 
@@ -169,7 +170,7 @@ export function AdminCourses() {
                 <SortableHeader label="Lessons" field="lessons" align="right" />
                 <SortableHeader label="Duration" field="duration" align="right" />
                 <SortableHeader label="Status" field="status" />
-                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[130px]">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -200,9 +201,9 @@ export function AdminCourses() {
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{course.totalDuration} min</td>
                     <td className="px-6 py-4">
-                      <Badge variant={course.isPublished ? "default" : "secondary"}>
+                      <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
                         {course.isPublished ? "Published" : "Draft"}
-                      </Badge>
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">

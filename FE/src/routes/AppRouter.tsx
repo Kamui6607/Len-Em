@@ -10,6 +10,9 @@ import { LoadingFallback } from "../app/components/LoadingFallback";
 const Home = lazy(() =>
   import("../app/pages/Home").then((m) => ({ default: m.Home })),
 );
+const AboutUs = lazy(() =>
+  import("../app/pages/AboutUs").then((m) => ({ default: m.AboutUs })),
+);
 const Shop = lazy(() =>
   import("../app/pages/Shop").then((m) => ({ default: m.Shop })),
 );
@@ -128,6 +131,7 @@ export function AppRouter() {
       {/* ===== Landing Page — Len&Em entry point with StoreLayout ===== */}
       <Route element={<StoreOutlet />}>
         <Route index element={<Home />} />
+        <Route path="about" element={<AboutUs />} />
 
         {/* ===== LEARN routes ===== */}
         <Route path="learn" element={<Learn />} />
