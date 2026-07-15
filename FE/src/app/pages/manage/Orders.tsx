@@ -77,7 +77,7 @@ export function ManageOrders() {
       loadOrders();
       if (selectedOrder?._id === orderId) {
         const { data } = await orderApi.getOrderById(orderId);
-        setSelectedOrder(data.data ?? null);
+        setSelectedOrder(data.order ?? null);
       }
     } catch {
       toast.error("Cập nhật trạng thái thất bại");
