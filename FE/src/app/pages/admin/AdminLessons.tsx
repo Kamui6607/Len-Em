@@ -1,6 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
-import { Edit, Plus, Search, Trash2, Video, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  Edit,
+  Plus,
+  Search,
+  Trash2,
+  Video,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -62,18 +70,23 @@ export function AdminLessons() {
   };
 
   const filteredLessons = lessons.filter((lesson) =>
-    lesson.title.toLowerCase().includes(searchTerm.toLowerCase())
+    lesson.title.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const sortedLessons = [...filteredLessons].sort((a, b) => {
     if (!sortField) return 0;
     const getValue = (lesson: Lesson) => {
       switch (sortField) {
-        case "title": return lesson.title;
-        case "order": return lesson.order;
-        case "duration": return lesson.duration;
-        case "products": return lesson.linkedProduct?.length ?? 0;
-        case "preview": return lesson.isPreview ? "yes" : "no";
+        case "title":
+          return lesson.title;
+        case "order":
+          return lesson.order;
+        case "duration":
+          return lesson.duration;
+        case "products":
+          return lesson.linkedProduct?.length ?? 0;
+        case "preview":
+          return lesson.isPreview ? "yes" : "no";
       }
     };
     const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
@@ -89,10 +102,20 @@ export function AdminLessons() {
     }
   };
 
-  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
+  function SortableHeader({
+    label,
+    field,
+    align = "left",
+  }: {
+    label: string;
+    field: SortField;
+    align?: "left" | "right";
+  }) {
     const active = sortField === field;
     return (
-      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+      <th
+        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}
+      >
         <button
           type="button"
           onClick={() => handleSort(field)}
@@ -100,8 +123,12 @@ export function AdminLessons() {
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
-            <ChevronUp className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-            <ChevronDown className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+            <ChevronUp
+              className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`}
+            />
+            <ChevronDown
+              className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`}
+            />
           </span>
         </button>
       </th>
@@ -112,7 +139,9 @@ export function AdminLessons() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">Lesson Management</h1>
-        <div className="flex items-center justify-center py-20 text-muted-foreground">Loading lessons...</div>
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          Loading lessons...
+        </div>
       </div>
     );
   }
@@ -127,14 +156,20 @@ export function AdminLessons() {
         </div>
         <Link to="/admin/lessons/new" className="btn-create">
           <Plus size={18} />
-          +create
+          create
         </Link>
       </div>
 
       {/* Table */}
-      <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>
+      <div
+        className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
+        style={{ borderColor: "var(--border)" }}
+      >
         {/* Filters */}
-        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
+        <div
+          className="p-6 border-b border-border"
+          style={{ background: "var(--surface)" }}
+        >
           <div className="relative">
             <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -142,7 +177,12 @@ export function AdminLessons() {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search lessons..."
               className="w-full pl-12 input"
-              style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
+              style={{
+                paddingLeft: "3rem",
+                paddingRight: "1rem",
+                paddingTop: "0.75rem",
+                paddingBottom: "0.75rem",
+              }}
             />
           </div>
         </div>
@@ -154,45 +194,80 @@ export function AdminLessons() {
               <tr>
                 <SortableHeader label="Lesson" field="title" />
                 <SortableHeader label="Order" field="order" align="right" />
-                <SortableHeader label="Duration" field="duration" align="right" />
-                <SortableHeader label="Products" field="products" align="right" />
+                <SortableHeader
+                  label="Duration"
+                  field="duration"
+                  align="right"
+                />
+                <SortableHeader
+                  label="Products"
+                  field="products"
+                  align="right"
+                />
                 <SortableHeader label="Preview" field="preview" />
-                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[120px]">Actions</th>
+                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[120px]">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {sortedLessons.length > 0 ? (
                 sortedLessons.map((lesson) => (
-                  <tr key={lesson._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
+                  <tr
+                    key={lesson._id}
+                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex size-11 items-center justify-center rounded-lg bg-muted">
                           <Video className="size-5 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
-                          <span className="block truncate font-medium text-sm max-w-[400px]">{lesson.title}</span>
-                          <span className="text-xs text-muted-foreground">{lesson.videoUrl?.slice(0, 50)}...</span>
+                          <span className="block truncate font-medium text-sm max-w-[400px]">
+                            {lesson.title}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {lesson.videoUrl?.slice(0, 50)}...
+                          </span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{lesson.order}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{lesson.duration} min</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{lesson.linkedProduct?.length ?? 0}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {lesson.order}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {lesson.duration} min
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {lesson.linkedProduct?.length ?? 0}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`badge ${lesson.isPreview ? "badge-green" : "badge-red"}`}>
+                      <span
+                        className={`badge ${lesson.isPreview ? "badge-green" : "badge-red"}`}
+                      >
                         {lesson.isPreview ? "Preview" : "Locked"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button asChild variant="ghost" size="sm" className="admin-action-btn view">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="admin-action-btn view"
+                        >
                           <Link to={`/admin/lessons/${lesson._id}`}>
                             <Edit className="size-4" />
                           </Link>
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="admin-action-btn delete" onClick={() => setDeleteId(lesson._id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="admin-action-btn delete"
+                              onClick={() => setDeleteId(lesson._id)}
+                            >
                               <Trash2 className="size-4" />
                             </Button>
                           </AlertDialogTrigger>
@@ -200,12 +275,22 @@ export function AdminLessons() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Lesson</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{lesson.title}"? This action cannot be undone.
+                                Are you sure you want to delete "{lesson.title}
+                                "? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel onClick={() => setDeleteId(null)} className="btn-secondary">Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDelete} disabled={deleting} className="btn-destructive">
+                              <AlertDialogCancel
+                                onClick={() => setDeleteId(null)}
+                                className="btn-secondary"
+                              >
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="btn-destructive"
+                              >
                                 {deleting ? "Deleting..." : "Delete"}
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -217,7 +302,10 @@ export function AdminLessons() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-muted-foreground"
+                  >
                     No lessons found
                   </td>
                 </tr>

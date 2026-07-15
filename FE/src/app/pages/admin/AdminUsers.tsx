@@ -62,7 +62,10 @@ function extractRoleId(
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
-const ROLE_STYLE: Record<string, { badge: string; avatar: string; item: string; icon: React.ReactNode }> = {
+const ROLE_STYLE: Record<
+  string,
+  { badge: string; avatar: string; item: string; icon: React.ReactNode }
+> = {
   Admin: {
     badge: "badge-pink",
     avatar: "badge-pink",
@@ -89,7 +92,10 @@ const ROLE_STYLE: Record<string, { badge: string; avatar: string; item: string; 
   },
 };
 
-const STATUS_STYLE: Record<string, { badge: string; dotColor: string; item: string }> = {
+const STATUS_STYLE: Record<
+  string,
+  { badge: string; dotColor: string; item: string }
+> = {
   ACTIVE: {
     badge: "badge-green",
     dotColor: "var(--accent-green-text)",
@@ -157,7 +163,9 @@ function UserAvatar({ name, roleName }: { name: string; roleName: string }) {
     .toUpperCase();
   const s = getRoleStyle(roleName);
   return (
-    <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center text-sm font-semibold flex-shrink-0 ${s.avatar}`}>
+    <div
+      className={`w-11 h-11 rounded-full border-2 flex items-center justify-center text-sm font-semibold flex-shrink-0 ${s.avatar}`}
+    >
       {initials || "?"}
     </div>
   );
@@ -191,9 +199,12 @@ function FilterSelect({
     function handler(e: MouseEvent) {
       const t = e.target as Node;
       if (
-        triggerRef.current && !triggerRef.current.contains(t) &&
-        menuRef.current && !menuRef.current.contains(t)
-      ) setOpen(false);
+        triggerRef.current &&
+        !triggerRef.current.contains(t) &&
+        menuRef.current &&
+        !menuRef.current.contains(t)
+      )
+        setOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -215,7 +226,10 @@ function FilterSelect({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => { if (!open) updateCoords(); setOpen((p) => !p); }}
+        onClick={() => {
+          if (!open) updateCoords();
+          setOpen((p) => !p);
+        }}
         className={`admin-filter-trigger${open ? " is-open" : ""} w-full flex items-center justify-between px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 ${
           open ? "ring-2 ring-primary/20" : ""
         }`}
@@ -224,48 +238,88 @@ function FilterSelect({
           {selected.dotColor && (
             <span
               className="led-dot"
-              style={{ backgroundColor: selected.dotColor, color: selected.dotColor }}
+              style={{
+                backgroundColor: selected.dotColor,
+                color: selected.dotColor,
+              }}
             />
           )}
-          <span style={{ color: value === "all" || !value ? "var(--foreground-muted)" : "var(--foreground)" }}>
+          <span
+            style={{
+              color:
+                value === "all" || !value
+                  ? "var(--foreground-muted)"
+                  : "var(--foreground)",
+            }}
+          >
             {selected.label}
           </span>
         </span>
         <ChevronDown
           className="w-4 h-4 transition-transform duration-200"
-          style={{ color: "var(--foreground-muted)", transform: open ? "rotate(180deg)" : undefined }}
+          style={{
+            color: "var(--foreground-muted)",
+            transform: open ? "rotate(180deg)" : undefined,
+          }}
         />
       </button>
 
-      {open && typeof document !== "undefined" && createPortal(
-        <div
-          ref={menuRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, width: coords.width, zIndex: 9999 }}
-          className="glass-panel overflow-hidden py-1"
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              style={{ color: opt.value === value ? "var(--foreground)" : "var(--foreground-muted)", fontWeight: opt.value === value ? 500 : 400 }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--dropdown-hover-bg)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors"
-            >
-              {opt.dotColor && (
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: opt.dotColor }}
-                />
-              )}
-              <span className="flex-1 text-left">{opt.label}</span>
-              {opt.value === value && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--primary)" }} />}
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: coords.top,
+              left: coords.left,
+              width: coords.width,
+              zIndex: 9999,
+            }}
+            className="glass-panel overflow-hidden py-1"
+          >
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                style={{
+                  color:
+                    opt.value === value
+                      ? "var(--foreground)"
+                      : "var(--foreground-muted)",
+                  fontWeight: opt.value === value ? 500 : 400,
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "var(--dropdown-hover-bg)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors"
+              >
+                {opt.dotColor && (
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: opt.dotColor }}
+                  />
+                )}
+                <span className="flex-1 text-left">{opt.label}</span>
+                {opt.value === value && (
+                  <Check
+                    className="w-3.5 h-3.5 flex-shrink-0"
+                    style={{ color: "var(--primary)" }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
@@ -290,7 +344,10 @@ function CustomDropdown({
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -352,33 +409,53 @@ function CustomDropdown({
         >
           {selected.prefix}
           {selected.label}
-          <ChevronDown className={`w-3 h-3 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`w-3 h-3 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+          />
         </button>
       </div>
 
-      {open && typeof document !== "undefined" && createPortal(
-        <div
-          ref={menuRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, width: MENU_WIDTH, zIndex: 9999 }}
-          className="glass-panel overflow-hidden py-1"
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => { onChange(opt.value); setOpen(false); }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--dropdown-hover-bg)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-colors ${opt.itemClass}`}
-            >
-              <span className="flex-shrink-0">{opt.prefix}</span>
-              <span className="flex-1 text-left">{opt.label}</span>
-              {opt.value === value && <Check className="w-3 h-3 flex-shrink-0 opacity-70" />}
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: coords.top,
+              left: coords.left,
+              width: MENU_WIDTH,
+              zIndex: 9999,
+            }}
+            className="glass-panel overflow-hidden py-1"
+          >
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "var(--dropdown-hover-bg)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-colors ${opt.itemClass}`}
+              >
+                <span className="flex-shrink-0">{opt.prefix}</span>
+                <span className="flex-1 text-left">{opt.label}</span>
+                {opt.value === value && (
+                  <Check className="w-3 h-3 flex-shrink-0 opacity-70" />
+                )}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
@@ -441,7 +518,9 @@ function SortableHeader({
 }) {
   const active = sortField === field;
   return (
-    <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+    <th
+      className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}
+    >
       <button
         type="button"
         onClick={() => onSort(field)}
@@ -449,8 +528,12 @@ function SortableHeader({
       >
         {label}
         <span className="flex flex-col items-center justify-center -space-y-[3px]">
-          <ChevronUp className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-          <ChevronDown className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+          <ChevronUp
+            className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`}
+          />
+          <ChevronDown
+            className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`}
+          />
         </span>
       </button>
     </th>
@@ -459,23 +542,49 @@ function SortableHeader({
 
 // ─── Detail modal ─────────────────────────────────────────────────────────────
 
-function UserDetailModal({ user, onClose }: { user: ApiUser; onClose: () => void }) {
+function UserDetailModal({
+  user,
+  onClose,
+}: {
+  user: ApiUser;
+  onClose: () => void;
+}) {
   const roleName = extractRoleName(user.roleId);
 
   const detailRows = [
-    { icon: <Mail className="w-3.5 h-3.5" />, label: "Email", value: user.email || "—" },
-    { icon: <Phone className="w-3.5 h-3.5" />, label: "Phone", value: user.phone || "—" },
-    { icon: <MapPin className="w-3.5 h-3.5" />, label: "Address", value: user.address || "—" },
-    { icon: <Venus className="w-3.5 h-3.5" />, label: "Gender", value: user.gender || "—" },
-    { icon: <Calendar className="w-3.5 h-3.5" />, label: "Date of birth", value: user.dateOfBirth || "—" },
+    {
+      icon: <Mail className="w-3.5 h-3.5" />,
+      label: "Email",
+      value: user.email || "—",
+    },
+    {
+      icon: <Phone className="w-3.5 h-3.5" />,
+      label: "Phone",
+      value: user.phone || "—",
+    },
+    {
+      icon: <MapPin className="w-3.5 h-3.5" />,
+      label: "Address",
+      value: user.address || "—",
+    },
+    {
+      icon: <Venus className="w-3.5 h-3.5" />,
+      label: "Gender",
+      value: user.gender || "—",
+    },
+    {
+      icon: <Calendar className="w-3.5 h-3.5" />,
+      label: "Date of birth",
+      value: user.dateOfBirth || "—",
+    },
   ];
 
   return (
-      <div className="admin-dialog-overlay" onClick={onClose}>
-        <div
-          className="admin-dialog-content w-full max-w-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
+    <div className="admin-dialog-overlay" onClick={onClose}>
+      <div
+        className="admin-dialog-content w-full max-w-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="relative admin-dialog-header">
           <button
             onClick={onClose}
@@ -488,8 +597,15 @@ function UserDetailModal({ user, onClose }: { user: ApiUser; onClose: () => void
           <div className="flex items-center gap-4">
             <UserAvatar name={user.fullName || ""} roleName={roleName} />
             <div className="min-w-0">
-              <p className="font-semibold text-base leading-tight truncate">{user.fullName}</p>
-              <p className="text-xs mt-0.5 truncate" style={{ color: "var(--foreground-muted)" }}>@{user.username}</p>
+              <p className="font-semibold text-base leading-tight truncate">
+                {user.fullName}
+              </p>
+              <p
+                className="text-xs mt-0.5 truncate"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                @{user.username}
+              </p>
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 <RoleBadge roleName={roleName} />
                 <StatusBadge status={user.status ?? "ACTIVE"} />
@@ -499,20 +615,43 @@ function UserDetailModal({ user, onClose }: { user: ApiUser; onClose: () => void
         </div>
 
         <div className="admin-dialog-body">
-          <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
+          <p
+            className="text-[10px] font-medium uppercase tracking-widest"
+            style={{ color: "var(--foreground-muted)" }}
+          >
             Account info
           </p>
           <div
             className="text-xs font-mono rounded-lg px-3 py-2 truncate"
-            style={{ color: "var(--foreground-muted)", background: "var(--chip-bg)", border: "1px solid var(--chip-border)" }}
+            style={{
+              color: "var(--foreground-muted)",
+              background: "var(--chip-bg)",
+              border: "1px solid var(--chip-border)",
+            }}
           >
             ID: {user.userId}
           </div>
           {detailRows.map((row) => (
-            <div key={row.label} className="flex items-start gap-3 py-1.5 border-b last:border-0" style={{ borderColor: "var(--border-subtle)" }}>
-              <span className="mt-0.5 flex-shrink-0" style={{ color: "var(--foreground-muted)" }}>{row.icon}</span>
-              <span className="text-xs w-24 flex-shrink-0" style={{ color: "var(--foreground-muted)" }}>{row.label}</span>
-              <span className="text-xs font-medium text-right flex-1 break-all">{row.value}</span>
+            <div
+              key={row.label}
+              className="flex items-start gap-3 py-1.5 border-b last:border-0"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
+              <span
+                className="mt-0.5 flex-shrink-0"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                {row.icon}
+              </span>
+              <span
+                className="text-xs w-24 flex-shrink-0"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                {row.label}
+              </span>
+              <span className="text-xs font-medium text-right flex-1 break-all">
+                {row.value}
+              </span>
             </div>
           ))}
         </div>
@@ -554,9 +693,12 @@ function DeleteUserModal({
         </div>
         <div className="admin-dialog-body">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">{user.fullName}</strong> will be set to{" "}
-            <span className="font-medium text-[var(--accent-red-text)]">INACTIVE</span>.
-            They can be reactivated later from this page.
+            <strong className="text-foreground">{user.fullName}</strong> will be
+            set to{" "}
+            <span className="font-medium text-[var(--accent-red-text)]">
+              INACTIVE
+            </span>
+            . They can be reactivated later from this page.
           </p>
         </div>
         <div className="admin-dialog-footer">
@@ -574,7 +716,14 @@ function DeleteUserModal({
             disabled={loading}
             className="btn-modal-destructive"
           >
-            {loading ? "Deleting…" : (<><Trash2 className="w-4 h-4" />Delete</>)}
+            {loading ? (
+              "Deleting…"
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -644,70 +793,103 @@ function UpdateUserModal({
           <div className="admin-dialog-body space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Username *
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Email *
                 </label>
                 <input
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Full Name *
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Phone
                 </label>
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Address
                 </label>
                 <input
                   type="text"
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Gender
                 </label>
                 <select
                   value={formData.gender}
-                  onChange={(e) => setFormData({ ...formData, gender: e.target.value as "MALE" | "FEMALE" | "OTHER" })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
+                    })
+                  }
                   className="input w-full"
                 >
                   <option value="MALE">Male</option>
@@ -716,26 +898,36 @@ function UpdateUserModal({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Date of Birth
                 </label>
                 <input
                   type="text"
                   placeholder="MM/DD/YYYY"
                   value={formData.dateOfBirth}
-                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dateOfBirth: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Subscription
                 </label>
                 <input
                   type="text"
                   placeholder="e.g., Freemium, Premium"
                   value={formData.subscription}
-                  onChange={(e) => setFormData({ ...formData, subscription: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subscription: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
@@ -755,7 +947,14 @@ function UpdateUserModal({
               disabled={loading}
               className="btn-modal-primary"
             >
-              {loading ? "Updating…" : (<><Edit3 className="w-4 h-4" />Update User</>)}
+              {loading ? (
+                "Updating…"
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4" />
+                  Update User
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -823,97 +1022,142 @@ function CreateUserModal({
           <div className="admin-dialog-body space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Username *
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Email *
                 </label>
                 <input
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Password *
                 </label>
                 <input
                   type="password"
                   required
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Full Name *
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Phone *
                 </label>
                 <input
                   type="tel"
                   required
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Role *
                 </label>
                 <select
                   value={formData.roleId}
-                  onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, roleId: e.target.value })
+                  }
                   className="input w-full"
                 >
-                  {ROLE_OPTIONS.filter(r => r.name !== "Admin").map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
+                  {ROLE_OPTIONS.filter((r) => r.name !== "Admin").map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Address
                 </label>
                 <input
                   type="text"
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Gender
                 </label>
                 <select
                   value={formData.gender}
-                  onChange={(e) => setFormData({ ...formData, gender: e.target.value as "MALE" | "FEMALE" | "OTHER" })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
+                    })
+                  }
                   className="input w-full"
                 >
                   <option value="MALE">Male</option>
@@ -922,14 +1166,19 @@ function CreateUserModal({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
                   Date of Birth
                 </label>
                 <input
                   type="text"
                   placeholder="MM/DD/YYYY"
                   value={formData.dateOfBirth}
-                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dateOfBirth: e.target.value })
+                  }
                   className="input w-full"
                 />
               </div>
@@ -949,7 +1198,14 @@ function CreateUserModal({
               disabled={loading}
               className="btn-modal-primary"
             >
-              {loading ? "Creating…" : (<><Plus className="w-4 h-4" />Create User</>)}
+              {loading ? (
+                "Creating…"
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Create User
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -1019,7 +1275,9 @@ export function AdminUsers() {
       .finally(() => {
         if (!cancelled) setStatsLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredUsers = users.filter(
@@ -1034,11 +1292,16 @@ export function AdminUsers() {
     if (!sortField) return 0;
     const getValue = (u: ApiUser) => {
       switch (sortField) {
-        case "name": return u.fullName ?? "";
-        case "email": return u.email ?? "";
-        case "phone": return u.phone ?? "";
-        case "role": return extractRoleName(u.roleId);
-        case "status": return u.status ?? "ACTIVE";
+        case "name":
+          return u.fullName ?? "";
+        case "email":
+          return u.email ?? "";
+        case "phone":
+          return u.phone ?? "";
+        case "role":
+          return extractRoleName(u.roleId);
+        case "status":
+          return u.status ?? "ACTIVE";
       }
     };
     const cmp = getValue(a).localeCompare(getValue(b));
@@ -1095,7 +1358,13 @@ export function AdminUsers() {
       setUsers((prev) =>
         prev.map((u) =>
           u.userId === user.userId
-            ? { ...u, roleId: { _id: roleId, roleName: ROLE_NAME_MAP[roleId] || "User" } }
+            ? {
+                ...u,
+                roleId: {
+                  _id: roleId,
+                  roleName: ROLE_NAME_MAP[roleId] || "User",
+                },
+              }
             : u,
         ),
       );
@@ -1142,20 +1411,26 @@ export function AdminUsers() {
     }
   };
 
-  const handleUpdateUser = async (userId: string, data: {
-    username?: string;
-    email?: string;
-    fullName?: string;
-    phone?: string;
-    address?: string;
-    gender?: "MALE" | "FEMALE" | "OTHER";
-    dateOfBirth?: string;
-    subscription?: string;
-  }) => {
+  const handleUpdateUser = async (
+    userId: string,
+    data: {
+      username?: string;
+      email?: string;
+      fullName?: string;
+      phone?: string;
+      address?: string;
+      gender?: "MALE" | "FEMALE" | "OTHER";
+      dateOfBirth?: string;
+      subscription?: string;
+    },
+  ) => {
     if (!isAdmin) return;
     try {
       setUpdating(true);
-      const { data: response } = await userService.adminUpdateUser(userId, data);
+      const { data: response } = await userService.adminUpdateUser(
+        userId,
+        data,
+      );
       const updatedUser = response.data.updatedResult;
       setUsers((prev) =>
         prev.map((u) => (u.userId === userId ? { ...u, ...updatedUser } : u)),
@@ -1221,13 +1496,18 @@ export function AdminUsers() {
         <div>
           <h1 className="mb-2">User Management</h1>
           <p className="text-muted-foreground">
-            {isAdmin ? "Manage users, statuses, and roles" : "View registered users"}
+            {isAdmin
+              ? "Manage users, statuses, and roles"
+              : "View registered users"}
           </p>
         </div>
         {isAdmin && (
-          <button onClick={() => setShowCreateModal(true)} className="btn-create">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn-create"
+          >
             <Plus size={18} />
-            +create
+            create
           </button>
         )}
       </div>
@@ -1235,7 +1515,10 @@ export function AdminUsers() {
       {/* User Statistics */}
       <div
         className="admin-panel-glow rounded-2xl border p-6 transition-all duration-300 hover:shadow-lg"
-        style={{ background: "var(--card)", borderColor: "var(--border-light)" }}
+        style={{
+          background: "var(--card)",
+          borderColor: "var(--border-light)",
+        }}
       >
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-4 h-4 text-muted-foreground" />
@@ -1246,7 +1529,10 @@ export function AdminUsers() {
         {statsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-pulse">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-muted/30 rounded-xl p-3 border border-border/50 space-y-2">
+              <div
+                key={i}
+                className="bg-muted/30 rounded-xl p-3 border border-border/50 space-y-2"
+              >
                 <div className="h-3 w-14 bg-muted rounded" />
                 <div className="h-6 w-8 bg-muted rounded" />
               </div>
@@ -1258,97 +1544,168 @@ export function AdminUsers() {
               {/* Total */}
               <div
                 className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{ background: "var(--primary-light)", borderColor: "var(--primary-soft)" }}
+                style={{
+                  background: "var(--primary-light)",
+                  borderColor: "var(--primary-soft)",
+                }}
               >
                 <div className="relative z-10">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span
                       className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                      style={{
+                        background: "var(--primary-soft)",
+                        color: "var(--primary)",
+                      }}
                     >
                       <Users className="w-3 h-3" />
                     </span>
-                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "var(--primary)" }}>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wide"
+                      style={{ color: "var(--primary)" }}
+                    >
                       Total
                     </span>
                   </div>
-                  <p className="text-lg font-bold" style={{ color: "var(--foreground)" }}>{stats.totalUsers}</p>
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    {stats.totalUsers}
+                  </p>
                 </div>
               </div>
 
               {/* Active */}
               <div
                 className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{ background: "var(--accent-green)", borderColor: "var(--accent-green-text)" }}
+                style={{
+                  background: "var(--accent-green)",
+                  borderColor: "var(--accent-green-text)",
+                }}
               >
                 <div className="relative z-10">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span
                       className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{ background: "var(--card)", color: "var(--accent-green-text)" }}
+                      style={{
+                        background: "var(--card)",
+                        color: "var(--accent-green-text)",
+                      }}
                     >
                       <UserCheck className="w-3 h-3" />
                     </span>
-                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "var(--accent-green-text)" }}>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wide"
+                      style={{ color: "var(--accent-green-text)" }}
+                    >
                       Active
                     </span>
                   </div>
-                  <p className="text-lg font-bold" style={{ color: "var(--accent-green-text)" }}>{stats.activeUsers}</p>
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--accent-green-text)" }}
+                  >
+                    {stats.activeUsers}
+                  </p>
                 </div>
               </div>
 
               {/* Inactive */}
               <div
                 className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{ background: "var(--accent-red)", borderColor: "var(--accent-red-text)" }}
+                style={{
+                  background: "var(--accent-red)",
+                  borderColor: "var(--accent-red-text)",
+                }}
               >
                 <div className="relative z-10">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span
                       className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{ background: "var(--card)", color: "var(--accent-red-text)" }}
+                      style={{
+                        background: "var(--card)",
+                        color: "var(--accent-red-text)",
+                      }}
                     >
                       <UserX className="w-3 h-3" />
                     </span>
-                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "var(--accent-red-text)" }}>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wide"
+                      style={{ color: "var(--accent-red-text)" }}
+                    >
                       Inactive
                     </span>
                   </div>
-                  <p className="text-lg font-bold" style={{ color: "var(--accent-red-text)" }}>{stats.inactiveUsers}</p>
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--accent-red-text)" }}
+                  >
+                    {stats.inactiveUsers}
+                  </p>
                 </div>
               </div>
 
               {/* Locked */}
               <div
                 className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{ background: "var(--accent-orange)", borderColor: "var(--accent-orange-text)" }}
+                style={{
+                  background: "var(--accent-orange)",
+                  borderColor: "var(--accent-orange-text)",
+                }}
               >
                 <div className="relative z-10">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span
                       className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{ background: "var(--card)", color: "var(--accent-orange-text)" }}
+                      style={{
+                        background: "var(--card)",
+                        color: "var(--accent-orange-text)",
+                      }}
                     >
                       <Lock className="w-3 h-3" />
                     </span>
-                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: "var(--accent-orange-text)" }}>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-wide"
+                      style={{ color: "var(--accent-orange-text)" }}
+                    >
                       Locked
                     </span>
                   </div>
-                  <p className="text-lg font-bold" style={{ color: "var(--accent-orange-text)" }}>{stats.lockedUsers}</p>
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--accent-orange-text)" }}
+                  >
+                    {stats.lockedUsers}
+                  </p>
                 </div>
               </div>
             </div>
             {stats.usersByRole.length > 0 && (
-              <div className="flex flex-wrap items-center gap-3 pt-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
-                <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>By Role:</span>
+              <div
+                className="flex flex-wrap items-center gap-3 pt-3 border-t"
+                style={{ borderColor: "var(--border-subtle)" }}
+              >
+                <span
+                  className="text-[10px] font-medium uppercase tracking-wider"
+                  style={{ color: "var(--foreground-muted)" }}
+                >
+                  By Role:
+                </span>
                 {stats.usersByRole.map((r) => (
                   <span
                     key={r.roleName}
                     className="text-xs px-2.5 py-1 rounded-full"
-                    style={{ background: "var(--chip-bg)", border: "1px solid var(--chip-border)", color: "var(--foreground-muted)" }}
+                    style={{
+                      background: "var(--chip-bg)",
+                      border: "1px solid var(--chip-border)",
+                      color: "var(--foreground-muted)",
+                    }}
                   >
-                    {r.roleName}: <strong style={{ color: "var(--foreground)" }}>{r.count}</strong>
+                    {r.roleName}:{" "}
+                    <strong style={{ color: "var(--foreground)" }}>
+                      {r.count}
+                    </strong>
                   </span>
                 ))}
               </div>
@@ -1362,9 +1719,15 @@ export function AdminUsers() {
       </div>
 
       {/* Filters and Table */}
-      <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>
+      <div
+        className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
+        style={{ borderColor: "var(--border)" }}
+      >
         {/* Filters */}
-        <div className="p-6 border-b border-border space-y-3" style={{ background: "var(--surface)" }}>
+        <div
+          className="p-6 border-b border-border space-y-3"
+          style={{ background: "var(--surface)" }}
+        >
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
@@ -1373,7 +1736,12 @@ export function AdminUsers() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input w-full"
-              style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
+              style={{
+                paddingLeft: "3rem",
+                paddingRight: "1rem",
+                paddingTop: "0.75rem",
+                paddingBottom: "0.75rem",
+              }}
             />
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
@@ -1381,9 +1749,21 @@ export function AdminUsers() {
               value={statusFilter}
               options={[
                 { value: "all", label: "All statuses" },
-                { value: "ACTIVE", label: "ACTIVE", dotColor: "var(--accent-green-text)" },
-                { value: "INACTIVE", label: "INACTIVE", dotColor: "var(--accent-red-text)" },
-                { value: "LOCKED", label: "LOCKED", dotColor: "var(--accent-gray-text)" },
+                {
+                  value: "ACTIVE",
+                  label: "ACTIVE",
+                  dotColor: "var(--accent-green-text)",
+                },
+                {
+                  value: "INACTIVE",
+                  label: "INACTIVE",
+                  dotColor: "var(--accent-red-text)",
+                },
+                {
+                  value: "LOCKED",
+                  label: "LOCKED",
+                  dotColor: "var(--accent-gray-text)",
+                },
               ]}
               onChange={(v) => setStatusFilter(v as "all" | UserStatus)}
             />
@@ -1403,12 +1783,44 @@ export function AdminUsers() {
           <table className="admin-table w-full">
             <thead className="bg-muted">
               <tr>
-                <SortableHeader label="User" field="name" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader label="Email" field="email" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader label="Phone" field="phone" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader label="Role" field="role" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                <SortableHeader label="Status" field="status" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">Actions</th>
+                <SortableHeader
+                  label="User"
+                  field="name"
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Email"
+                  field="email"
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Phone"
+                  field="phone"
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Role"
+                  field="role"
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Status"
+                  field="status"
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1417,24 +1829,40 @@ export function AdminUsers() {
                   const roleName = extractRoleName(user.roleId);
                   const currentStatus = user.status ?? "ACTIVE";
                   return (
-                    <tr key={user.userId} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
+                    <tr
+                      key={user.userId}
+                      className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <UserAvatar name={user.fullName || ""} roleName={roleName} />
+                          <UserAvatar
+                            name={user.fullName || ""}
+                            roleName={roleName}
+                          />
                           <div>
-                            <p className="font-medium text-sm">{user.fullName}</p>
-                            <p className="text-xs text-muted-foreground">@{user.username}</p>
+                            <p className="font-medium text-sm">
+                              {user.fullName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              @{user.username}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{user.phone || "—"}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {user.phone || "—"}
+                      </td>
                       <td className="px-6 py-4">
                         {isAdmin ? (
                           <CustomDropdown
                             value={extractRoleId(user.roleId)}
                             options={ROLE_DROPDOWN_OPTIONS}
-                            onChange={(roleId) => handleRoleChange(user, roleId)}
+                            onChange={(roleId) =>
+                              handleRoleChange(user, roleId)
+                            }
                           />
                         ) : (
                           <RoleBadge roleName={roleName} />
@@ -1445,7 +1873,9 @@ export function AdminUsers() {
                           <CustomDropdown
                             value={currentStatus}
                             options={STATUS_DROPDOWN_OPTIONS}
-                            onChange={(status) => handleStatusChange(user, status as UserStatus)}
+                            onChange={(status) =>
+                              handleStatusChange(user, status as UserStatus)
+                            }
                           />
                         ) : (
                           <StatusBadge status={currentStatus} />
@@ -1454,30 +1884,32 @@ export function AdminUsers() {
                       <td className="px-6 py-4 text-right">
                         {isAdmin ? (
                           <div className="flex items-center justify-end gap-2">
-                             <button
-                               onClick={() => handleViewUser(user)}
-                               className="admin-action-btn view"
-                               title="View detail"
-                             >
-                               <Eye className="w-4 h-4" />
-                             </button>
-                             <button
-                               onClick={() => setUserToUpdate(user)}
-                               className="admin-action-btn edit"
-                               title="Update user"
-                             >
-                               <Edit3 className="w-4 h-4" />
-                             </button>
-                             <button
-                               onClick={() => requestDeleteUser(user)}
-                               className="admin-action-btn delete"
-                               title="Soft delete"
-                             >
-                               <Trash2 className="w-4 h-4" />
-                             </button>
+                            <button
+                              onClick={() => handleViewUser(user)}
+                              className="admin-action-btn view"
+                              title="View detail"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setUserToUpdate(user)}
+                              className="admin-action-btn edit"
+                              title="Update user"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => requestDeleteUser(user)}
+                              className="admin-action-btn delete"
+                              title="Soft delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">View only</span>
+                          <span className="text-xs text-muted-foreground">
+                            View only
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -1485,7 +1917,10 @@ export function AdminUsers() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="text-center py-12 text-muted-foreground"
+                  >
                     No users found
                   </td>
                 </tr>
@@ -1496,7 +1931,10 @@ export function AdminUsers() {
       </div>
 
       {selectedUser && (
-        <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+        <UserDetailModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+        />
       )}
 
       {userToDelete && (

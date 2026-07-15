@@ -179,8 +179,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const clearCart = useCallback(() => {
+    // Clear both React state AND localStorage synchronously
+    // so that even if window.location.href navigates away immediately,
+    // the cart data is already removed from localStorage.
     setCartItems([]);
     setCartKits([]);
+    localStorage.removeItem(CART_STORAGE_KEY);
+    localStorage.removeItem(CART_KITS_STORAGE_KEY);
   }, []);
 
   const isInCart = useCallback(

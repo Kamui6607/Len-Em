@@ -592,8 +592,7 @@ export function OrderSummaryCard({
   const kitSavings = cartKits
     .reduce((s, k) => s + (k.originalIndividualTotal ? k.originalIndividualTotal - k.price : 0), 0);
   const promoSaving = promoOk ? Math.round(subtotal * 0.10) : 0;
-  const shipping = subtotal >= 60000 ? 0 : 6950;
-  const total = subtotal - promoSaving + shipping;
+  const total = subtotal - promoSaving;
 
   const handleApplyPromo = () => {
     setChecking(true);
@@ -653,35 +652,6 @@ export function OrderSummaryCard({
               </span>
               <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"0.85rem", fontWeight:600, color:"var(--success-text)" }}>
                 − {formatPrice(promoSaving)}
-              </span>
-            </div>
-          )}
-
-          {/* Shipping */}
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontFamily:"'Inter',sans-serif", fontSize:"0.83rem", color:"var(--foreground-muted)" }}>
-              Shipping
-            </span>
-            <span style={{
-              fontFamily:"'Inter',sans-serif",
-              fontSize:"0.82rem", fontWeight: shipping === 0 ? 600 : 400,
-              color: shipping === 0 ? "var(--success-text)" : "var(--foreground-muted)",
-            }}>
-              {shipping === 0 ? "Free ✓" : formatPrice(shipping)}
-            </span>
-          </div>
-
-          {shipping > 0 && (
-            <div style={{
-              padding:"8px 12px", borderRadius:"10px",
-              background:"rgba(245,239,168,0.5)",
-              border:"1px solid var(--accent-yellow)",
-            }}>
-              <span style={{
-                fontFamily:"'Caveat',cursive",
-                fontSize:"0.72rem", color:"var(--warning-text)",
-              }}>
-                Add {formatPrice(60000 - subtotal)} more for free shipping →
               </span>
             </div>
           )}
@@ -789,7 +759,7 @@ export function OrderSummaryCard({
 
         {/* Assurance strip */}
         <div style={{ display:"flex", justifyContent:"center", gap:"16px", flexWrap:"wrap" as const }}>
-          {["Secure payment", "30-day returns", "Free over 60.000₫"].map(note => (
+          {["Secure payment", "30-day returns"].map(note => (
             <span key={note} style={{
               fontFamily:"'Caveat',cursive",
               fontSize:"0.66rem", color:"var(--foreground-muted)",

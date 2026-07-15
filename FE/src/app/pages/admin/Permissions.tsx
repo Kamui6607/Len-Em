@@ -1,13 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  Search,
-  Plus,
-  Edit3,
-  Trash2,
-  X,
-  Shield,
-  Eye,
-} from "lucide-react";
+import { Search, Plus, Edit3, Trash2, X, Shield, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../hooks/useAuth";
 import {
@@ -38,47 +30,43 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-  function ConfirmDialog({
-    open,
-    title,
-    message,
-    onConfirm,
-    onCancel,
-  }: ConfirmDialogProps) {
-    if (!open) return null;
-    return (
-      <div className="admin-dialog-overlay" onClick={onCancel}>
-        <div
-          className="admin-dialog-content max-w-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="admin-dialog-header">
-            <h3 className="text-base font-semibold">{title}</h3>
-          </div>
-          <div className="admin-dialog-body">
-            <p className="text-sm text-muted-foreground">{message}</p>
-          </div>
-          <div className="admin-dialog-footer">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="btn-modal-cancel"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="btn-modal-destructive"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
-          </div>
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
+  if (!open) return null;
+  return (
+    <div className="admin-dialog-overlay" onClick={onCancel}>
+      <div
+        className="admin-dialog-content max-w-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="admin-dialog-header">
+          <h3 className="text-base font-semibold">{title}</h3>
+        </div>
+        <div className="admin-dialog-body">
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </div>
+        <div className="admin-dialog-footer">
+          <button type="button" onClick={onCancel} className="btn-modal-cancel">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="btn-modal-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
 // ─── Permission Form Data ────────────────────────────────
 
@@ -110,144 +98,167 @@ interface PermissionModalProps {
   onClose: () => void;
 }
 
-  function PermissionModal({
-    open,
-    editingId,
-    form,
-    resources,
-    saving,
-    fieldErrors,
-    onChange,
-    onSave,
-    onClose,
-  }: PermissionModalProps) {
-    if (!open) return null;
+function PermissionModal({
+  open,
+  editingId,
+  form,
+  resources,
+  saving,
+  fieldErrors,
+  onChange,
+  onSave,
+  onClose,
+}: PermissionModalProps) {
+  if (!open) return null;
 
-    const filteredActions =
-      resources.find((r) => r.resource === form.resource)?.actions ?? [];
+  const filteredActions =
+    resources.find((r) => r.resource === form.resource)?.actions ?? [];
 
-    return (
-      <div className="admin-dialog-overlay" onClick={onClose}>
-        <div
-          className="admin-dialog-content max-w-lg max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
+  return (
+    <div className="admin-dialog-overlay" onClick={onClose}>
+      <div
+        className="admin-dialog-content max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="admin-dialog-header">
+          <h3 className="text-base font-semibold">
+            {editingId ? "Edit Permission" : "Create Permission"}
+          </h3>
+          <button
+            onClick={onClose}
+            style={{ color: "var(--foreground-muted)" }}
+            className="admin-action-btn absolute top-4 right-4"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSave();
+          }}
         >
-          <div className="admin-dialog-header">
-            <h3 className="text-base font-semibold">
-              {editingId ? "Edit Permission" : "Create Permission"}
-            </h3>
+          <div className="admin-dialog-body space-y-4">
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                Permission Name <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={form.name}
+                onChange={(e) => onChange({ ...form, name: e.target.value })}
+                className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
+                placeholder="e.g. create_product"
+              />
+              {fieldErrors.name && (
+                <p className="text-xs text-destructive mt-1">
+                  {fieldErrors.name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                Resource <span className="text-destructive">*</span>
+              </label>
+              <AdminSelect
+                value={form.resource}
+                placeholder="Select resource"
+                options={resources.map((r) => ({
+                  value: r.resource,
+                  label: r.resource,
+                }))}
+                onChange={(value) =>
+                  onChange({ ...form, resource: value, action: "" })
+                }
+                buttonClassName={
+                  fieldErrors.resource ? "border-destructive" : ""
+                }
+              />
+              {fieldErrors.resource && (
+                <p className="text-xs text-destructive mt-1">
+                  {fieldErrors.resource}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                Action <span className="text-destructive">*</span>
+              </label>
+              <AdminSelect
+                value={form.action}
+                placeholder="Select action"
+                disabled={!form.resource}
+                options={filteredActions.map((action) => ({
+                  value: action,
+                  label: action,
+                }))}
+                onChange={(value) => onChange({ ...form, action: value })}
+                buttonClassName={fieldErrors.action ? "border-destructive" : ""}
+              />
+              {fieldErrors.action && (
+                <p className="text-xs text-destructive mt-1">
+                  {fieldErrors.action}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                Description
+              </label>
+              <textarea
+                value={form.description}
+                onChange={(e) =>
+                  onChange({ ...form, description: e.target.value })
+                }
+                rows={3}
+                className="input w-full resize-none"
+                placeholder="Optional description..."
+              />
+            </div>
+          </div>
+          <div className="admin-dialog-footer">
             <button
+              type="button"
               onClick={onClose}
-              style={{ color: "var(--foreground-muted)" }}
-              className="admin-action-btn absolute top-4 right-4"
-              aria-label="Close"
+              disabled={saving}
+              className="btn-modal-cancel"
             >
-              <X className="w-4 h-4" />
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-modal-primary"
+            >
+              {saving
+                ? "Saving…"
+                : editingId
+                  ? "Update Permission"
+                  : "Create Permission"}
             </button>
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
-            <div className="admin-dialog-body space-y-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  Permission Name <span className="text-destructive">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => onChange({ ...form, name: e.target.value })}
-                  className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
-                  placeholder="e.g. create_product"
-                />
-                {fieldErrors.name && (
-                  <p className="text-xs text-destructive mt-1">
-                    {fieldErrors.name}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  Resource <span className="text-destructive">*</span>
-                </label>
-                <AdminSelect
-                  value={form.resource}
-                  placeholder="Select resource"
-                  options={resources.map((r) => ({
-                    value: r.resource,
-                    label: r.resource,
-                  }))}
-                  onChange={(value) =>
-                    onChange({ ...form, resource: value, action: "" })
-                  }
-                  buttonClassName={fieldErrors.resource ? "border-destructive" : ""}
-                />
-                {fieldErrors.resource && (
-                  <p className="text-xs text-destructive mt-1">
-                    {fieldErrors.resource}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  Action <span className="text-destructive">*</span>
-                </label>
-                <AdminSelect
-                  value={form.action}
-                  placeholder="Select action"
-                  disabled={!form.resource}
-                  options={filteredActions.map((action) => ({
-                    value: action,
-                    label: action,
-                  }))}
-                  onChange={(value) => onChange({ ...form, action: value })}
-                  buttonClassName={fieldErrors.action ? "border-destructive" : ""}
-                />
-                {fieldErrors.action && (
-                  <p className="text-xs text-destructive mt-1">
-                    {fieldErrors.action}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  Description
-                </label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) =>
-                    onChange({ ...form, description: e.target.value })
-                  }
-                  rows={3}
-                  className="input w-full resize-none"
-                  placeholder="Optional description..."
-                />
-              </div>
-            </div>
-            <div className="admin-dialog-footer">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="btn-modal-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="btn-modal-primary"
-              >
-                {saving ? "Saving…" : editingId ? "Update Permission" : "Create Permission"}
-              </button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
 // ─── Main Component ──────────────────────────────────────
 
@@ -466,7 +477,7 @@ export function Permissions() {
         {isAdmin && (
           <button onClick={openCreate} className="btn-create">
             <Plus size={18} />
-            +create
+            create
           </button>
         )}
       </div>
@@ -474,7 +485,10 @@ export function Permissions() {
       {/* Table */}
       <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
         {/* Filters */}
-        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
+        <div
+          className="p-6 border-b border-border"
+          style={{ background: "var(--surface)" }}
+        >
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -484,7 +498,12 @@ export function Permissions() {
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
                 className="input w-full"
-                style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
+                style={{
+                  paddingLeft: "3rem",
+                  paddingRight: "1rem",
+                  paddingTop: "0.75rem",
+                  paddingBottom: "0.75rem",
+                }}
               />
             </div>
 
@@ -522,16 +541,25 @@ export function Permissions() {
 
         {/* Table Body */}
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
+          <div
+            className="p-8 text-center text-muted-foreground"
+            style={{ background: "var(--card)" }}
+          >
             Loading...
           </div>
         ) : permissions.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
+          <div
+            className="p-8 text-center text-muted-foreground"
+            style={{ background: "var(--card)" }}
+          >
             <Shield size={40} className="mx-auto mb-3 opacity-40" />
             <p>No permissions found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+          <div
+            className="overflow-x-auto"
+            style={{ background: "var(--card)" }}
+          >
             <table className="admin-table w-full">
               <thead className="bg-muted">
                 <tr>

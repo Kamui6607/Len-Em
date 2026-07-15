@@ -11,7 +11,7 @@ import { orderApi } from "../../../api/orderService";
 import { formatPrice } from "../../../lib/formatPrice";
 import {
   ORDER_STATUS_LABELS,
-  ORDER_STATUS_COLORS,
+  getOrderStatusStyle,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_COLORS,
 } from "../../../constants/orderStatus";
@@ -91,7 +91,8 @@ export function MyOrders() {
                         Đơn hàng #{normalized._id.slice(-8).toUpperCase()}
                       </p>
                       <span
-                        className={`inline-flex items-center text-xs px-2.5 py-0.5 rounded-full font-medium ${ORDER_STATUS_COLORS[normalized.orderStatus]}`}
+                        className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full font-medium"
+                        style={getOrderStatusStyle(normalized.orderStatus)}
                       >
                         {ORDER_STATUS_LABELS[normalized.orderStatus]}
                       </span>

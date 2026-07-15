@@ -13,7 +13,7 @@ import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../ui/ColorSwatch";
 import {
   ORDER_STATUS_LABELS,
-  ORDER_STATUS_COLORS,
+  getOrderStatusStyle,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_COLORS,
   PAYMENT_METHOD_LABELS,
@@ -88,7 +88,8 @@ export function OrderDetailCard({
           </div>
           <div className="flex items-center gap-3">
             <span
-              className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium ${ORDER_STATUS_COLORS[normalized.orderStatus]}`}
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium"
+              style={getOrderStatusStyle(normalized.orderStatus)}
             >
               {ORDER_STATUS_LABELS[normalized.orderStatus]}
             </span>

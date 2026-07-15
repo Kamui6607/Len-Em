@@ -45,6 +45,40 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
 };
 
 /**
+ * Get inline style object for order status badges using CSS custom properties.
+ * This respects the design system's --status-* tokens for both light & dark modes.
+ */
+export function getOrderStatusStyle(status: string): React.CSSProperties {
+  const base: React.CSSProperties = {};
+  switch (status) {
+    case "DELIVERED":
+    case "CONFIRMED":
+    case "PREPARING":
+    case "SHIPPING":
+      base.background = "var(--status-success-bg)";
+      base.color = "var(--status-success-text)";
+      base.border = "1px solid var(--status-success-border)";
+      break;
+    case "PENDING":
+      base.background = "var(--status-pending-bg)";
+      base.color = "var(--status-pending-text)";
+      base.border = "1px solid var(--status-pending-border)";
+      break;
+    case "CANCELLED":
+      base.background = "var(--status-error-bg)";
+      base.color = "var(--status-error-text)";
+      base.border = "1px solid var(--status-error-border)";
+      break;
+    default:
+      base.background = "var(--status-info-bg)";
+      base.color = "var(--status-info-text)";
+      base.border = "1px solid var(--status-info-border)";
+      break;
+  }
+  return base;
+}
+
+/**
  * Valid status transitions for admin order management.
  * Keys are current status, values are allowed next statuses.
  */
