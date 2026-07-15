@@ -106,7 +106,12 @@ export interface AdminOrdersResponse {
 }
 
 export interface MyOrdersResponse {
+  message: string;
   orders: Order[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface CreateOrderResponse {

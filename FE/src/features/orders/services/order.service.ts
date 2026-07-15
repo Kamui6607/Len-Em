@@ -29,8 +29,8 @@ export const orderService = {
    * 2c. Get my orders (customer).
    * GET /orders/my?page=1&limit=10
    */
-  getMyOrders: () =>
-    axiosClient.get<MyOrdersResponse>(`${ORDERS_BASE}/my`),
+  getMyOrders: (params?: { page?: number; limit?: number }) =>
+    axiosClient.get<MyOrdersResponse>(`${ORDERS_BASE}/my`, { params }),
 
   /**
    * 2d. Get order by ID (customer).

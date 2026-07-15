@@ -12,6 +12,9 @@ interface StoreLayoutProps {
   children: ReactNode;
 }
 
+// Routes that should NOT render Navigation or Footer
+const NO_NAV_ROUTES = ["/order/success"];
+
 export function StoreLayout({
   children,
 }: StoreLayoutProps) {
@@ -19,6 +22,7 @@ export function StoreLayout({
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const shouldReduceMotion = useReducedMotion();
+  const hideNav = NO_NAV_ROUTES.includes(location.pathname);
 
   useSwipeBack(isMobile);
 
@@ -30,9 +34,9 @@ export function StoreLayout({
   return (
     <motion.div className="min-h-screen flex flex-col">
       <div style={{ position: "relative", zIndex: 1 }}>
-        <Navigation cartCount={cartCount} />
+        {!hideNav && <Navigation cartCount={cartCount} />}
 
-        <div className="main-content flex-1 pb-20 md:pb-0">
+        <div className={`main-content flex-1 ${!hideNav ? "pb-20 md:pb-0" : ""}`}>
           {isMobile && !shouldReduceMotion ? (
             <AnimatePresence mode="wait">
               <motion.div
@@ -52,7 +56,7 @@ export function StoreLayout({
         </div>
 
         <BackToTop />
-        {location.pathname !== "/" && <Footer />}
+        {!hideNav && location.pathname !== "/" && <Footer />}
       </div>
     </motion.div>
   );

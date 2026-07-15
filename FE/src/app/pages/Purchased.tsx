@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, Calendar, Star } from "lucide-react";
+import { Package, Calendar, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../hooks/useAuth";
@@ -10,6 +10,9 @@ import { Link } from "react-router";
 import { orderService } from "../../features/orders/services/order.service";
 import type { Order } from "../../features/orders/types/order.types";
 import { normalizeOrder } from "../../features/orders/types/order.types";
+import { getOrderStatusStyle } from "../../constants/orderStatus";
+
+const PAGE_SIZE = 10;
 
 export function Purchased() {
   const { user } = useAuth();
@@ -17,6 +20,9 @@ export function Purchased() {
   const { addNotification } = useNotifications();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [reviewModal, setReviewModal] = useState<{
     orderId: string;
     productId: string;
@@ -28,8 +34,10 @@ export function Purchased() {
   useEffect(() => {
     async function loadOrders() {
       try {
-        const { data: response } = await orderService.getMyOrders();
+        const { data: response } = await orderService.getMyOrders({ page, limit: PAGE_SIZE });
         setOrders(response.orders.map(normalizeOrder));
+        setTotal(response.total ?? 0);
+        setTotalPages(response.totalPages ?? 1);
       } catch {
         // API unavailable — empty state (demo mode / offline)
       } finally {
@@ -38,7 +46,7 @@ export function Purchased() {
     }
     if (user) loadOrders();
     else setLoading(false);
-  }, [user]);
+  }, [user, page]);
 
   const handleSubmitReview = () => {
     if (!reviewModal || !comment.trim()) {
@@ -85,22 +93,6 @@ export function Purchased() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DELIVERED":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-      case "CONFIRMED":
-      case "PREPARING":
-      case "SHIPPING":
-        return "bg-secondary/20 text-secondary";
-      case "PENDING":
-        return "bg-accent/20 text-accent";
-      case "CANCELLED":
-        return "bg-destructive/10 text-destructive";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -135,6 +127,11 @@ export function Purchased() {
           <p className="text-muted-foreground">
             Track your orders, leave reviews, and report issues
           </p>
+          {total > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Showing {orders.length} of {total} orders
+            </p>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -155,104 +152,132 @@ export function Purchased() {
               </Link>
             </div>
           ) : (
-            orders.map((order) => (
-              <div
-                key={order._id}
-                className="bg-card rounded-2xl p-6 border border-border"
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">
-                      {getStatusIcon(order.orderStatus)}
-                    </span>
-                    <div>
-                      <h3 className="font-semibold">
-                        Order #{order._id.slice(-8).toUpperCase()}
-                      </h3>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+            <>
+              {orders.map((order) => (
+                <div
+                  key={order._id}
+                  className="bg-card rounded-2xl p-6 border border-border"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">
+                        {getStatusIcon(order.orderStatus)}
+                      </span>
+                      <div>
+                        <h3 className="font-semibold">
+                          Order #{order._id.slice(-8).toUpperCase()}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary text-xl">
+                        {formatPrice(order.totalPrice)}
+                      </p>
+                      <span
+                        style={getOrderStatusStyle(order.orderStatus)}
+                        className="inline-block mt-1 px-3 py-0.5 rounded-full text-xs font-medium"
+                      >
+                        {order.orderStatus}
+                      </span>
+                      {order.payment.status === "PAID" && (
+                        <p className="text-[10px] text-green-600 mt-1">Paid</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-primary text-xl">
-                      {formatPrice(order.totalPrice)}
-                    </p>
-                    <span
-                      className={`inline-block mt-1 px-3 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.orderStatus)}`}
-                    >
-                      {order.orderStatus}
-                    </span>
-                    {order.payment.status === "PAID" && (
-                      <p className="text-[10px] text-green-600 mt-1">Paid</p>
-                    )}
-                  </div>
-                </div>
 
-                <div className="border-t border-border pt-4">
-                  <div className="space-y-3">
-                    {order.items.map((item, idx) => {
-                      const reviewed = hasReviewed(order._id, item.productId);
-                      return (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {item.productName || `Product ${item.productId}`}
-                            </p>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span>x{item.quantity}</span>
-                              {item.color && <span>Color: {item.color}</span>}
+                  <div className="border-t border-border pt-4">
+                    <div className="space-y-3">
+                      {order.items.map((item, idx) => {
+                        const reviewed = hasReviewed(order._id, item.productId);
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {item.productName || `Product ${item.productId}`}
+                              </p>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span>x{item.quantity}</span>
+                                {item.color && <span>Color: {item.color}</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                              {order.orderStatus === "DELIVERED" && !reviewed && (
+                                <button
+                                  onClick={() =>
+                                    setReviewModal({
+                                      orderId: order._id,
+                                      productId: item.productId,
+                                      productName: item.productName || "Product",
+                                    })
+                                  }
+                                  className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                                >
+                                  <Star className="w-3 h-3 inline mr-1" /> Review
+                                </button>
+                              )}
+                              {order.orderStatus === "DELIVERED" && reviewed && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
+                                  Reviewed
+                                </span>
+                              )}
+                              <ReportButton
+                                targetType="purchased_order"
+                                targetId={order._id}
+                                targetTitle={`Order ${order._id}`}
+                              />
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                            {order.orderStatus === "DELIVERED" && !reviewed && (
-                              <button
-                                onClick={() =>
-                                  setReviewModal({
-                                    orderId: order._id,
-                                    productId: item.productId,
-                                    productName: item.productName || "Product",
-                                  })
-                                }
-                                className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                              >
-                                <Star className="w-3 h-3 inline mr-1" /> Review
-                              </button>
-                            )}
-                            {order.orderStatus === "DELIVERED" && reviewed && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
-                                Reviewed
-                              </span>
-                            )}
-                            <ReportButton
-                              targetType="purchased_order"
-                              targetId={order._id}
-                              targetTitle={`Order ${order._id}`}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
 
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {order.orderStatus === "CONFIRMED" && (
-                      <button
-                        onClick={() => markAsDone(order._id)}
-                        className="text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90 transition-colors"
-                      >
-                        ✅ Mark as Done
-                      </button>
-                    )}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {order.orderStatus === "CONFIRMED" && (
+                        <button
+                          onClick={() => markAsDone(order._id)}
+                          className="text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90 transition-colors"
+                        >
+                          ✅ Mark as Done
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 pt-6 pb-4">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

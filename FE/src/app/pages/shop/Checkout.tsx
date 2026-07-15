@@ -109,14 +109,15 @@ export function Checkout() {
       const response = await orderApi.createOrder(payload);
       const result = response.data;
 
+      // Order created successfully — clear cart regardless of payment method
+      clearCart();
+
       if (result.payUrl) {
         // VNPAY: redirect to payment gateway
         window.location.href = result.payUrl;
         return;
       }
 
-      // Order created: clear cart and go to success page
-      clearCart();
       const orderId = result?.order?._id || "";
       const date = new Date().toLocaleDateString("en-GB", {
         day: "2-digit",

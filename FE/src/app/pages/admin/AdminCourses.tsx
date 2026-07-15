@@ -140,7 +140,7 @@ export function AdminCourses() {
         </div>
         <Link to="/admin/courses/new" className="btn-create">
           <Plus size={18} />
-          +create
+          create
         </Link>
       </div>
 

@@ -246,11 +246,32 @@
   --navbar-blur: 18px;
   --navbar-border: rgba(255,255,255,.7);
 
-  /* Status */
+  /* Status — generic semantic (used by general UI) */
   --success-bg: #EAF8EF; --success-text: #2E7D4F;
   --warning-bg: #FFF9DD; --warning-text: #A46A00;
   --error-bg: #FFECEC;   --error-text: #C74242;
   --info-bg: #EDF6FF;    --info-text: #2E6BB8;
+
+  /* ===== STATUS BADGE TOKENS — warm atelier palette =====
+     Light mode: solid warm tints with dark saturated text for readability.
+     Dark mode:  semi-transparent rgba backgrounds with bright text.
+     Used by order-status badges, membership-tier badges, etc.
+  */
+  --status-success-bg:    #E8F0DC;
+  --status-success-text:  #4D7A2E;
+  --status-success-border: #C3DBA8;
+
+  --status-pending-bg:    #FFD8B4;
+  --status-pending-text:  #B5651D;
+  --status-pending-border: #F5C08A;
+
+  --status-error-bg:      #FBE2DC;
+  --status-error-text:    #B84C3A;
+  --status-error-border:  #F0B8A8;
+
+  --status-info-bg:       #F0C4E0;
+  --status-info-text:     #9B4E86;
+  --status-info-border:   #E3A8CF;
 
   /* Rating / clear actions */
   --rating-star: var(--warning-text);
@@ -530,6 +551,26 @@
   --badge-yellow-bg: rgba(232,223,160,0.20); --badge-yellow-text:#F0E8B0;
   --badge-peach-bg:  rgba(255,210,160,0.22); --badge-peach-text: #FFD8B4;
   --badge-green-bg:  rgba(60,140,80,0.24);   --badge-green-text: #8BD4A0;
+
+  /* ===== STATUS BADGE TOKENS — dark mode (Warm Night) =====
+     Semi-transparent rgba background (~15% opacity) over dark purple base,
+     bright saturated text, border at ~35% opacity.
+  */
+  --status-success-bg:    rgba(155, 214, 111, 0.15);
+  --status-success-text:  #A8E08A;
+  --status-success-border: rgba(168, 224, 138, 0.35);
+
+  --status-pending-bg:    rgba(255, 184, 120, 0.15);
+  --status-pending-text:  #FFC98A;
+  --status-pending-border: rgba(255, 201, 138, 0.35);
+
+  --status-error-bg:      rgba(230, 110, 90, 0.15);
+  --status-error-text:    #F09080;
+  --status-error-border:  rgba(240, 144, 128, 0.35);
+
+  --status-info-bg:       rgba(184, 151, 232, 0.15);
+  --status-info-text:     #D8C2FF;
+  --status-info-border:   rgba(216, 194, 255, 0.35);
 
   /* Rating / clear actions — dark */
   --clear-btn-glow: rgba(224, 84, 114, 0.4);

@@ -329,7 +329,7 @@ export function ProductManagement() {
              className="btn-create"
            >
              <Plus size={18} />
-             +create
+             create
            </button>
          )}
       </div>
