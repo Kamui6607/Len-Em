@@ -23,7 +23,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   PENDING: "Chờ thanh toán",
-  PAID: "Đã thanh toán",
+  PAID: "Đã Thanh Toán",
   FAILED: "Thất bại",
   REFUNDED: "Đã hoàn tiền",
 };
@@ -48,6 +48,34 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
  * Get inline style object for order status badges using CSS custom properties.
  * This respects the design system's --status-* tokens for both light & dark modes.
  */
+export function getPaymentStatusStyle(status: string): React.CSSProperties {
+  const base: React.CSSProperties = {};
+  switch (status) {
+    case "PAID":
+      base.background = "var(--status-success-bg)";
+      base.color = "var(--status-success-text)";
+      base.border = "1px solid var(--status-success-border)";
+      break;
+    case "PENDING":
+      base.background = "var(--status-pending-bg)";
+      base.color = "var(--status-pending-text)";
+      base.border = "1px solid var(--status-pending-border)";
+      break;
+    case "FAILED":
+    case "REFUNDED":
+      base.background = "var(--status-error-bg)";
+      base.color = "var(--status-error-text)";
+      base.border = "1px solid var(--status-error-border)";
+      break;
+    default:
+      base.background = "var(--status-info-bg)";
+      base.color = "var(--status-info-text)";
+      base.border = "1px solid var(--status-info-border)";
+      break;
+  }
+  return base;
+}
+
 export function getOrderStatusStyle(status: string): React.CSSProperties {
   const base: React.CSSProperties = {};
   switch (status) {

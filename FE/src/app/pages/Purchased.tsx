@@ -154,9 +154,10 @@ export function Purchased() {
           ) : (
             <>
               {orders.map((order) => (
-                <div
+                <Link
+                  to={`/orders/my/${order._id}`}
                   key={order._id}
-                  className="bg-card rounded-2xl p-6 border border-border"
+                  className="block bg-card rounded-2xl p-6 border border-border hover:border-primary/30 transition-all hover:shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
@@ -210,13 +211,15 @@ export function Purchased() {
                             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                               {order.orderStatus === "DELIVERED" && !reviewed && (
                                 <button
-                                  onClick={() =>
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     setReviewModal({
                                       orderId: order._id,
                                       productId: item.productId,
                                       productName: item.productName || "Product",
-                                    })
-                                  }
+                                    });
+                                  }}
                                   className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
                                 >
                                   <Star className="w-3 h-3 inline mr-1" /> Review
@@ -242,7 +245,11 @@ export function Purchased() {
                     <div className="flex flex-wrap gap-2 pt-2">
                       {order.orderStatus === "CONFIRMED" && (
                         <button
-                          onClick={() => markAsDone(order._id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            markAsDone(order._id);
+                          }}
                           className="text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90 transition-colors"
                         >
                           ✅ Mark as Done
@@ -250,7 +257,7 @@ export function Purchased() {
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
 
               {/* Pagination */}

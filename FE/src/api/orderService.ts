@@ -4,14 +4,13 @@
 
 import axiosClient from "../lib/axiosClient";
 import type {
-  Order,
   CreateOrderRequest,
   CancelOrderRequest,
   UpdateOrderStatusRequest,
   AdminOrdersResponse,
   MyOrdersResponse,
   CreateOrderResponse,
-  OrderApiResponse,
+  GetOrderResponse,
 } from "../features/orders/types/order.types";
 
 const ORDERS_BASE = "/orders";
@@ -33,15 +32,17 @@ export const orderApi = {
 
   /**
    * GET /orders/:id — get order detail (customer or admin/staff)
+   * Backend returns: { message, order }
    */
   getOrderById: (orderId: string) =>
-    axiosClient.get<OrderApiResponse<Order>>(`${ORDERS_BASE}/${orderId}`),
+    axiosClient.get<GetOrderResponse>(`${ORDERS_BASE}/${orderId}`),
 
   /**
    * POST /orders/:id/cancel — customer cancels their own PENDING order
+   * Backend returns: { message, order }
    */
   cancelOrder: (orderId: string, data: CancelOrderRequest) =>
-    axiosClient.post<OrderApiResponse<Order>>(`${ORDERS_BASE}/${orderId}/cancel`, data),
+    axiosClient.post<GetOrderResponse>(`${ORDERS_BASE}/${orderId}/cancel`, data),
 
   /**
    * GET /orders — admin/staff get all orders with filters + pagination
@@ -56,7 +57,8 @@ export const orderApi = {
 
   /**
    * PATCH /orders/:id/status — admin/staff update order status
+   * Backend returns: { message, order }
    */
   updateOrderStatus: (orderId: string, data: UpdateOrderStatusRequest) =>
-    axiosClient.patch<OrderApiResponse<Order>>(`${ORDERS_BASE}/${orderId}/status`, data),
+    axiosClient.patch<GetOrderResponse>(`${ORDERS_BASE}/${orderId}/status`, data),
 };

@@ -79,7 +79,13 @@ axiosClient.interceptors.response.use(
       _retry?: boolean;
     };
 
+    // Skip 401 handling for login requests — the caller (LoginPage) handles the error
     if (error.response?.status !== 401 || original._retry) {
+      return handleAxiosError(error);
+    }
+
+    const requestUrl = original.url ?? "";
+    if (requestUrl.includes("/auth/login")) {
       return handleAxiosError(error);
     }
 
@@ -181,8 +187,16 @@ function forceLogout(): void {
     return;
   }
 
-  toast.error("Session expired. Please sign in again.");
-  window.location.href = "/auth/login";
+  // Only show toast if not already on the login page
+  if (!window.location.pathname.startsWith("/auth/")) {
+    toast.error("Session expired. Please sign in again.");
+  }
+  // Use replace to avoid keeping the error page in history
+  // and avoid a full page reload when already on the auth page
+  const currentPath = window.location.pathname;
+  if (!currentPath.startsWith("/auth/")) {
+    window.location.replace("/auth/login");
+  }
 }
 
 export default axiosClient;

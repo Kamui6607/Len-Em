@@ -126,6 +126,12 @@ export interface OrderApiResponse<T> {
   message?: string;
 }
 
+/** Response from GET /orders/:id — backend returns { message, order } */
+export interface GetOrderResponse {
+  message: string;
+  order: Order;
+}
+
 export function normalizeOrder(order: Order): Order {
   return {
     ...order,
