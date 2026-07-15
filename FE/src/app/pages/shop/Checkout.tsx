@@ -284,11 +284,13 @@ export function Checkout() {
               </div>
 
               {/* Coin Usage */}
-              <CoinUsage
-                orderTotal={subtotal}
-                onCoinApplied={setCoinDiscount}
-                onCoinRemoved={() => setCoinDiscount(0)}
-              />
+              <div className="mb-6">
+                <CoinUsage
+                  orderTotal={subtotal}
+                  onCoinApplied={setCoinDiscount}
+                  onCoinRemoved={() => setCoinDiscount(0)}
+                />
+              </div>
             </div>
 
             {/* ── Right: Order Summary ── */}

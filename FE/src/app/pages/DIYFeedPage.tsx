@@ -193,7 +193,7 @@ export function DIYFeedPage() {
                   <img src={post.images[0]} alt={post.title} className="w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                   <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 p-3 opacity-100 md:opacity-0 md:transition-opacity group-hover:md:opacity-100">
                     <Button asChild size="sm" variant="secondary">
-                      <Link to={`/diy/${post._id}`} onClick={(e) => { if (!isAuthenticated) { e.preventDefault(); navigate("/auth/login"); } }}>View material combo</Link>
+                      <Link to={`/diy/${post._id}`} onClick={(e) => { if (!isAuthenticated) { e.preventDefault(); navigate("/auth/login"); } }}>View material</Link>
                     </Button>
                     <Button size="sm" onClick={() => requireAuth(() => buyCombo(post))}>
                       <ShoppingBag className="size-4" /> Buy now

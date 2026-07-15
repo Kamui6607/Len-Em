@@ -689,29 +689,29 @@ export function LearnSection() {
                   letterSpacing: "0.04em",
                 }}
               >
-                Skill-building · Season 2025
+                Xây dựng kỹ năng · Mùa 2025
               </span>
             </motion.div>
 
             {/* Headline */}
-            <motion.h2
-              variants={leftColItem}
-              style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: "clamp(1.9rem, 2.8vw, 2.9rem)",
-                fontWeight: 700,
-                color: "var(--foreground)",
-                letterSpacing: "-0.025em",
-                lineHeight: 1.12,
-                marginBottom: "20px",
-              }}
-            >
-              Master every stitch,{" "}
-              <span style={{ fontStyle: "italic", color: "var(--primary)" }}>
-                one lesson
-              </span>{" "}
-              at a time,
-            </motion.h2>
+              <motion.h2
+                variants={leftColItem}
+                style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: "clamp(1.9rem, 2.8vw, 2.9rem)",
+                  fontWeight: 700,
+                  color: "var(--foreground)",
+                  letterSpacing: "-0.025em",
+                  lineHeight: 1.12,
+                  marginBottom: "20px",
+                }}
+              >
+                Thành thạo mọi mũi móc,{" "}
+                <span style={{ fontStyle: "italic", color: "var(--primary)" }}>
+                  một bài học
+                </span>{" "}
+                mỗi lần,
+              </motion.h2>
 
             {/* Checklist */}
             <motion.div
@@ -719,16 +719,16 @@ export function LearnSection() {
               style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "32px" }}
             >
               <CheckItem
-                title="Beginner · Intermediate · Advanced"
-                detail="Structured paths for every skill level — start anywhere."
+                title="Người mới · Trung cấp · Nâng cao"
+                detail="Lộ trình có cấu trúc cho mọi trình độ — bắt đầu từ bất kỳ đâu."
               />
               <CheckItem
-                title="Creator-taught video lessons"
-                detail="Real makers, filmed in their studios. No lecture-hall aesthetic."
+                title="Video bài học từ người làm thực thụ"
+                detail="Những người làm thủ công thực tế, quay trong xưởng của họ. Không phong cách giảng đường."
               />
               <CheckItem
-                title="Materials tagged at timestamps"
-                detail="Tap any tag mid-lesson to add it straight to your cart."
+                title="Nguyên liệu được gắn thẻ theo thời gian"
+                detail="Nhấn vào bất kỳ thẻ nào giữa bài học để thêm trực tiếp vào giỏ hàng."
               />
             </motion.div>
 
@@ -754,7 +754,7 @@ export function LearnSection() {
                 textDecoration: "none",
               }}
             >
-              Browse courses
+              Duyệt khóa học
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -765,11 +765,11 @@ export function LearnSection() {
               variants={leftColItem}
               style={{ display: "flex", gap: "24px", marginTop: "22px" }}
             >
-              {[
-                { n: "48+", label: "courses" },
-                { n: "4.9",  label: "avg. rating" },
-                { n: "12k",  label: "learners" },
-              ].map(({ n, label }) => (
+                {[
+                  { n: "48+", label: "khóa học" },
+                  { n: "4.9",  label: "đánh giá TB" },
+                  { n: "12k",  label: "học viên" },
+                ].map(({ n, label }) => (
                 <div key={label}>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)", letterSpacing: "-0.02em", lineHeight: 1 }}>
                     {n}
@@ -845,7 +845,7 @@ export function LearnSection() {
                   }}
                 />
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "var(--foreground)" }}>
-                  Lesson 4 · Provisional cast-on
+                  Bài 4 · Móc lỗ tạm
                 </span>
               </motion.div>
 
@@ -873,7 +873,7 @@ export function LearnSection() {
                   <circle cx="5" cy="5" r="4" fill="var(--accent-pink)" stroke="white" strokeWidth="0.8"/>
                 </svg>
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.62rem", fontWeight: 600, color: "white" }}>
-                  Merino Yarn · tagged
+                  Sợi Merino · đã gắn thẻ
                 </span>
               </motion.div>
             </motion.div>
@@ -931,7 +931,7 @@ export function LearnSection() {
                 letterSpacing: "0.06em",
               }}
             >
-              6 stitch motifs · hover to fill
+              6 mẫu mũi móc · di chuột để tô màu
             </span>
           </div>
 

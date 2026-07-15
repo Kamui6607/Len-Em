@@ -14,7 +14,7 @@ export const diyService = {
     axiosClient.get<{ status: string; data: DIYPostsResponse }>("/diy-posts", { params }),
 
   getPostById: (id: string) =>
-    axiosClient.get<{ status: string; data: DIYPost }>(`/diy-posts/${id}`),
+    axiosClient.get<{ status: string; data: { post: DIYPost } }>(`/diy-posts/${id}`),
 
   createPost: (data: CreateDIYPostDTO, images: File[]) => {
     const formData = new FormData();
