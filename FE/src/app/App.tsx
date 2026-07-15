@@ -17,9 +17,12 @@ export default function App() {
   const initializeMembership = useMembershipStore((s) => s.initialize);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
+  // Run initialize once on mount only - do NOT re-run on re-render
+  // (login() already handles the full auth flow, no need to re-initialize)
   useEffect(() => {
     initialize();
-  }, [initialize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Initialize membership when user is authenticated
   useEffect(() => {

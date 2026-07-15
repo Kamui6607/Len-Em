@@ -21,7 +21,7 @@ export function OrderDetail() {
     async function loadOrder() {
       try {
         const { data } = await orderApi.getOrderById(id!);
-        setOrder(data.data ?? null);
+        setOrder(data.order ?? null);
       } catch {
         toast.error("Không thể tải thông tin đơn hàng");
       } finally {
@@ -36,7 +36,7 @@ export function OrderDetail() {
       await orderApi.cancelOrder(orderId, { cancelReason: reason });
       // Refresh order data
       const { data } = await orderApi.getOrderById(orderId);
-      setOrder(data.data ?? null);
+      setOrder(data.order ?? null);
       toast.success("Đã huỷ đơn hàng thành công");
     } catch {
       toast.error("Huỷ đơn hàng thất bại");

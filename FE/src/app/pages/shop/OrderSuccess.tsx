@@ -254,7 +254,6 @@ export function OrderSuccess() {
   // or as "vnp_TxnRef" when redirected back from VNPAY gateway.
   const orderId = searchParams.get("orderId") || searchParams.get("vnp_TxnRef") || "";
   const date = searchParams.get("date") || new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-
   return (
     <div style={{
       minHeight:"100vh",

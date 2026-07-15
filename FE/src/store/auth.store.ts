@@ -9,6 +9,8 @@ import { isAuthenticated as hasValidToken } from "../lib/authUtils";
 import type { AuthState, LoginRequest, RegisterRequest, User } from "../types/auth.types";
 import { normalizeApiUserProfile } from "../types/auth.types";
 
+let _initialized = false;
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
@@ -17,6 +19,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
+    // Guard: prevent double-execution from StrictMode or re-renders
+    if (_initialized) return;
+    _initialized = true;
+
     set({ isLoading: true });
     try {
       if (!hasValidToken()) {
@@ -55,6 +61,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       tokenStorage.setAccess(accessToken);
       tokenStorage.setRefresh(refreshToken);
 
+      // Mark initialized so if App re-renders and calls initialize(), it's a no-op
+      _initialized = true;
+
       // Fetch full user profile and normalize backend role object for app routing
       const profileRes = await authService.getCurrentUser();
       const user = normalizeApiUserProfile(profileRes.data.data.userProfile);
@@ -85,6 +94,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    _initialized = false;
     // Local logout only. Mark it so pending protected requests do not show
     // session-expired toasts or force a second redirect while the app moves to Login.
     markVoluntaryLogout();

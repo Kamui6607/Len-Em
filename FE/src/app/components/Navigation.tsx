@@ -317,8 +317,8 @@ export function Navigation({ cartCount }: NavigationProps) {
                 "sectionId" in item ? (item.sectionId as string) : undefined,
               );
               return (
-                <motion.button
-                  key={item.href}
+              <motion.button
+                  key={item.label + item.href}
                   type="button"
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.97 }}
@@ -565,7 +565,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                   );
                   return (
                     <motion.button
-                      key={item.href}
+                      key={item.label + item.href}
                       variants={drawerItemVariants}
                       whileTap={{ scale: 0.98 }}
                       type="button"
