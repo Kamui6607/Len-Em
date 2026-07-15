@@ -412,7 +412,7 @@ export function ClosingCTA() {
               whiteSpace: "nowrap" as const,
             }}
           >
-            Bắt đầu dự án đầu tiên
+            Bắt đầu
             <ArrowRight size={15} strokeWidth={2.5} />
           </motion.a>
 
@@ -705,7 +705,7 @@ export function LenEmFooter() {
             margin: 0,
             letterSpacing: "0.02em",
           }}>
-            © 2025 Len&Em Studio.{" "}
+            © 2026 Len&Em Studio.{" "}
             <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.78rem", color: "var(--footer-text-muted)" }}>
               Made with ♥ in Amsterdam.
             </span>

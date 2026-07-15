@@ -133,7 +133,7 @@ function EyebrowBadge() {
           fontFamily: "'Caveat', cursive", fontSize: "0.85rem", fontWeight: 500,
           color: "var(--color-primary)", letterSpacing: "0.03em",
         }}>
-          New season · Spring 2025
+          Mùa mới · Xuân 2025
         </span>
       </span>
     </motion.div>
@@ -143,22 +143,22 @@ function EyebrowBadge() {
 function HeroHeadline() {
   return (
     <div style={{ marginBottom: "1.35rem" }}>
-      <motion.div
-        variants={{
-          hidden: { opacity: 0, y: 24 },
-          show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut", delay: 0 } },
-        }}
-        style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontSize: "clamp(2rem, 6vw, 3.6rem)",
-          fontWeight: 700,
-          color: "var(--color-foreground)",
-          letterSpacing: "-0.025em",
-          lineHeight: 1.08,
-        }}
-      >
-        Learn to knit,
-      </motion.div>
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 24 },
+            show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut", delay: 0 } },
+          }}
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: "clamp(2rem, 6vw, 3.6rem)",
+            fontWeight: 700,
+            color: "var(--color-foreground)",
+            letterSpacing: "-0.025em",
+            lineHeight: 1.08,
+          }}
+        >
+          Học đan móc,
+        </motion.div>
 
       <motion.div
         variants={{
@@ -175,7 +175,7 @@ function HeroHeadline() {
           lineHeight: 1.08,
         }}
       >
-        <span>live</span>
+        <span>sáng tạo</span>
         <span className="relative inline-block" style={{ paddingBottom: "4px" }}>
           <span style={{ fontStyle: "italic", fontWeight: 600, color: "var(--color-primary)" }}>
             creatively
@@ -191,25 +191,25 @@ function HeroHeadline() {
 
 function HeroSubtitle() {
   return (
-    <motion.p
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-      style={{
-        fontFamily: "'Inter', 'Poppins', sans-serif",
-        fontSize: "1rem",
-        fontWeight: 400,
-        color: "var(--color-muted-foreground)",
-        lineHeight: 1.7,
-        maxWidth: "420px",
-        marginLeft: "auto",
-        marginRight: "auto",
-        marginBottom: "2rem",
-      }}
-    >
-      Step-by-step knitting tutorials, curated yarn bundles, and a community
-      of makers. Your cozy craft journey starts here.
-    </motion.p>
+      <motion.p
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+        style={{
+          fontFamily: "'Inter', 'Poppins', sans-serif",
+          fontSize: "1rem",
+          fontWeight: 400,
+          color: "var(--color-muted-foreground)",
+          lineHeight: 1.7,
+          maxWidth: "420px",
+          marginLeft: "auto",
+          marginRight: "auto",
+          marginBottom: "2rem",
+        }}
+      >
+        Bài học đan móc từng bước, bộ sợi được tuyển chọn, và cộng đồng
+        những người làm thủ công. Hành trình thủ công ấm áp của bạn bắt đầu từ đây.
+      </motion.p>
   );
 }
 
@@ -256,7 +256,7 @@ function HeroCTAs() {
           <path d="M5.5 2.2C6 4 6.2 6 6 8C5.8 10 5.2 12 4.4 13.5" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" strokeOpacity="0.8"/>
           <path d="M10.5 2.5C10 4.3 9.8 6.2 10 8.2C10.2 10 10.8 11.8 11.6 13.2" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" strokeOpacity="0.8"/>
         </svg>
-        Start Learning
+        Bắt đầu học
       </motion.a>
 
       <motion.a
@@ -278,7 +278,7 @@ function HeroCTAs() {
           textDecoration: "none",
         }}
       >
-        Browse Patterns
+        Duyệt mẫu
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path d="M2.5 7H11.5M8 3.5L11.5 7L8 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -305,7 +305,7 @@ function HeroCTAs() {
         <span style={{
           fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", fontWeight: 500, color: "var(--color-foreground)",
         }}>
-          4,200+ makers
+          4,200+ người làm thủ công
         </span>
       </motion.div>
     </motion.div>
@@ -341,7 +341,7 @@ function ThreeStepCard() {
           fontFamily: "'Caveat', cursive", fontSize: "0.8rem", fontWeight: 600,
           color: "var(--color-primary)", letterSpacing: "0.04em",
         }}>
-          how it works
+          cách hoạt động
         </span>
       </div>
 
@@ -390,7 +390,7 @@ function ThreeStepCard() {
           <path d="M8.5 4.5 L6 7 L9 8.5" stroke="var(--color-primary)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
         </svg>
         <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.72rem", color: "var(--color-muted-foreground)", fontStyle: "italic" }}>
-          loops forever
+          lặp lại mãi mãi
         </span>
       </div>
     </motion.div>

@@ -72,6 +72,11 @@ export function OrderDetailCard({
     ? new Date(normalized.createdAt).toLocaleString("vi-VN")
     : "N/A";
 
+  // Calculate shipping fee percentage for display
+  const subtotal = normalized.itemsPrice || 0;
+  const shippingFee = normalized.shippingFee || 0;
+  const shippingPercent = subtotal > 0 ? Math.round((shippingFee / subtotal) * 100) : 0;
+
   return (
     <div className="space-y-6">
       {/* ── Order Header ── */}
@@ -248,11 +253,11 @@ export function OrderDetailCard({
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Tạm tính</span>
-            <span>{formatPrice(normalized.itemsPrice)}</span>
+            <span>{formatPrice(subtotal)}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Phí giao hàng</span>
-            <span>{formatPrice(normalized.shippingFee)}</span>
+            <span>Phí giao hàng ({shippingPercent}%)</span>
+            <span>{formatPrice(shippingFee)}</span>
           </div>
           {normalized.discount != null && normalized.discount > 0 && (
             <div className="flex justify-between text-green-600">

@@ -720,55 +720,55 @@ function DIYHeading() {
               letterSpacing: "0.05em",
             }}
           >
-            Community · 6k creators
+            Cộng đồng · 6k người làm
           </span>
         </div>
 
         {/* Three-line headline */}
         <h2 style={{ margin: 0, padding: 0 }}>
-          {/* Line 1 */}
-          <span
-            style={{
-              display: "block",
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: "clamp(1.8rem, 2.5vw, 2.8rem)",
-              fontWeight: 400,
-              color: "var(--foreground)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.12,
-            }}
-          >
-            See it made.
-          </span>
-          {/* Line 2 — italic + primary */}
-          <span
-            style={{
-              display: "block",
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: "clamp(1.8rem, 2.5vw, 2.8rem)",
-              fontWeight: 600,
-              fontStyle: "italic",
-              color: "var(--primary)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.12,
-            }}
-          >
-            Buy the kit.
-          </span>
-          {/* Line 3 — bold + trailing comma */}
-          <span
-            style={{
-              display: "block",
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: "clamp(1.8rem, 2.5vw, 2.8rem)",
-              fontWeight: 700,
-              color: "var(--foreground)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.12,
-            }}
-          >
-            Make it yours.,
-          </span>
+            {/* Line 1 */}
+            <span
+              style={{
+                display: "block",
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(1.8rem, 2.5vw, 2.8rem)",
+                fontWeight: 400,
+                color: "var(--foreground)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.12,
+              }}
+            >
+              Xem nó được làm.
+            </span>
+            {/* Line 2 — italic + primary */}
+            <span
+              style={{
+                display: "block",
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(1.8rem, 2.5vw, 2.8rem)",
+                fontWeight: 600,
+                fontStyle: "italic",
+                color: "var(--primary)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.12,
+              }}
+            >
+              Mua bộ kit.
+            </span>
+            {/* Line 3 — bold + trailing comma */}
+            <span
+              style={{
+                display: "block",
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(1.8rem, 2.5vw, 2.8rem)",
+                fontWeight: 700,
+                color: "var(--foreground)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.12,
+              }}
+            >
+              Làm của bạn.,
+            </span>
         </h2>
       </div>
 
@@ -781,47 +781,6 @@ function DIYHeading() {
           gap: "12px",
         }}
       >
-        <motion.a
-          href="#"
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 24px",
-            borderRadius: "999px",
-            background: "var(--primary)",
-            color: "var(--primary-foreground)",
-            fontFamily: "'Inter', sans-serif",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            textDecoration: "none",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          Join the community
-          <ArrowRight size={14} strokeWidth={2} />
-        </motion.a>
-
-        {/* Stat strip */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Users
-            size={12}
-            strokeWidth={1.6}
-            style={{ color: "var(--foreground-muted)" }}
-          />
-          <span
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "0.72rem",
-              color: "var(--foreground-muted)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            6,200 makers · 48k projects shared
-          </span>
-        </div>
       </div>
     </motion.div>
   );

@@ -11,22 +11,60 @@ export type DIYState   = "default" | "revealed";
 // ── Image URLs ────────────────────────────────────────────────────────────────
 
 const IMG = {
-  learnHands: "https://images.unsplash.com/photo-1632649027900-389e810204e6?auto=format&fit=crop&w=700&q=80",
-  shopYarn:   "https://images.unsplash.com/photo-1597736091383-084fa1b69a6a?auto=format&fit=crop&w=700&q=80",
-  shopSwatch: "https://images.unsplash.com/photo-1624516268152-1e48624026ed?auto=format&fit=crop&w=800&q=80",
-  diy1:       "https://images.unsplash.com/photo-1728393287642-13bee7126ae8?auto=format&fit=crop&w=500&q=80",
-  diy2:       "https://images.unsplash.com/photo-1700171518313-5dd219beaaa6?auto=format&fit=crop&w=500&q=80",
-  diy3:       "https://images.unsplash.com/photo-1494430539277-0c8da386e1ad?auto=format&fit=crop&w=500&q=80",
+  learnHands:
+    "https://images.unsplash.com/photo-1632649027900-389e810204e6?auto=format&fit=crop&w=700&q=80",
+  shopYarn:
+    "https://images.unsplash.com/photo-1597736091383-084fa1b69a6a?auto=format&fit=crop&w=700&q=80",
+  shopSwatch:
+    "https://images.unsplash.com/photo-1624516268152-1e48624026ed?auto=format&fit=crop&w=800&q=80",
+  diy1: "https://images.unsplash.com/photo-1728393287642-13bee7126ae8?auto=format&fit=crop&w=500&q=80",
+  diy2: "https://images.unsplash.com/photo-1700171518313-5dd219beaaa6?auto=format&fit=crop&w=500&q=80",
+  diy3: "https://images.unsplash.com/photo-1494430539277-0c8da386e1ad?auto=format&fit=crop&w=500&q=80",
 };
 
 // ── Material dots (Learn scrubber) ────────────────────────────────────────────
 
 const DOTS = [
-  { id: "d1", pos: 12, bg: "var(--decor-1-bg)", border: "var(--decor-1-border)", label: "Merino Yarn",      detail: "Natural · 200g · 4-ply"     },
-  { id: "d2", pos: 32, bg: "var(--decor-2-bg)", border: "var(--decor-2-border)", label: "Circular Needles", detail: "4.0 mm · 80 cm cable"        },
-  { id: "d3", pos: 54, bg: "var(--decor-3-bg)", border: "var(--decor-3-border)", label: "Stitch Markers",   detail: "Set of 8 · silicone ring"   },
-  { id: "d4", pos: 74, bg: "var(--decor-4-bg)", border: "var(--decor-4-border)", label: "Tapestry Needle",  detail: "Blunt tip · size 16"        },
-  { id: "d5", pos: 91, bg: "var(--decor-5-bg)", border: "var(--decor-5-border)", label: "Blocking Mat",     detail: "60 × 60 cm · EVA foam"      },
+  {
+    id: "d1",
+    pos: 12,
+    bg: "var(--decor-1-bg)",
+    border: "var(--decor-1-border)",
+    label: "Sợi Merino",
+    detail: "Tự nhiên · 200g · 4 sợi",
+  },
+  {
+    id: "d2",
+    pos: 32,
+    bg: "var(--decor-2-bg)",
+    border: "var(--decor-2-border)",
+    label: "Kim Đan Tròn",
+    detail: "4.0 mm · 80 cm cáp",
+  },
+  {
+    id: "d3",
+    pos: 54,
+    bg: "var(--decor-3-bg)",
+    border: "var(--decor-3-border)",
+    label: "Dấu Mũi Móc",
+    detail: "Bộ 8 · nhẫn silicone",
+  },
+  {
+    id: "d4",
+    pos: 74,
+    bg: "var(--decor-4-bg)",
+    border: "var(--decor-4-border)",
+    label: "Kim Thêu",
+    detail: "Đầu cùn · size 16",
+  },
+  {
+    id: "d5",
+    pos: 91,
+    bg: "var(--decor-5-bg)",
+    border: "var(--decor-5-border)",
+    label: "Thệm Căn Chỉnh",
+    detail: "60 × 60 cm · EVA foam",
+  },
 ] as const;
 
 // Dot that pops open in "revealed" state (Stitch Markers @ 54 %)
@@ -34,7 +72,13 @@ const ACTIVE_IDX = 2;
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
-function CategoryChip({ children, color = "var(--accent-pink)" }: { children: React.ReactNode; color?: string }) {
+function CategoryChip({
+  children,
+  color = "var(--accent-pink)",
+}: {
+  children: React.ReactNode;
+  color?: string;
+}) {
   return (
     <span
       style={{
@@ -133,7 +177,9 @@ function Scrubber({ state }: { state: LearnState }) {
   return (
     <div>
       {/* Track row */}
-      <div style={{ position: "relative", height: "36px", marginBottom: "6px" }}>
+      <div
+        style={{ position: "relative", height: "36px", marginBottom: "6px" }}
+      >
         {/* Track background */}
         <div
           style={{
@@ -158,7 +204,8 @@ function Scrubber({ state }: { state: LearnState }) {
             top: "50%",
             left: 0,
             height: "3px",
-            background: "linear-gradient(90deg, var(--primary), var(--primary-hover))",
+            background:
+              "linear-gradient(90deg, var(--primary), var(--primary-hover))",
             borderRadius: "99px",
             transform: "translateY(-50%)",
           }}
@@ -167,7 +214,7 @@ function Scrubber({ state }: { state: LearnState }) {
         {/* Material dots */}
         {DOTS.map((dot, i) => {
           const isActive = state === "revealed" && i === ACTIVE_IDX;
-          const isPast   = dot.pos <= progress;
+          const isPast = dot.pos <= progress;
           return (
             <div
               key={dot.id}
@@ -182,7 +229,7 @@ function Scrubber({ state }: { state: LearnState }) {
               {/* The dot itself */}
               <div
                 style={{
-                  width:  isActive ? "14px" : "10px",
+                  width: isActive ? "14px" : "10px",
                   height: isActive ? "14px" : "10px",
                   borderRadius: "50%",
                   background: dot.bg,
@@ -278,7 +325,14 @@ function Scrubber({ state }: { state: LearnState }) {
                     pointerEvents: "none",
                   }}
                 >
-                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.5rem", fontWeight: 700, color: dot.border }}>
+                  <span
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "0.5rem",
+                      fontWeight: 700,
+                      color: dot.border,
+                    }}
+                  >
                     {dot.label.split(" ")[0]}
                   </span>
                 </div>
@@ -306,7 +360,13 @@ function Scrubber({ state }: { state: LearnState }) {
       </div>
 
       {/* Step counter */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <span
           style={{
             fontFamily: "'Caveat', cursive",
@@ -314,7 +374,9 @@ function Scrubber({ state }: { state: LearnState }) {
             color: "var(--foreground-muted)",
           }}
         >
-          {state === "default" ? "5 material tags" : "Step 3 of 12 · Stitch Markers"}
+          {state === "default"
+            ? "5 thẻ nguyên liệu"
+            : "Bước 3 của 12 · Dấu mũi móc"}
         </span>
         <span
           style={{
@@ -333,13 +395,28 @@ function Scrubber({ state }: { state: LearnState }) {
 
 export function LearnCard({ state = "default" }: { state?: LearnState }) {
   return (
-    <CardShell style={{ overflow: state === "revealed" ? "visible" : "hidden" }}>
+    <CardShell
+      style={{ overflow: state === "revealed" ? "visible" : "hidden" }}
+    >
       {/* Image */}
-      <div style={{ position: "relative", height: "180px", flexShrink: 0, overflow: "hidden", borderRadius: "22px 22px 0 0" }}>
+      <div
+        style={{
+          position: "relative",
+          height: "180px",
+          flexShrink: 0,
+          overflow: "hidden",
+          borderRadius: "22px 22px 0 0",
+        }}
+      >
         <ImageWithFallback
           src={IMG.learnHands}
           alt="Hands knitting with wool yarn"
-          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center 30%",
+          }}
         />
         {/* Lesson count pill */}
         <div
@@ -358,10 +435,23 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
           }}
         >
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <circle cx="4" cy="4" r="3.5" fill="var(--primary)" fillOpacity="0.8"/>
+            <circle
+              cx="4"
+              cy="4"
+              r="3.5"
+              fill="var(--primary)"
+              fillOpacity="0.8"
+            />
           </svg>
-          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.62rem", fontWeight: 600, color: "var(--foreground)" }}>
-            12 lessons
+          <span
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: "0.62rem",
+              fontWeight: 600,
+              color: "var(--foreground)",
+            }}
+          >
+            12 bài học
           </span>
         </div>
 
@@ -370,20 +460,34 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(to bottom, transparent 50%, var(--surface) 100%)",
+            background:
+              "linear-gradient(to bottom, transparent 50%, var(--surface) 100%)",
             pointerEvents: "none",
           }}
         />
       </div>
 
       {/* Body */}
-      <div style={{ padding: "16px 20px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
-        <CategoryChip color="var(--accent-pink)">Learn</CategoryChip>
-        <CardTitle>Video lessons</CardTitle>
-        <CardSubtitle>Beginner to advanced · tagged at every step</CardSubtitle>
+      <div
+        style={{
+          padding: "16px 20px 20px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <CategoryChip color="var(--accent-pink)">Học tập</CategoryChip>
+        <CardTitle>Video bài học</CardTitle>
+        <CardSubtitle>Từ cơ bản đến nâng cao · được gắn thẻ ở mỗi bước</CardSubtitle>
 
         {/* Divider */}
-        <div style={{ height: "1px", background: "var(--border)", marginBottom: "14px" }} />
+        <div
+          style={{
+            height: "1px",
+            background: "var(--border)",
+            marginBottom: "14px",
+          }}
+        />
 
         {/* Label */}
         <div
@@ -397,11 +501,17 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
             marginBottom: "10px",
           }}
         >
-          Lesson materials ↓
+          Nguyên liệu bài học ↓
         </div>
 
         {/* Scrubber — needs overflow:visible when revealed */}
-        <div style={{ position: "relative", flex: 1, paddingTop: state === "revealed" ? "52px" : "0" }}>
+        <div
+          style={{
+            position: "relative",
+            flex: 1,
+            paddingTop: state === "revealed" ? "52px" : "0",
+          }}
+        >
           <Scrubber state={state} />
         </div>
       </div>
@@ -413,18 +523,39 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
 // SHOP CARD
 // ═══════════════════════════════════════════════════════════════════
 
-function StarRating({ value = 4.2, count = 38 }: { value?: number; count?: number }) {
+function StarRating({
+  value = 4.2,
+  count = 38,
+}: {
+  value?: number;
+  count?: number;
+}) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "5px",
+        marginBottom: "10px",
+      }}
+    >
       {[1, 2, 3, 4, 5].map((s) => (
         <svg key={s} width="11" height="11" viewBox="0 0 11 11" fill="none">
           <path
             d="M5.5 1L6.7 4.1H10L7.4 6.1L8.4 9.2L5.5 7.4L2.6 9.2L3.6 6.1L1 4.1H4.3Z"
-            fill={s <= Math.round(value) ? "var(--rating-star)" : "var(--border)"}
+            fill={
+              s <= Math.round(value) ? "var(--rating-star)" : "var(--border)"
+            }
           />
         </svg>
       ))}
-      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.62rem", color: "var(--foreground-muted)" }}>
+      <span
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "0.62rem",
+          color: "var(--foreground-muted)",
+        }}
+      >
         {value} ({count})
       </span>
     </div>
@@ -441,7 +572,12 @@ function HangTag() {
         height="26"
         viewBox="0 0 32 26"
         fill="none"
-        style={{ position: "absolute", top: "-22px", left: "18px", pointerEvents: "none" }}
+        style={{
+          position: "absolute",
+          top: "-22px",
+          left: "18px",
+          pointerEvents: "none",
+        }}
         aria-hidden
       >
         {/* Thread — looped/kinked like real string */}
@@ -498,7 +634,7 @@ function HangTag() {
             marginBottom: "3px",
           }}
         >
-          Len&Em Shop
+          Cửa hàng Len&Em
         </div>
 
         {/* Product name */}
@@ -512,11 +648,17 @@ function HangTag() {
             marginBottom: "6px",
           }}
         >
-          Alpine Merino Bundle
+          Bộ sợi Alpine Merino
         </div>
 
         {/* Divider */}
-        <div style={{ height: "1px", background: "var(--border)", marginBottom: "6px" }} />
+        <div
+          style={{
+            height: "1px",
+            background: "var(--border)",
+            marginBottom: "6px",
+          }}
+        />
 
         {/* Price */}
         <div
@@ -529,7 +671,7 @@ function HangTag() {
             marginBottom: "5px",
           }}
         >
-          €42.00
+          ₫1.080.000
         </div>
 
         {/* Specs */}
@@ -556,7 +698,14 @@ function HangTag() {
             gap: "4px",
           }}
         >
-          <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.65rem", color: "var(--primary)", opacity: 0.75 }}>
+          <span
+            style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: "0.65rem",
+              color: "var(--primary)",
+              opacity: 0.75,
+            }}
+          >
             ♥ handpicked
           </span>
         </div>
@@ -574,7 +723,12 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
           <ImageWithFallback
             src={IMG.shopSwatch}
             alt="Multi-colored striped textile fabric swatch"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
           />
 
           {/* Darkening vignette — lower 55% for legibility */}
@@ -582,7 +736,8 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(to bottom, rgba(28,21,38,0.15) 0%, rgba(28,21,38,0.72) 100%)",
+              background:
+                "linear-gradient(to bottom, rgba(28,21,38,0.15) 0%, rgba(28,21,38,0.72) 100%)",
             }}
           />
         </div>
@@ -595,7 +750,8 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
             bottom: 0,
             left: 0,
             width: "6px",
-            background: "linear-gradient(to right, rgba(107,63,160,0.35), transparent)",
+            background:
+              "linear-gradient(to right, rgba(107,63,160,0.35), transparent)",
             zIndex: 5,
           }}
         />
@@ -624,7 +780,14 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
           }}
         >
           {/* Material tag chips */}
-          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "5px", marginBottom: "10px" }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap" as const,
+              gap: "5px",
+              marginBottom: "10px",
+            }}
+          >
             {["100% Merino", "4-ply", "Natural dye", "Oeko-Tex®"].map((tag) => (
               <span
                 key={tag}
@@ -649,7 +812,13 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
           {/* "Tap to flip back" hint */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2L7 12M4 9L7 12L10 9" stroke="rgba(245,240,232,0.6)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M7 2L7 12M4 9L7 12L10 9"
+                stroke="rgba(245,240,232,0.6)"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             <span
               style={{
@@ -670,11 +839,24 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
   return (
     <CardShell>
       {/* Product image */}
-      <div style={{ position: "relative", height: "180px", flexShrink: 0, overflow: "hidden", borderRadius: "22px 22px 0 0" }}>
+      <div
+        style={{
+          position: "relative",
+          height: "180px",
+          flexShrink: 0,
+          overflow: "hidden",
+          borderRadius: "22px 22px 0 0",
+        }}
+      >
         <ImageWithFallback
           src={IMG.shopYarn}
           alt="Blue and white yarn skeins product shot"
-          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 60%" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center 60%",
+          }}
         />
         {/* "Limited" badge */}
         <div
@@ -692,26 +874,41 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
             color: "var(--foreground)",
           }}
         >
-          Limited edition
+          Phiên bản giới hạn
         </div>
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(to bottom, transparent 50%, var(--surface) 100%)",
+            background:
+              "linear-gradient(to bottom, transparent 50%, var(--surface) 100%)",
             pointerEvents: "none",
           }}
         />
       </div>
 
       {/* Body */}
-      <div style={{ padding: "14px 20px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
-        <CategoryChip color="var(--accent-yellow)">Shop</CategoryChip>
-        <CardTitle>Alpine Merino Bundle</CardTitle>
+      <div
+        style={{
+          padding: "14px 20px 20px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <CategoryChip color="var(--accent-yellow)">Cửa hàng</CategoryChip>
+        <CardTitle>Bộ sợi Alpine Merino</CardTitle>
         <StarRating />
 
         {/* Price row */}
-        <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "12px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "8px",
+            marginBottom: "12px",
+          }}
+        >
           <span
             style={{
               fontFamily: "'Inter', sans-serif",
@@ -721,7 +918,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
               letterSpacing: "-0.02em",
             }}
           >
-            €42.00
+            ₫1.080.000
           </span>
           <span
             style={{
@@ -731,7 +928,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
               textDecoration: "line-through",
             }}
           >
-            €55.00
+            ₫1.450.000
           </span>
           <span
             style={{
@@ -749,7 +946,14 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
         </div>
 
         {/* Spec pills */}
-        <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "4px", marginBottom: "14px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap" as const,
+            gap: "4px",
+            marginBottom: "14px",
+          }}
+        >
           {["100% Merino", "4-ply", "200m", "Free shipping"].map((s) => (
             <span
               key={s}
@@ -780,12 +984,24 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
           }}
         >
           <div className="btn-text">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-              <path d="M2 2H3.5L5.5 9H10.5L12 4H4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="6" cy="11.5" r="0.8" fill="currentColor"/>
-              <circle cx="10" cy="11.5" r="0.8" fill="currentColor"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              style={{ flexShrink: 0 }}
+            >
+              <path
+                d="M2 2H3.5L5.5 9H10.5L12 4H4.5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="6" cy="11.5" r="0.8" fill="currentColor" />
+              <circle cx="10" cy="11.5" r="0.8" fill="currentColor" />
             </svg>
-            Add to cart
+            Thêm vào giỏ
           </div>
           <div className="btn-icon">
             <svg
@@ -815,36 +1031,40 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
 // Photo card dimensions
 const PHOTO_W = 168;
 const PHOTO_H = 196;
-const BORDER  = 8;  // white frame around each photo
+const BORDER = 8; // white frame around each photo
 
 // Positions: [default, revealed] for each of the 3 photos
 // Photo 0 = top visible; Photo 1 = middle; Photo 2 = bottom
 const PHOTO_TRANSFORMS = {
   default: [
     // Photo 0 — fully visible on top
-    { x:  0, y:   0, rotate:  1.5, zIndex: 3, scale: 1,    opacity: 1   },
+    { x: 0, y: 0, rotate: 1.5, zIndex: 3, scale: 1, opacity: 1 },
     // Photo 1 — peeking behind, slightly lower-right
-    { x:  9, y:  10, rotate: -4,   zIndex: 2, scale: 0.97, opacity: 1   },
+    { x: 9, y: 10, rotate: -4, zIndex: 2, scale: 0.97, opacity: 1 },
     // Photo 2 — deepest, further offset
-    { x: -7, y:  18, rotate:  6,   zIndex: 1, scale: 0.94, opacity: 1   },
+    { x: -7, y: 18, rotate: 6, zIndex: 1, scale: 0.94, opacity: 1 },
   ],
   revealed: [
     // Photo 0 — slides up and slightly right, partially off-frame
-    { x: 22, y: -82, rotate:  9,   zIndex: 2, scale: 0.9,  opacity: 0.7 },
+    { x: 22, y: -82, rotate: 9, zIndex: 2, scale: 0.9, opacity: 0.7 },
     // Photo 1 — moves to top position (now the featured card)
-    { x:  0, y:   0, rotate:  1,   zIndex: 3, scale: 1,    opacity: 1   },
+    { x: 0, y: 0, rotate: 1, zIndex: 3, scale: 1, opacity: 1 },
     // Photo 2 — stays behind
-    { x: -7, y:  18, rotate:  6,   zIndex: 1, scale: 0.94, opacity: 1   },
+    { x: -7, y: 18, rotate: 6, zIndex: 1, scale: 0.94, opacity: 1 },
   ],
 };
 
 const DIY_IMAGES = [IMG.diy1, IMG.diy2, IMG.diy3];
-const DIY_ALTS  = [
+const DIY_ALTS = [
   "Crocheted blanket kit laid on bed",
   "Group of crocheted flowers on blue surface",
   "Green scissors beside knitting sticks",
 ];
-const DIY_STEPS = ["Choose your pattern", "Gather materials", "Make & wear it!"];
+const DIY_STEPS = [
+  "Chọn mẫu",
+  "Chuẩn bị nguyên liệu",
+  "Làm và sử dụng!",
+];
 
 export function DIYCard({ state = "default" }: { state?: DIYState }) {
   const transforms = PHOTO_TRANSFORMS[state];
@@ -853,15 +1073,24 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
   return (
     <CardShell style={{ overflow: "visible" }}>
       {/* Inner clip wrapper for rounded corners */}
-      <div style={{ borderRadius: "22px", overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", background: "var(--surface)" }}>
-
+      <div
+        style={{
+          borderRadius: "22px",
+          overflow: "hidden",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--surface)",
+        }}
+      >
         {/* Photo stack area */}
         <div
           style={{
             position: "relative",
             height: "244px",
             flexShrink: 0,
-            background: "linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-yellow) 100%)",
+            background:
+              "linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-yellow) 100%)",
             overflow: "visible",
           }}
         >
@@ -876,14 +1105,29 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
 
           {/* Dot grid decoration — top-left */}
           <svg
-            width="44" height="44" viewBox="0 0 44 44" fill="none"
-            style={{ position: "absolute", top: "10px", left: "12px", opacity: 0.45, zIndex: 0 }}
+            width="44"
+            height="44"
+            viewBox="0 0 44 44"
+            fill="none"
+            style={{
+              position: "absolute",
+              top: "10px",
+              left: "12px",
+              opacity: 0.45,
+              zIndex: 0,
+            }}
             aria-hidden
           >
-            {[0,1,2,3].flatMap((r) =>
-              [0,1,2,3].map((c) => (
-                <circle key={`${r}-${c}`} cx={4 + c * 12} cy={4 + r * 12} r="2" fill="var(--primary)" />
-              ))
+            {[0, 1, 2, 3].flatMap((r) =>
+              [0, 1, 2, 3].map((c) => (
+                <circle
+                  key={`${r}-${c}`}
+                  cx={4 + c * 12}
+                  cy={4 + r * 12}
+                  r="2"
+                  fill="var(--primary)"
+                />
+              )),
             )}
           </svg>
 
@@ -891,7 +1135,7 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
           <div
             style={{
               position: "absolute",
-              bottom: "-24px",   // let them float out the bottom edge
+              bottom: "-24px", // let them float out the bottom edge
               left: "50%",
               transform: "translateX(-50%)",
               width: PHOTO_W + BORDER * 2,
@@ -924,7 +1168,13 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
                   <ImageWithFallback
                     src={DIY_IMAGES[idx]}
                     alt={DIY_ALTS[idx]}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "5px", display: "block" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: "5px",
+                      display: "block",
+                    }}
                   />
 
                   {/* Step number on photo */}
@@ -948,7 +1198,7 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
                         color: "var(--primary)",
                       }}
                     >
-                      Step {idx + 1}
+                      Bước {idx + 1}
                     </span>
                   </div>
                 </div>
@@ -958,10 +1208,17 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
         </div>
 
         {/* Body — sits below the stack */}
-        <div style={{ padding: "36px 20px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
-          <CategoryChip color="var(--accent-yellow)">DIY</CategoryChip>
-          <CardTitle>Make it yourself</CardTitle>
-          <CardSubtitle>From pattern to finished piece · 3 steps</CardSubtitle>
+        <div
+          style={{
+            padding: "36px 20px 20px",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <CategoryChip color="var(--accent-yellow)">Tự làm</CategoryChip>
+          <CardTitle>Tự làm tại nhà</CardTitle>
+          <CardSubtitle>Từ mẫu đến sản phẩm hoàn thành · 3 bước</CardSubtitle>
 
           {/* Step indicator */}
           <div
@@ -978,13 +1235,17 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
           >
             {/* Step dots */}
             {DIY_STEPS.map((step, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div
+                key={i}
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
                 <div
                   style={{
                     width: i === activeStep ? "22px" : "8px",
                     height: "8px",
                     borderRadius: "999px",
-                    background: i === activeStep ? "var(--primary)" : "var(--border)",
+                    background:
+                      i === activeStep ? "var(--primary)" : "var(--border)",
                     transition: "width 0.3s",
                     flexShrink: 0,
                   }}
@@ -1008,8 +1269,20 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
 
           {/* Swipe hint */}
           <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <svg width="16" height="10" viewBox="0 0 16 10" fill="none" aria-hidden>
-              <path d="M1 5H14M10 1.5L14 5L10 8.5" stroke="var(--foreground-muted)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg
+              width="16"
+              height="10"
+              viewBox="0 0 16 10"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M1 5H14M10 1.5L14 5L10 8.5"
+                stroke="var(--foreground-muted)"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             <span
               style={{
@@ -1018,7 +1291,9 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
                 color: "var(--foreground-muted)",
               }}
             >
-              {state === "default" ? "swipe to see next step" : "tap photo to go back"}
+              {state === "default"
+                ? "vuốt để xem bước tiếp"
+                : "nhấn ảnh để quay lại"}
             </span>
           </div>
         </div>
@@ -1037,9 +1312,12 @@ export function LearnCardHoverable() {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => setHovered(h => !h)}
+      onClick={() => setHovered((h) => !h)}
     >
-      <motion.div animate={{ y: hovered ? -6 : 0 }} transition={{ duration: 0.35, ease: "easeOut" }}>
+      <motion.div
+        animate={{ y: hovered ? -6 : 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+      >
         <LearnCard state={hovered ? "revealed" : "default"} />
       </motion.div>
     </div>
@@ -1053,22 +1331,37 @@ export function ShopCardFlippable() {
     <div
       onMouseEnter={() => setFlipped(true)}
       onMouseLeave={() => setFlipped(false)}
-      onClick={() => setFlipped(f => !f)}
+      onClick={() => setFlipped((f) => !f)}
       style={{ perspective: "1200px", minHeight: "430px" }}
     >
       <motion.div
-        style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d" }}
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          transformStyle: "preserve-3d",
+        }}
         animate={reduce ? undefined : { rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
       >
-        <div style={{ position: reduce ? "static" : "absolute", inset: 0, backfaceVisibility: "hidden" }}>
+        <div
+          style={{
+            position: reduce ? "static" : "absolute",
+            inset: 0,
+            backfaceVisibility: "hidden",
+          }}
+        >
           <ShopCard state="front" />
         </div>
-        <div style={{
-          position: reduce ? "static" : "absolute", inset: 0,
-          backfaceVisibility: "hidden", transform: "rotateY(180deg)",
-          display: reduce ? "none" : undefined,
-        }}>
+        <div
+          style={{
+            position: reduce ? "static" : "absolute",
+            inset: 0,
+            backfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
+            display: reduce ? "none" : undefined,
+          }}
+        >
           <ShopCard state="back" />
         </div>
       </motion.div>
@@ -1082,7 +1375,7 @@ export function DIYCardHoverable() {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => setHovered(h => !h)}
+      onClick={() => setHovered((h) => !h)}
     >
       <motion.div
         animate={{ scale: hovered ? 1.015 : 1 }}
@@ -1107,7 +1400,12 @@ const staggerContainer = {
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, rotateX: -8 },
-  show: { opacity: 1, y: 0, rotateX: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  show: {
+    opacity: 1,
+    y: 0,
+    rotateX: 0,
+    transition: { duration: 0.6, ease: "easeOut" },
+  },
 };
 
 export function HowItWorksSection() {
@@ -1124,11 +1422,23 @@ export function HowItWorksSection() {
       }}
     >
       {/* Ambient blobs */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-      </div>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      ></div>
 
-      <div style={{ position: "relative", zIndex: 1, maxWidth: "1200px", margin: "0 auto" }}>
-
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: "1200px",
+          margin: "0 auto",
+        }}
+      >
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -1148,7 +1458,7 @@ export function HowItWorksSection() {
               marginBottom: "6px",
             }}
           >
-            your creative journey
+            hành trình sáng tạo của bạn
           </span>
           <h2
             style={{
@@ -1161,7 +1471,7 @@ export function HowItWorksSection() {
               marginBottom: "12px",
             }}
           >
-            How Len&Em works
+            Len&Em hoạt động như thế nào
           </h2>
           <p
             style={{
@@ -1173,7 +1483,8 @@ export function HowItWorksSection() {
               lineHeight: 1.65,
             }}
           >
-            Learn a skill, find the perfect yarn, make something you'll treasure — all in one place.
+            Học một kỹ năng, tìm sợi hoàn hảo, làm ra thứ bạn sẽ trân trọng
+            — tất cả trong một nơi.
           </p>
         </motion.div>
 
@@ -1196,7 +1507,6 @@ export function HowItWorksSection() {
             <DIYCardHoverable />
           </motion.div>
         </motion.div>
-
       </div>
     </motion.section>
   );
