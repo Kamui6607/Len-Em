@@ -16,7 +16,7 @@ export interface CreateOrderReportDTO {
   orderId: string;
   title: string;
   description: string;
-  images?: string[];
+  images?: string[] | File[];
 }
 
 export interface OrderReportsResponse {

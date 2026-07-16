@@ -133,7 +133,7 @@ function getStatusStyle(status: string) {
 function RoleBadge({ roleName }: { roleName: string }) {
   const s = getRoleStyle(roleName);
   return (
-    <span className={`badge ${s.badge}`}>
+    <span className={`badge ${s.badge} w-[96px] justify-center`}>
       {s.icon}
       {roleName}
     </span>
@@ -405,7 +405,7 @@ function CustomDropdown({
           ref={triggerRef}
           type="button"
           onClick={toggleOpen}
-          className={`badge badge-trigger inline-flex items-center gap-1.5 pl-2.5 pr-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 ${selected.badgeClass}`}
+          className={`badge badge-trigger inline-flex items-center gap-1.5 pl-2.5 pr-2 py-0.5 text-xs font-medium w-[96px] justify-between focus:outline-none focus:ring-2 focus:ring-primary/50 ${selected.badgeClass}`}
         >
           {selected.prefix}
           {selected.label}
@@ -1780,7 +1780,15 @@ export function AdminUsers() {
 
         {/* Table */}
         <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
-          <table className="admin-table w-full">
+          <table className="admin-table w-full table-fixed">
+            <colgroup>
+              <col className="w-[26%]" />
+              <col className="w-[22%]" />
+              <col className="w-[14%]" />
+              <col className="w-[13%]" />
+              <col className="w-[13%]" />
+              <col className="w-[12%]" />
+            </colgroup>
             <thead className="bg-muted">
               <tr>
                 <SortableHeader
@@ -1818,7 +1826,7 @@ export function AdminUsers() {
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
-                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground normal-case">
                   Actions
                 </th>
               </tr>
