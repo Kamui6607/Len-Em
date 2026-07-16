@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from "react";
-import { Heart, ArrowRight, Users } from "lucide-react";
+import { Heart, ArrowRight } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import {
   motion,
