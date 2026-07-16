@@ -3,7 +3,7 @@
 // Customer xem danh sách reports của mình
 // ============================================================
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { Link } from "react-router";
 import { ArrowLeft, Search, Edit, Trash2, Eye } from "lucide-react";
@@ -16,6 +16,7 @@ import { Input } from "../components/ui/input";
 import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
 
 const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];
+const POLLING_INTERVAL = 30000; // Poll every 30 seconds
 
 export function MyReportsPage() {
   const [reports, setReports] = useState<OrderReport[]>([]);
@@ -31,15 +32,46 @@ export function MyReportsPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [updating, setUpdating] = useState(false);
+  
+  // Store previous reports for change detection
+  const previousReportsRef = useRef<Map<string, OrderReport>>(new Map());
 
   const fetchReports = useCallback(async () => {
-    setLoading(true);
     try {
       const { data } = await orderReportService.getMyReports({
         page,
         limit: 10,
       });
-      setReports(data.data.reports);
+      
+      const newReports = data.data.reports;
+      const previousReports = previousReportsRef.current;
+      
+      // Check for status changes and show notifications
+      if (previousReports.size > 0 && newReports.length > 0) {
+        newReports.forEach((report) => {
+          const previous = previousReports.get(report._id);
+          
+          // If report exists in both and status changed
+          if (previous && previous.status !== report.status) {
+            const statusMessages: Record<string, string> = {
+              "DONE": `Report #${report._id.slice(-8)} has been marked as DONE`,
+              "CANCELLED": `Report #${report._id.slice(-8)} has been CANCELLED`,
+            };
+            
+            const message = statusMessages[report.status];
+            if (message) {
+              toast.info(message, {
+                duration: 5000,
+              });
+            }
+          }
+        });
+      }
+      
+      // Update previous reports ref
+      previousReportsRef.current = new Map(newReports.map(r => [r._id, r]));
+      
+      setReports(newReports);
       setTotalPages(data.data.totalPages);
     } catch {
       toast.error("Failed to load reports");
@@ -48,8 +80,18 @@ export function MyReportsPage() {
     }
   }, [page]);
 
+  // Initial fetch
   useEffect(() => {
     fetchReports();
+  }, [fetchReports]);
+  
+  // Poll for updates every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchReports();
+    }, POLLING_INTERVAL);
+    
+    return () => clearInterval(interval);
   }, [fetchReports]);
 
   const handleUpdate = async () => {

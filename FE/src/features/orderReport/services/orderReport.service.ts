@@ -5,8 +5,36 @@ export const orderReportService = {
   // ─── Customer endpoints ───────────────────────────────────
 
   /** POST /order-reports — Customer creates a new report (must own the order) */
-  create: (data: CreateOrderReportDTO) =>
-    axiosClient.post<{ status: string; data: OrderReport }>("/order-reports", data),
+  create: (data: CreateOrderReportDTO) => {
+    // Check if we have File objects - if so, use FormData
+    const hasFiles = data.images && data.images.length > 0 && data.images.some(img => img instanceof File);
+    
+    if (hasFiles) {
+      // Use multipart/form-data for file uploads
+      const formData = new FormData();
+      formData.append("orderId", data.orderId);
+      formData.append("title", data.title);
+      formData.append("description", data.description);
+      
+      data.images!.forEach((image) => {
+        if (image instanceof File) {
+          formData.append("images", image);
+        }
+      });
+      
+      return axiosClient.post<{ status: string; data: OrderReport }>("/order-reports", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } else {
+      // Use JSON for reports without files or with base64 strings
+      return axiosClient.post<{ status: string; data: OrderReport }>("/order-reports", {
+        orderId: data.orderId,
+        title: data.title,
+        description: data.description,
+        images: data.images || [],
+      });
+    }
+  },
 
   /** GET /order-reports/my — Customer gets their own reports (paginated) */
   getMyReports: (params?: { page?: number; limit?: number }) =>

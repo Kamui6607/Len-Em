@@ -61,9 +61,20 @@ export function AdminReports() {
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
   useEffect(() => {
-    userService.getAllUsers({ page: 1, limit: 50 })
-      .then(({ data }) => setApiUsers(data.data.result.users || []))
-      .catch(() => {});
+    // Fetch all users and filter client-side by roleName === "Staff"
+    const timer = setTimeout(() => {
+      userService.getAllUsers({ page: 1, limit: 50 })
+        .then((response) => {
+          const users = response.data?.data?.result?.users || [];
+          setApiUsers(users);
+        })
+        .catch((error) => {
+          console.warn("Failed to load users for staff assignment:", error);
+          setApiUsers([]);
+        });
+    }, 100); // Small delay to ensure auth is ready
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const staffUsers = apiUsers.filter((u) => {
@@ -231,7 +242,7 @@ export function AdminReports() {
                        </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{format(new Date(report.createdAt), "MMM dd, yyyy")}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-left">
                       <button
                         onClick={() => setSelectedReport(report)}
                         className="admin-action-btn view text-xs"
