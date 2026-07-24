@@ -1,5 +1,5 @@
 // ============================================================
-// MyOrders Page — route /orders/my
+// MyOrders Page — route /purchased
 // Danh sách đơn hàng của customer hiện tại
 // ============================================================
 
@@ -81,7 +81,7 @@ export function MyOrders() {
             return (
               <Link
                 key={normalized._id}
-                to={`/orders/my/${normalized._id}`}
+                to={`/purchased/${normalized._id}`}
                 className="block bg-card rounded-2xl border border-border p-6 hover:border-primary/30 transition-all hover:shadow-sm"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

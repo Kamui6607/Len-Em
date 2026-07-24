@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Package, Calendar, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Package, Calendar, Star, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../context/CartContext";
 import { useReviews } from "../context/ReviewContext";
 import { useNotifications } from "../context/NotificationContext";
 import { ReportButton } from "../components/ReportButton";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { orderService } from "../../features/orders/services/order.service";
 import type { Order } from "../../features/orders/types/order.types";
 import { normalizeOrder } from "../../features/orders/types/order.types";
@@ -30,6 +31,8 @@ export function Purchased() {
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadOrders() {
@@ -66,6 +69,33 @@ export function Purchased() {
     setReviewModal(null);
     setComment("");
     setRating(5);
+  };
+
+  const handleReorder = (order: Order) => {
+    const items = order.items.filter(
+      (item) => item.productId && item.productName,
+    );
+    if (items.length === 0) {
+      toast.error("No items available to reorder");
+      return;
+    }
+    items.forEach((item) => {
+      addToCart(
+        {
+          productId: item.productId,
+          variantId: item.productId,
+          name: item.productName || "Product",
+          image: item.image || "",
+          color: item.color || "",
+          hexCode: item.hexCode || "",
+          price: item.price ?? 0,
+          stock: 999,
+        },
+        item.quantity,
+      );
+    });
+    toast.success(`Added ${items.length} item(s) to cart`);
+    navigate("/cart");
   };
 
   const markAsDone = async (orderId: string) => {
@@ -155,7 +185,7 @@ export function Purchased() {
             <>
               {orders.map((order) => (
                 <Link
-                  to={`/orders/my/${order._id}`}
+                  to={`/purchased/${order._id}`}
                   key={order._id}
                   className="block bg-card rounded-2xl p-6 border border-border hover:border-primary/30 transition-all hover:shadow-sm"
                 >
@@ -253,6 +283,18 @@ export function Purchased() {
                           className="text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90 transition-colors"
                         >
                           ✅ Mark as Done
+                        </button>
+                      )}
+                      {order.orderStatus !== "CANCELLED" && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReorder(order);
+                          }}
+                          className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                        >
+                          <ShoppingCart className="w-3 h-3 inline mr-1" /> Đặt hàng lại
                         </button>
                       )}
                     </div>

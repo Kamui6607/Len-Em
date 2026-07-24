@@ -19,7 +19,6 @@ import {
   validateVariants,
   hasVariantErrors,
 } from "../../components/admin/VariantEditor";
-import { ColorSwatchList } from "../../components/ui/ColorSwatch";
 import { useAuth } from "../../../hooks/useAuth";
 import { AdminSelect } from "../../components/admin/AdminSelect";
 
@@ -32,6 +31,7 @@ interface ProductFormData {
   image: string;
   imageFile: File | null;
   tags: string;
+  price: number;
   variants: VariantData[];
   isActive: boolean;
 }
@@ -43,6 +43,7 @@ const emptyForm: ProductFormData = {
   image: "",
   imageFile: null,
   tags: "",
+  price: 0,
   variants: [{ color: "", hexCode: "#000000", price: 0, stock: 0, image: "" }],
   isActive: true,
 };
@@ -158,7 +159,12 @@ export function ProductManagement() {
     setShowModal(true);
   };
 
+  const applyPriceToVariants = (price: number, variants: VariantData[]): VariantData[] => {
+    return variants.map((v) => ({ ...v, price }));
+  };
+
   const openEdit = (product: Product) => {
+    const firstPrice = product.variants[0]?.price ?? 0;
     setEditingId(product._id);
     setForm({
       name: product.name,
@@ -167,6 +173,7 @@ export function ProductManagement() {
       image: product.image,
       tags: product.tags?.join(", ") ?? "",
       imageFile: null,
+      price: firstPrice,
       variants: (product.variants ?? []).map((v) => ({
         color: v.color,
         hexCode: v.hexCode,
@@ -383,14 +390,8 @@ export function ProductManagement() {
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">
                     Product
                   </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Category
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Colors
-                  </th>
                   <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Price range
+                    Price
                   </th>
                   <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
                     Total stock
@@ -433,17 +434,6 @@ export function ProductManagement() {
                             )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="capitalize text-sm bg-muted px-2.5 py-1 rounded-full">
-                          {product.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <ColorSwatchList
-                          variants={product.variants}
-                          size="sm"
-                        />
                       </td>
                       <td className="px-6 py-4 text-right text-sm font-semibold text-primary">
                         {min === max
@@ -591,6 +581,27 @@ export function ProductManagement() {
                       onChange={(value) => setForm({ ...form, category: value })}
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                      Price *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={form.price || ""}
+                      onChange={(e) => {
+                        const price = Number(e.target.value);
+                        setForm({
+                          ...form,
+                          price,
+                          variants: applyPriceToVariants(price, form.variants),
+                        });
+                      }}
+                      className="input w-full"
+                      placeholder="Product price"
+                      min={0}
+                    />
+                  </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
                       Description
@@ -644,14 +655,17 @@ export function ProductManagement() {
                   </div>
                 </div>
 
-                {/* Variants */}
+                {/* Variants (stock & colors only - price is set at product level) */}
                 <div>
-                  <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
-                    Variants *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
+                      Colors / Stock *
+                    </label>
+                  </div>
                   <VariantEditor
                     variants={form.variants}
                     onChange={(variants) => setForm({ ...form, variants })}
+                    hidePrice
                   />
                 </div>
 

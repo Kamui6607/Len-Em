@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronUp, ChevronDown, Check, X, Package, Truck } from "lucide-react";
+import { Search, ChevronUp, ChevronDown, Check, Package, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
 import { useAdmin } from "../../context/AdminContext";
@@ -32,7 +32,8 @@ export function AdminOrders() {
   const [filter, setFilter] = useState<OrderFilter>("all");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     async function loadOrders() {
@@ -89,24 +90,6 @@ export function AdminOrders() {
     }
   };
 
-  const handleCancelOrder = async () => {
-    if (!cancelTarget) return;
-    try {
-      await orderService.cancelOrder(cancelTarget._id, {
-        cancelReason: "Cancelled by admin",
-      });
-      setOrders((prev) =>
-        prev.map((o) =>
-          o._id === cancelTarget._id ? { ...o, orderStatus: "CANCELLED" as const } : o,
-        ),
-      );
-      setCancelTarget(null);
-      toast.success("Order cancelled");
-    } catch {
-      toast.error("Failed to cancel order");
-    }
-  };
-
   const handleStatusUpdate = async (
     orderId: string,
     newStatus: OrderStatus,
@@ -121,6 +104,24 @@ export function AdminOrders() {
       toast.success(`Status updated to ${newStatus}`);
     } catch {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleViewDetail = async (orderId: string) => {
+    console.log("View detail clicked for order:", orderId);
+    setDetailLoading(true);
+    try {
+      const { data: response } = await orderService.getOrderById(orderId);
+      console.log("API response:", response);
+      const order = normalizeOrder(response.order);
+      console.log("Normalized order:", order);
+      setSelectedOrder(order);
+      console.log("selectedOrder set to:", order);
+    } catch (error) {
+      console.error("Error loading order details:", error);
+      toast.error("Failed to load order details");
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -267,7 +268,8 @@ export function AdminOrders() {
                 sortedOrders.map((order) => (
                   <tr
                     key={order._id}
-                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
+                    onClick={() => handleViewDetail(order._id)}
+                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer"
                   >
                     <td className="px-6 py-4">
                       <div>
@@ -317,63 +319,68 @@ export function AdminOrders() {
                         {order.orderStatus}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-left">
+                     <td className="px-6 py-4 text-left">
                       <div className="flex items-center justify-start gap-1.5">
-                        {order.orderStatus === "PENDING" && (
-                          <>
+                          {order.orderStatus === "PENDING" && (
                             <button
-                              onClick={() => handleConfirmPayment(order._id)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleConfirmPayment(order._id);
+                              }}
                               className="btn-modal-primary p-1.5"
                               title="Confirm payment"
+                              type="button"
                             >
                               <Check className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => setCancelTarget(order)}
-                              className="btn-modal-destructive p-1.5"
-                              title="Cancel order"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
+                          )}
                         {order.orderStatus === "CONFIRMED" && (
                           <button
-                            onClick={() =>
-                              handleStatusUpdate(order._id, "PREPARING")
-                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleStatusUpdate(order._id, "PREPARING");
+                            }}
                             className="btn-modal-primary p-1.5"
                             title="Start preparing"
+                            type="button"
                           >
                             <Package className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {order.orderStatus === "PREPARING" && (
                           <button
-                            onClick={() =>
-                              handleStatusUpdate(order._id, "SHIPPING")
-                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleStatusUpdate(order._id, "SHIPPING");
+                            }}
                             className="p-1.5 rounded-lg font-medium transition-all duration-200 hover:shadow-md"
                             style={{
                               background: "var(--accent-glow-2)",
                               color: "var(--primary)",
                             }}
                             title="Ship order"
+                            type="button"
                           >
                             <Truck className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {order.orderStatus === "SHIPPING" && (
                           <button
-                            onClick={() =>
-                              handleStatusUpdate(order._id, "DELIVERED")
-                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleStatusUpdate(order._id, "DELIVERED");
+                            }}
                             className="p-1.5 rounded-lg font-medium transition-all duration-200 hover:shadow-md"
                             style={{
                               background: "var(--accent-green)",
                               color: "var(--accent-green-text)",
                             }}
                             title="Mark as delivered"
+                            type="button"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
@@ -397,36 +404,192 @@ export function AdminOrders() {
         </div>
       </div>
 
-      {/* Cancel Order Confirm Dialog */}
-      {cancelTarget && (
-        <div className="admin-dialog-overlay" onClick={() => setCancelTarget(null)}>
+      {/* Order Detail Dialog */}
+      {selectedOrder && (
+        <div className="admin-dialog-overlay" onClick={() => setSelectedOrder(null)}>
           <div
-            className="admin-dialog-content max-w-sm"
+            className="admin-dialog-content max-w-3xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">Cancel Order</h3>
+              <h3 className="text-base font-semibold">Order Details</h3>
             </div>
             <div className="admin-dialog-body">
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to cancel order #{cancelTarget._id.slice(-8).toUpperCase()}? This action cannot be undone.
-              </p>
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Order Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Order ID</p>
+                      <p className="text-sm font-medium">#{selectedOrder._id.slice(-8).toUpperCase()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Date</p>
+                      <p className="text-sm font-medium">
+                        {new Date(selectedOrder.createdAt).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Status</p>
+                      <span
+                        className={`badge ${
+                          selectedOrder.orderStatus === "DELIVERED"
+                            ? "badge-green"
+                            : ["CONFIRMED", "PREPARING", "SHIPPING"].includes(
+                                selectedOrder.orderStatus,
+                              )
+                              ? "badge-blue"
+                              : selectedOrder.orderStatus === "PENDING"
+                                ? "badge-orange"
+                                : selectedOrder.orderStatus === "CANCELLED"
+                                  ? "badge-red"
+                                  : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {selectedOrder.orderStatus}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Payment Method</p>
+                      <p className="text-sm font-medium">{selectedOrder.payment.method || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Payment Status</p>
+                      <span className={`badge ${selectedOrder.payment.status === "PAID" ? "badge-green" : "badge-orange"}`}>
+                        {selectedOrder.payment.status}
+                      </span>
+                    </div>
+                    {selectedOrder.payment.transactionNo && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Transaction No.</p>
+                        <p className="text-sm font-medium">{selectedOrder.payment.transactionNo}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Shipping Address */}
+                  <div className="border-t border-border pt-4">
+                    <h4 className="text-sm font-semibold mb-3">Shipping Address</h4>
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-1">
+                      <p className="text-sm font-medium">{selectedOrder.shippingAddress.fullName}</p>
+                      <p className="text-sm text-muted-foreground">{selectedOrder.shippingAddress.phone}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.shippingAddress.address}
+                      </p>
+                      {selectedOrder.shippingAddress.ward && (
+                        <p className="text-sm text-muted-foreground">
+                          {selectedOrder.shippingAddress.ward}, {selectedOrder.shippingAddress.district}, {selectedOrder.shippingAddress.city}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="border-t border-border pt-4">
+                    <h4 className="text-sm font-semibold mb-3">Order Items</h4>
+                    <div className="space-y-3">
+                      {selectedOrder.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
+                        >
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt={item.productName || item.name || "Product"}
+                              className="w-16 h-16 rounded-lg object-cover bg-muted flex-shrink-0"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.fallback) {
+                                  target.dataset.fallback = "true";
+                                  target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
+                                }
+                              }}
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{item.productName || item.name || "Product"}</p>
+                            {item.color && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Color: {item.color}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Qty: {item.quantity} x {formatPrice(item.price || 0)}
+                            </p>
+                          </div>
+                          <p className="text-sm font-semibold flex-shrink-0">
+                            {formatPrice((item.price || 0) * item.quantity)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Order Summary */}
+                  <div className="border-t border-border pt-4">
+                    <h4 className="text-sm font-semibold mb-3">Order Summary</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Subtotal</span>
+                        <span>{formatPrice(selectedOrder.itemsPrice)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Shipping Fee</span>
+                        <span>{formatPrice(selectedOrder.shippingFee)}</span>
+                      </div>
+                      {selectedOrder.coinUsed && selectedOrder.coinUsed > 0 && (
+                        <div className="flex justify-between text-sm text-primary">
+                          <span>Coin Discount</span>
+                          <span>-{formatPrice(selectedOrder.coinUsed)}</span>
+                        </div>
+                      )}
+                      {selectedOrder.discount && selectedOrder.discount > 0 && (
+                        <div className="flex justify-between text-sm text-primary">
+                          <span>Discount</span>
+                          <span>-{formatPrice(selectedOrder.discount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-semibold text-base pt-2 border-t border-border">
+                        <span>Total</span>
+                        <span className="text-primary">{formatPrice(selectedOrder.totalPrice)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Info */}
+                  {selectedOrder.note && (
+                    <div className="border-t border-border pt-4">
+                      <h4 className="text-sm font-semibold mb-2">Note</h4>
+                      <p className="text-sm text-muted-foreground">{selectedOrder.note}</p>
+                    </div>
+                  )}
+                  {selectedOrder.cancelReason && (
+                    <div className="border-t border-border pt-4">
+                      <h4 className="text-sm font-semibold mb-2 text-destructive">Cancel Reason</h4>
+                      <p className="text-sm text-muted-foreground">{selectedOrder.cancelReason}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="admin-dialog-footer">
               <button
                 type="button"
-                onClick={() => setCancelTarget(null)}
+                onClick={() => setSelectedOrder(null)}
                 className="btn-modal-cancel"
               >
-                Keep Order
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelOrder}
-                className="btn-modal-destructive"
-              >
-                <X className="w-4 h-4" />
-                Cancel Order
+                Close
               </button>
             </div>
           </div>

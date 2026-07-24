@@ -18,6 +18,7 @@ interface VariantEditorProps {
   variants: VariantData[];
   onChange: (variants: VariantData[]) => void;
   errors?: Record<string, string>[];
+  hidePrice?: boolean;
 }
 
 const emptyVariant = (): VariantData => ({
@@ -33,6 +34,7 @@ export function VariantEditor({
   variants,
   onChange,
   errors,
+  hidePrice,
 }: VariantEditorProps) {
   const addVariant = () => {
     onChange([...variants, emptyVariant()]);
@@ -96,7 +98,7 @@ export function VariantEditor({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${hidePrice ? "lg:grid-cols-4" : "lg:grid-cols-5"}`}>
                 {/* Color */}
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-xs mb-1">
@@ -129,26 +131,28 @@ export function VariantEditor({
                 </div>
 
                 {/* Price */}
-                <div>
-                  <label className="block text-xs mb-1">
-                    Price <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={v.price || ""}
-                    onChange={(e) =>
-                      updateVariant(i, "price", Number(e.target.value))
-                    }
-                    className={`w-full px-3 py-2 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
-                      err.price ? "border-destructive" : "border-border"
-                    }`}
-                    placeholder="0"
-                    min={0}
-                  />
-                  {err.price && (
-                    <p className="text-xs text-destructive mt-1">{err.price}</p>
-                  )}
-                </div>
+                {!hidePrice && (
+                  <div>
+                    <label className="block text-xs mb-1">
+                      Price <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={v.price || ""}
+                      onChange={(e) =>
+                        updateVariant(i, "price", Number(e.target.value))
+                      }
+                      className={`w-full px-3 py-2 bg-input-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                        err.price ? "border-destructive" : "border-border"
+                      }`}
+                      placeholder="0"
+                      min={0}
+                    />
+                    {err.price && (
+                      <p className="text-xs text-destructive mt-1">{err.price}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Stock */}
                 <div>

@@ -391,7 +391,7 @@ export function OrderSuccess() {
         <div style={{ display:"flex", flexDirection:"column", gap:"12px", width:"100%" }}>
           {/* Primary CTA */}
           <Link
-            to={`/orders/my/${orderId}`}
+            to={`/purchased/${orderId}`}
             style={{
               display:"flex", alignItems:"center", justifyContent:"center", gap:"8px",
               padding:"14px 32px",

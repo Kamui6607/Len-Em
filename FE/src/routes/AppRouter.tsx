@@ -91,11 +91,7 @@ const OrderSuccess = lazy(() =>
   import("../app/pages/shop/OrderSuccess").then((m) => ({ default: m.OrderSuccess })),
 );
 
-// ── NEW: My Orders + Order Detail ──
-const MyOrders = lazy(() =>
-  import("../app/pages/shop/MyOrders").then((m) => ({ default: m.MyOrders })),
-);
-
+// ── NEW: Order Detail ──
 const OrderDetail = lazy(() =>
   import("../app/pages/shop/OrderDetail").then((m) => ({ default: m.OrderDetail })),
 );
@@ -201,18 +197,26 @@ export function AppRouter() {
             </RequireAuth>
           }
         />
-        {/* [NEW] My Orders list */}
+        {/* [NEW] My Orders list — redirects to /purchased */}
         <Route
           path="orders/my"
           element={
             <RequireAuth>
-              <MyOrders />
+              <Navigate to="/purchased" replace />
             </RequireAuth>
           }
         />
-        {/* [NEW] Order Detail */}
+        {/* [NEW] Order Detail — moved under /purchased/:id */}
         <Route
           path="orders/my/:id"
+          element={
+            <RequireAuth>
+              <OrderDetail />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="purchased/:id"
           element={
             <RequireAuth>
               <OrderDetail />

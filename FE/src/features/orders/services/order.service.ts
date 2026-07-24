@@ -12,6 +12,7 @@ import type {
   MyOrdersResponse,
   CreateOrderResponse,
   OrderApiResponse,
+  GetOrderResponse,
 } from "../types/order.types";
 
 const ORDERS_BASE = "/orders";
@@ -35,9 +36,10 @@ export const orderService = {
   /**
    * 2d. Get order by ID (customer).
    * GET /orders/<orderId>
+   * Response: { message, order }
    */
   getOrderById: (orderId: string) =>
-    axiosClient.get<OrderApiResponse<Order>>(`${ORDERS_BASE}/${orderId}`),
+    axiosClient.get<GetOrderResponse>(`${ORDERS_BASE}/${orderId}`),
 
   /**
    * 2e. Cancel an order (customer — only when PENDING).

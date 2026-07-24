@@ -135,7 +135,7 @@ export function MyReportsPage() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center gap-4">
           <Link
-            to="/orders/my"
+            to="/purchased"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4" />

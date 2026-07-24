@@ -81,6 +81,7 @@ export function Checkout() {
   const onSubmit = async (data: ShippingFormData) => {
     if (cartItems.length === 0) {
       toast.error("Giỏ hàng trống");
+      setSubmitting(false);
       return;
     }
 
