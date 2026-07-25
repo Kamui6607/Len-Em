@@ -133,9 +133,9 @@ export function DIYFeedPage() {
               Browse creator projects, save your favorites, then buy the exact material combo behind every look.
             </p>
           </section>
-          <div className="columns-2 gap-4 md:columns-3 xl:columns-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-sm">
+              <div key={i} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
                 <ProductSkeleton className="w-full rounded-none" />
               </div>
             ))}
@@ -178,7 +178,7 @@ export function DIYFeedPage() {
           </div>
         </div>
 
-        <div className="columns-2 gap-4 md:columns-3 xl:columns-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {sortedPosts.map((post, index) => {
             const creator = creators[post.creatorId];
             return (
@@ -187,7 +187,7 @@ export function DIYFeedPage() {
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: index * 0.045 }}
-                className="group mb-4 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-xl"
+                className="group overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-xl"
               >
                 <div className="relative overflow-hidden bg-muted">
                   <img src={post.images[0]} alt={post.title} className="w-full object-cover transition-transform duration-300 group-hover:scale-105" />

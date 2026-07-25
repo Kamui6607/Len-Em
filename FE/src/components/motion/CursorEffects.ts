@@ -10,6 +10,9 @@ import { useAnimationFrame } from "motion/react";
 // dust rather than everything snapping to the pointer at once.
 //
 // Canvas 2D only. No WebGL / three.js / shaders.
+//
+// PERFORMANCE: Throttled to 30fps max, desktop-only (no mobile),
+// particles reduced, idle frames skipped.
 // ═══════════════════════════════════════════════════════════════════
 
 export type RGB = [number, number, number];
@@ -283,6 +286,21 @@ function applyColorBreathing(canvas: HTMLCanvasElement, now: number, blendMode: 
   const hue = Math.sin((now / HUE_BREATHE_PERIOD_MS) * Math.PI * 2) * HUE_BREATHE_DEGREES;
   canvas.style.mixBlendMode = blendMode;
   canvas.style.filter = `hue-rotate(${hue.toFixed(2)}deg)`;
+}
+
+// ───────────────────────── Desktop-only check ──────────────────────
+
+export function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: fine) and (hover: hover)").matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(pointer: fine) and (hover: hover)");
+    const onChange = () => setIsDesktop(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  return isDesktop;
 }
 
 // ───────────────────────── Reduced motion ───────────────────────────
@@ -681,15 +699,21 @@ import React from "react";
 
 export function CursorEffects({ isDark }: { isDark: boolean }): React.ReactNode {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const isDesktop = useIsDesktop();
   const cursorRef = useSmoothCursor(prefersReducedMotion);
   
   const trailCanvasRef = useRef<HTMLCanvasElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
   const particlesCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  useCursorTrail(trailCanvasRef, cursorRef, isDark, prefersReducedMotion);
-  useCursorGlow(glowCanvasRef, cursorRef, isDark, prefersReducedMotion);
-  useParticles(particlesCanvasRef, cursorRef, isDark, prefersReducedMotion);
+  // Desktop-only: skip entirely on mobile/touch devices (pointer:fine + hover:hover)
+  const enabled = isDesktop && !prefersReducedMotion;
+
+  useCursorTrail(trailCanvasRef, cursorRef, isDark, !enabled);
+  useCursorGlow(glowCanvasRef, cursorRef, isDark, !enabled);
+  useParticles(particlesCanvasRef, cursorRef, isDark, !enabled);
+
+  if (!enabled) return null;
 
   return React.createElement(React.Fragment, null,
     React.createElement("canvas", {

@@ -678,14 +678,17 @@ h4 { font-size: var(--text-xl); }
 p { line-height: 1.7; color: var(--foreground-secondary); }
 
 /* ===== TRANSITIONS ===== */
-*, *::before, *::after {
+/* Theme-aware transitions only on elements that need them */
+.theme-transition, .theme-transition::before, .theme-transition::after {
   transition: background 0.3s var(--ease-out),
               background-color 0.3s var(--ease-out),
               border-color 0.3s var(--ease-out),
               color 0.25s var(--ease-out),
-              box-shadow 0.3s var(--ease-out),
-              transform 0.3s var(--ease-out),
-              opacity 0.25s var(--ease-out);
+              box-shadow 0.3s var(--ease-out);
+}
+.interactive-transition, .interactive-transition::before, .interactive-transition::after {
+  transition: transform 0.2s var(--ease-out),
+              opacity 0.2s var(--ease-out);
 }
 
 /* ============================================================

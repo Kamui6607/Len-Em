@@ -127,8 +127,8 @@ export function Navigation({ cartCount }: NavigationProps) {
   const showFullActions = isAuthenticated && !isHomePage && !isAboutPage;
   const showAuthButtons = !isAuthenticated;
 
-  // Navbar "nổi" chỉ khi đang ở đầu trang Home, chưa cuộn
-  const isFloating = isHomePage && !scrolled;
+  // Navbar bo tròn khi scroll (ngược với behavior cũ)
+  const isFloating = scrolled;
 
   // Scroll helpers
   const scrollToSection = (id: string) => {
@@ -238,24 +238,11 @@ export function Navigation({ cartCount }: NavigationProps) {
 
   return (
     <>
-      <motion.header
-        layout
-        animate={{
-          marginTop: isFloating ? 12 : 0,
-          marginLeft: isFloating ? 16 : 0,
-          marginRight: isFloating ? 16 : 0,
-          borderRadius: isFloating ? 24 : 0,
-          boxShadow: isFloating
-            ? "0 8px 30px rgba(60,40,100,0.12)"
-            : scrolled
-              ? "0 4px 20px rgba(60,40,100,0.08)"
-              : "0 0 0 rgba(0,0,0,0)",
-        }}
-        transition={{ type: "spring", stiffness: 320, damping: 32 }}
+      <header
         className={cn(
           "sticky top-0 z-50 border transition-all duration-300",
           isFloating
-            ? "border-[var(--border-light)] bg-[var(--glass-bg)] backdrop-blur-[20px]"
+            ? "mt-3 mx-4 rounded-[24px] border-[var(--border-light)] bg-[var(--glass-bg)] backdrop-blur-[20px] shadow-[0_8px_30px_rgba(60,40,100,0.12)]"
             : "border-[var(--border-light)] border-t-0 border-x-0 bg-[var(--glass-bg)] backdrop-blur-[20px]",
         )}
       >
@@ -510,7 +497,7 @@ export function Navigation({ cartCount }: NavigationProps) {
             </AnimatePresence>
           </Button>
         </div>
-      </motion.header>
+      </header>
 
       {/* Mobile overlay + sidebar */}
       <AnimatePresence>

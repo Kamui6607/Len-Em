@@ -33,12 +33,13 @@ export function AnimatedBackground() {
         }}
       />
 
-      {/* ── Ambient glow blooms ── */}
+      {/* ── Ambient glow blooms (reduced blur for performance) ── */}
       <div
         style={{
           position: "absolute",
           inset: "-15%",
-          filter: "blur(72px) saturate(1.15)",
+          filter: "blur(40px) saturate(1.1)",
+          willChange: "transform",
           transition: "background 0.6s ease",
           background: isDark
             ? `radial-gradient(38% 32% at 20% 20%, rgba(107,63,160,0.42) 0%, transparent 70%),
@@ -47,18 +48,6 @@ export function AnimatedBackground() {
             : `radial-gradient(40% 34% at 16% 18%, rgba(245,239,168,0.55) 0%, transparent 70%),
                radial-gradient(36% 30% at 84% 14%, rgba(240,196,224,0.48) 0%, transparent 70%),
                radial-gradient(46% 40% at 50% 86%, rgba(255,214,170,0.42) 0%, transparent 70%)`,
-        }}
-      />
-
-      {/* ── Fine fiber texture ── */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          opacity: isDark ? 0.05 : 0.035,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='1' height='1' fill='${
-            isDark ? "%239B6FD6" : "%236B3FA0"
-          }' fill-opacity='0.4'/%3E%3C/svg%3E")`,
         }}
       />
 
