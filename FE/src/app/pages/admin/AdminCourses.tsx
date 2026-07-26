@@ -29,9 +29,9 @@ const levelLabels: Record<CourseLevel, string> = {
 };
 
 const levelStyles: Record<CourseLevel, string> = {
-  beginner: "border-green-200 bg-green-100 text-green-700",
-  intermediate: "border-yellow-200 bg-yellow-100 text-yellow-800",
-  advanced: "border-red-200 bg-red-100 text-red-700",
+  beginner: "border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
+  intermediate: "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
+  advanced: "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
 };
 
 export function AdminCourses() {

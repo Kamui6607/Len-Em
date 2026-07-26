@@ -45,65 +45,41 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
 };
 
 /**
- * Get inline style object for order status badges using CSS custom properties.
- * This respects the design system's --status-* tokens for both light & dark modes.
+ * Get badge class name for payment status badges.
+ * Uses the design system's badge classes for consistent styling.
  */
-export function getPaymentStatusStyle(status: string): React.CSSProperties {
-  const base: React.CSSProperties = {};
+export function getPaymentStatusBadgeClass(status: string): string {
   switch (status) {
     case "PAID":
-      base.background = "var(--status-success-bg)";
-      base.color = "var(--status-success-text)";
-      base.border = "1px solid var(--status-success-border)";
-      break;
+      return "badge-green";
     case "PENDING":
-      base.background = "var(--status-pending-bg)";
-      base.color = "var(--status-pending-text)";
-      base.border = "1px solid var(--status-pending-border)";
-      break;
+      return "badge-orange";
     case "FAILED":
     case "REFUNDED":
-      base.background = "var(--status-error-bg)";
-      base.color = "var(--status-error-text)";
-      base.border = "1px solid var(--status-error-border)";
-      break;
+      return "badge-red";
     default:
-      base.background = "var(--status-info-bg)";
-      base.color = "var(--status-info-text)";
-      base.border = "1px solid var(--status-info-border)";
-      break;
+      return "badge-blue";
   }
-  return base;
 }
 
-export function getOrderStatusStyle(status: string): React.CSSProperties {
-  const base: React.CSSProperties = {};
+/**
+ * Get badge class name for order status badges.
+ * Uses the design system's badge classes for consistent styling with LED glow effects.
+ */
+export function getOrderStatusBadgeClass(status: string): string {
   switch (status) {
     case "DELIVERED":
     case "CONFIRMED":
     case "PREPARING":
     case "SHIPPING":
-      base.background = "var(--status-success-bg)";
-      base.color = "var(--status-success-text)";
-      base.border = "1px solid var(--status-success-border)";
-      break;
+      return "badge-green";
     case "PENDING":
-      base.background = "var(--status-pending-bg)";
-      base.color = "var(--status-pending-text)";
-      base.border = "1px solid var(--status-pending-border)";
-      break;
+      return "badge-orange";
     case "CANCELLED":
-      base.background = "var(--status-error-bg)";
-      base.color = "var(--status-error-text)";
-      base.border = "1px solid var(--status-error-border)";
-      break;
+      return "badge-red";
     default:
-      base.background = "var(--status-info-bg)";
-      base.color = "var(--status-info-text)";
-      base.border = "1px solid var(--status-info-border)";
-      break;
+      return "badge-blue";
   }
-  return base;
 }
 
 /**

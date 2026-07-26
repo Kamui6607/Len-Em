@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import { useCart } from "../../../context/CartContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import { formatPrice } from "../../../lib/formatPrice";
-import { ImageWithFallback } from "../../../components/figma/ImageWithFallback";
 
 // ═══════════════════════════════════════════════════════════════════
 // EMPTY CART ILLUSTRATION — empty embroidery hoop
@@ -397,12 +396,12 @@ function InlineStepper({
 
 function ProductThumb({
   img,
-  dotColor,
   alt,
+  fallbackSeed,
 }: {
   img: string | null;
-  dotColor?: string;
   alt: string;
+  fallbackSeed?: string;
 }) {
   if (img) {
     return (
@@ -417,7 +416,7 @@ function ProductThumb({
           background: "var(--surface)",
         }}
       >
-        <ImageWithFallback
+        <img
           src={img}
           alt={alt}
           style={{
@@ -426,10 +425,20 @@ function ProductThumb({
             objectFit: "cover",
             display: "block",
           }}
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (!target.dataset.fallback) {
+              target.dataset.fallback = "true";
+              target.src = `https://picsum.photos/seed/${fallbackSeed || "product"}/100/100`;
+            }
+          }}
         />
       </div>
     );
   }
+
+  const fallbackSrc = `https://picsum.photos/seed/${fallbackSeed || "product"}/100/100`;
+
   return (
     <div
       style={{
@@ -437,27 +446,21 @@ function ProductThumb({
         height: "80px",
         flexShrink: 0,
         borderRadius: "14px",
-        background: dotColor ?? "var(--surface)",
+        overflow: "hidden",
         border: "1px solid var(--border)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+        background: "var(--surface)",
       }}
     >
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <circle
-          cx="14"
-          cy="14"
-          r="11"
-          fill="white"
-          fillOpacity="0.25"
-          stroke="white"
-          strokeWidth="1.4"
-          strokeOpacity="0.5"
-        />
-        <circle cx="14" cy="14" r="5" fill="white" fillOpacity="0.45" />
-      </svg>
+      <img
+        src={fallbackSrc}
+        alt={alt}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
     </div>
   );
 }
@@ -498,7 +501,7 @@ export function CartProductRow({
       }}
     >
       {/* Image */}
-      <ProductThumb img={item.image} dotColor={item.hexCode} alt={item.name} />
+      <ProductThumb img={item.image} alt={item.name} fallbackSeed={item.productId} />
 
       {/* Name + variant */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -693,7 +696,7 @@ export function CartKitRow({
       >
         {/* Image + bundle badge overlay */}
         <div style={{ position: "relative" as const, flexShrink: 0 }}>
-          <ProductThumb img={item.thumbnail} alt={item.name} />
+          <ProductThumb img={item.thumbnail} alt={item.name} fallbackSeed={item.kitId} />
           {/* Bundle badge — bottom-left of image */}
           <div
             style={{

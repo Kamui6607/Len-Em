@@ -86,8 +86,8 @@ function HandInkedUnderline({ width = 300 }: { width?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{ display: "block" }}
-      initial={reduce ? undefined : { scaleX: 0 }}
-      animate={reduce ? undefined : { scaleX: 1 }}
+      initial={reduce ? { scaleX: 1 } : { scaleX: 0 }}
+      animate={reduce ? { scaleX: 1 } : { scaleX: 1 }}
       transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }}
       className="origin-left"
     >
@@ -95,8 +95,8 @@ function HandInkedUnderline({ width = 300 }: { width?: number }) {
         d="M 3,5 C 18,2  42,6  68,4 C 94,2  118,5 142,4 C 162,3 180,6 200,4 C 218,2 238,5 258,3 C 272,2 286,4 297,3 L 297,8 C 285,10 270,8  255,10 C 237,11 217,9  200,10 C 180,11 162,9  142,10 C 122,11 98,9   70,10 C 46,11  22,9    3,10 Z"
         fill="var(--color-primary)"
         fillOpacity={0.65}
-        initial={reduce ? undefined : { pathLength: 0, opacity: 0 }}
-        animate={reduce ? undefined : { pathLength: 1, opacity: 1 }}
+        initial={reduce ? { pathLength: 1, opacity: 0.65 } : { pathLength: 0, opacity: 0 }}
+        animate={reduce ? { pathLength: 1, opacity: 0.65 } : { pathLength: 1, opacity: 1 }}
         transition={{ duration: 0.9, delay: 0.6, ease: "easeOut" }}
       />
       <path
@@ -635,8 +635,8 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
       >
         <motion.div
           className="flex-1 min-w-0 w-full"
-          initial={reduce ? undefined : "hidden"}
-          animate={reduce ? undefined : "show"}
+          initial={reduce ? "show" : "hidden"}
+          animate={reduce ? "show" : "show"}
           variants={{
             hidden: {},
             show: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } },

@@ -33,6 +33,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "../components/ui/dialog";
+import { useLanguage } from "../../context/LanguageContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ interface ProfileProps {
 }
 
 export function Profile({ embedded = false }: ProfileProps) {
+  const { t } = useLanguage();
   const { user, signOut } = useAuth();
   const { data } = useMembershipStore();
   const navigate = useNavigate();
@@ -125,7 +127,7 @@ export function Profile({ embedded = false }: ProfileProps) {
       }
 
       if (Object.keys(payload).length === 0) {
-        toast.info("No changes to save");
+        toast.info(t("profile.toastNoChanges"));
         setSaving(false);
         setEditOpen(false);
         return;
@@ -138,7 +140,7 @@ export function Profile({ embedded = false }: ProfileProps) {
       const updatedUser = normalizeApiUserProfile(profileRes.data.userProfile);
       setUser(updatedUser);
 
-      toast.success("Profile updated successfully");
+      toast.success(t("profile.toastProfileSuccess"));
       setEditOpen(false);
     } catch {
       // Error toast is handled by axiosClient interceptor
@@ -158,7 +160,7 @@ export function Profile({ embedded = false }: ProfileProps) {
       if (!file || !user) return;
 
       if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
-        toast.error("Only JPG and PNG files are allowed");
+        toast.error(t("profile.toastAvatarTypeError"));
         return;
       }
 
@@ -166,7 +168,7 @@ export function Profile({ embedded = false }: ProfileProps) {
         const { data: res } = await userService.uploadAvatar(user.userId, file);
         const avatarUrl = res.data.updatedUser.avatar.url;
         setUser({ ...user, avatar: avatarUrl });
-        toast.success("Avatar updated successfully");
+        toast.success(t("profile.toastAvatarSuccess"));
       } catch {
         // Error toast handled by axiosClient
       } finally {
@@ -185,15 +187,15 @@ export function Profile({ embedded = false }: ProfileProps) {
       !pwdForm.newPassword ||
       !pwdForm.confirmNewPassword
     ) {
-      toast.error("Please fill in all password fields");
+      toast.error(t("profile.toastPasswordRequired"));
       return;
     }
     if (pwdForm.newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters");
+      toast.error(t("profile.toastPasswordMinLength"));
       return;
     }
     if (pwdForm.newPassword !== pwdForm.confirmNewPassword) {
-      toast.error("New passwords do not match");
+      toast.error(t("profile.toastPasswordMismatch"));
       return;
     }
 
@@ -204,7 +206,7 @@ export function Profile({ embedded = false }: ProfileProps) {
         newPassword: pwdForm.newPassword,
         email: user.email,
       });
-      toast.success("Password has been changed successfully");
+      toast.success(t("profile.toastPasswordSuccess"));
       setPwdOpen(false);
       setPwdForm({ oldPassword: "", newPassword: "", confirmNewPassword: "" });
     } catch {
@@ -234,25 +236,25 @@ export function Profile({ embedded = false }: ProfileProps) {
   const infoRows = [
     {
       icon: <Mail className="w-4 h-4" />,
-      label: "Email",
+      label: t("profile.emailLabel"),
       value: user.email,
       color: "text-primary bg-primary/10",
     },
     {
       icon: <Phone className="w-4 h-4" />,
-      label: "Phone",
-      value: user.phone || "Not set",
+      label: t("profile.phoneLabel"),
+      value: user.phone || t("profile.notSet"),
       color: "text-secondary bg-secondary/10",
     },
     {
       icon: <MapPin className="w-4 h-4" />,
-      label: "Address",
-      value: user.address || "Not set",
+      label: t("profile.addressLabel"),
+      value: user.address || t("profile.notSet"),
       color: "text-amber-500 bg-amber-500/10",
     },
     {
       icon: <Calendar className="w-4 h-4" />,
-      label: "Date of Birth",
+      label: t("profile.dobLabel"),
       value: formatDateForDisplay(user.dateOfBirth),
       color: "text-teal-500 bg-teal-500/10",
     },
@@ -269,11 +271,9 @@ export function Profile({ embedded = false }: ProfileProps) {
       <div className="max-w-4xl mx-auto space-y-5">
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold md:text-2xl">My Profile</h1>
+          <h1 className="text-xl font-bold md:text-2xl">{t("profile.title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {isDashboardUser
-              ? "Manage your account"
-              : "Manage your account and membership"}
+            {isDashboardUser ? t("profile.subtitleAdmin") : t("profile.subtitleUser")}
           </p>
         </div>
 
@@ -293,7 +293,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     type="button"
                     onClick={handleAvatarClick}
                     className="relative w-[72px] h-[72px] rounded-2xl bg-primary/15 border-4 border-card flex items-center justify-center text-xl font-bold text-primary shadow-md overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity"
-                    title="Change avatar"
+                    title={t("profile.changeAvatar")}
                   >
                     {user.avatar ? (
                       <img
@@ -321,7 +321,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors text-muted-foreground mb-0.5"
                   >
                     <Pencil className="w-3 h-3" />
-                    Edit
+                    {t("profile.editButton")}
                   </button>
                 </div>
 
@@ -343,7 +343,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             <div className="glass-panel-solid rounded-2xl overflow-hidden">
               <div className="px-5 pt-4 pb-2">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Personal Information
+                  {t("profile.personalInfo")}
                 </h3>
               </div>
               <div className="px-3 pb-3 space-y-0.5">
@@ -377,13 +377,13 @@ export function Profile({ embedded = false }: ProfileProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Membership
+                    {t("profile.membership")}
                   </h3>
                   <Link
                     to="/my-account/membership"
                     className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
                   >
-                    View details <ChevronRight className="w-3 h-3" />
+                    {t("profile.viewDetails")} <ChevronRight className="w-3 h-3" />
                   </Link>
                 </div>
                 <MembershipCard
@@ -407,7 +407,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                 <div className="glass-panel-solid rounded-2xl overflow-hidden">
                   <div className="px-5 pt-4 pb-2">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Role & Access
+                      {t("profile.roleAccess")}
                     </h3>
                   </div>
                   <div className="px-5 pb-5 space-y-3">
@@ -417,7 +417,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                       </div>
                       <div>
                         <p className="text-[11px] text-muted-foreground leading-none mb-0.5">
-                          Current role
+                          {t("profile.currentRole")}
                         </p>
                         <p className="text-sm font-semibold capitalize">
                           {user.roleId}
@@ -426,8 +426,8 @@ export function Profile({ embedded = false }: ProfileProps) {
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {user.roleId === "admin"
-                        ? "Full access to all dashboard features including user management, reports, and system settings."
-                        : "Access to orders, products, and customer support features."}
+                        ? t("profile.adminDescription")
+                        : t("profile.staffDescription")}
                     </p>
                   </div>
                 </div>
@@ -436,7 +436,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                 <div className="glass-panel-solid rounded-2xl overflow-hidden">
                   <div className="px-5 pt-4 pb-2">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Account Actions
+                      {t("profile.accountActions")}
                     </h3>
                   </div>
                   <div className="px-3 pb-3 space-y-0.5">
@@ -450,7 +450,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                         <KeyRound className="w-4 h-4" />
                       </div>
                       <span className="flex-1 text-sm font-medium">
-                        Change password
+                        {t("profile.changePassword")}
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
                     </button>
@@ -464,7 +464,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                         <Bell className="w-4 h-4" />
                       </div>
                       <span className="flex-1 text-sm font-medium">
-                        Notification settings
+                        {t("profile.notificationSettings")}
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
                     </button>
@@ -479,7 +479,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                         <LogOut className="w-4 h-4" />
                       </div>
                       <span className="flex-1 text-sm font-medium text-rose-500">
-                        Sign out
+                        {t("profile.signOut")}
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
                     </button>
@@ -495,9 +495,9 @@ export function Profile({ embedded = false }: ProfileProps) {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md glass-panel-solid">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Edit Profile</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t("profile.editProfileTitle")}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Update your personal information below.
+              {t("profile.editProfileDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -505,7 +505,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             {/* Full Name */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Full Name
+                {t("profile.fullNameLabel")}
               </label>
               <input
                 type="text"
@@ -514,14 +514,14 @@ export function Profile({ embedded = false }: ProfileProps) {
                   setEditForm((f) => ({ ...f, fullName: e.target.value }))
                 }
                 className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="Your full name"
+                placeholder={t("profile.fullNamePlaceholder")}
               />
             </div>
 
             {/* Phone */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Phone
+                {t("profile.phoneLabel")}
               </label>
               <input
                 type="tel"
@@ -530,14 +530,14 @@ export function Profile({ embedded = false }: ProfileProps) {
                   setEditForm((f) => ({ ...f, phone: e.target.value }))
                 }
                 className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="Your phone number"
+                placeholder={t("profile.phonePlaceholder")}
               />
             </div>
 
             {/* Address */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Address
+                {t("profile.addressLabel")}
               </label>
               <input
                 type="text"
@@ -546,14 +546,14 @@ export function Profile({ embedded = false }: ProfileProps) {
                   setEditForm((f) => ({ ...f, address: e.target.value }))
                 }
                 className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="Your address"
+                placeholder={t("profile.addressPlaceholder")}
               />
             </div>
 
             {/* Gender */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Gender
+                {t("profile.genderLabel")}
               </label>
               <select
                 value={editForm.gender}
@@ -565,16 +565,16 @@ export function Profile({ embedded = false }: ProfileProps) {
                 }
                 className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               >
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
+                <option value="MALE">{t("profile.maleOption")}</option>
+                <option value="FEMALE">{t("profile.femaleOption")}</option>
+                <option value="OTHER">{t("profile.otherOption")}</option>
               </select>
             </div>
 
             {/* Date of Birth */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Date of Birth (MM/DD/YYYY)
+                {t("profile.dobLabelLong")}
               </label>
               <input
                 type="text"
@@ -583,7 +583,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   setEditForm((f) => ({ ...f, dateOfBirth: e.target.value }))
                 }
                 className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="MM/DD/YYYY"
+                placeholder={t("profile.dobPlaceholder")}
               />
             </div>
           </div>
@@ -595,7 +595,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium"
               disabled={saving}
             >
-              Cancel
+              {t("profile.cancelButton")}
             </button>
             <button
               type="button"
@@ -604,7 +604,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? t("profile.savingButton") : t("profile.saveChanges")}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -614,9 +614,9 @@ export function Profile({ embedded = false }: ProfileProps) {
       <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
         <DialogContent className="sm:max-w-md glass-panel-solid">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Change Password</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t("profile.changePasswordTitle")}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Enter your current password and a new password.
+              {t("profile.changePasswordDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -624,7 +624,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             {/* Old Password */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Current Password
+                {t("profile.currentPasswordLabel")}
               </label>
               <div className="relative">
                 <input
@@ -634,7 +634,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     setPwdForm((f) => ({ ...f, oldPassword: e.target.value }))
                   }
                   className="w-full px-4 py-3 pr-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                  placeholder="Enter current password"
+                  placeholder={t("profile.currentPasswordPlaceholder")}
                 />
                 <button
                   type="button"
@@ -654,7 +654,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             {/* New Password */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                New Password
+                {t("profile.newPasswordLabel")}
               </label>
               <div className="relative">
                 <input
@@ -664,7 +664,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     setPwdForm((f) => ({ ...f, newPassword: e.target.value }))
                   }
                   className="w-full px-4 py-3 pr-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                  placeholder="Enter new password (min 6 chars)"
+                  placeholder={t("profile.newPasswordPlaceholder")}
                 />
                 <button
                   type="button"
@@ -684,7 +684,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             {/* Confirm New Password */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Confirm New Password
+                {t("profile.confirmNewPasswordLabel")}
               </label>
               <input
                 type="password"
@@ -696,7 +696,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   }))
                 }
                 className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                placeholder="Re-enter new password"
+                placeholder={t("profile.confirmNewPasswordPlaceholder")}
               />
             </div>
           </div>
@@ -707,7 +707,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               onClick={() => setPwdOpen(false)}
               className="text-xs text-primary hover:underline mr-auto"
             >
-              Forgot password?
+              {t("profile.forgotPassword")}
             </Link>
             <button
               type="button"
@@ -722,7 +722,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium"
               disabled={changingPwd}
             >
-              Cancel
+              {t("profile.cancelButton")}
             </button>
             <button
               type="button"
@@ -731,7 +731,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
             >
               {changingPwd && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {changingPwd ? "Changing..." : "Change Password"}
+              {changingPwd ? t("profile.changingButton") : t("profile.changePasswordButton")}
             </button>
           </DialogFooter>
         </DialogContent>

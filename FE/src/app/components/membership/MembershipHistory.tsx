@@ -117,10 +117,10 @@ export function MembershipHistory({ history, compact = false }: MembershipHistor
               </td>
               <td className="py-3 px-4">
                 <span className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full",
-                  entry.status === "completed" && "bg-green-100 text-green-700",
-                  entry.status === "pending" && "bg-amber-100 text-amber-700",
-                  entry.status === "cancelled" && "bg-red-100 text-red-700",
+                  "badge text-[10px] px-2 py-0.5",
+                  entry.status === "completed" && "badge-green",
+                  entry.status === "pending" && "badge-orange",
+                  entry.status === "cancelled" && "badge-red",
                 )}>
                   {entry.status === "completed" ? "✅" : entry.status === "pending" ? "⏳" : "❌"}
                 </span>

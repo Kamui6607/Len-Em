@@ -16,9 +16,9 @@ import { cn } from "../components/ui/utils";
 import { motion, AnimatePresence } from "motion/react";
 
 const levelBadgeColors: Record<string, string> = {
-  beginner: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  intermediate: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  advanced: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+  beginner: "bg-[var(--success-bg)] text-[var(--success-text)]",
+  intermediate: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
+  advanced: "bg-[var(--error-bg)] text-[var(--error-text)]",
 };
 
 function StarRating({ rating, count }: { rating: number; count: number }) {

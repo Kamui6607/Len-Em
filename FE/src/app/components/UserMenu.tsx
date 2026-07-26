@@ -7,6 +7,7 @@ import {
   Shield,
   Users as UsersIcon,
   HelpCircle,
+  Bell,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
@@ -154,40 +155,72 @@ export function UserMenu({
           background: "linear-gradient(90deg, var(--primary), var(--accent-pink), var(--accent-yellow))",
         }} />
 
-        {/* ── User info header ── */}
-        <div className="p-5 pb-4" style={{
-          background: "var(--surface)",
-        }}>
-          <div className="flex items-center gap-3.5">
-            {/* Avatar with premium ring */}
-            <div className="relative shrink-0">
-              <div
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-sm font-bold ${roleStyle.avatar}`}
-                style={{ borderColor: "var(--primary)" }}
-              >
-                {initials}
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-[2.5px] shadow-sm" style={{
-                borderColor: "var(--surface)"
-              }} />
-            </div>
+         {/* ── User info header ── */}
+         <div className="p-5 pb-4" style={{
+           background: "var(--surface)",
+         }}>
+           <div className="flex items-center gap-3.5">
+             {/* Avatar with premium ring */}
+             <div className="relative shrink-0">
+               <div
+                 className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-sm font-bold ${roleStyle.avatar}`}
+                 style={{ borderColor: "var(--primary)" }}
+               >
+                 {initials}
+               </div>
+               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-[2.5px] shadow-sm" style={{
+                 borderColor: "var(--surface)"
+               }} />
+             </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[var(--foreground)] truncate text-sm leading-tight">
-                {user.fullName}
-              </p>
-              <p className="text-xs text-[var(--foreground-muted)] truncate mt-0.5">
-                {user.email}
-              </p>
-              <span
-                className={`inline-flex items-center gap-1 mt-1.5 text-[10px] px-2.5 py-0.5 rounded-full font-semibold tracking-wide ${roleStyle.badge}`}
-              >
-                <RoleIcon className="w-3 h-3" />
-                {roleLabel}
-              </span>
-            </div>
-          </div>
-        </div>
+             <div className="flex-1 min-w-0">
+               <p className="font-semibold text-[var(--foreground)] truncate text-sm leading-tight">
+                 {user.fullName}
+               </p>
+               <p className="text-xs text-[var(--foreground-muted)] truncate mt-0.5">
+                 {user.email}
+               </p>
+               <span
+                 className={`inline-flex items-center gap-1 mt-1.5 text-[10px] px-2.5 py-0.5 rounded-full font-semibold tracking-wide ${roleStyle.badge}`}
+               >
+                 <RoleIcon className="w-3 h-3" />
+                 {roleLabel}
+               </span>
+             </div>
+           </div>
+         </div>
+
+         {/* ── Notifications Link ── */}
+         <Link
+           to="/notifications"
+           onClick={() => setIsOpen(false)}
+           className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group no-underline"
+           style={{
+             color: "var(--foreground)",
+           }}
+           onMouseEnter={(e) => {
+             e.currentTarget.style.background = "var(--chip-hover-bg)";
+             e.currentTarget.style.transform = "translateX(2px)";
+           }}
+           onMouseLeave={(e) => {
+             e.currentTarget.style.background = "transparent";
+             e.currentTarget.style.transform = "translateX(0)";
+           }}
+         >
+           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{
+             background: "linear-gradient(135deg, var(--accent-blush), var(--accent-peach))",
+             border: "1px solid var(--border-subtle)",
+           }}>
+             <Bell className="w-4.5 h-4.5 text-[var(--primary)]" />
+           </div>
+           <div className="flex-1 min-w-0">
+             <span className="text-sm font-medium block">Notifications</span>
+             <span className="text-xs text-[var(--foreground-muted)] block">View all notifications</span>
+           </div>
+           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "var(--foreground-muted)", opacity: 0.5 }}>
+             <path d="M4.5 2.5L9.5 7L4.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+           </svg>
+         </Link>
 
         {/* ── Menu items ── */}
         <div className="py-2 px-2" style={{

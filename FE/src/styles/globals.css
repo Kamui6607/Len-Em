@@ -351,17 +351,64 @@ a.nav-icon-btn:hover {
   border: 1px solid transparent;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  padding: 2px 12px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.badge-green   { border-color: color-mix(in srgb, var(--success-text) 45%, transparent); }
-.badge-orange  { border-color: color-mix(in srgb, var(--warning-text) 45%, transparent); }
-.badge-red     { border-color: color-mix(in srgb, var(--error-text) 45%, transparent); }
-.badge-blue    { border-color: color-mix(in srgb, var(--info-text) 45%, transparent); }
-.badge-pink    { border-color: color-mix(in srgb, var(--badge-pink-text) 45%, transparent); }
-.badge-yellow  { border-color: color-mix(in srgb, var(--badge-yellow-text) 45%, transparent); }
-.badge-peach   { border-color: color-mix(in srgb, var(--badge-peach-text) 45%, transparent); }
-.badge-warm    { border-color: color-mix(in srgb, var(--badge-warm-text) 45%, transparent); }
-.badge-gray    { border-color: color-mix(in srgb, var(--accent-gray-text) 35%, transparent); }
-.badge-purple, .badge-lavender { border-color: color-mix(in srgb, var(--badge-purple-text) 45%, transparent); }
+.badge-green   { 
+  background: var(--success-bg); 
+  color: var(--success-text); 
+  border-color: color-mix(in srgb, var(--success-text) 45%, transparent); 
+}
+.badge-orange  { 
+  background: var(--warning-bg); 
+  color: var(--warning-text); 
+  border-color: color-mix(in srgb, var(--warning-text) 45%, transparent); 
+}
+.badge-red     { 
+  background: var(--error-bg); 
+  color: var(--error-text); 
+  border-color: color-mix(in srgb, var(--error-text) 45%, transparent); 
+}
+.badge-blue    { 
+  background: var(--info-bg); 
+  color: var(--info-text); 
+  border-color: color-mix(in srgb, var(--info-text) 45%, transparent); 
+}
+.badge-pink    { 
+  background: var(--badge-pink-bg); 
+  color: var(--badge-pink-text); 
+  border-color: color-mix(in srgb, var(--badge-pink-text) 45%, transparent); 
+}
+.badge-yellow  { 
+  background: var(--badge-yellow-bg); 
+  color: var(--badge-yellow-text); 
+  border-color: color-mix(in srgb, var(--badge-yellow-text) 45%, transparent); 
+}
+.badge-peach   { 
+  background: var(--badge-peach-bg); 
+  color: var(--badge-peach-text); 
+  border-color: color-mix(in srgb, var(--badge-peach-text) 45%, transparent); 
+}
+.badge-warm    { 
+  background: var(--badge-warm-bg); 
+  color: var(--badge-warm-text); 
+  border-color: color-mix(in srgb, var(--badge-warm-text) 45%, transparent); 
+}
+.badge-gray    { 
+  background: var(--accent-gray); 
+  color: var(--accent-gray-text); 
+  border-color: color-mix(in srgb, var(--accent-gray-text) 35%, transparent); 
+}
+.badge-purple, .badge-lavender { 
+  background: var(--badge-purple-bg); 
+  color: var(--badge-purple-text); 
+  border-color: color-mix(in srgb, var(--badge-purple-text) 45%, transparent); 
+}
 
 /* Dark mode: give each badge a soft matching LED glow */
 .dark .badge-green   { box-shadow: 0 0 0 1px color-mix(in srgb, var(--success-text) 35%, transparent), 0 0 12px color-mix(in srgb, var(--success-text) 35%, transparent); }

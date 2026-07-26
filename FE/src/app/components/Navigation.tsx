@@ -25,7 +25,6 @@ import { Button } from "./ui/button";
 import { cn } from "./ui/utils";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { BottomNav } from "../../components/mobile/BottomNav";
-import { NotificationsBell } from "./NotificationsBell";
 import { LanguageToggle } from "./LanguageToggle";
 import { useLanguage } from "../../context/LanguageContext";
 
@@ -467,15 +466,6 @@ export function Navigation({ cartCount }: NavigationProps) {
               </AnimatePresence>
             </div>
 
-            {isAuthenticated && !isHomePage && !isAboutPage && (
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                className="nav-icon-btn"
-              >
-                <NotificationsBell />
-              </motion.div>
-            )}
             {showFullActions && (
               <>
                 <motion.div

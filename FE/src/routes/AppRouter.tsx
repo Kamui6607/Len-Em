@@ -107,6 +107,9 @@ const KitDetail = lazy(() =>
 const MyReportsPage = lazy(() =>
   import("../app/pages/MyReportsPage").then((m) => ({ default: m.MyReportsPage })),
 );
+const NotificationsPage = lazy(() =>
+  import("../app/pages/Notifications").then((m) => ({ default: m.NotificationsPage })),
+);
 
 function StoreOutlet() {
   return (
@@ -253,6 +256,14 @@ export function AppRouter() {
           element={
             <RequireAuth>
               <Purchased />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="notifications"
+          element={
+            <RequireAuth>
+              <NotificationsPage />
             </RequireAuth>
           }
         />

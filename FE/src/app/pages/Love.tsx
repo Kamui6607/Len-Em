@@ -123,7 +123,8 @@ export function Love() {
           </p>
           <Link
             to="/shop"
-            className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-full hover:bg-primary/90 transition-colors"
+            className="inline-block bg-primary px-8 py-3 rounded-full hover:bg-primary/90 transition-colors font-medium"
+            style={{ color: "#FFFFFF" }}
           >
             {t("love.browseProducts")}
           </Link>

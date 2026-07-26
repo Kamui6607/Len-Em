@@ -51,13 +51,15 @@ export function DIYFeedPage() {
       for (const creatorId of creatorIds) {
         try {
           const { data: userData } = await userService.getUserById(creatorId);
-          creatorMap[creatorId] = {
-            userId: userData.data.result.userId,
-            fullName: userData.data.result.fullName,
-            avatar: typeof userData.data.result.avatar === 'object' 
-              ? userData.data.result.avatar?.url 
-              : userData.data.result.avatar,
-          };
+          if (userData?.data?.result) {
+            creatorMap[creatorId] = {
+              userId: userData.data.result.userId,
+              fullName: userData.data.result.fullName,
+              avatar: typeof userData.data.result.avatar === 'object' 
+                ? userData.data.result.avatar?.url 
+                : userData.data.result.avatar,
+            };
+          }
         } catch {
           // Keep default if fetch fails
         }

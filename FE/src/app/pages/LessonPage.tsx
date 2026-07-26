@@ -519,7 +519,7 @@ export function LessonPage() {
                       {progress?.completed ? "Completed" : `${Math.floor(progress?.watchedSeconds ?? watchedSeconds)} seconds watched`}
                     </p>
                   </div>
-                  {progress?.completed && <CheckCircle2 className="size-6 text-green-600" />}
+                  {progress?.completed && <CheckCircle2 className="size-6 text-[var(--success-text)]" />}
                 </div>
                 <Progress
                   value={

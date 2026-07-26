@@ -302,7 +302,7 @@ export function LearnPage() {
                           <Badge className={cn("absolute left-3 top-3 border", levelStyles[course.level])}>
                             {levelLabels[course.level]}
                           </Badge>
-                          <Badge className="absolute right-3 top-3 border-green-200 bg-green-100 text-green-700">
+                          <Badge className="absolute right-3 top-3 border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]">
                             {t("learnPage.free")}
                           </Badge>
                         </div>
@@ -376,7 +376,7 @@ export function LearnPage() {
                       <Badge className={cn("absolute left-3 top-3 border", levelStyles[video.level])}>
                         {levelLabels[video.level]}
                       </Badge>
-                      <Badge className="absolute right-3 top-3 border-green-200 bg-green-100 text-green-700 text-[10px]">
+                      <Badge className="absolute right-3 top-3 border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)] text-[10px]">
                         {video.duration} {t("learnPage.min")}
                       </Badge>
                     </div>

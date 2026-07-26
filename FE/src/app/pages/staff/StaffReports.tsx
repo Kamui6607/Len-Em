@@ -274,7 +274,11 @@ export function StaffReports() {
                   <button
                     onClick={() => handleUpdateStatus(selectedReport._id, "DONE")}
                     disabled={statusUpdating}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600"
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: "var(--accent-green)",
+                      color: "var(--accent-green-text)",
+                    }}
                   >
                     <CheckCircle className="w-4 h-4 inline mr-1" />
                     Mark as Done
@@ -282,7 +286,11 @@ export function StaffReports() {
                   <button
                     onClick={() => handleUpdateStatus(selectedReport._id, "CANCELLED")}
                     disabled={statusUpdating}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600"
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: "var(--accent-red)",
+                      color: "var(--accent-red-text)",
+                    }}
                   >
                     <XCircle className="w-4 h-4 inline mr-1" />
                     Cancel Report

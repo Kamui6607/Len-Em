@@ -13,8 +13,8 @@ import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../ui/ColorSwatch";
 import {
   ORDER_STATUS_LABELS,
-  getOrderStatusStyle,
-  getPaymentStatusStyle,
+  getOrderStatusBadgeClass,
+  getPaymentStatusBadgeClass,
   PAYMENT_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   VALID_TRANSITIONS,
@@ -93,8 +93,7 @@ export function OrderDetailCard({
           </div>
           <div className="flex items-center gap-3">
             <span
-              style={getOrderStatusStyle(normalized.orderStatus)}
-              className="inline-block mt-1 px-3 py-0.5 rounded-full text-xs font-medium"
+              className={`badge ${getOrderStatusBadgeClass(normalized.orderStatus)}`}
             >
               {ORDER_STATUS_LABELS[normalized.orderStatus]}
             </span>
@@ -233,8 +232,7 @@ export function OrderDetailCard({
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Trạng thái</span>
             <span
-              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              style={getPaymentStatusStyle(normalized.payment?.status ?? "")}
+              className={`badge ${getPaymentStatusBadgeClass(normalized.payment?.status ?? "")}`}
             >
               {PAYMENT_STATUS_LABELS[normalized.payment?.status] || normalized.payment?.status}
             </span>

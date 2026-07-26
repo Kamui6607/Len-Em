@@ -126,15 +126,15 @@ export function Checkout() {
       const response = await orderApi.createOrder(payload);
       const result = response.data;
 
+      // Clear cart immediately after order is successfully created
+      // This ensures cart is cleared whether using VNPAY or other payment methods
+      clearCart();
+
       if (result.payUrl) {
-        // VNPAY: redirect to payment gateway immediately — don't clear cart yet
-        // Cart will be cleared on the success page after payment confirmation
+        // VNPAY: redirect to payment gateway
         window.location.href = result.payUrl;
         return;
       }
-
-      // Non-VNPAY: clear cart and navigate to success
-      clearCart();
 
       const orderId = result?.order?._id || "";
       const date = new Date().toLocaleDateString("en-GB", {
