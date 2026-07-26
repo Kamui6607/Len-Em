@@ -17,8 +17,6 @@ import {
 import { useAuthStore } from "../../store/auth.store";
 import { toast } from "sonner";
 import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
-import { CursorEffects } from "../../components/motion/CursorEffects";
-import { useTheme } from "../../app/context/ThemeContext";
 
 const inputStyle = (hasIcon = true, hasError = false): React.CSSProperties => ({
   width: "100%",
@@ -135,7 +133,6 @@ function Field({
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuthStore();
-  const { isDark } = useTheme();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -370,7 +367,6 @@ export function RegisterPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      <CursorEffects isDark={isDark} />
       <div className="rp-root">
         <div className="rp-card">
           {/* Decorative glow */}

@@ -185,8 +185,8 @@ const CONFETTI_PIECES = (() => {
 //    confetti like a party popper the moment the card is hovered. ──
 function AnimatedGiftRibbon({
   isHovered,
-  color = "#F0C4E0",
-  accent = "#6B3FA0",
+  color = "#E8DEFF",
+  accent = "#5B3DF5",
   level = "Beginner",
 }: {
   isHovered: boolean;
@@ -726,7 +726,7 @@ export const ProductCard = memo(function ProductCard({
         transformOrigin: "center bottom",
         willChange: "transform",
       }}
-      className={isHovered ? "dark:border-[#9B6FD6]/40" : ""}
+      className={isHovered ? "dark:border-[#7C63FF]/40" : ""}
     >
       {/* Subtle animated gradient halo behind the card, only visible on hover */}
       <motion.div
@@ -742,7 +742,7 @@ export const ProductCard = memo(function ProductCard({
           zIndex: 0,
           pointerEvents: "none",
           background:
-            "linear-gradient(135deg, var(--primary) 0%, var(--accent-pink, #F0C4E0) 50%, var(--primary) 100%)",
+            "linear-gradient(135deg, var(--primary) 0%, var(--accent-blush, #E8DEFF) 50%, var(--primary) 100%)",
           WebkitMask:
             "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
           WebkitMaskComposite: "xor",
@@ -1051,7 +1051,7 @@ export const ProductCard = memo(function ProductCard({
               fontFamily: "'Playfair Display', serif",
               fontSize: "1.15rem",
               fontWeight: 700,
-              color: isDark ? "var(--primary)" : "#F0C4E0",
+              color: isDark ? "var(--primary)" : "var(--primary)",
               letterSpacing: "-0.02em",
               lineHeight: 1,
               transformOrigin: "right center",
@@ -1075,7 +1075,7 @@ export const ProductCard = memo(function ProductCard({
               color: isHovered
                 ? isDark
                   ? "var(--primary)"
-                  : "#F0C4E0"
+                  : "var(--primary)"
                 : isDark
                   ? "var(--foreground)"
                   : "#000000",

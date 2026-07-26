@@ -4,6 +4,7 @@ import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart } from "../../context/CartContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { products as mockProducts } from "../data/products";
 import { fetchProductById } from "../../features/shop/services/product.service";
 import { ProductCard } from "../components/ProductCard";
@@ -14,6 +15,7 @@ import type { Product } from "../data/products";
 import type { Kit } from "../../api/kitService";
 
 export function Love() {
+  const { t } = useLanguage();
   const { addToCart, addKitToCart } = useCart();
   const { favorites, favoriteKits, toggleFavoriteKit, clearAllFavorites } = useFavorites();
   const [resolvedProducts, setResolvedProducts] = useState<Product[]>([]);
@@ -92,12 +94,12 @@ export function Love() {
         stock: variant.stock,
       });
     });
-    toast.success(`Added all ${resolvedProducts.length} items to cart`);
+    toast.success(t("love.addedAllToCart", { count: resolvedProducts.length }));
   };
 
   const handleRemoveAll = () => {
     clearAllFavorites();
-    toast.success("Đã xoá tất cả khỏi danh sách yêu thích");
+    toast.success(t("love.removedAllFavorites"));
   };
 
   if (loading) {
@@ -115,15 +117,15 @@ export function Love() {
           <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
             <Heart className="w-12 h-12 text-muted-foreground" />
           </div>
-          <h2 className="mb-3">Your Wishlist is Empty</h2>
+          <h2 className="mb-3">{t("love.emptyTitle")}</h2>
           <p className="text-muted-foreground mb-6">
-            Start adding products and kits you love by clicking the heart icon!
+            {t("love.emptyDesc")}
           </p>
           <Link
             to="/shop"
             className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-full hover:bg-primary/90 transition-colors"
           >
-            Browse Products
+            {t("love.browseProducts")}
           </Link>
         </div>
       </div>
@@ -137,25 +139,25 @@ export function Love() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <Heart className="w-8 h-8 text-primary fill-primary" />
-              <h1>My Wishlist</h1>
+              <h1>{t("love.title")}</h1>
             </div>
-            <button
-              onClick={handleRemoveAll}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-full transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Remove All
-            </button>
+              <button
+                onClick={handleRemoveAll}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-full transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                {t("love.removeAll")}
+              </button>
           </div>
           <p className="text-muted-foreground">
-            {resolvedProducts.length + resolvedKits.length} {resolvedProducts.length + resolvedKits.length === 1 ? "item" : "items"} saved for later
+            {t("love.itemsSaved", { count: resolvedProducts.length + resolvedKits.length })}
           </p>
         </div>
 
         {/* Products Section */}
         {resolvedProducts.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Products</h2>
+            <h2 className="text-xl font-semibold mb-4">{t("love.products")}</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {resolvedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
@@ -167,7 +169,7 @@ export function Love() {
         {/* Kits Section */}
         {resolvedKits.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">Combos</h2>
+              <h2 className="text-xl font-semibold mb-4">{t("love.combos")}</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {resolvedKits.map((kit) => (
                 <div
@@ -196,8 +198,8 @@ export function Love() {
                         toggleFavoriteKit(kit._id);
                         toast.success(
                           favoriteKits.includes(kit._id)
-                            ? "Đã xoá khỏi danh sách yêu thích"
-                            : "Đã thêm vào danh sách yêu thích"
+                            ? t("love.removedFromFavorites")
+                            : t("love.addedToFavorites")
                         );
                       }}
                       className="absolute top-3 right-3 w-10 h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
@@ -258,13 +260,13 @@ export function Love() {
                           price: kit.price,
                           products,
                         });
-                        toast.success(`Đã thêm combo "${kit.name}" vào giỏ hàng`);
+                        toast.success(t("love.addedComboToCart", { name: kit.name }));
                       }}
                       className="add-to-cart-btn mt-3"
                     >
                       <div className="btn-text">
                         <ShoppingCart className="w-4 h-4" />
-                        Add to cart
+                        {t("love.addToCart")}
                       </div>
                       <div className="btn-icon">
                         <svg
@@ -295,17 +297,17 @@ export function Love() {
         <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Wishlist:</p>
-              <p className="text-base font-bold text-primary">{resolvedProducts.length} items</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{t("love.wishlist")}</p>
+              <p className="text-base font-bold text-primary">{resolvedProducts.length} {t("love.items")}</p>
             </div>
              <button
                onClick={addAllToCart}
                className="add-to-cart-btn"
              >
-               <div className="btn-text">
-                 <ShoppingCart className="size-4" />
-                 Add to cart
-               </div>
+                <div className="btn-text">
+                  <ShoppingCart className="size-4" />
+                  {t("love.addToCart")}
+                </div>
                <div className="btn-icon">
                  <svg
                    xmlns="http://www.w3.org/2000/svg"

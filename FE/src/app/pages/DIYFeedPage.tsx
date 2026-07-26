@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { diyService } from "../../features/diy/services/diy.service";
 import type { DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
@@ -26,9 +27,10 @@ interface CreatorInfo {
 }
 
 export function DIYFeedPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { addToCart } = useCart();
+  const { addKitToCart } = useCart();
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [search, setSearch] = useState("");
   const [posts, setPosts] = useState<DIYPost[]>([]);
@@ -81,18 +83,18 @@ export function DIYFeedPage() {
   };
 
   const buyCombo = (post: DIYPost) => {
-    const itemPrice = (post.price ?? 0) / (post.linkedProduct?.length || 1);
-    post.linkedProduct?.forEach((item) => {
-      addToCart({
+    addKitToCart({
+      kitId: post._id,
+      name: post.title,
+      thumbnail: post.images[0],
+      price: post.price ?? 0,
+      products: (post.linkedProduct ?? []).map((item) => ({
         productId: item.productId,
         variantId: "default",
         name: item.productId,
         image: post.images[0],
-        color: "",
-        hexCode: "#ccc",
-        price: itemPrice,
-        stock: 999,
-      });
+        price: (post.price ?? 0) / (post.linkedProduct?.length || 1),
+      })),
     });
     toast.success("Materials added to cart");
   };
@@ -125,12 +127,12 @@ export function DIYFeedPage() {
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
         <div className="mx-auto max-w-7xl">
           <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
-            <Badge variant="secondary" className="mb-4">DIY</Badge>
+            <Badge variant="secondary" className="mb-4">{t("nav.diy")}</Badge>
             <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-              Fan-made crochet inspiration you can buy instantly.
+              {t("diyFeed.headline")}
             </h1>
             <p className="max-w-3xl text-muted-foreground md:text-lg">
-              Browse creator projects, save your favorites, then buy the exact material combo behind every look.
+              {t("diyFeed.subtitle")}
             </p>
           </section>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -149,21 +151,21 @@ export function DIYFeedPage() {
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <div className="mx-auto max-w-7xl">
         <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
-          <Badge variant="secondary" className="mb-4">DIY</Badge>
+          <Badge variant="secondary" className="mb-4">{t("nav.diy")}</Badge>
           <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            Fan-made crochet inspiration you can buy instantly.
+            {t("diyFeed.headline")}
           </h1>
           <p className="max-w-3xl text-muted-foreground md:text-lg">
-            Browse creator projects, save your favorites, then buy the exact material combo behind every look.
+            {t("diyFeed.subtitle")}
           </p>
         </section>
 
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FeedFilter)}>
             <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-fit sm:grid-cols-3">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="newest">Newest</TabsTrigger>
-              <TabsTrigger value="purchased">Most Purchased</TabsTrigger>
+              <TabsTrigger value="all">{t("diyFeed.all")}</TabsTrigger>
+              <TabsTrigger value="newest">{t("diyFeed.newest")}</TabsTrigger>
+              <TabsTrigger value="purchased">{t("diyFeed.mostPurchased")}</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -172,7 +174,7 @@ export function DIYFeedPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tags: bag, beginner..."
+              placeholder={t("diyFeed.searchPlaceholder")}
               className="pl-9"
             />
           </div>
@@ -193,10 +195,10 @@ export function DIYFeedPage() {
                   <img src={post.images[0]} alt={post.title} className="w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                   <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 p-3 opacity-100 md:opacity-0 md:transition-opacity group-hover:md:opacity-100">
                     <Button asChild size="sm" variant="secondary">
-                      <Link to={`/diy/${post._id}`} onClick={(e) => { if (!isAuthenticated) { e.preventDefault(); navigate("/auth/login"); } }}>View material</Link>
+                      <Link to={`/diy/${post._id}`} onClick={(e) => { if (!isAuthenticated) { e.preventDefault(); navigate("/auth/login"); } }}>{t("diyFeed.viewMaterial")}</Link>
                     </Button>
                     <Button size="sm" onClick={() => requireAuth(() => buyCombo(post))}>
-                      <ShoppingBag className="size-4" /> Buy now
+                      <ShoppingBag className="size-4" /> {t("diyFeed.buyNow")}
                     </Button>
                   </div>
                 </div>
@@ -208,7 +210,7 @@ export function DIYFeedPage() {
                       <AvatarFallback>{creator?.fullName?.charAt(0) || "C"}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{creator?.fullName || "Creator"}</p>
+                      <p className="truncate text-sm font-medium">{creator?.fullName || t("diyFeed.creator")}</p>
                     </div>
                   </div>
 
@@ -220,10 +222,10 @@ export function DIYFeedPage() {
                     <span className="text-primary font-semibold">
                       {post.price != null && post.price > 0
                         ? formatPrice(post.price)
-                        : <span className="text-muted-foreground">Free</span>}
+                        : <span className="text-muted-foreground">{t("diyFeed.free")}</span>}
                     </span>
                     {post.purchaseCount != null && post.purchaseCount > 0 && (
-                      <span className="text-xs text-muted-foreground">{post.purchaseCount.toLocaleString()} bought</span>
+                      <span className="text-xs text-muted-foreground">{post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}</span>
                     )}
                   </div>
 

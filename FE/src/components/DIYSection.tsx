@@ -8,6 +8,7 @@ import {
   useMotionValue,
   useTransform,
 } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -354,6 +355,7 @@ export function CreatorPhoto({
   index?: number;
   draggable?: boolean;
 }) {
+  const { t } = useLanguage();
   const reduce = useReducedMotion();
 
   // ── Hover thật do chuột điều khiển ──
@@ -558,7 +560,7 @@ export function CreatorPhoto({
               pointerEvents: "none",
             }}
           >
-            kéo để thích ↗
+            {t("diy.dragHint")}
           </span>
         )}
       </div>
@@ -677,6 +679,7 @@ function SCurveThread() {
 // ── Section heading ────────────────────────────────────────────────────────────
 
 function DIYHeading() {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -720,7 +723,7 @@ function DIYHeading() {
               letterSpacing: "0.05em",
             }}
           >
-            Cộng đồng · 6k người làm
+            {t("diy.eyebrow")}
           </span>
         </div>
 
@@ -738,7 +741,7 @@ function DIYHeading() {
                 lineHeight: 1.12,
               }}
             >
-              Xem nó được làm.
+              {t("diy.headline1")}
             </span>
             {/* Line 2 — italic + primary */}
             <span
@@ -753,7 +756,7 @@ function DIYHeading() {
                 lineHeight: 1.12,
               }}
             >
-              Mua bộ kit.
+              {t("diy.headline2")}
             </span>
             {/* Line 3 — bold + trailing comma */}
             <span
@@ -767,7 +770,7 @@ function DIYHeading() {
                 lineHeight: 1.12,
               }}
             >
-              Làm của bạn.,
+              {t("diy.headline3")}
             </span>
         </h2>
       </div>
@@ -1205,6 +1208,7 @@ export function DIYSection({ hoveredIndex = -1 }: { hoveredIndex?: number }) {
 // Used in App.tsx frames for the close-up heart icon comparison.
 
 export function HeartStatePanel() {
+  const { t } = useLanguage();
   const creator = CREATORS[2]; // Imani — highest likes, good reference
   return (
     <div style={{ display: "flex", gap: "48px", alignItems: "center" }}>
@@ -1237,7 +1241,7 @@ export function HeartStatePanel() {
             color: "var(--foreground-muted)",
           }}
         >
-          Default — unfilled
+          {t("diy.default")}
         </span>
       </div>
 
@@ -1281,7 +1285,7 @@ export function HeartStatePanel() {
             color: "var(--decor-heart)",
           }}
         >
-          Liked — filled
+          {t("diy.likedLabel")}
         </span>
       </div>
     </div>

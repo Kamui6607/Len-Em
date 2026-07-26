@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { ProductCard } from "../app/components/ProductCard";
 import { products } from "../app/data/products";
+import { useLanguage } from "../context/LanguageContext";
 
 // Take first 4 products from the shop
 const SHOP_PRODUCTS = products.slice(0, 4);
@@ -8,6 +9,7 @@ const SHOP_PRODUCTS = products.slice(0, 4);
 // ── Section heading ───────────────────────────────────────────────────────────
 
 function ShopHeading() {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -43,7 +45,7 @@ function ShopHeading() {
             letterSpacing: "0.05em",
           }}
         >
-          Lựa chọn cho nghề thủ công của bạn
+          {t("shop.eyebrow")}
         </span>
       </div>
 
@@ -59,9 +61,9 @@ function ShopHeading() {
             marginBottom: "14px",
           }}
         >
-          Nguyên liệu phù hợp{" "}
+          {t("shop.headline")}{" "}
           <span style={{ fontStyle: "italic", color: "var(--primary)" }}>
-            với dự án của bạn,
+            {t("shop.headlineItalic")}
           </span>
         </h2>
 
@@ -73,8 +75,7 @@ function ShopHeading() {
             lineHeight: 1.65,
           }}
         >
-          Mỗi cuộn sợi, kim và công cụ được chọn lọc để kết hợp với các bài học của chúng tôi.
-          Di chuột qua thẻ để xem chi tiết.
+          {t("shop.subtitle")}
         </p>
     </motion.div>
   );

@@ -4,12 +4,9 @@ import { Mail, ArrowLeft, CircleCheck as CheckCircle2, Loader as Loader2, Sparkl
 import { toast } from "sonner";
 import { authService } from "../../services/auth.service";
 import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
-import { CursorEffects } from "../../components/motion/CursorEffects";
-import { useTheme } from "../../app/context/ThemeContext";
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const { isDark } = useTheme();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,7 +29,6 @@ export function ForgotPasswordPage() {
     return (
       <>
         <AnimatedBackgroundAuth />
-        <CursorEffects isDark={isDark} />
         <div style={{
           minHeight: "100vh",
           display: "flex",
@@ -116,7 +112,6 @@ export function ForgotPasswordPage() {
   return (
     <>
       <AnimatedBackgroundAuth />
-      <CursorEffects isDark={isDark} />
       <div style={{
         minHeight: "100vh",
         display: "flex",

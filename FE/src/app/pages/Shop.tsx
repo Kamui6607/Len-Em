@@ -14,6 +14,7 @@ import { useLearnStore } from "../../store/learn.store";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit } from "../../api/kitService";
 import { cn } from "../components/ui/utils";
@@ -41,19 +42,65 @@ const CATEGORY_META: Record<
   },
 };
 
+// Backend only supports: newest. Remove price-asc, price-desc, rating (cause 400)
 const SORT_OPTIONS = [
   { value: "popular", label: "Most popular" },
   { value: "newest", label: "Newest first" },
-  { value: "price-asc", label: "Price: low → high" },
-  { value: "price-desc", label: "Price: high → low" },
-  { value: "rating", label: "Top rated" },
 ];
+
+// ── Price range filter component (standalone to preserve input focus) ──
+function PriceRangeFilter({ onApply }: { onApply: (min: number, max: number) => void }) {
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(0);
+
+  return (
+    <div className="filter-group">
+      <span className="filter-group-label">Price range</span>
+      <div className="price-inputs">
+        <input
+          className="price-input"
+          type="number"
+          placeholder="Min"
+          value={minPrice || ""}
+          onChange={(e) => setMinPrice(Number(e.target.value))}
+        />
+        <span className="price-sep">–</span>
+        <input
+          className="price-input"
+          type="number"
+          placeholder="Max"
+          value={maxPrice || ""}
+          onChange={(e) => setMaxPrice(Number(e.target.value))}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => onApply(minPrice, maxPrice)}
+        style={{
+          marginTop: "8px",
+          width: "100%",
+          padding: "8px",
+          borderRadius: "10px",
+          border: "none",
+          background: "var(--primary)",
+          color: "var(--primary-foreground)",
+          fontSize: "0.82rem",
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Find
+      </button>
+    </div>
+  );
+}
 
 export function Shop() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { isFavoriteKit, toggleFavoriteKit } = useFavorites();
+  const { t } = useLanguage();
 
   const {
     filters,
@@ -441,27 +488,13 @@ const getEmptyStateMessage = () => {
         </div>
       )}
 
-      {/* Price range */}
-      <div className="filter-group">
-        <span className="filter-group-label">Price range</span>
-        <div className="price-inputs">
-          <input
-            className="price-input"
-            type="number"
-            placeholder="Min"
-            value={filters.minPrice || ""}
-            onChange={(e) => updateFilter("minPrice", Number(e.target.value))}
-          />
-          <span className="price-sep">–</span>
-          <input
-            className="price-input"
-            type="number"
-            placeholder="Max"
-            value={filters.maxPrice || ""}
-            onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
-          />
-        </div>
-      </div>
+      {/* Price range - standalone component with own state */}
+      <PriceRangeFilter
+        onApply={(min, max) => {
+          updateFilter("minPrice", min);
+          updateFilter("maxPrice", max);
+        }}
+      />
     </>
   );
 
@@ -779,7 +812,7 @@ const getEmptyStateMessage = () => {
             <Search size={16} className="search-icon" />
             <input
               className="search-input"
-              placeholder="Search products…"
+              placeholder={t("shop.searchPlaceholder")}
               value={filters.search}
               onChange={(e) => updateFilter("search", e.target.value)}
             />
@@ -1094,7 +1127,7 @@ const getEmptyStateMessage = () => {
                           key={kit._id}
                           to={`/kits/${kit._id}`}
                           className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                          aria-label={`Xem chi tiết combo ${kit.name}`}
+                          aria-label={`${t("shop.kitDetail")} ${kit.name}`}
                         >
                           <div className="aspect-[4/3] overflow-hidden bg-muted relative">
                             <img
@@ -1118,8 +1151,8 @@ const getEmptyStateMessage = () => {
                                 toggleFavoriteKit(kit._id);
                                 toast.success(
                                   isFavorite
-                                    ? "Đã xoá khỏi danh sách yêu thích"
-                                    : "Đã thêm vào danh sách yêu thích"
+                                    ? t("shop.removedFromFavorites")
+                                    : t("shop.addedToCart")
                                 );
                               }}
                               className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
@@ -1163,7 +1196,7 @@ const getEmptyStateMessage = () => {
                                 {kit.productIds.length} products included
                               </p>
                               <span className="text-xs font-medium text-primary">
-                                Xem chi tiết →
+                                {t("shop.viewDetails")} →
                               </span>
                             </div>
                           </div>

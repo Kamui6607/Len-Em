@@ -1,14 +1,7 @@
 /* ============================================================
    THEME TOGGLE — Uiverse.io by JkHuger (adapted)
-   Light thumb/track: #FFF6C7 | Dark thumb/track: #9B6FD6
+   Light: Soft Lilac (#E8DEFF) | Dark: Electric Indigo (#7C63FF)
    Depends on --bg, --transDur, --primaryT from theme.css
-
-   Sizing note: every dimension here is in `em`, and the component
-   is sized purely by setting `font-size` on `.theme` (see
-   .theme / .theme--sm below). Do NOT resize this with
-   `transform: scale()` — that scales the pixels visually but not
-   the element's actual layout box, which is what was causing the
-   dark square/corner artifact around the switch.
    ============================================================ */
 
 .theme {
@@ -16,11 +9,11 @@
   align-items: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  font-size: 9px; /* controls the whole switch's size — default (navbar) */
+  font-size: 9px;
 }
 
 .theme--sm {
-  font-size: 7.5px; /* smaller variant, e.g. mobile drawer / compact spots */
+  font-size: 7.5px;
 }
 
 .theme__icon {
@@ -87,11 +80,9 @@
 
 .theme__toggle {
   display: block;
-  background-color: #fff6c7;
+  background-color: #E8DEFF; /* Soft Lilac — light mode track */
   border-radius: 999px;
-  /* Viền LIGHT mode — tông vàng ấm khớp với track/thumb (#FFF6C7 / #FFE5A0),
-     không dùng chung --primaryT (biến đó là tím, hợp cho dark hơn) */
-  --toggle-border: rgba(224, 179, 63, 0.45);
+  --toggle-border: rgba(91, 61, 245, 0.25);
   box-shadow: 0 0 0 0.125em var(--toggle-border);
   padding: 0.25em;
   width: 6em;
@@ -107,7 +98,7 @@
 
 .theme__toggle:before {
   display: block;
-  background-color: #ffe5a0;
+  background-color: #DCCEFF; /* Soft Lilac hover — light mode thumb */
   border-radius: 50%;
   content: "";
   width: 2.5em;
@@ -123,8 +114,7 @@
 
 /* Checked = dark mode */
 .theme__toggle:checked {
-  background-color: #9b6fd6;
-  /* Viền DARK mode — giữ nguyên như cũ, tím theo --primaryT của theme.css */
+  background-color: #7C63FF; /* Electric Indigo (dark) — dark mode track */
   --toggle-border: var(--primaryT);
 }
 
@@ -133,8 +123,6 @@
 }
 
 .theme__toggle:checked ~ .theme__icon {
-  /* Vị trí RIÊNG của mặt trăng — không còn cộng dồn từ top/left mặt trời nữa.
-     Chỉnh top/left ở đây để di chuyển mặt trăng, không ảnh hưởng mặt trời. */
   top: 0.85em;
   left: 4.25em;
   transform: none;
@@ -143,7 +131,7 @@
 }
 
 .theme__toggle:checked:before {
-  background-color: #b497e8;
+  background-color: #9080FF; /* Primary hover (dark) — dark mode thumb */
 }
 
 .theme__toggle:checked ~ .theme__icon .theme__icon-part:nth-child(1) {

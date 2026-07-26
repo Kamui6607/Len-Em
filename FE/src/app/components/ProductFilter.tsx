@@ -28,8 +28,8 @@ interface ProductFilterProps {
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "popular", label: "Most Popular" },
   { value: "newest", label: "Newest" },
-  { value: "price-low", label: "Price: Low to High" },
-  { value: "price-high", label: "Price: High to Low" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
   { value: "rating", label: "Best Rating" },
 ];
 

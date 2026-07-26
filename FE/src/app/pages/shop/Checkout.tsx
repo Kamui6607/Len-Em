@@ -11,6 +11,7 @@ import * as yup from "yup";
 import { toast } from "sonner";
 import { Check, QrCode, ArrowLeft } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
+import { useLanguage } from "../../../context/LanguageContext";
 import { useAuthStore } from "../../../store/auth.store";
 import { orderApi } from "../../../api/orderService";
 import { formatPrice } from "../../../lib/formatPrice";
@@ -41,8 +42,9 @@ const PAYMENT_METHODS = [
 ];
 
 export function Checkout() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
-  const { cartItems, totalItems, totalPrice, clearCart } = useCart();
+  const { cartItems, cartKits, totalItems, totalPrice, clearCart } = useCart();
   const user = useAuthStore((s) => s.user);
   const [paymentMethod, setPaymentMethod] = useState<"VNPAY">("VNPAY");
   const [submitting, setSubmitting] = useState(false);
@@ -79,45 +81,60 @@ export function Checkout() {
   }, [user, reset]);
 
   const onSubmit = async (data: ShippingFormData) => {
-    if (cartItems.length === 0) {
-      toast.error("Giỏ hàng trống");
+    if (cartItems.length === 0 && cartKits.length === 0) {
+      toast.error(t("checkout.cartEmpty"));
       setSubmitting(false);
       return;
     }
 
     setSubmitting(true);
     try {
-      const payload: CreateOrderRequest = {
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          color: item.color,
-          hexCode: item.hexCode,
-        })),
-        shippingAddress: {
-          fullName: data.fullName,
-          phone: data.phone,
-          address: data.address,
-          ward: "",
-          district: "",
-          city: "",
-        },
-        paymentMethod,
-        shippingFee: deliveryFee,
-        ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
-      };
+      const payload: CreateOrderRequest & { kits?: Array<{ kitId: string }> } =
+        {
+          items: [
+            ...cartItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              color: item.color,
+              hexCode: item.hexCode,
+            })),
+            ...cartKits.flatMap((kit) =>
+              kit.products.map((p) => ({
+                productId: p.productId,
+                quantity: 1,
+                color: "",
+                hexCode: "",
+              })),
+            ),
+          ],
+          ...(cartKits.length > 0
+            ? { kits: cartKits.map((k) => ({ kitId: k.kitId })) }
+            : {}),
+          shippingAddress: {
+            fullName: data.fullName,
+            phone: data.phone,
+            address: data.address,
+            ward: "",
+            district: "",
+            city: "",
+          },
+          paymentMethod,
+          shippingFee: deliveryFee,
+          ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
+        };
 
       const response = await orderApi.createOrder(payload);
       const result = response.data;
 
-      // Order created successfully — clear cart regardless of payment method
-      clearCart();
-
       if (result.payUrl) {
-        // VNPAY: redirect to payment gateway
+        // VNPAY: redirect to payment gateway immediately — don't clear cart yet
+        // Cart will be cleared on the success page after payment confirmation
         window.location.href = result.payUrl;
         return;
       }
+
+      // Non-VNPAY: clear cart and navigate to success
+      clearCart();
 
       const orderId = result?.order?._id || "";
       const date = new Date().toLocaleDateString("en-GB", {
@@ -143,14 +160,14 @@ export function Checkout() {
           });
         }
       } else {
-        toast.error("Đặt hàng thất bại. Vui lòng thử lại.");
+        toast.error(t("checkout.orderFailed"));
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (cartItems.length === 0) {
+  if (cartItems.length === 0 && cartKits.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center max-w-md">
@@ -200,8 +217,10 @@ export function Checkout() {
                     <input
                       {...register("fullName")}
                       placeholder="Nguyễn Văn A"
-                      className={`w-full px-4 py-3 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base ${
-                        errors.fullName ? "border-destructive" : "border-border"
+                      className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
+                        errors.fullName
+                          ? "border-destructive"
+                          : "border-border/70 hover:border-primary/40"
                       }`}
                     />
                     {errors.fullName && (
@@ -218,8 +237,10 @@ export function Checkout() {
                     <input
                       {...register("phone")}
                       placeholder="0901234567"
-                      className={`w-full px-4 py-3 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base ${
-                        errors.phone ? "border-destructive" : "border-border"
+                      className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
+                        errors.phone
+                          ? "border-destructive"
+                          : "border-border/70 hover:border-primary/40"
                       }`}
                     />
                     {errors.phone && (
@@ -236,8 +257,10 @@ export function Checkout() {
                     <input
                       {...register("address")}
                       placeholder="Số nhà, tên đường, phường/xã, quận/huyện, thành phố"
-                      className={`w-full px-4 py-3 bg-input-background border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all text-base ${
-                        errors.address ? "border-destructive" : "border-border"
+                      className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
+                        errors.address
+                          ? "border-destructive"
+                          : "border-border/70 hover:border-primary/40"
                       }`}
                     />
                     {errors.address && (
@@ -301,6 +324,38 @@ export function Checkout() {
 
                 {/* Cart items (read-only) */}
                 <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                  {/* Kits */}
+                  {cartKits.map((kit) => (
+                    <div
+                      key={kit.kitId}
+                      className="flex items-start gap-3 py-2 border-b border-border"
+                    >
+                      <img
+                        src={kit.thumbnail}
+                        alt={kit.name}
+                        className="w-12 h-12 rounded-lg object-cover bg-muted flex-shrink-0"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallback) {
+                            target.dataset.fallback = "true";
+                            target.src = `https://picsum.photos/seed/${kit.kitId}/100/100`;
+                          }
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {kit.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {kit.productCount} products included
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium flex-shrink-0">
+                        {formatPrice(kit.price)}
+                      </p>
+                    </div>
+                  ))}
+
                   {cartItems.map((item) => (
                     <div
                       key={`${item.productId}-${item.color}`}
@@ -361,7 +416,9 @@ export function Checkout() {
                   )}
                   <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border">
                     <span>Tổng cộng</span>
-                    <span className="text-primary">{formatPrice(grandTotal)}</span>
+                    <span className="text-primary">
+                      {formatPrice(grandTotal)}
+                    </span>
                   </div>
                 </div>
 

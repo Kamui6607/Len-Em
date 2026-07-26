@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion, useReducedMotion } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
 
 export type StackMode = "collapsed" | "fanned";
 
@@ -110,6 +111,7 @@ function HandInkedUnderline({ width = 300 }: { width?: number }) {
 }
 
 function EyebrowBadge() {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
@@ -133,7 +135,7 @@ function EyebrowBadge() {
           fontFamily: "'Caveat', cursive", fontSize: "0.85rem", fontWeight: 500,
           color: "var(--color-primary)", letterSpacing: "0.03em",
         }}>
-          Mùa mới · Xuân 2025
+          {t("hero.eyebrow")}
         </span>
       </span>
     </motion.div>
@@ -141,6 +143,7 @@ function EyebrowBadge() {
 }
 
 function HeroHeadline() {
+  const { t } = useLanguage();
   return (
     <div style={{ marginBottom: "1.35rem" }}>
         <motion.div
@@ -157,7 +160,7 @@ function HeroHeadline() {
             lineHeight: 1.08,
           }}
         >
-          Học đan móc,
+          {t("hero.headline1")}
         </motion.div>
 
       <motion.div
@@ -175,10 +178,10 @@ function HeroHeadline() {
           lineHeight: 1.08,
         }}
       >
-        <span>sáng tạo</span>
+        <span>{t("hero.headline2")}</span>
         <span className="relative inline-block" style={{ paddingBottom: "4px" }}>
           <span style={{ fontStyle: "italic", fontWeight: 600, color: "var(--color-primary)" }}>
-            creatively
+            {t("hero.headline2Alt")}
           </span>
           <span className="absolute" style={{ left: "-4px", right: "-4px", bottom: "-2px", display: "block" }}>
             <HandInkedUnderline width={220} />
@@ -190,6 +193,7 @@ function HeroHeadline() {
 }
 
 function HeroSubtitle() {
+  const { t } = useLanguage();
   return (
       <motion.p
         initial={{ opacity: 0, y: 16 }}
@@ -207,8 +211,7 @@ function HeroSubtitle() {
           marginBottom: "2rem",
         }}
       >
-        Bài học đan móc từng bước, bộ sợi được tuyển chọn, và cộng đồng
-        những người làm thủ công. Hành trình thủ công ấm áp của bạn bắt đầu từ đây.
+        {t("hero.subtitle")}
       </motion.p>
   );
 }
@@ -224,6 +227,7 @@ const ctaItem = {
 };
 
 function HeroCTAs() {
+  const { t } = useLanguage();
   return (
     <motion.div
       className="flex items-center gap-3 flex-wrap"
@@ -256,7 +260,7 @@ function HeroCTAs() {
           <path d="M5.5 2.2C6 4 6.2 6 6 8C5.8 10 5.2 12 4.4 13.5" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" strokeOpacity="0.8"/>
           <path d="M10.5 2.5C10 4.3 9.8 6.2 10 8.2C10.2 10 10.8 11.8 11.6 13.2" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" strokeOpacity="0.8"/>
         </svg>
-        Bắt đầu học
+        {t("hero.ctaStart")}
       </motion.a>
 
       <motion.a
@@ -278,7 +282,7 @@ function HeroCTAs() {
           textDecoration: "none",
         }}
       >
-        Duyệt mẫu
+        {t("hero.ctaBrowse")}
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path d="M2.5 7H11.5M8 3.5L11.5 7L8 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -305,7 +309,7 @@ function HeroCTAs() {
         <span style={{
           fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", fontWeight: 500, color: "var(--color-foreground)",
         }}>
-          4,200+ người làm thủ công
+          {t("hero.community")}
         </span>
       </motion.div>
     </motion.div>
@@ -313,10 +317,11 @@ function HeroCTAs() {
 }
 
 function ThreeStepCard() {
+  const { t } = useLanguage();
   const steps = [
-    { num: "1", label: "Choose\nyarn", icon: "🧶" },
-    { num: "2", label: "Learn\nstitch", icon: "🪡" },
-    { num: "3", label: "Wear\nit!", icon: "✨" },
+    { num: "1", label: t("hero.step1"), icon: "🧶" },
+    { num: "2", label: t("hero.step2"), icon: "🪡" },
+    { num: "3", label: t("hero.step3"), icon: "✨" },
   ];
 
   return (
@@ -341,7 +346,7 @@ function ThreeStepCard() {
           fontFamily: "'Caveat', cursive", fontSize: "0.8rem", fontWeight: 600,
           color: "var(--color-primary)", letterSpacing: "0.04em",
         }}>
-          cách hoạt động
+          {t("hero.howItWorks")}
         </span>
       </div>
 
@@ -390,7 +395,7 @@ function ThreeStepCard() {
           <path d="M8.5 4.5 L6 7 L9 8.5" stroke="var(--color-primary)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
         </svg>
         <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.72rem", color: "var(--color-muted-foreground)", fontStyle: "italic" }}>
-          lặp lại mãi mãi
+          {t("hero.loop")}
         </span>
       </div>
     </motion.div>

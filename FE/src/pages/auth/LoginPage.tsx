@@ -12,13 +12,10 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
-import { CursorEffects } from "../../components/motion/CursorEffects";
-import { useTheme } from "../../app/context/ThemeContext";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuthStore();
-  const { isDark } = useTheme();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -365,7 +362,6 @@ export function LoginPage() {
       `}</style>
 
       <AnimatedBackgroundAuth />
-      <CursorEffects isDark={isDark} />
       <div className="login-root">
         <div className="login-card">
           {/* Decorative glow */}

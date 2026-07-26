@@ -10,16 +10,12 @@ import { ScrollProgress } from "../../components/motion/ScrollProgress";
 import { BackToTop } from "../../components/motion/BackToTop";
 import { SectionDivider } from "../../components/motion/SectionDivider";
 import { AnimatedBackground } from "../../components/motion/AnimatedBackground";
-import { CursorEffects } from "../../components/motion/CursorEffects";
-import { useTheme } from "../../app/context/ThemeContext";
 
 export function Home() {
-  const { isDark } = useTheme();
   
   return (
     <>
       <AnimatedBackground />
-      <CursorEffects isDark={isDark} />
       <ScrollProgress />
 
       {/* Page entrance fade — only on mount */}

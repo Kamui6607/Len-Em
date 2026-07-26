@@ -1,5 +1,6 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
 
 // ═══════════════════════════════════════════════════════════════════
 // BOW / KNOT GRAPHIC  — static decorative SVG closing asset
@@ -163,6 +164,7 @@ const footerColumnVariants = {
 // ═══════════════════════════════════════════════════════════════════
 
 export function ClosingCTA() {
+  const { t } = useLanguage();
   return (
     <section
       style={{
@@ -334,7 +336,7 @@ export function ClosingCTA() {
             color: "color-mix(in srgb, var(--primary-foreground) 85%, transparent)",
             letterSpacing: "0.05em",
           }}>
-            Tham gia cùng 6.200 người yêu thích
+            {t("cta.eyebrow")}
           </span>
         </motion.div>
 
@@ -349,7 +351,7 @@ export function ClosingCTA() {
             letterSpacing: "-0.03em",
             lineHeight: 1.05,
           }}>
-            Dự án handmade
+            {t("cta.headline1")}
           </span>
           <motion.span
             variants={ctaItemVariants}
@@ -364,7 +366,21 @@ export function ClosingCTA() {
               lineHeight: 1.05,
             }}
           >
-            tiếp theo của bạn bắt đầu từ đây,
+            {t("cta.headline2")}
+          </motion.span>
+          <motion.span
+            variants={ctaItemVariants}
+            style={{
+              display: "block",
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: "clamp(2.4rem, 4.5vw, 4rem)",
+              fontWeight: 700,
+              color: "var(--primary-foreground)",
+              letterSpacing: "-0.03em",
+              lineHeight: 1.05,
+            }}
+          >
+            {t("cta.headline3")}
           </motion.span>
         </motion.h2>
 
@@ -380,8 +396,7 @@ export function ClosingCTA() {
             margin: "0 auto 40px",
           }}
         >
-          Học từ những người làm thực thụ, mua nguyên liệu chọn lọc,
-          và chia sẻ thành quả của bạn — tất cả trong một góc ấm áp của internet.
+          {t("cta.subtitle")}
         </motion.p>
 
         {/* Buttons */}
@@ -412,7 +427,7 @@ export function ClosingCTA() {
               whiteSpace: "nowrap" as const,
             }}
           >
-            Bắt đầu
+            {t("cta.ctaStart")}
             <ArrowRight size={15} strokeWidth={2.5} />
           </motion.a>
 
@@ -440,7 +455,7 @@ export function ClosingCTA() {
               whiteSpace: "nowrap" as const,
             }}
           >
-            Khám phá cửa hàng
+            {t("cta.ctaShop")}
           </motion.a>
         </motion.div>
 
@@ -603,6 +618,7 @@ function FooterColumn({ heading, links }: { heading: string; links: string[] }) 
 // ═══════════════════════════════════════════════════════════════════
 
 export function LenEmFooter() {
+  const { t } = useLanguage();
   return (
     <motion.footer
       initial={{ opacity: 0 }}
@@ -664,7 +680,7 @@ export function LenEmFooter() {
               lineHeight: 1.4,
               letterSpacing: "0.02em",
             }}>
-              Workshop ấm cúng,<br />kết quả tinh tế.
+              {t("cta.footprint")}
             </p>
 
             <div style={{ marginTop: "18px" }}>
@@ -684,9 +700,9 @@ export function LenEmFooter() {
             </div>
           </motion.div>
 
-          <FooterColumn heading="Shop"    links={["New Arrivals","Yarn & Fibres","Needles & Tools","Kits & Bundles","Gift Cards"]} />
-          <FooterColumn heading="Learn"   links={["Browse Courses","Beginner Track","Pattern Library","Creator Programme","Community"]} />
-          <FooterColumn heading="Connect" links={["Our Studio","Newsletter","Wholesale","Press & Media","Contact"]} />
+          <FooterColumn heading={t("cta.footerShop")}    links={[t("cta.footerNewArrivals"),t("cta.footerYarn"),t("cta.footerNeedles"),t("cta.footerKits"),t("cta.footerGiftCards")]} />
+          <FooterColumn heading={t("cta.footerLearn")}   links={[t("cta.footerCourses"),t("cta.footerBeginner"),t("cta.footerPatterns"),t("cta.footerCreator"),t("cta.footerCommunity")]} />
+          <FooterColumn heading={t("cta.footerConnect")} links={[t("cta.footerStudio"),t("cta.footerNewsletter"),t("cta.footerWholesale"),t("cta.footerPress"),t("cta.footerContact")]} />
         </motion.div>
 
         {/* ── Bottom bar ── */}
@@ -705,14 +721,14 @@ export function LenEmFooter() {
             margin: 0,
             letterSpacing: "0.02em",
           }}>
-            © 2026 Len&Em Studio.{" "}
+            {t("cta.copyright")}{" "}
             <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.78rem", color: "var(--footer-text-muted)" }}>
-              Made with ♥ in Amsterdam.
+              {t("cta.madeWith")}
             </span>
           </p>
 
           <div style={{ display: "flex", gap: "16px" }}>
-            {["Privacy", "Terms", "Cookies"].map((item) => (
+            {[t("cta.privacy"), t("cta.terms"), t("cta.cookies")].map((item) => (
               <a key={item} href="#" style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "0.68rem",
                 color: "var(--footer-text-dim)", textDecoration: "none", letterSpacing: "0.02em",

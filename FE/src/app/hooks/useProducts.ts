@@ -6,7 +6,7 @@ import { fetchProducts } from "../../features/shop/services/product.service";
 import type { Product } from "../data/products";
 import type { PaginatedResponse } from "../../shared/types/api.types";
 
-export type SortOption = "newest" | "price-low" | "price-high" | "popular" | "rating";
+export type SortOption = "popular" | "newest" | "oldest" | "price-asc" | "price-desc" | "rating";
 
 export interface FilterState {
   search: string;

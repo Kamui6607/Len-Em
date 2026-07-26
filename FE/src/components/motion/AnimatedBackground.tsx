@@ -39,7 +39,6 @@ export function AnimatedBackground() {
           position: "absolute",
           inset: "-15%",
           filter: "blur(40px) saturate(1.1)",
-          willChange: "transform",
           transition: "background 0.6s ease",
           background: isDark
             ? `radial-gradient(38% 32% at 20% 20%, rgba(107,63,160,0.42) 0%, transparent 70%),

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "../../../context/CartContext";
+import { useLanguage } from "../../../context/LanguageContext";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ImageWithFallback } from "../../../components/figma/ImageWithFallback";
 
@@ -228,6 +229,8 @@ export function EmptyHoopIllustration({ size = 200 }: { size?: number }) {
 }
 
 export function EmptyCartState() {
+  const { t } = useLanguage();
+  
   return (
     <div
       style={{
@@ -254,7 +257,7 @@ export function EmptyCartState() {
           marginBottom: "8px",
         }}
       >
-        Your basket is still empty
+        {t("cart.emptyTitle")}
       </h2>
       <p
         style={{
@@ -265,7 +268,7 @@ export function EmptyCartState() {
           marginBottom: "28px",
         }}
       >
-        Every maker's journey starts with one skein.
+        {t("cart.emptyDesc")}
       </p>
 
       <Link
@@ -288,7 +291,7 @@ export function EmptyCartState() {
         }}
       >
         <ShoppingBag size={14} strokeWidth={1.8} />
-        Continue shopping
+        {t("cart.continueShopping")}
       </Link>
     </div>
   );
@@ -662,6 +665,7 @@ export function CartKitRow({
   onRemove,
   defaultExpanded = false,
 }: CartKitRowProps) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const level = item.level || "beginner";
   const ls = KIT_LEVEL_STYLE[level];
@@ -804,13 +808,11 @@ export function CartKitRow({
           >
             {expanded ? (
               <>
-                <ChevronUp size={12} strokeWidth={2} /> Hide{" "}
-                {item.products.length} items
+                <ChevronUp size={12} strokeWidth={2} /> {t("cart.hideItems", { count: item.products.length })}
               </>
             ) : (
               <>
-                <ChevronDown size={12} strokeWidth={2} /> Show{" "}
-                {item.products.length} items
+                <ChevronDown size={12} strokeWidth={2} /> {t("cart.showItems", { count: item.products.length })}
               </>
             )}
           </button>
@@ -840,9 +842,9 @@ export function CartKitRow({
                 textDecoration: "line-through",
                 textDecorationColor: "var(--accent-pink)",
               }}
-            >
-              {formatPrice(item.originalIndividualTotal)}
-            </div>
+                >
+                  {t("cart.bundle")}
+                </div>
           )}
         </div>
 
@@ -936,8 +938,8 @@ export function CartKitRow({
                     fontSize: "0.6rem",
                     color: "var(--foreground-muted)",
                   }}
-                >
-                  included
+                 >
+                  {t("cart.included")}
                 </span>
               </div>
             ))}
@@ -959,6 +961,7 @@ export function OrderSummaryCard({
   cartItems: { price: number; quantity: number }[];
   cartKits: { price: number; originalIndividualTotal?: number }[];
 }) {
+  const { t } = useLanguage();
   const [promoOpen, setPromoOpen] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoOk, setPromoOk] = useState(false);
@@ -1003,18 +1006,18 @@ export function OrderSummaryCard({
       />
 
       <div style={{ padding: "24px" }}>
-        <h2
-          style={{
-            fontFamily: "'Playfair Display',serif",
-            fontSize: "1.05rem",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            letterSpacing: "-0.015em",
-            margin: "0 0 20px",
-          }}
-        >
-          Order summary
-        </h2>
+      <h2
+        style={{
+          fontFamily: "'Playfair Display',serif",
+          fontSize: "1.05rem",
+          fontWeight: 600,
+          color: "var(--foreground)",
+          letterSpacing: "-0.015em",
+          margin: "0 0 20px",
+        }}
+      >
+        {t("cart.orderSummary")}
+      </h2>
 
         {/* Line items */}
         <div
@@ -1034,9 +1037,7 @@ export function OrderSummaryCard({
                 color: "var(--foreground-muted)",
               }}
             >
-              Subtotal (
-              {cartItems.reduce((s, i) => s + i.quantity, 0) + cartKits.length}{" "}
-              items)
+              {t("cart.subtotal", { count: cartItems.reduce((s, i) => s + i.quantity, 0) + cartKits.length })}
             </span>
             <span
               style={{
@@ -1066,7 +1067,7 @@ export function OrderSummaryCard({
                   color: "var(--success-text)",
                 }}
               >
-                ✦ Kit bundle savings
+                {t("cart.kitSavings")}
               </span>
               <span
                 style={{
@@ -1076,7 +1077,7 @@ export function OrderSummaryCard({
                   color: "var(--success-text)",
                 }}
               >
-                − {formatPrice(kitSavings)}{" "}
+                 − {formatPrice(kitSavings)}{" "}
                 <span
                   style={{
                     fontFamily: "'Inter',sans-serif",
@@ -1084,7 +1085,7 @@ export function OrderSummaryCard({
                     fontWeight: 400,
                   }}
                 >
-                  saved
+                  {t("cart.saved")}
                 </span>
               </span>
             </div>
@@ -1147,7 +1148,7 @@ export function OrderSummaryCard({
               }}
             >
               {promoOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-              {promoOk ? "Promo applied ✓" : "Have a promo code?"}
+              {promoOk ? t("cart.promoApplied") : t("cart.havePromo")}
             </button>
 
             {promoOpen && !promoOk && (
@@ -1155,7 +1156,7 @@ export function OrderSummaryCard({
                 <input
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
-                  placeholder="Enter code…"
+                  placeholder={t("cart.enterCode")}
                   style={{
                     flex: 1,
                     padding: "7px 12px",
@@ -1193,7 +1194,7 @@ export function OrderSummaryCard({
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  {checking ? "…" : "Apply"}
+                  {checking ? "…" : t("cart.apply")}
                 </button>
               </div>
             )}
@@ -1221,19 +1222,19 @@ export function OrderSummaryCard({
             marginBottom: "20px",
           }}
         >
-          <div>
-            <div
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase" as const,
-                color: "var(--foreground-muted)",
-              }}
-            >
-              Order total
-            </div>
+              <div>
+                <div
+                  style={{
+                    fontFamily: "'Inter',sans-serif",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const,
+                    color: "var(--foreground-muted)",
+                  }}
+                >
+                  {t("cart.orderTotal")}
+                </div>
             {(kitSavings > 0 || promoOk) && (
               <div
                 style={{
@@ -1243,7 +1244,7 @@ export function OrderSummaryCard({
                   marginTop: "1px",
                 }}
               >
-                You're saving {formatPrice(kitSavings + promoSaving)} today
+                 {t("cart.savingToday", { amount: formatPrice(kitSavings + promoSaving) })}
               </div>
             )}
           </div>
@@ -1295,7 +1296,7 @@ export function OrderSummaryCard({
           }}
         >
           <Lock size={14} strokeWidth={2} />
-          Proceed to checkout
+          {t("cart.proceedToCheckout")}
           <ArrowRight size={14} strokeWidth={2} />
         </Link>
 
@@ -1308,7 +1309,7 @@ export function OrderSummaryCard({
             flexWrap: "wrap" as const,
           }}
         >
-          {["Secure payment", "30-day returns"].map((note) => (
+          {[t("cart.securePayment"), t("cart.returns30Day")].map((note) => (
             <span
               key={note}
               style={{
@@ -1337,6 +1338,7 @@ export function OrderSummaryCard({
 // ═══════════════════════════════════════════════════════════════════
 
 export function CartPage() {
+  const { t } = useLanguage();
   const {
     cartItems,
     cartKits,
@@ -1357,7 +1359,7 @@ export function CartPage() {
 
   const handleClearCart = () => {
     clearCart();
-    toast.success("Đã xoá tất cả sản phẩm khỏi giỏ hàng");
+    toast.success(t("cart.removeAllItems"));
   };
 
   const isEmpty = cartItems.length === 0 && cartKits.length === 0;
@@ -1420,20 +1422,20 @@ export function CartPage() {
                     lineHeight: 1.1,
                     margin: 0,
                   }}
-                >
-                  Your bag
-                </h1>
-                {!isEmpty && (
-                  <span
-                    style={{
-                      fontFamily: "'Caveat',cursive",
-                      fontSize: "0.9rem",
-                      color: "var(--foreground-muted)",
-                    }}
                   >
-                    {totalItems} items
-                  </span>
-                )}
+                    {t("cart.yourBag")}
+                  </h1>
+                  {!isEmpty && (
+                    <span
+                      style={{
+                        fontFamily: "'Caveat',cursive",
+                        fontSize: "0.9rem",
+                        color: "var(--foreground-muted)",
+                      }}
+                    >
+                      {totalItems} {t("cart.items")}
+                    </span>
+                  )}
               </div>
               {!isEmpty && (
                 <button
@@ -1464,7 +1466,7 @@ export function CartPage() {
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  Remove all items
+                  {t("cart.removeAllItems")}
                 </button>
               )}
             </div>
@@ -1560,7 +1562,7 @@ export function CartPage() {
                       e.currentTarget.style.transform = "translateX(0)";
                     }}
                   >
-                    ← Continue shopping
+                   ← {t("cart.continueShopping")}
                   </Link>
                 </div>
               </div>

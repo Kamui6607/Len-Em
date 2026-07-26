@@ -7,6 +7,7 @@ import {
   LogOut,
   Menu,
   Palette,
+  Search,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
@@ -14,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
@@ -25,6 +26,8 @@ import { cn } from "./ui/utils";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { BottomNav } from "../../components/mobile/BottomNav";
 import { NotificationsBell } from "./NotificationsBell";
+import { LanguageToggle } from "./LanguageToggle";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface NavigationProps {
   cartCount: number;
@@ -96,15 +99,19 @@ const drawerItemVariants = {
 };
 
 export function Navigation({ cartCount }: NavigationProps) {
+  const { t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("top");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
   const { favorites, favoriteKits } = useFavorites();
   const { isAuthenticated, signOut } = useAuth();
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Detect keyboard open to hide bottom nav
   useEffect(() => {
@@ -138,6 +145,35 @@ export function Navigation({ cartCount }: NavigationProps) {
     }
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // ── Search: navigate to the current active nav link's page with search query ──
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    // Find the active nav link based on current path
+    const currentNav = navLinks.find((link) => location.pathname.startsWith(link.href));
+    if (currentNav) {
+      // Navigate to the active link's page with search param
+      navigate(`${currentNav.href}?search=${encodeURIComponent(q)}`);
+    } else {
+      // Fallback: navigate to SHOP (most common search target)
+      navigate(`/shop?search=${encodeURIComponent(q)}`);
+    }
+    setSearchOpen(false);
+    setSearchQuery("");
+  };
+
+  const toggleSearch = () => {
+    setSearchOpen((o) => !o);
+    // Focus input when opening
+    setTimeout(() => {
+      if (!searchOpen && searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 100);
   };
 
   // Effects
@@ -178,6 +214,18 @@ export function Navigation({ cartCount }: NavigationProps) {
       document.body.style.overflow = "";
     };
   }, [isMobileMenuOpen]);
+
+  // Close search on Escape
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && searchOpen) {
+        setSearchOpen(false);
+        setSearchQuery("");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [searchOpen]);
 
   // Helpers
   const isActive = (href: string, sectionId?: string) => {
@@ -290,7 +338,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                   Len<span className="text-[var(--primary)]">&</span>em
                 </p>
                 <p className="hidden text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--foreground-muted)] sm:block">
-                  Learn • Buy • Create
+                  {t("nav.tagline")}
                 </p>
               </motion.div>
           </Link>
@@ -364,6 +412,61 @@ export function Navigation({ cartCount }: NavigationProps) {
 
           {/* Desktop Right */}
           <div className="hidden items-center gap-2 md:flex">
+            {/* ── Search button + input ── */}
+            <div className="relative flex items-center">
+              <AnimatePresence mode="wait">
+                {searchOpen ? (
+                  <motion.form
+                    key="search-form"
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 220, opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    onSubmit={handleSearch}
+                    className="overflow-hidden"
+                  >
+                    <div className="relative">
+                      <Search
+                        size={15}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] pointer-events-none"
+                      />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={
+                          location.pathname.startsWith("/shop")
+                            ? t("nav.searchProducts")
+                            : location.pathname.startsWith("/learn")
+                              ? t("nav.searchLessons")
+                              : location.pathname.startsWith("/diy")
+                                ? t("nav.searchDiy")
+                                : t("nav.search")
+                        }
+                        className="w-full h-9 pl-9 pr-3 rounded-full border border-[var(--border)] bg-[var(--card)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] transition-colors"
+                      />
+                    </div>
+                  </motion.form>
+                ) : (
+                  <motion.button
+                    key="search-btn"
+                    type="button"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleSearch}
+                    className="nav-icon-btn flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] text-[var(--foreground-muted)] hover:text-[var(--primary)] transition-colors"
+                    aria-label="Search"
+                  >
+                    <Search className="size-5" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+
             {isAuthenticated && !isHomePage && !isAboutPage && (
               <motion.div
                 whileHover={{ scale: 1.1 }}
@@ -416,6 +519,13 @@ export function Navigation({ cartCount }: NavigationProps) {
               </>
             )}
 
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className="nav-icon-btn"
+            >
+              <LanguageToggle />
+            </motion.div>
             <motion.div
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}

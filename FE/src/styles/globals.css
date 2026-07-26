@@ -41,11 +41,6 @@ a.nav-icon-btn:hover {
 
 /* ============================================================
    GLASS SURFACE SYSTEM
-   Every floating/overlaying element (dropdown menus, popovers,
-   modals, tables, filter chips) gets a dedicated SOLID
-   background token so nothing reads as see-through. The blur +
-   soft border + shadow keep the "kính" (glass) feel without
-   ever letting content behind bleed through and become unreadable.
    ============================================================ */
 
 .glass-panel {
@@ -64,7 +59,7 @@ a.nav-icon-btn:hover {
   border-radius: var(--radius-xl);
 }
 
-/* Filter / status pill chip — e.g. AdminOrders status row */
+/* Filter / status pill chip */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -86,7 +81,7 @@ a.nav-icon-btn:hover {
   color: var(--primary);
 }
 
-/* Order filter button — Light mode: #F0C4E0 | Dark mode: #9B6FD6 */
+/* Order filter button */
 .order-filter-btn {
   background: var(--chip-bg);
   border: 1px solid var(--chip-border);
@@ -100,19 +95,19 @@ a.nav-icon-btn:hover {
   transform: translateY(-1px);
 }
 .order-filter-btn.active {
-  background: var(--accent-blush);
+  background: var(--primary);
   color: var(--primary-foreground);
-  box-shadow: 0 2px 8px var(--glow-pink);
-  border-color: var(--accent-blush);
+  box-shadow: 0 2px 8px var(--glow-primary);
+  border-color: var(--primary);
 }
 .dark .order-filter-btn.active {
   background: var(--primary);
-  box-shadow: 0 2px 8px rgba(155, 111, 214, 0.3);
+  box-shadow: 0 2px 8px rgba(124, 99, 255, 0.3);
   border-color: var(--primary);
 }
 
 /* ============================================================
-   ADMIN TABLE — guaranteed solid, zebra + hover states
+   ADMIN TABLE
    ============================================================ */
 .admin-table {
   width: 100%;
@@ -152,7 +147,7 @@ a.nav-icon-btn:hover {
 .admin-table tbody tr:last-child td { border-bottom: none; }
 
 /* ============================================================
-   ADMIN DIALOGS / MODALS — solid, blurred backdrop
+   ADMIN DIALOGS / MODALS
    ============================================================ */
 .admin-dialog-overlay {
   position: fixed;
@@ -223,7 +218,7 @@ a.nav-icon-btn:hover {
   background: var(--error-bg);
 }
 
-/* Glass action buttons — semantic tokens (info / warning / destructive) */
+/* Glass action buttons — semantic tokens */
 .admin-action-btn.view {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -286,88 +281,36 @@ a.nav-icon-btn:hover {
 /* Subtle pulse for accents */
 @keyframes pulse-soft { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 
-/* ============================================================
-   PARTICLES BACKGROUND — Dark Mode Only
-   ============================================================ */
-@keyframes particle-float {
-  0%, 100% {
-    transform: translateY(0) translateX(0) scale(1);
-    opacity: var(--particle-opacity, 0.5);
-  }
-  25% {
-    transform: translateY(-20px) translateX(10px) scale(1.1);
-    opacity: calc(var(--particle-opacity, 0.5) * 1.2);
-  }
-  50% {
-    transform: translateY(-10px) translateX(-5px) scale(0.95);
-    opacity: calc(var(--particle-opacity, 0.5) * 0.8);
-  }
-  75% {
-    transform: translateY(-30px) translateX(15px) scale(1.05);
-    opacity: calc(var(--particle-opacity, 0.5) * 1.1);
-  }
-}
-
-.bg-particles {
-  position: absolute;
-  width: 100%;
-  min-height: 300px;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.bg-label {
-  position: absolute;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.particle {
-  position: absolute;
-  border-radius: 50%;
-  animation: particle-float var(--particle-duration, 10s) ease-in-out infinite;
-  animation-delay: var(--particle-delay, 0s);
-  will-change: transform, opacity;
-  pointer-events: none;
-}
-
 /* No transition utility */
 .no-transition, .no-transition * { transition: none !important; }
 
 /* ============================================================
    ADMIN PANEL GLOW — Light & Dark Mode
-   Soft rim-light on panels for depth
    ============================================================ */
 .admin-panel-glow {
   box-shadow:
-    0 0 0 1px rgba(236, 230, 243, 0.6),
-    0 2px 8px rgba(83, 60, 122, 0.04),
-    0 4px 16px rgba(107, 63, 160, 0.04);
+    0 0 0 1px rgba(220, 211, 242, 0.6),
+    0 2px 8px rgba(91, 61, 245, 0.04),
+    0 4px 16px rgba(91, 61, 245, 0.04);
   transition: box-shadow 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
 }
 .admin-panel-glow:hover {
   box-shadow:
-    0 0 0 1px rgba(236, 230, 243, 0.9),
-    0 4px 16px rgba(83, 60, 122, 0.06),
-    0 8px 32px rgba(107, 63, 160, 0.08);
+    0 0 0 1px rgba(220, 211, 242, 0.9),
+    0 4px 16px rgba(91, 61, 245, 0.06),
+    0 8px 32px rgba(91, 61, 245, 0.08);
 }
 
 .dark .admin-panel-glow {
   box-shadow:
-    0 0 0 1px rgba(155, 111, 214, 0.16),
-    0 0 28px -8px rgba(155, 111, 214, 0.40),
+    0 0 0 1px rgba(124, 99, 255, 0.16),
+    0 0 28px -8px rgba(124, 99, 255, 0.40),
     var(--shadow-card);
 }
 .dark .admin-panel-glow:hover {
   box-shadow:
-    0 0 0 1px rgba(155, 111, 214, 0.26),
-    0 0 28px -4px rgba(155, 111, 214, 0.45),
+    0 0 0 1px rgba(124, 99, 255, 0.26),
+    0 0 28px -4px rgba(124, 99, 255, 0.45),
     var(--shadow-card-hover);
 }
 
@@ -376,21 +319,21 @@ a.nav-icon-btn:hover {
 .dark .glass-panel-solid,
 .dark .admin-dialog-content {
   box-shadow:
-    0 0 0 1px rgba(155, 111, 214, 0.16),
-    0 0 28px -8px rgba(155, 111, 214, 0.40),
+    0 0 0 1px rgba(124, 99, 255, 0.16),
+    0 0 28px -8px rgba(124, 99, 255, 0.40),
     var(--shadow-card);
 }
 
 .dark .admin-table {
-  box-shadow: inset 0 0 0 1px rgba(155, 111, 214, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(124, 99, 255, 0.10);
 }
 
 /* Inputs / selects / filter triggers glow on hover + focus */
 .dark .input:hover, .dark .select:hover, .dark .admin-filter-trigger:hover {
-  box-shadow: 0 0 0 1px rgba(155, 111, 214, 0.28), 0 0 18px rgba(155, 111, 214, 0.28);
+  box-shadow: 0 0 0 1px rgba(124, 99, 255, 0.28), 0 0 18px rgba(124, 99, 255, 0.28);
 }
 .dark .input:focus, .dark .select:focus, .dark .admin-filter-trigger.is-open {
-  box-shadow: 0 0 0 1px rgba(155, 111, 214, 0.45), 0 0 24px rgba(155, 111, 214, 0.35), var(--input-focus-shadow);
+  box-shadow: 0 0 0 1px rgba(124, 99, 255, 0.45), 0 0 24px rgba(124, 99, 255, 0.35), var(--input-focus-shadow);
 }
 
 .admin-filter-trigger {
@@ -409,10 +352,10 @@ a.nav-icon-btn:hover {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-.badge-green   { border-color: color-mix(in srgb, var(--accent-green-text) 45%, transparent); }
-.badge-orange  { border-color: color-mix(in srgb, var(--warning-text, var(--accent-orange-text)) 45%, transparent); }
-.badge-red     { border-color: color-mix(in srgb, var(--error-text, var(--accent-red-text)) 45%, transparent); }
-.badge-blue    { border-color: color-mix(in srgb, var(--info-text, var(--accent-blue-text)) 45%, transparent); }
+.badge-green   { border-color: color-mix(in srgb, var(--success-text) 45%, transparent); }
+.badge-orange  { border-color: color-mix(in srgb, var(--warning-text) 45%, transparent); }
+.badge-red     { border-color: color-mix(in srgb, var(--error-text) 45%, transparent); }
+.badge-blue    { border-color: color-mix(in srgb, var(--info-text) 45%, transparent); }
 .badge-pink    { border-color: color-mix(in srgb, var(--badge-pink-text) 45%, transparent); }
 .badge-yellow  { border-color: color-mix(in srgb, var(--badge-yellow-text) 45%, transparent); }
 .badge-peach   { border-color: color-mix(in srgb, var(--badge-peach-text) 45%, transparent); }
@@ -421,10 +364,10 @@ a.nav-icon-btn:hover {
 .badge-purple, .badge-lavender { border-color: color-mix(in srgb, var(--badge-purple-text) 45%, transparent); }
 
 /* Dark mode: give each badge a soft matching LED glow */
-.dark .badge-green   { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-green-text) 35%, transparent), 0 0 12px color-mix(in srgb, var(--accent-green-text) 35%, transparent); }
-.dark .badge-orange  { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-orange-text) 35%, transparent), 0 0 12px color-mix(in srgb, var(--accent-orange-text) 35%, transparent); }
-.dark .badge-red     { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-red-text) 35%, transparent),    0 0 12px color-mix(in srgb, var(--accent-red-text) 35%, transparent); }
-.dark .badge-blue    { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue-text) 35%, transparent),   0 0 12px color-mix(in srgb, var(--accent-blue-text) 35%, transparent); }
+.dark .badge-green   { box-shadow: 0 0 0 1px color-mix(in srgb, var(--success-text) 35%, transparent), 0 0 12px color-mix(in srgb, var(--success-text) 35%, transparent); }
+.dark .badge-orange  { box-shadow: 0 0 0 1px color-mix(in srgb, var(--warning-text) 35%, transparent), 0 0 12px color-mix(in srgb, var(--warning-text) 35%, transparent); }
+.dark .badge-red     { box-shadow: 0 0 0 1px color-mix(in srgb, var(--error-text) 35%, transparent),    0 0 12px color-mix(in srgb, var(--error-text) 35%, transparent); }
+.dark .badge-blue    { box-shadow: 0 0 0 1px color-mix(in srgb, var(--info-text) 35%, transparent),   0 0 12px color-mix(in srgb, var(--info-text) 35%, transparent); }
 .dark .badge-pink    { box-shadow: 0 0 0 1px color-mix(in srgb, var(--badge-pink-text) 35%, transparent),    0 0 12px color-mix(in srgb, var(--badge-pink-text) 35%, transparent); }
 .dark .badge-yellow  { box-shadow: 0 0 0 1px color-mix(in srgb, var(--badge-yellow-text) 35%, transparent),  0 0 12px color-mix(in srgb, var(--badge-yellow-text) 35%, transparent); }
 .dark .badge-peach   { box-shadow: 0 0 0 1px color-mix(in srgb, var(--badge-peach-text) 35%, transparent),   0 0 12px color-mix(in srgb, var(--badge-peach-text) 35%, transparent); }
@@ -432,7 +375,7 @@ a.nav-icon-btn:hover {
 .dark .badge-gray    { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-gray-text) 25%, transparent),   0 0 10px color-mix(in srgb, var(--accent-gray-text) 20%, transparent); }
 .dark .badge-purple, .dark .badge-lavender { box-shadow: 0 0 0 1px color-mix(in srgb, var(--badge-purple-text) 35%, transparent), 0 0 12px color-mix(in srgb, var(--badge-purple-text) 35%, transparent); }
 
-/* Interactive badge (used as a dropdown trigger, e.g. role/status pickers) */
+/* Interactive badge */
 .badge-trigger {
   cursor: pointer;
   transition: all 0.2s var(--ease-out);
@@ -440,7 +383,7 @@ a.nav-icon-btn:hover {
 .badge-trigger:hover { transform: translateY(-1px); filter: brightness(1.08); }
 .dark .badge-trigger:hover { filter: brightness(1.18); }
 
-/* Status LED dot used inside status badges */
+/* Status LED dot */
 .led-dot {
   width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
 }
@@ -448,11 +391,11 @@ a.nav-icon-btn:hover {
   box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent), 0 0 8px currentColor;
 }
 
-/* Glass destructive button (Close button in UserDetailModal — kính style like Inactive badge) */
+/* Glass destructive button */
 .btn-glass-destructive {
   background: transparent;
-  color: var(--accent-red-text);
-  border: 1px solid color-mix(in srgb, var(--accent-red-text) 45%, transparent);
+  color: var(--error-text);
+  border: 1px solid color-mix(in srgb, var(--error-text) 45%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   font-weight: 600;
@@ -470,19 +413,19 @@ a.nav-icon-btn:hover {
   outline: none;
 }
 .btn-glass-destructive:hover {
-  background: var(--accent-red);
+  background: var(--error-bg);
   transform: translateY(-1px);
 }
 .btn-glass-destructive:active {
   transform: translateY(0);
 }
 .dark .btn-glass-destructive {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-red-text) 35%, transparent),
-              0 0 12px color-mix(in srgb, var(--accent-red-text) 35%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--error-text) 35%, transparent),
+              0 0 12px color-mix(in srgb, var(--error-text) 35%, transparent);
 }
 .dark .btn-glass-destructive:hover {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-red-text) 55%, transparent),
-              0 0 20px color-mix(in srgb, var(--accent-red-text) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--error-text) 55%, transparent),
+              0 0 20px color-mix(in srgb, var(--error-text) 45%, transparent);
 }
 
 /* Reduced motion */
@@ -494,16 +437,14 @@ a.nav-icon-btn:hover {
 }
 
 /* ============================================================
-   ANIMATED ADD TO CART BUTTON — Uiverse.io Style
-   Sliding icon/text animation on hover
-   Light mode: #F0C4E0 | Dark mode: #9B6FD6
+   ANIMATED ADD TO CART BUTTON
    ============================================================ */
 .add-to-cart-btn {
   --width: 100%;
   --height: 48px;
   width: var(--width);
   height: var(--height);
-  background: var(--accent-blush);
+  background: var(--primary);
   position: relative;
   text-align: center;
   border-radius: var(--radius-lg);
@@ -512,33 +453,32 @@ a.nav-icon-btn:hover {
   border: none;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 4px 16px var(--glow-pink);
+  box-shadow: 0 4px 16px var(--glow-primary);
 }
 
 .add-to-cart-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(240, 196, 224, 0.45);
-  background: var(--accent-blush);
+  box-shadow: 0 8px 24px rgba(91, 61, 245, 0.35);
+  background: var(--primary-hover);
 }
 
 .add-to-cart-btn:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(240, 196, 224, 0.35);
+  box-shadow: 0 4px 12px rgba(91, 61, 245, 0.25);
 }
 
-/* Dark mode overrides */
 .dark .add-to-cart-btn {
   background: var(--primary);
-  box-shadow: 0 4px 16px rgba(155, 111, 214, 0.3);
+  box-shadow: 0 4px 16px rgba(124, 99, 255, 0.3);
 }
 
 .dark .add-to-cart-btn:hover {
-  background: var(--primary);
-  box-shadow: 0 8px 24px rgba(155, 111, 214, 0.45);
+  background: var(--primary-hover);
+  box-shadow: 0 8px 24px rgba(124, 99, 255, 0.45);
 }
 
 .dark .add-to-cart-btn:active {
-  box-shadow: 0 4px 12px rgba(155, 111, 214, 0.35);
+  box-shadow: 0 4px 12px rgba(124, 99, 255, 0.35);
 }
 
 .add-to-cart-btn .btn-text,
@@ -567,7 +507,7 @@ a.nav-icon-btn:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-blush);
+  background: var(--primary);
 }
 
 .dark .add-to-cart-btn .btn-icon {
@@ -587,7 +527,7 @@ a.nav-icon-btn:hover {
   top: 0;
 }
 
-/* Custom Select Input — AdminDIYPosts & other admin filters */
+/* Custom Select Input */
 select.input {
   appearance: none;
   -webkit-appearance: none;
@@ -601,7 +541,7 @@ select.input {
   border-radius: var(--input-radius);
   cursor: pointer;
   transition: all 0.2s var(--ease-out);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239B6FD6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235B3DF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 16px 16px;
@@ -609,13 +549,13 @@ select.input {
 
 select.input:hover {
   border-color: var(--input-hover-border);
-  box-shadow: 0 0 0 3px rgba(155, 111, 214, 0.1);
+  box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.1);
 }
 
 select.input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(155, 111, 214, 0.15), 0 0 0 1px var(--primary);
+  box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.15), 0 0 0 1px var(--primary);
 }
 
 select.input option {
@@ -625,10 +565,18 @@ select.input option {
 }
 
 .dark select.input {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23C4B5FD' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237C63FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
-/* Custom Dropdown Menu — AdminDIYPosts filter */
+/* ── Smooth language switching ── */
+body.lang-switching * {
+  transition: opacity 0.2s ease !important;
+}
+.lang-text {
+  transition: opacity 0.2s ease;
+}
+
+/* Custom Dropdown Menu */
 .dropdown-menu {
   background: var(--dropdown-bg);
   border: 1px solid var(--border);
@@ -685,7 +633,7 @@ select.input option {
 .dropdown-item:hover {
   background: var(--surface-secondary);
   transform: translateX(4px);
-  box-shadow: 0 2px 8px rgba(155, 111, 214, 0.1);
+  box-shadow: 0 2px 8px rgba(91, 61, 245, 0.1);
 }
 
 .dropdown-item:hover::before {
@@ -693,10 +641,10 @@ select.input option {
 }
 
 .dropdown-item.selected {
-  background: linear-gradient(135deg, rgba(155, 111, 214, 0.12), rgba(240, 196, 224, 0.12));
+  background: linear-gradient(135deg, rgba(91, 61, 245, 0.12), rgba(232, 222, 255, 0.12));
   color: var(--primary);
   font-weight: 500;
-  box-shadow: inset 0 0 0 1px rgba(155, 111, 214, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(91, 61, 245, 0.2);
 }
 
 .dropdown-item.selected::before {
@@ -705,8 +653,8 @@ select.input option {
 }
 
 .dropdown-item.selected:hover {
-  background: linear-gradient(135deg, rgba(155, 111, 214, 0.18), rgba(240, 196, 224, 0.18));
-  box-shadow: inset 0 0 0 1px rgba(155, 111, 214, 0.3), 0 2px 12px rgba(155, 111, 214, 0.15);
+  background: linear-gradient(135deg, rgba(91, 61, 245, 0.18), rgba(232, 222, 255, 0.18));
+  box-shadow: inset 0 0 0 1px rgba(91, 61, 245, 0.3), 0 2px 12px rgba(91, 61, 245, 0.15);
 }
 
 .dropdown-item .check-icon {

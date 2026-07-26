@@ -13,15 +13,10 @@ import { Separator } from "../components/ui/separator";
 import { freeVideos } from "../../features/learn/data/learn.mock";
 import { courseService } from "../../api/courseService";
 import { useAuth } from "../../hooks/useAuth";
+import { useLanguage } from "../../context/LanguageContext";
 import type { Course, CourseLevel } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
 import { ProductSkeleton } from "../../components/skeletons/ProductSkeleton";
-
-const levelLabels: Record<CourseLevel, string> = {
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
-};
 
 const levelStyles: Record<CourseLevel, string> = {
   beginner: "border-green-200 bg-[var(--accent-green)] text-[var(--accent-green-text)]",
@@ -30,6 +25,7 @@ const levelStyles: Record<CourseLevel, string> = {
 };
 
 export function LearnPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { isAuthenticated, user, setUser } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -38,6 +34,12 @@ export function LearnPage() {
   const [selectedLevels, setSelectedLevels] = useState<CourseLevel[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+
+  const levelLabels: Record<CourseLevel, string> = {
+    beginner: t("learn.beginner"),
+    intermediate: t("learn.intermediate"),
+    advanced: t("learn.advanced"),
+  };
 
   // Get enrolled courses from user profile
   const enrolledCourses = user?.enrolled || [];
@@ -184,13 +186,12 @@ export function LearnPage() {
 
       <div className="mx-auto max-w-7xl">
         <div className="mb-10 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-8">
-          <Badge variant="secondary" className="mb-4">LEARN</Badge>
+          <Badge variant="secondary" className="mb-4">{t("nav.learn")}</Badge>
           <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            Learn, buy materials, and start creating in one flow.
+            {t("learnPage.headline")}
           </h1>
           <p className="max-w-3xl text-muted-foreground md:text-lg">
-            Follow Gen Z-friendly crochet lessons by skill level. Each course tags the exact yarn,
-            tools, and combo kits used inside the lesson so you can add them to cart instantly.
+            {t("learnPage.subtitle")}
           </p>
         </div>
 
@@ -202,7 +203,7 @@ export function LearnPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-sm font-medium"
             >
               <SlidersHorizontal className="size-4" />
-              Filters
+              {t("learnPage.filters")}
               {(selectedLevels.length + selectedTags.length) > 0 && (
                 <span className="bg-primary text-primary-foreground text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
                   {selectedLevels.length + selectedTags.length}
@@ -213,7 +214,7 @@ export function LearnPage() {
 
           <aside className="hidden lg:block h-fit rounded-2xl border p-5 lg:sticky lg:top-24 learn-filter-panel" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-semibold">Filters</h2>
+              <h2 className="font-semibold">{t("learnPage.filters")}</h2>
               <motion.button
                 type="button"
                 onClick={() => {
@@ -232,11 +233,11 @@ export function LearnPage() {
                 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Reset
+                {t("learnPage.reset")}
               </motion.button>
             </div>
 
-            <FilterGroup title="Level">
+            <FilterGroup title={t("learnPage.level")}>
               {(Object.keys(levelLabels) as CourseLevel[]).map((level) => (
                 <FilterCheckbox
                   key={level}
@@ -250,7 +251,7 @@ export function LearnPage() {
 
             <Separator className="my-5" />
 
-            <FilterGroup title="Tags">
+            <FilterGroup title={t("learnPage.tags")}>
               {tags.map((tag) => (
                 <FilterCheckbox
                   key={tag}
@@ -270,10 +271,10 @@ export function LearnPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">🔥</span>
-                    <h2 className="text-2xl font-semibold">Premium Courses</h2>
+                    <h2 className="text-2xl font-semibold">{t("learnPage.premiumCourses")}</h2>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {loading ? "Loading..." : `${filteredCourses.length} course${filteredCourses.length === 1 ? "" : "s"} — structured lessons with PDF materials`}
+                    {loading ? t("learnPage.loading") : `${filteredCourses.length} ${t("learnPage.courses")}`}
                   </p>
                 </div>
               </div>
@@ -302,7 +303,7 @@ export function LearnPage() {
                             {levelLabels[course.level]}
                           </Badge>
                           <Badge className="absolute right-3 top-3 border-green-200 bg-green-100 text-green-700">
-                            Free
+                            {t("learnPage.free")}
                           </Badge>
                         </div>
                         <CardContent className="space-y-4 p-5">
@@ -315,8 +316,8 @@ export function LearnPage() {
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} lessons</span>
-                            <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} min</span>
+                            <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} {t("learnPage.lessons")}</span>
+                            <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} {t("learnPage.min")}</span>
                             <span className="flex items-center gap-1.5"><Star className="size-4 fill-yellow-400 text-yellow-400" />{course.rating}</span>
                             <span className="flex items-center gap-1.5"><Users className="size-4" />{course.enrolledCount.toLocaleString()}</span>
                           </div>
@@ -326,7 +327,7 @@ export function LearnPage() {
                             disabled={isEnrolling}
                             onClick={() => handleEnroll(course._id)}
                           >
-                            {isEnrolling ? "Enrolling..." : isEnrolled ? "Enrolled" : "Bắt đầu học"}
+                            {isEnrolling ? t("learnPage.enrolling") : isEnrolled ? t("learnPage.enrolled") : t("learnPage.startLearning")}
                           </button>
                         </CardContent>
                       </Card>
@@ -342,10 +343,10 @@ export function LearnPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">🆓</span>
-                    <h2 className="text-2xl font-semibold">Free Videos</h2>
+                    <h2 className="text-2xl font-semibold">{t("learnPage.freeVideos")}</h2>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {freeVideos.length} short tutorials — no login required
+                    {`${freeVideos.length} ${t("learnPage.shortTutorials")}`}
                   </p>
                 </div>
               </div>
@@ -376,7 +377,7 @@ export function LearnPage() {
                         {levelLabels[video.level]}
                       </Badge>
                       <Badge className="absolute right-3 top-3 border-green-200 bg-green-100 text-green-700 text-[10px]">
-                        {video.duration} phút
+                        {video.duration} {t("learnPage.min")}
                       </Badge>
                     </div>
                     <div className="p-4">
@@ -390,7 +391,7 @@ export function LearnPage() {
                       <h4 className="text-sm font-semibold line-clamp-2">{video.title}</h4>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{video.description}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] text-muted-foreground">👁️ {video.viewCount.toLocaleString()} lượt xem</span>
+                        <span className="text-[10px] text-muted-foreground">👁️ {video.viewCount.toLocaleString()} {t("learnPage.views")}</span>
                       </div>
                     </div>
                   </div>
@@ -421,7 +422,7 @@ export function LearnPage() {
             >
               <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-lg">Filters</h2>
+                <h2 className="font-semibold text-lg">{t("learnPage.filters")}</h2>
                 <motion.button
                   type="button"
                   onClick={() => {
@@ -440,11 +441,11 @@ export function LearnPage() {
                   }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Reset all
+                  {t("learnPage.resetAll")}
                 </motion.button>
               </div>
 
-              <FilterGroup title="Level">
+              <FilterGroup title={t("learnPage.level")}>
                 {(Object.keys(levelLabels) as CourseLevel[]).map((level) => (
                   <FilterCheckbox
                     key={level}
@@ -458,7 +459,7 @@ export function LearnPage() {
 
               <Separator className="my-4" />
 
-              <FilterGroup title="Tags">
+              <FilterGroup title={t("learnPage.tags")}>
                 {tags.map((tag) => (
                   <FilterCheckbox
                     key={tag}
@@ -474,7 +475,7 @@ export function LearnPage() {
                 className="w-full mt-6"
                 onClick={() => setFilterDrawerOpen(false)}
               >
-                Show {filteredCourses.length} courses
+                {`${t("learnPage.show")} ${filteredCourses.length} ${t("learnPage.courses")}`}
               </Button>
             </motion.div>
           </>

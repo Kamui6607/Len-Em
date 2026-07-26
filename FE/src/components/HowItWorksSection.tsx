@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion, useReducedMotion } from "motion/react";
+import { useLanguage } from "../context/LanguageContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,40 +31,40 @@ const DOTS = [
     pos: 12,
     bg: "var(--decor-1-bg)",
     border: "var(--decor-1-border)",
-    label: "Sợi Merino",
-    detail: "Tự nhiên · 200g · 4 sợi",
+    labelKey: "howItWorks.materialMerino",
+    detailKey: "howItWorks.merinoDetail",
   },
   {
     id: "d2",
     pos: 32,
     bg: "var(--decor-2-bg)",
     border: "var(--decor-2-border)",
-    label: "Kim Đan Tròn",
-    detail: "4.0 mm · 80 cm cáp",
+    labelKey: "howItWorks.materialKnitting",
+    detailKey: "howItWorks.knittingDetail",
   },
   {
     id: "d3",
     pos: 54,
     bg: "var(--decor-3-bg)",
     border: "var(--decor-3-border)",
-    label: "Dấu Mũi Móc",
-    detail: "Bộ 8 · nhẫn silicone",
+    labelKey: "howItWorks.materialMarkers",
+    detailKey: "howItWorks.markersDetail",
   },
   {
     id: "d4",
     pos: 74,
     bg: "var(--decor-4-bg)",
     border: "var(--decor-4-border)",
-    label: "Kim Thêu",
-    detail: "Đầu cùn · size 16",
+    labelKey: "howItWorks.materialNeedle",
+    detailKey: "howItWorks.needleDetail",
   },
   {
     id: "d5",
     pos: 91,
     bg: "var(--decor-5-bg)",
     border: "var(--decor-5-border)",
-    label: "Thệm Căn Chỉnh",
-    detail: "60 × 60 cm · EVA foam",
+    labelKey: "howItWorks.materialMat",
+    detailKey: "howItWorks.matDetail",
   },
 ] as const;
 
@@ -172,6 +173,7 @@ function CardShell({
 // ═══════════════════════════════════════════════════════════════════
 
 function Scrubber({ state }: { state: LearnState }) {
+  const { t } = useLanguage();
   const progress = state === "default" ? 0 : 54;
 
   return (
@@ -280,7 +282,7 @@ function Scrubber({ state }: { state: LearnState }) {
                       letterSpacing: "0.01em",
                     }}
                   >
-                    {dot.label}
+                    {t(dot.labelKey)}
                   </div>
                   <div
                     style={{
@@ -290,7 +292,7 @@ function Scrubber({ state }: { state: LearnState }) {
                       marginTop: "2px",
                     }}
                   >
-                    {dot.detail}
+                    {t(dot.detailKey)}
                   </div>
 
                   {/* Caret pointing down */}
@@ -333,7 +335,7 @@ function Scrubber({ state }: { state: LearnState }) {
                       color: dot.border,
                     }}
                   >
-                    {dot.label.split(" ")[0]}
+                    {t(dot.labelKey).split(" ")[0]}
                   </span>
                 </div>
               )}
@@ -375,8 +377,8 @@ function Scrubber({ state }: { state: LearnState }) {
           }}
         >
           {state === "default"
-            ? "5 thẻ nguyên liệu"
-            : "Bước 3 của 12 · Dấu mũi móc"}
+            ? t("howItWorks.learnDefault")
+            : t("howItWorks.learnProgress")}
         </span>
         <span
           style={{
@@ -394,6 +396,7 @@ function Scrubber({ state }: { state: LearnState }) {
 }
 
 export function LearnCard({ state = "default" }: { state?: LearnState }) {
+  const { t } = useLanguage();
   return (
     <CardShell
       style={{ overflow: state === "revealed" ? "visible" : "hidden" }}
@@ -451,7 +454,7 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
               color: "var(--foreground)",
             }}
           >
-            12 bài học
+            {t("howItWorks.lessonCount")}
           </span>
         </div>
 
@@ -476,9 +479,9 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
           flexDirection: "column",
         }}
       >
-        <CategoryChip color="var(--accent-pink)">Học tập</CategoryChip>
-        <CardTitle>Video bài học</CardTitle>
-        <CardSubtitle>Từ cơ bản đến nâng cao · được gắn thẻ ở mỗi bước</CardSubtitle>
+        <CategoryChip color="var(--accent-pink)">{t("howItWorks.learn")}</CategoryChip>
+        <CardTitle>{t("howItWorks.learnTitle")}</CardTitle>
+        <CardSubtitle>{t("howItWorks.learnSub")}</CardSubtitle>
 
         {/* Divider */}
         <div
@@ -501,7 +504,7 @@ export function LearnCard({ state = "default" }: { state?: LearnState }) {
             marginBottom: "10px",
           }}
         >
-          Nguyên liệu bài học ↓
+          {t("howItWorks.learnLabel")}
         </div>
 
         {/* Scrubber — needs overflow:visible when revealed */}
@@ -564,6 +567,7 @@ function StarRating({
 
 // Price tag that hangs over the swatch image
 function HangTag() {
+  const { t } = useLanguage();
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       {/* Thread from hole to card edge (SVG) */}
@@ -634,7 +638,7 @@ function HangTag() {
             marginBottom: "3px",
           }}
         >
-          Cửa hàng Len&Em
+          {t("howItWorks.shopBrand")}
         </div>
 
         {/* Product name */}
@@ -648,7 +652,7 @@ function HangTag() {
             marginBottom: "6px",
           }}
         >
-          Bộ sợi Alpine Merino
+          {t("howItWorks.shopProduct")}
         </div>
 
         {/* Divider */}
@@ -671,7 +675,7 @@ function HangTag() {
             marginBottom: "5px",
           }}
         >
-          ₫1.080.000
+          {t("howItWorks.shopPrice")}
         </div>
 
         {/* Specs */}
@@ -706,7 +710,7 @@ function HangTag() {
               opacity: 0.75,
             }}
           >
-            ♥ handpicked
+            {t("howItWorks.shopHandpicked")}
           </span>
         </div>
       </div>
@@ -715,6 +719,8 @@ function HangTag() {
 }
 
 export function ShopCard({ state = "front" }: { state?: ShopState }) {
+  const { t } = useLanguage();
+
   if (state === "back") {
     return (
       <CardShell style={{ overflow: "hidden", minHeight: "430px" }}>
@@ -827,7 +833,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
                 color: "rgba(245,240,232,0.6)",
               }}
             >
-              tap to flip back
+              {t("howItWorks.shopTapBack")}
             </span>
           </div>
         </div>
@@ -874,7 +880,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
             color: "var(--foreground)",
           }}
         >
-          Phiên bản giới hạn
+          {t("howItWorks.shopLimited")}
         </div>
         <div
           style={{
@@ -896,8 +902,8 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
           flexDirection: "column",
         }}
       >
-        <CategoryChip color="var(--accent-yellow)">Cửa hàng</CategoryChip>
-        <CardTitle>Bộ sợi Alpine Merino</CardTitle>
+        <CategoryChip color="var(--accent-yellow)">{t("howItWorks.shop")}</CategoryChip>
+        <CardTitle>{t("howItWorks.shopTitle")}</CardTitle>
         <StarRating />
 
         {/* Price row */}
@@ -918,7 +924,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
               letterSpacing: "-0.02em",
             }}
           >
-            ₫1.080.000
+            {t("howItWorks.shopPrice")}
           </span>
           <span
             style={{
@@ -928,7 +934,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
               textDecoration: "line-through",
             }}
           >
-            ₫1.450.000
+            {t("howItWorks.shopOldPrice")}
           </span>
           <span
             style={{
@@ -941,7 +947,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
               color: "var(--success-text)",
             }}
           >
-            −24 %
+            {t("howItWorks.shopDiscount")}
           </span>
         </div>
 
@@ -954,7 +960,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
             marginBottom: "14px",
           }}
         >
-          {["100% Merino", "4-ply", "200m", "Free shipping"].map((s) => (
+          {[t("howItWorks.materialMerinoSpec"), "4-ply", "200m", t("howItWorks.shopFreeShip")].map((s) => (
             <span
               key={s}
               style={{
@@ -1001,7 +1007,7 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
               <circle cx="6" cy="11.5" r="0.8" fill="currentColor" />
               <circle cx="10" cy="11.5" r="0.8" fill="currentColor" />
             </svg>
-            Thêm vào giỏ
+            {t("howItWorks.shopAddToCart")}
           </div>
           <div className="btn-icon">
             <svg
@@ -1060,15 +1066,17 @@ const DIY_ALTS = [
   "Group of crocheted flowers on blue surface",
   "Green scissors beside knitting sticks",
 ];
-const DIY_STEPS = [
-  "Chọn mẫu",
-  "Chuẩn bị nguyên liệu",
-  "Làm và sử dụng!",
-];
 
 export function DIYCard({ state = "default" }: { state?: DIYState }) {
+  const { t } = useLanguage();
   const transforms = PHOTO_TRANSFORMS[state];
   const activeStep = state === "default" ? 0 : 1;
+
+  const DIY_STEPS = [
+    t("howItWorks.diyStep1"),
+    t("howItWorks.diyStep2"),
+    t("howItWorks.diyStep3"),
+  ];
 
   return (
     <CardShell style={{ overflow: "visible" }}>
@@ -1143,7 +1151,7 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
             }}
           >
             {[2, 1, 0].map((idx) => {
-              const t = transforms[idx];
+              const t2 = transforms[idx];
               return (
                 <div
                   key={idx}
@@ -1158,10 +1166,10 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
                     padding: `${BORDER}px`,
                     boxShadow: "var(--shadow-lg)",
                     overflow: "hidden",
-                    transform: `translate(${t.x}px, ${t.y}px) rotate(${t.rotate}deg) scale(${t.scale})`,
+                    transform: `translate(${t2.x}px, ${t2.y}px) rotate(${t2.rotate}deg) scale(${t2.scale})`,
                     transformOrigin: "center center",
-                    zIndex: t.zIndex,
-                    opacity: t.opacity,
+                    zIndex: t2.zIndex,
+                    opacity: t2.opacity,
                     willChange: "transform, opacity",
                   }}
                 >
@@ -1197,9 +1205,9 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
                         fontWeight: 600,
                         color: "var(--primary)",
                       }}
-                    >
-                      Bước {idx + 1}
-                    </span>
+                  >
+                    {t(`howItWorks.step${idx + 1}` as const)}
+                  </span>
                   </div>
                 </div>
               );
@@ -1216,9 +1224,9 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
             flexDirection: "column",
           }}
         >
-          <CategoryChip color="var(--accent-yellow)">Tự làm</CategoryChip>
-          <CardTitle>Tự làm tại nhà</CardTitle>
-          <CardSubtitle>Từ mẫu đến sản phẩm hoàn thành · 3 bước</CardSubtitle>
+          <CategoryChip color="var(--accent-yellow)">{t("howItWorks.diy")}</CategoryChip>
+          <CardTitle>{t("howItWorks.diyTitle")}</CardTitle>
+          <CardSubtitle>{t("howItWorks.diySub")}</CardSubtitle>
 
           {/* Step indicator */}
           <div
@@ -1292,8 +1300,8 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
               }}
             >
               {state === "default"
-                ? "vuốt để xem bước tiếp"
-                : "nhấn ảnh để quay lại"}
+                ? t("howItWorks.diySwipe")
+                : t("howItWorks.diyTap")}
             </span>
           </div>
         </div>
@@ -1409,6 +1417,7 @@ const cardVariants = {
 };
 
 export function HowItWorksSection() {
+  const { t } = useLanguage();
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -1458,7 +1467,7 @@ export function HowItWorksSection() {
               marginBottom: "6px",
             }}
           >
-            hành trình sáng tạo của bạn
+            {t("howItWorks.eyebrow")}
           </span>
           <h2
             style={{
@@ -1471,7 +1480,7 @@ export function HowItWorksSection() {
               marginBottom: "12px",
             }}
           >
-            Len&Em hoạt động như thế nào
+            {t("howItWorks.title")}
           </h2>
           <p
             style={{
@@ -1483,8 +1492,7 @@ export function HowItWorksSection() {
               lineHeight: 1.65,
             }}
           >
-            Học một kỹ năng, tìm sợi hoàn hảo, làm ra thứ bạn sẽ trân trọng
-            — tất cả trong một nơi.
+            {t("howItWorks.subtitle")}
           </p>
         </motion.div>
 

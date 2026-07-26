@@ -10,6 +10,7 @@ import { ReportProvider } from "../context/ReportContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ReviewProvider } from "./context/ReviewContext";
 import { CartProvider } from "../context/CartContext";
+import { LanguageProvider } from "../context/LanguageContext";
 import { AppRouter } from "../routes/AppRouter";
 
 export default function App() {
@@ -32,29 +33,31 @@ export default function App() {
   }, [isAuthenticated, initializeMembership]);
 
   return (
-    <ThemeProvider>
-      <AdminProvider>
-        <ReportProvider>
-          <NotificationProvider>
-            <ReviewProvider>
-              <FavoritesProvider>
-                <CartProvider>
-                  <Toaster
-                    position="top-right"
-                    richColors
-                    visibleToasts={5}
-                    gap={8}
-                    offset={{ right: 16, top: 16 }}
-                  />
-                  <BrowserRouter>
-                    <AppRouter />
-                  </BrowserRouter>
-                </CartProvider>
-              </FavoritesProvider>
-            </ReviewProvider>
-          </NotificationProvider>
-        </ReportProvider>
-      </AdminProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <AdminProvider>
+          <ReportProvider>
+            <NotificationProvider>
+              <ReviewProvider>
+                <FavoritesProvider>
+                  <CartProvider>
+                    <Toaster
+                      position="top-right"
+                      richColors
+                      visibleToasts={5}
+                      gap={8}
+                      offset={{ right: 16, top: 16 }}
+                    />
+                    <BrowserRouter>
+                      <AppRouter />
+                    </BrowserRouter>
+                  </CartProvider>
+                </FavoritesProvider>
+              </ReviewProvider>
+            </NotificationProvider>
+          </ReportProvider>
+        </AdminProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

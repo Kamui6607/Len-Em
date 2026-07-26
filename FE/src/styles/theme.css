@@ -1,23 +1,50 @@
 /* ============================================================
-   LEN&EM — COMPLETE PREMIUM DESIGN SYSTEM
+   LEN&EM — DESIGN TOKENS (v5 · "Indigo–Lilac, chuẩn 2 màu gốc")
    ============================================================
-   Warm Atelier (light) / Warm Night (dark) — glass surfaces
-   that are readable, not transparent.
+   Quy tắc:
+   1) CHỈ dùng 2 màu thương hiệu làm accent: Electric Indigo #5B3DF5
+      (đậm/nổi) và Soft Lilac #E8DEFF (nhạt/mềm) — mọi màu nhấn khác
+      chỉ là các sắc độ (tint/shade) của chính 2 màu này.
+   2) Chữ THƯỜNG luôn là đen/trắng trung tính (zinc scale) — KHÔNG
+      nhuộm tím. Chữ NHẤN (giá, số liệu, chữ ký, tiêu đề nổi bật)
+      mới dùng Indigo/Lilac, giống đúng 2 khối trong ảnh mood board.
+   3) Light mode: nền mềm (soft), gần trắng nhưng không chói.
+   4) Dark mode: nền phải có cảm giác "phát sáng" như đèn toả ra —
+      dùng glow (box-shadow + radial-gradient) quanh các điểm nhấn,
+      không chỉ đơn thuần là nền tối phẳng.
+   5) Đầy đủ mọi biến đang được các component thực tế sử dụng —
+      không còn biến "mồ côi" gây lỗi màu (vd: --color-text-muted).
    ============================================================ */
 
 :root {
   color: var(--foreground);
-
-  /* ---------- LIGHT MODE — Premium Warm Atelier ---------- */
-
   --font-size: 16px;
 
-  /* Background gradient stops — warm yarn/craft cream */
-  --bg-1: #FDF8F2;
-  --bg-2: #F7EEDF;
-  --bg-3: #F2E4CE;
-  --bg-1-rgb: 253, 248, 242;
-  --bg-gradient-160: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+  /* ============================================================
+     BRAND RAMP — chỉ 1 hue duy nhất (Indigo→Lilac), nhiều sắc độ
+     ============================================================ */
+  --brand-50:  #F8F5FF;
+  --brand-100: #F1EAFE;
+  --brand-150: #E8DEFF;  /* ★ Soft Lilac — ĐÚNG HEX GỐC */
+  --brand-200: #D8C9F9;
+  --brand-300: #C3ADF5;
+  --brand-400: #9B84F2;
+  --brand-500: #7A63F5;
+  --brand-600: #5B3DF5;  /* ★ Electric Indigo — ĐÚNG HEX GỐC */
+  --brand-700: #4A2FE0;
+  --brand-800: #3B23BD;
+  --brand-900: #2A1985;
+
+  /* ============================================================
+     🌞 LIGHT MODE
+     ============================================================ */
+
+  /* ── Nền — soft, gần trắng, không chói ── */
+  --bg-1: #FBFAFD;
+  --bg-2: #F4F0FC;
+  --bg-3: #ECE3FA;
+  --bg-1-rgb: 251, 250, 253;
+  --bg-gradient-160: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 55%, var(--bg-3) 100%);
   --bg-gradient-180: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-3) 100%);
   --bg-overlay-92: rgba(var(--bg-1-rgb), 0.92);
   --bg-overlay-90: rgba(var(--bg-1-rgb), 0.9);
@@ -27,298 +54,229 @@
   --bg-overlay-22: rgba(var(--bg-1-rgb), 0.22);
   --bg-vignette: linear-gradient(to bottom, rgba(var(--bg-1-rgb), 0) 55%, rgba(var(--bg-1-rgb), 0.22) 100%);
 
-  --background:        var(--bg-1);
-  --surface:            #F3E8D8;
-  --surface-secondary:  #EDE0CC;
-  --muted:              #E8D9C2;
-  --card:               #FFFFFF;
-  --card-warm:          #FFFDFC;
-  --card-hover:         #FFF8F0;
-  --card-glass:         rgba(255,255,255,.98);
-  --card-feature:       #FFF9F3;
+  --background:          var(--bg-1);
+  --surface:              var(--brand-150);  /* card = Soft Lilac đúng gốc */
+  --surface-secondary:    var(--brand-200);
+  --muted:                var(--bg-2);
+  --card:                 var(--brand-150);
+  --card-warm:            var(--brand-100);
+  --card-hover:           var(--brand-200);
+  --card-glass:           rgba(251,250,253,.97);
+  --card-feature:         var(--bg-2);
+  --card-bg:              var(--card);
 
-  /* Typography — warm plum with hierarchy */
-  --foreground:          #2A1F3B;
-  --foreground-secondary: #3A2A4D;
-  --foreground-muted:    #6B5D7A;
-  --foreground-subtle:   #8A8097;
-  --foreground-disabled: #C3BACF;
-  --foreground-placeholder: #AAA0B8;
-  --border:              #D6C8E3;
-  --border-subtle:       #E6DBF0;
-  --border-light:        #CBB7DD;
+  /* ── Border ── */
+  --border:              #DED0F7;
+  --border-subtle:       #E8DFFA;
+  --border-light:        #DED0F7;
 
-  /* Primary — lavender scale (light) */
-  --primary:            #6B3FA0;
-  --primary-hover:      #7C4FB0;
-  --primary-pressed:    #9B6FD6;
-  --primary-soft:       #EEE3FA;
-  --primary-light:      #F5EEFC;
-  --primary-disabled:   #B497E8;
+  /* ── TEXT THƯỜNG — đen/trắng trung tính, KHÔNG nhuộm tím ── */
+  --foreground:            #18181B;   /* gần đen thuần */
+  --foreground-secondary:  #52525B;
+  --foreground-muted:      #71717A;
+  --foreground-subtle:     #A1A1AA;
+  --foreground-disabled:   #A1A1AA;
+  --foreground-placeholder:#A1A1AA;
+  /* Compat aliases dùng rải rác trong component */
+  --color-text:            var(--foreground);
+  --color-text-muted:      var(--foreground-muted);
+  --muted-foreground:      var(--foreground-muted);
+
+  /* ── TEXT NHẤN — nổi bật, dùng đúng Indigo/Lilac ── */
+  --text-accent:           var(--brand-600);  /* chữ nhấn trên nền sáng */
+  --text-accent-on-brand:  #FFFFFF;           /* chữ trên nền Indigo đặc */
+
+  /* ── Primary — Electric Indigo (đúng hex gốc) ── */
+  --primary:            var(--brand-600);
+  --primary-hover:      var(--brand-700);
+  --primary-pressed:    var(--brand-800);
+  --primary-soft:       var(--brand-150);
+  --primary-light:      var(--brand-100);
+  --primary-disabled:   var(--brand-300);
   --primary-foreground: #FFFFFF;
 
-  /* Primary CTA — solid, no gradient */
-  --cta-gradient:       linear-gradient(135deg, #6B3FA0 0%, #6B3FA0 100%);
-  --cta-shadow:         0 4px 20px rgba(107, 63, 160, 0.15);
-  --cta-shadow-hover:   0 8px 32px rgba(107, 63, 160, 0.22);
+  /* ── Secondary button ── */
+  --secondary:            var(--brand-150);
+  --secondary-hover:      var(--brand-200);
+  --secondary-foreground: var(--brand-600);
 
-  /* Warm glow accents — per spec */
-  --accent-glow:        #FFF6C7;
-  --accent-butter:      #F5EFA8;
-  --accent-peach:       #FFD8B4;
-  --accent-blush:       #F0C4E0;
-  --accent-pink:        #F0C4E0;
-  --accent-yellow:      #F5EFA8;
-  --accent-cream:       #FFF6C7;
-  --accent-lavender:    #EEE3FA;
-  --accent-warm:        #D9824A;
-  --accent-warm-soft:   #E0995C;
-  --accent-green:       #EAF8EF;
-  --accent-green-text:  #2E7D4F;
-  --accent-orange:      #FFF9DD;
-  --accent-orange-text: #A46A00;
-  --accent-red:         #FFECEC;
-  --accent-red-text:    #C74242;
-  --accent-blue:        #EDF6FF;
-  --accent-blue-text:   #2E6BB8;
-  --accent-gray:        #F8F3FB;
-  --accent-gray-text:   #6B5D7A;
+  /* ── Link ── */
+  --link:               var(--brand-600);
+  --link-hover:         var(--brand-700);
+  --link-visited:       var(--brand-800);
 
-  /* Decorative palette — component-specific accents (warm only) */
-  --decor-1-bg: var(--accent-lavender);
-  --decor-1-border: var(--primary);
-  --decor-2-bg: var(--accent-blush);
-  --decor-2-border: var(--badge-pink-text);
-  --decor-3-bg: var(--accent-butter);
-  --decor-3-border: var(--warning-text);
-  --decor-4-bg: var(--accent-green);
-  --decor-4-border: var(--success-text);
-  --decor-5-bg: var(--accent-peach);
-  --decor-5-border: var(--destructive);
-  --decor-particle-1: #9B6FD6;
-  --decor-particle-2: #6B3FA0;
-  --decor-particle-3: #F0C4E0;
-  --decor-particle-4: #FFD8B4;
-  --decor-particle-5: #B497E8;
-  --decor-avatar-close: #4C1D95;
-  --decor-avatar-s: #A46A00;
-  --decor-heart: #C74242;
-  --decor-heart-soft: #C74242;
+  /* ── CTA Gradient ── */
+  --cta-gradient:       linear-gradient(135deg, var(--brand-600) 0%, var(--brand-500) 100%);
+  --cta-shadow:         0 4px 20px rgba(91, 61, 245, 0.20);
+  --cta-shadow-hover:   0 10px 32px rgba(74, 47, 224, 0.28);
 
-  /* Secondary */
-  --secondary: #F0C4E0;
-  --secondary-foreground: #2A1F3B;
+  /* ── Accent hỗ trợ — CHỈ LÀ sắc độ của Indigo/Lilac (không rẽ hue khác) ── */
+  --accent-pink:         var(--brand-100);   /* nền chip nhạt */
+  --accent-yellow:       var(--brand-100);   /* dùng cùng 1 sắc thay vì hue lạ */
+  --accent-blush:        var(--brand-400);   /* nút nổi bật cấp 2 */
+  --accent-cream:        var(--brand-50);
+  --accent-warm:         var(--brand-500);
+  --accent-lavender:     var(--brand-300);
+  --accent-gray:         #EEEEF1;
+  --accent-gray-text:    #52525B;
+  --accent-green:        #E6F6EA;
+  --accent-green-text:   #1F8A4C;
+  --accent-red:          #FCE8E8;
+  --accent-red-text:     #C23B3B;
+  --accent-blue:         #E7EEFC;
+  --accent-blue-text:    #2A56C6;
 
-  /* Destructive */
-  --destructive: #C74242;
+  --rating-star:         var(--brand-600);   /* sao đánh giá = Indigo, không dùng vàng lạ */
+  --decor-heart:         #E23E6B;            /* tim yêu thích — đỏ hồng rõ ràng, KHÁC biệt có chủ đích để không lẫn với brand, dễ nhận biết trạng thái */
+  --decor-heart-soft:    #F293AC;
+
+  --decor-1-bg: var(--brand-100); --decor-1-border: var(--brand-500);
+  --decor-2-bg: var(--brand-150); --decor-2-border: var(--brand-600);
+  --decor-3-bg: var(--brand-200); --decor-3-border: var(--brand-700);
+  --decor-4-bg: var(--brand-100); --decor-4-border: var(--brand-400);
+  --decor-5-bg: var(--brand-50);  --decor-5-border: var(--brand-300);
+  --decor-avatar-close: var(--brand-600);
+  --decor-avatar-s:     var(--brand-400);
+
+  /* ── Status (giữ tách biệt để không lẫn với brand — cần thiết cho UX) ── */
+  --success-bg: #E9F7EF; --success-text: #1F8A4C; --success-border: #BEE8CF;
+  --warning-bg: #FEF6E3; --warning-text: #9A6B00; --warning-border: #F5DFA0;
+  --error-bg:   #FCE9E9; --error-text:   #C23B3B; --error-border:   #F3C4C4;
+  --info-bg:    #E7EEFC; --info-text:    #2A56C6; --info-border:    #C4D4F5;
+
+  /* Admin action buttons (view/edit/delete) — dùng lại status set */
+  --action-info-bg: var(--info-bg); --action-info-border: var(--info-border); --action-info-text: var(--info-text); --action-info-hover-bg: #DCE7FA; --action-info-glow: rgba(42,86,198,0.35);
+  --action-warning-bg: var(--warning-bg); --action-warning-border: var(--warning-border); --action-warning-text: var(--warning-text); --action-warning-hover-bg: #FCEDC7; --action-warning-glow: rgba(154,107,0,0.30);
+  --action-destructive-bg: var(--error-bg); --action-destructive-border: var(--error-border); --action-destructive-text: var(--error-text); --action-destructive-hover-bg: #FAD6D6; --action-destructive-glow: rgba(194,59,59,0.30);
+
+  --destructive: #C23B3B;
   --destructive-foreground: #FFFFFF;
 
-  /* ===== SHADOWS ===== */
-  --shadow-xs:   0 1px 2px rgba(83,60,122,0.03), 0 1px 1px rgba(107,63,160,0.02);
-  --shadow-sm:   0 1px 3px rgba(83,60,122,0.04), 0 1px 6px rgba(107,63,160,0.03);
-  --shadow-md:   0 2px 8px rgba(83,60,122,0.05), 0 4px 16px rgba(107,63,160,0.06);
-  --shadow-lg:   0 4px 16px rgba(83,60,122,0.06), 0 8px 32px rgba(107,63,160,0.08);
-  --shadow-xl:   0 8px 32px rgba(83,60,122,0.08), 0 16px 48px rgba(107,63,160,0.10);
-
-  --shadow-card: 0 1px 3px rgba(83,60,122,0.04), 0 4px 12px rgba(107,63,160,0.05), 0 0 0 1px rgba(236,230,243,0.5) inset;
-  --shadow-card-hover: 0 4px 16px rgba(83,60,122,0.08), 0 12px 40px rgba(107,63,160,0.10), 0 0 0 1px rgba(236,230,243,0.8) inset;
-  --shadow-card-elevated: 0 8px 32px rgba(83,60,122,0.10), 0 24px 60px rgba(107,63,160,0.12);
-
-  --shadow-float: 0 12px 48px rgba(83,60,122,0.10), 0 4px 16px rgba(107,63,160,0.08);
-  --shadow-float-lg: 0 24px 64px rgba(83,60,122,0.12), 0 8px 24px rgba(107,63,160,0.10);
-
-  /* ===== BORDER RADIUS ===== */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-3xl: 28px;
-  --radius-full: 9999px;
-  --input-radius: var(--radius-lg);
-
-  /* ===== FOCUS RING ===== */
-  --focus-ring: 0 0 0 3px rgba(107, 63, 160, 0.15);
+  /* ── Focus ring ── */
+  --focus-ring: 0 0 0 3px rgba(91, 61, 245, 0.35);
   --focus-ring-width: 3px;
-  --focus-ring-color: rgba(107, 63, 160, 0.15);
+  --focus-ring-color: rgba(91, 61, 245, 0.35);
 
-  /* ===== GLASSMORPHISM — solid enough to always be readable ===== */
-  --glass-bg:       rgba(var(--bg-1-rgb), 0.94);
+  /* ── Shadows — trung tính, không nhuộm hết mọi thứ ── */
+  --shadow-xs:   0 1px 2px rgba(24,24,27,0.04);
+  --shadow-sm:   0 1px 3px rgba(24,24,27,0.05), 0 1px 6px rgba(24,24,27,0.03);
+  --shadow-md:   0 2px 10px rgba(24,24,27,0.06), 0 6px 18px rgba(24,24,27,0.05);
+  --shadow-lg:   0 6px 20px rgba(24,24,27,0.08), 0 12px 36px rgba(24,24,27,0.06);
+  --shadow-xl:   0 10px 32px rgba(24,24,27,0.10), 0 20px 52px rgba(24,24,27,0.08);
+  --shadow-card: 0 1px 3px rgba(24,24,27,0.05), 0 4px 14px rgba(24,24,27,0.05), 0 0 0 1px rgba(222,208,247,0.6) inset;
+  --shadow-card-hover: 0 6px 20px rgba(24,24,27,0.09), 0 16px 42px rgba(91,61,245,0.12), 0 0 0 1px rgba(222,208,247,0.9) inset;
+  --shadow-card-elevated: 0 10px 34px rgba(24,24,27,0.10), 0 28px 60px rgba(91,61,245,0.12);
+  --shadow-float: 0 14px 46px rgba(24,24,27,0.12);
+  --shadow-float-lg: 0 26px 64px rgba(24,24,27,0.14);
+  /* Glow riêng cho phần tử cần nổi bật ngay ở light mode (nhẹ) */
+  --shadow-glow-primary: 0 0 24px rgba(91,61,245,0.18);
+
+  /* ── Glass ── */
+  --glass-bg:       rgba(251, 250, 253, 0.94);
   --glass-border:   rgba(255, 255, 255, 0.6);
-  --glass-shadow:   0 4px 24px rgba(83,60,122,0.08);
+  --glass-shadow:   0 4px 24px rgba(24,24,27,0.08);
   --glass-blur:     20px;
 
-  /* Dedicated SOLID surfaces for things that must never be see-through */
+  /* ── Popover / Dropdown / Modal ── */
   --popover-bg:     #FFFFFF;
   --dropdown-bg:    #FFFFFF;
-  --dropdown-hover-bg: #F8F1FC;
-  --modal-bg:       #FFFDF9;
-  --modal-overlay:  rgba(58, 42, 77, 0.35);
+  --dropdown-hover-bg: var(--bg-2);
+  --modal-bg:       #FFFFFF;
+  --modal-overlay:  rgba(24, 24, 27, 0.40);
   --select-bg:      #FFFFFF;
 
-  /* ===== BADGE ===== */
+  /* ── Badge ── */
   --badge-radius: var(--radius-full);
   --badge-padding: 2px 12px;
-  --badge-purple-bg: #EEE3FA;
-  --badge-purple-text: #6B3FA0;
-  --badge-pink-bg: #FCEBF5;
-  --badge-pink-text: #D065A3;
-  --badge-yellow-bg: #FFF8D8;
-  --badge-yellow-text: #B58B00;
-  --badge-peach-bg: #FFF0E0;
-  --badge-peach-text: #A65A20;
-  --badge-warm-bg: #FDEBE0;
-  --badge-warm-text: #A04E22;
-  --badge-green-bg: #EAF8EF;
-  --badge-green-text: #2E7D4F;
+  --badge-purple-bg: var(--brand-100); --badge-purple-text: var(--brand-600);
+  --badge-pink-bg:   var(--brand-100); --badge-pink-text:   var(--brand-700);
+  --badge-yellow-bg: var(--brand-100); --badge-yellow-text: var(--brand-700);
+  --badge-peach-bg:  var(--brand-100); --badge-peach-text:  var(--brand-700);
+  --badge-warm-bg:   var(--brand-100); --badge-warm-text:   var(--brand-700);
+  --badge-green-bg:  #E6F6EA; --badge-green-text: #1F8A4C;
 
-  /* ===== FILTER CHIP ===== */
+  /* ── Filter Chip ── */
   --chip-bg:          #FFFFFF;
-  --chip-border:      #E8E0F3;
-  --chip-hover-bg:    #FFF8F2;
-  --chip-active-bg:   #EEE3FA;
-  --chip-active-border: #9B6FD6;
+  --chip-border:      #DED0F7;
+  --chip-hover-bg:    var(--bg-2);
+  --chip-active-bg:   var(--brand-150);
+  --chip-active-border: var(--brand-600);
   --chip-radius:      var(--radius-full);
   --chip-padding:     6px 16px;
-  --chip-text:        #6B3FA0;
+  --chip-text:        var(--brand-600);
 
-  /* ===== INPUT ===== */
+  /* ── Input ── */
   --input-bg:           #FFFFFF;
-  --input-border:       #E6E0EC;
-  --input-hover-border: #6B3FA0;
-  --input-focus-border: #6B3FA0;
-  --input-hover-bg:     #FFF9F5;
-  --input-focus-shadow: 0 0 0 4px rgba(107, 63, 160, 0.08);
+  --input-border:       #DED0F7;
+  --input-hover-border: var(--brand-600);
+  --input-focus-border: var(--brand-600);
+  --input-hover-bg:     var(--bg-2);
+  --input-focus-shadow: 0 0 0 4px rgba(91, 61, 245, 0.10);
   --input-radius:       var(--radius-lg);
-  --input-placeholder:  #AAA0B8;
+  --input-placeholder:  #A1A1AA;
 
-  /* ===== SWITCH ===== */
-  --switch-bg: #E6DCF2;
+  --switch-bg: #DED0F7;
 
-  /* ===== SPACING SCALE ===== */
+  /* ── Table ── */
+  --table-header: var(--bg-2);
+  --table-body: #FFFFFF;
+  --table-row-alt: #FBF9FE;
+  --table-row-hover: var(--bg-3);
+  --table-border: #DED0F7;
+
+  --sidebar-bg: #FFFFFF;
+  --sidebar-hover: var(--bg-2);
+  --sidebar-active: var(--brand-150);
+  --sidebar-border: #DED0F7;
+
+  --navbar-bg: rgba(251, 250, 253, .97);
+  --navbar-blur: 18px;
+  --navbar-border: rgba(255, 255, 255, .7);
+
+  --scrollbar-track: var(--bg-3);
+  --scrollbar-thumb: var(--brand-300);
+  --scrollbar-thumb-hover: var(--brand-400);
+
+  --progress-track: var(--bg-3);
+  --progress-fill: var(--brand-600);
+
+  /* ── Glow — dùng CÓ CHỦ ĐÍCH, light mode nhẹ, dark mode mạnh (xem .dark) ── */
+  --glow-primary: rgba(91, 61, 245, 0.14);
+  --glow-pink: rgba(91, 61, 245, 0.12);
+  --glow-yellow: rgba(91, 61, 245, 0.10);
+  --glow-peach: rgba(91, 61, 245, 0.10);
+  --glow-lavender: rgba(91, 61, 245, 0.12);
+
+  --hover-overlay: rgba(255,255,255,.45);
+  --divider: #DED0F7;
+  --overlay: rgba(24,24,27,.35);
+  --texture-opacity: 0.02;
+
+  /* ── Spacing / Typography / Radius / Z / Anim — không đổi ── */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
   --space-12: 48px; --space-16: 64px; --space-20: 80px; --space-24: 96px;
 
-  /* ===== TYPOGRAPHY SCALE ===== */
   --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem; --text-lg: 1.125rem;
   --text-xl: 1.25rem; --text-2xl: 1.5rem; --text-3xl: 1.875rem; --text-4xl: 2.25rem;
   --text-5xl: 3rem; --text-6xl: 3.75rem;
-
-  /* ===== FONT FAMILIES ===== */
   --font-heading: 'Playfair Display', Georgia, serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-script: 'Caveat', cursive;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* ===== Z-INDEX SYSTEM ===== */
+  --radius-xs: 6px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --radius-xl: 20px; --radius-2xl: 24px; --radius-3xl: 28px; --radius-full: 9999px;
+
   --z-base: 0; --z-dropdown: 100; --z-sticky: 200; --z-navbar: 300;
   --z-drawer: 400; --z-modal: 500; --z-toast: 600; --z-tooltip: 700;
 
-  /* ===== ANIMATION ===== */
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 150ms; --duration-normal: 250ms; --duration-slow: 400ms; --duration-slower: 600ms;
 
-  /* ===== GLOW EFFECTS (ambient orbs) ===== */
-  --glow-primary: rgba(107, 63, 160, 0.15);
-  --glow-pink: rgba(240, 196, 224, 0.28);
-  --glow-yellow: rgba(255, 246, 199, 0.28);
-  --glow-peach: rgba(255, 216, 180, 0.28);
-  --glow-lavender: rgba(238, 227, 250, 0.3);
-
-  /* Table */
-  --table-header: #F8F3FB;
-  --table-body: #FFFFFF;
-  --table-row-alt: #FCFAFE;
-  --table-row-hover: #FFF9F3;
-  --table-border: #ECE6F3;
-
-  /* Sidebar */
-  --sidebar-bg: #FFFDF9;
-  --sidebar-hover: #FFF6EF;
-  --sidebar-active: #F1E7FD;
-  --sidebar-border: #EEE6F4;
-
-  /* Navbar */
-  --navbar-bg: rgba(var(--bg-1-rgb), .97);
-  --navbar-blur: 18px;
-  --navbar-border: rgba(255,255,255,.7);
-
-  /* Status — generic semantic (used by general UI) */
-  --success-bg: #EAF8EF; --success-text: #2E7D4F;
-  --warning-bg: #FFF9DD; --warning-text: #A46A00;
-  --error-bg: #FFECEC;   --error-text: #C74242;
-  --info-bg: #EDF6FF;    --info-text: #2E6BB8;
-
-  /* ===== STATUS BADGE TOKENS — warm atelier palette =====
-     Light mode: solid warm tints with dark saturated text for readability.
-     Dark mode:  semi-transparent rgba backgrounds with bright text.
-     Used by order-status badges, membership-tier badges, etc.
-  */
-  --status-success-bg:    #E8F0DC;
-  --status-success-text:  #4D7A2E;
-  --status-success-border: #C3DBA8;
-
-  --status-pending-bg:    #FFD8B4;
-  --status-pending-text:  #B5651D;
-  --status-pending-border: #F5C08A;
-
-  --status-error-bg:      #FBE2DC;
-  --status-error-text:    #B84C3A;
-  --status-error-border:  #F0B8A8;
-
-  --status-info-bg:       #F0C4E0;
-  --status-info-text:     #9B4E86;
-  --status-info-border:   #E3A8CF;
-
-  /* Rating / clear actions */
-  --rating-star: var(--warning-text);
-  --clear-btn-bg: var(--destructive);
-  --clear-btn-border: var(--destructive);
-  --clear-btn-text: var(--destructive-foreground);
-  --clear-btn-glow: rgba(199, 66, 66, 0.4);
-
-  /* Glass admin action buttons — semantic */
-  --action-info-bg: rgba(46, 107, 184, 0.1);
-  --action-info-border: rgba(46, 107, 184, 0.3);
-  --action-info-text: var(--info-text);
-  --action-info-hover-bg: rgba(46, 107, 184, 0.2);
-  --action-info-glow: rgba(46, 107, 184, 0.3);
-  --action-warning-bg: rgba(164, 106, 0, 0.1);
-  --action-warning-border: rgba(164, 106, 0, 0.3);
-  --action-warning-text: var(--warning-text);
-  --action-warning-hover-bg: rgba(164, 106, 0, 0.2);
-  --action-warning-glow: rgba(164, 106, 0, 0.3);
-  --action-destructive-bg: rgba(199, 66, 66, 0.1);
-  --action-destructive-border: rgba(199, 66, 66, 0.3);
-  --action-destructive-text: var(--destructive);
-  --action-destructive-hover-bg: rgba(199, 66, 66, 0.2);
-  --action-destructive-glow: rgba(199, 66, 66, 0.3);
-
-  --hover-overlay: rgba(255,255,255,.45);
-  --divider: #ECE6F3;
-
-  --progress-track: #F1EDF5;
-  --progress-fill: #6B3FA0;
-
-  --scrollbar-track: #F6F2F8;
-  --scrollbar-thumb: #B497E8;
-  --scrollbar-thumb-hover: #B497E8;
-
-  --glow-yellow-bg: #FFF6C7;
-  --glow-gold-bg: #F5EFA8;
-  --glow-peach-bg: #FFD8B4;
-  --glow-pink-bg: #F0C4E0;
-  --glow-purple-bg: rgba(107,63,160,.15);
-
-  --overlay: rgba(40,25,55,.35);
-  --texture-opacity: 0.025;
-
-  --bg-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-
-  /* Shadcn-compatible aliases */
+  /* ── Shadcn / compat aliases ── */
   --color-background:         var(--background);
   --color-foreground:         var(--foreground);
   --color-card:               var(--card);
@@ -339,27 +297,7 @@
   --color-input:              var(--input-border);
   --color-input-background:   var(--input-bg);
   --color-ring:               var(--primary);
-
-  --color-text:               var(--foreground);
-  --color-text-muted:         var(--foreground-muted);
   --color-bg-card:            var(--card);
-  --card-bg:                  var(--card);
-
-  --radius: var(--radius-lg);
-
-  /* ============================================================
-     COMPATIBILITY ALIASES — "--color-warm-*" / "--muted-foreground"
-     ------------------------------------------------------------
-     These names are referenced by several components (ProductFilter,
-     SortDropdown, FilterChip, Shop's inline <style>) but were never
-     declared anywhere in the design system. An undefined CSS custom
-     property resolves to nothing, so every background/border that
-     depended on them silently fell back to "transparent" — this is
-     the root cause of the "trong suốt" bug on filters, pills, tables
-     and popups. Defined once here (not inside .dark) so they always
-     track whichever theme is active, since --card/--surface/--primary
-     etc. are themselves re-declared under .dark.
-     ============================================================ */
   --color-warm-bg:             var(--card);
   --color-warm-surface:        var(--surface);
   --color-warm-border:         var(--border);
@@ -370,32 +308,23 @@
   --color-warm-muted:          var(--foreground-muted);
   --color-warm-text:           var(--foreground);
   --color-warm-text-secondary: var(--foreground-secondary);
-  --muted-foreground:          var(--foreground-muted);
+  --radius: var(--radius-lg);
 
-  /* ============================================================
-     THEME TOGGLE (Uiverse-style switch) — missing tokens
-     ------------------------------------------------------------
-     theme-toggle.css references --bg / --primaryT / --transDur,
-     none of which existed anywhere in the system. Same class of bug
-     as --color-warm-*: undefined var → the mix-blend fill overlay,
-     the focus-ring glow, and every transition on the switch silently
-     did nothing. Defined once here; --primaryT gets a stronger, more
-     visible alpha under .dark since the switch sits on a darker bg.
-     ============================================================ */
+  /* ── Theme toggle widget ── */
   --bg:       var(--background);
   --transDur: 0.4s;
-  --primaryT: rgba(107, 63, 160, 0.25);
+  --primaryT: rgba(91, 61, 245, 0.25);
 }
 
 /* ============================================================
-   DARK MODE — Warm Night (tím ấm) — SOLID glass surfaces
+   🌙 DARK MODE — "phát sáng như đèn", không phẳng lì
    ============================================================ */
 .dark {
-  /* Background gradient stops — per spec */
-  --bg-1: #1C1526;
-  --bg-2: #241A34;
-  --bg-3: #180F22;
-  --bg-1-rgb: 28, 21, 38;
+  /* ── Nền tối, có sắc indigo rất nhẹ để glow "có chỗ để toả" ── */
+  --bg-1: #0F0D16;
+  --bg-2: #17131F;
+  --bg-3: #1D1729;
+  --bg-1-rgb: 15, 13, 22;
   --bg-gradient-160: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
   --bg-gradient-180: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-3) 100%);
   --bg-overlay-92: rgba(var(--bg-1-rgb), 0.92);
@@ -404,209 +333,179 @@
   --bg-overlay-96: rgba(var(--bg-1-rgb), 0.96);
   --bg-overlay-15: rgba(var(--bg-1-rgb), 0.15);
   --bg-overlay-22: rgba(var(--bg-1-rgb), 0.22);
-  --bg-vignette: linear-gradient(to bottom, rgba(var(--bg-1-rgb), 0) 55%, rgba(var(--bg-1-rgb), 0.22) 100%);
 
   --background: var(--bg-1);
-  --surface:    #241A34;
-  --surface-secondary: #2A1F3D;
-  --muted:      #2E2246;
-  --card:       #241A34;
-  --card-warm:  #251B36;
-  --card-hover: #2A1F3D;
-  --card-glass: rgba(36, 26, 52, 0.98);
+  --surface:    #211B33;
+  --surface-secondary: #2B2242;
+  --muted:      #17131F;
+  --card:       #211B33;
+  --card-warm:  #241D38;
+  --card-hover: #2B2242;
+  --card-glass: rgba(33, 27, 51, 0.96);
+  --card-bg:    var(--card);
 
-  /* Typography */
-  --foreground:          #F5F0E8;
-  --foreground-secondary: #E8E0D8;
-  --foreground-muted:    #C3B4DC;
-  --foreground-subtle:   #9C8AB8;
-  --foreground-disabled: #4E3E62;
-  --foreground-placeholder: #8A7A9E;
-  --border:              #4A3768;
-  --border-subtle:       #3E2E5A;
-  --border-light:        #4A3768;
+  --border:              #362B54;
+  --border-subtle:       #2C2340;
+  --border-light:        #362B54;
 
-  /* Primary — luminous lavender, per spec (#D8C2FF → #6B3FA0) */
-  --primary:            #9B6FD6;
-  --primary-hover:      #B497E8;
-  --primary-pressed:    #6B3FA0;
-  --primary-soft:       #34274F;
-  --primary-light:      #2C2145;
-  --primary-disabled:   #4A3E5A;
-  --primary-foreground: #1A1526;
+  /* ── TEXT THƯỜNG dark mode — trắng trung tính, KHÔNG nhuộm tím ── */
+  --foreground:            #F4F4F5;
+  --foreground-secondary:  #C4C4CC;
+  --foreground-muted:      #93939F;
+  --foreground-subtle:     #6E6E7A;
+  --foreground-disabled:   #6E6E7A;
+  --foreground-placeholder:#6E6E7A;
+  --color-text:            var(--foreground);
+  --color-text-muted:      var(--foreground-muted);
+  --muted-foreground:      var(--foreground-muted);
 
-  /* CTA */
-  --cta-gradient:       linear-gradient(135deg, #6B3FA0 0%, #9B6FD6 100%);
-  --cta-shadow:         0 4px 24px rgba(155, 111, 214, 0.30);
-  --cta-shadow-hover:   0 8px 40px rgba(184, 151, 232, 0.40);
+  /* ── TEXT NHẤN dark mode — Indigo sáng lên để tự phát sáng trên nền tối ── */
+  --text-accent:           #8C7BFF;
+  --text-accent-on-brand:  #FFFFFF;
 
-  --secondary: #3D2E4F;
-  --secondary-foreground: #F5F0E8;
+  --primary:            #8C7BFF;
+  --primary-hover:      #A294FF;
+  --primary-pressed:    #6C57E8;
+  --primary-soft:       #2B2242;
+  --primary-light:      #17131F;
+  --primary-disabled:   #4A3E78;
+  --primary-foreground: #FFFFFF;
 
-  /* Accent — dark glow spec: D8C2FF / B497E8 / 9B6FD6 / 6B3FA0 */
-  --accent-glow:        rgba(216, 194, 255, 0.10);
-  --accent-butter:      rgba(232, 223, 160, 0.10);
-  --accent-peach:       rgba(255, 210, 160, 0.08);
-  --accent-blush:       rgba(232, 174, 212, 0.10);
-  --accent-pink:        #E8AED4;
-  --accent-yellow:      #E8DFA0;
-  --accent-cream:       rgba(216, 194, 255, 0.12);
-  --accent-lavender:    rgba(184, 151, 232, 0.16);
-  --accent-green:       rgba(60, 140, 80, 0.22);
-  --accent-green-text:  #8BD4A0;
-  --accent-orange:      rgba(200, 130, 40, 0.22);
-  --accent-orange-text: #F5C47A;
-  --accent-red:         rgba(200, 50, 50, 0.22);
-  --accent-red-text:    #F48A8A;
-  --accent-blue:        rgba(60, 100, 200, 0.22);
-  --accent-blue-text:   #8AB4F8;
-  --accent-gray:        rgba(216, 194, 255, 0.08);
-  --accent-gray-text:   #B4A8C8;
+  --secondary:          #2B2242;
+  --secondary-hover:    #372B54;
+  --secondary-foreground: #C6BAF5;
 
-  /* Decorative palette — dark luminous variants */
-  --decor-1-bg: rgba(155, 111, 214, 0.35);
-  --decor-1-border: var(--primary);
-  --decor-2-bg: rgba(232, 174, 212, 0.30);
-  --decor-2-border: var(--accent-pink);
-  --decor-3-bg: rgba(232, 223, 160, 0.30);
-  --decor-3-border: var(--accent-orange-text);
-  --decor-4-bg: var(--accent-green);
-  --decor-4-border: var(--accent-green-text);
-  --decor-5-bg: rgba(255, 210, 160, 0.28);
-  --decor-5-border: var(--destructive);
-  --decor-particle-1: #9B6FD6;
-  --decor-particle-2: #B497E8;
-  --decor-particle-3: #E8AED4;
-  --decor-particle-4: #FFD8B4;
-  --decor-particle-5: #D8C2FF;
-  --decor-avatar-close: #57327F;
-  --decor-avatar-s: #F5C47A;
-  --decor-heart: #E05472;
-  --decor-heart-soft: #F48A8A;
+  --link:               #A294FF;
+  --link-hover:         #B9AEFF;
+  --link-visited:       #8C7BFF;
 
-  /* Destructive */
-  --destructive: #E05472;
-  --destructive-foreground: #1A1526;
+  --cta-gradient:       linear-gradient(135deg, #8C7BFF 0%, #6C57E8 100%);
+  /* CTA glow rõ, như đèn LED toả sáng quanh nút — đây là điểm "phát sáng" chính */
+  --cta-shadow:         0 0 24px rgba(140,123,255,0.45), 0 6px 24px rgba(0,0,0,0.4);
+  --cta-shadow-hover:   0 0 40px rgba(162,148,255,0.60), 0 10px 32px rgba(0,0,0,0.5);
 
-  /* Shadows */
-  --shadow-xs:   0 1px 2px rgba(0,0,0,0.25);
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.30), 0 1px 6px rgba(155,111,214,0.08);
-  --shadow-md:   0 2px 8px rgba(0,0,0,0.35), 0 4px 16px rgba(155,111,214,0.10);
-  --shadow-lg:   0 4px 16px rgba(0,0,0,0.40), 0 8px 32px rgba(155,111,214,0.12);
-  --shadow-xl:   0 8px 32px rgba(0,0,0,0.45), 0 16px 48px rgba(155,111,214,0.14);
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.25), 0 4px 12px rgba(155,111,214,0.10), 0 0 0 1px rgba(74,55,104,0.6) inset;
-  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.40), 0 12px 40px rgba(155,111,214,0.14), 0 0 0 1px rgba(74,55,104,0.9) inset;
-  --shadow-card-elevated: 0 8px 32px rgba(0,0,0,0.45), 0 24px 60px rgba(155,111,214,0.18);
-  --shadow-float: 0 12px 48px rgba(0,0,0,0.45);
-  --shadow-float-lg: 0 24px 64px rgba(0,0,0,0.50);
+  --accent-pink:         rgba(140,123,255,0.16);
+  --accent-yellow:       rgba(140,123,255,0.16);
+  --accent-blush:        #9B84F2;
+  --accent-cream:        rgba(140,123,255,0.10);
+  --accent-warm:         #7A63F5;
+  --accent-lavender:     #C3ADF5;
+  --accent-gray:         #2B2242;
+  --accent-gray-text:    #C4C4CC;
+  --accent-green:        rgba(74,196,120,0.16);
+  --accent-green-text:   #6FD897;
+  --accent-red:          rgba(226,62,107,0.16);
+  --accent-red-text:     #F4879F;
+  --accent-blue:         rgba(90,140,240,0.16);
+  --accent-blue-text:    #9DB8F5;
 
-  /* Focus */
-  --focus-ring: 0 0 0 3px rgba(155, 111, 214, 0.30);
-  --focus-ring-color: rgba(155, 111, 214, 0.30);
+  --rating-star:         #A294FF;
+  --decor-heart:         #F4879F;
+  --decor-heart-soft:    #F9B6C4;
 
-  /* Glass — kept visually "glassy" via blur, but SOLID enough to read */
-  --glass-bg:       rgba(24, 15, 34, 0.92);
-  --glass-border:   rgba(155, 111, 214, 0.22);
-  --glass-shadow:   0 4px 24px rgba(0, 0, 0, 0.45);
+  --decor-1-bg: rgba(140,123,255,0.18); --decor-1-border: #9B84F2;
+  --decor-2-bg: rgba(140,123,255,0.22); --decor-2-border: #8C7BFF;
+  --decor-3-bg: rgba(140,123,255,0.26); --decor-3-border: #A294FF;
+  --decor-4-bg: rgba(140,123,255,0.16); --decor-4-border: #7A63F5;
+  --decor-5-bg: rgba(140,123,255,0.12); --decor-5-border: #C3ADF5;
+  --decor-avatar-close: #8C7BFF;
+  --decor-avatar-s:     #9B84F2;
+
+  --success-bg: rgba(111,216,151,0.16); --success-text: #6FD897; --success-border: rgba(111,216,151,0.35);
+  --warning-bg: rgba(244,196,90,0.16);  --warning-text: #F4C45A; --warning-border: rgba(244,196,90,0.35);
+  --error-bg:   rgba(244,135,159,0.16); --error-text:   #F4879F; --error-border:   rgba(244,135,159,0.35);
+  --info-bg:    rgba(157,184,245,0.16); --info-text:    #9DB8F5; --info-border:    rgba(157,184,245,0.35);
+
+  --action-info-bg: var(--info-bg); --action-info-border: var(--info-border); --action-info-text: var(--info-text); --action-info-hover-bg: rgba(157,184,245,0.24); --action-info-glow: rgba(157,184,245,0.45);
+  --action-warning-bg: var(--warning-bg); --action-warning-border: var(--warning-border); --action-warning-text: var(--warning-text); --action-warning-hover-bg: rgba(244,196,90,0.24); --action-warning-glow: rgba(244,196,90,0.40);
+  --action-destructive-bg: var(--error-bg); --action-destructive-border: var(--error-border); --action-destructive-text: var(--error-text); --action-destructive-hover-bg: rgba(244,135,159,0.24); --action-destructive-glow: rgba(244,135,159,0.40);
+
+  --destructive: #F4879F;
+  --destructive-foreground: #0F0D16;
+
+  --focus-ring: 0 0 0 3px rgba(140, 123, 255, 0.50);
+  --focus-ring-color: rgba(140, 123, 255, 0.50);
+
+  /* ── Shadows dark — nền rất tối + glow indigo rõ để tạo cảm giác "đèn" ── */
+  --shadow-xs:   0 1px 2px rgba(0,0,0,0.35);
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.40), 0 0 10px rgba(140,123,255,0.10);
+  --shadow-md:   0 2px 10px rgba(0,0,0,0.45), 0 0 20px rgba(140,123,255,0.14);
+  --shadow-lg:   0 6px 20px rgba(0,0,0,0.50), 0 0 32px rgba(140,123,255,0.18);
+  --shadow-xl:   0 10px 32px rgba(0,0,0,0.55), 0 0 48px rgba(140,123,255,0.22);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.35), 0 0 22px rgba(140,123,255,0.10), 0 0 0 1px rgba(140,123,255,0.14) inset;
+  --shadow-card-hover: 0 6px 20px rgba(0,0,0,0.50), 0 0 40px rgba(140,123,255,0.22), 0 0 0 1px rgba(140,123,255,0.24) inset;
+  --shadow-card-elevated: 0 10px 34px rgba(0,0,0,0.55), 0 0 56px rgba(140,123,255,0.24);
+  --shadow-float: 0 14px 46px rgba(0,0,0,0.55), 0 0 40px rgba(140,123,255,0.16);
+  --shadow-float-lg: 0 26px 64px rgba(0,0,0,0.60), 0 0 60px rgba(140,123,255,0.20);
+  /* Glow mạnh — dùng cho nút chính / khối hero để có cảm giác "đèn toả sáng" */
+  --shadow-glow-primary: 0 0 50px rgba(140,123,255,0.45), 0 0 100px rgba(140,123,255,0.20);
+
+  --glass-bg:       rgba(15, 13, 22, 0.90);
+  --glass-border:   rgba(140, 123, 255, 0.28);
+  --glass-shadow:   0 4px 24px rgba(0, 0, 0, 0.50), 0 0 30px rgba(140,123,255,0.14);
   --glass-blur:     22px;
 
-  /* Dedicated SOLID surfaces — this is the fix for "trong suốt" */
-  --popover-bg:     #241A34;
-  --dropdown-bg:    #2A1F3D;
-  --dropdown-hover-bg: #34285A;
-  --modal-bg:       #221A32;
-  --modal-overlay:  rgba(10, 6, 18, 0.65);
-  --select-bg:      #2A1F3D;
+  --popover-bg:     #211B33;
+  --dropdown-bg:    #2B2242;
+  --dropdown-hover-bg: #372B54;
+  --modal-bg:       #211B33;
+  --modal-overlay:  rgba(0, 0, 0, 0.68);
+  --select-bg:      #2B2242;
 
-  /* Chip */
-  --chip-bg:          #2A1F3D;
-  --chip-border:      #4A3768;
-  --chip-hover-bg:    #34285A;
-  --chip-active-bg:   rgba(155, 111, 214, 0.24);
-  --chip-active-border: #9B6FD6;
-  --chip-text:        #D8C2FF;
+  --badge-purple-bg: rgba(140,123,255,0.22); --badge-purple-text: #C6BAF5;
+  --badge-pink-bg:   rgba(140,123,255,0.22); --badge-pink-text:  #C6BAF5;
+  --badge-yellow-bg: rgba(140,123,255,0.22); --badge-yellow-text:#C6BAF5;
+  --badge-peach-bg:  rgba(140,123,255,0.22); --badge-peach-text: #C6BAF5;
+  --badge-warm-bg:   rgba(140,123,255,0.22); --badge-warm-text:  #C6BAF5;
+  --badge-green-bg:  rgba(111,216,151,0.18); --badge-green-text: #6FD897;
 
-  /* Input — was near-invisible (3% alpha); now a real solid surface */
-  --input-bg:           #2A1F3D;
-  --input-border:       #4A3768;
-  --input-hover-bg:     #322650;
+  --chip-bg:          #2B2242;
+  --chip-border:      #362B54;
+  --chip-hover-bg:    #372B54;
+  --chip-active-bg:   rgba(140, 123, 255, 0.24);
+  --chip-active-border: #8C7BFF;
+  --chip-text:        #C6BAF5;
+
+  --input-bg:           #211B33;
+  --input-border:       #362B54;
+  --input-hover-bg:     #2B2242;
   --input-hover-border: var(--primary);
   --input-focus-border: var(--primary);
-  --input-focus-shadow: 0 0 0 4px rgba(155, 111, 214, 0.22);
-  --input-placeholder:  #8A7A9E;
+  --input-focus-shadow: 0 0 0 4px rgba(140, 123, 255, 0.22);
+  --input-placeholder:  #6E6E7A;
 
-  /* Switch */
-  --switch-bg: #3D2E4F;
+  --switch-bg: #362B54;
 
-  /* Glow */
-  --glow-primary: rgba(155, 111, 214, 0.20);
-  --glow-pink: rgba(232, 174, 212, 0.10);
-  --glow-yellow: rgba(232, 223, 160, 0.08);
-  --glow-peach: rgba(200, 130, 40, 0.08);
-  --glow-lavender: rgba(184, 151, 232, 0.14);
+  --table-header: #2B2242;
+  --table-body:   #211B33;
+  --table-row-alt: #241D38;
+  --table-row-hover: #372B54;
+  --table-border: #362B54;
 
-  /* Badges — solid pastel-on-dark chips stay legible (WCAG AA) */
-  --badge-purple-bg: rgba(155,111,214,0.22); --badge-purple-text: #D8C2FF;
-  --badge-pink-bg:   rgba(232,174,212,0.20); --badge-pink-text:  #F5D4EA;
-  --badge-yellow-bg: rgba(232,223,160,0.20); --badge-yellow-text:#F0E8B0;
-  --badge-peach-bg:  rgba(255,210,160,0.22); --badge-peach-text: #FFD8B4;
-  --badge-green-bg:  rgba(60,140,80,0.24);   --badge-green-text: #8BD4A0;
+  --sidebar-bg: #211B33;
+  --sidebar-hover: #2B2242;
+  --sidebar-active: #372B54;
+  --sidebar-border: #362B54;
 
-  /* ===== STATUS BADGE TOKENS — dark mode (Warm Night) =====
-     Semi-transparent rgba background (~15% opacity) over dark purple base,
-     bright saturated text, border at ~35% opacity.
-  */
-  --status-success-bg:    rgba(155, 214, 111, 0.15);
-  --status-success-text:  #A8E08A;
-  --status-success-border: rgba(168, 224, 138, 0.35);
+  --scrollbar-track: #211B33;
+  --scrollbar-thumb: #362B54;
+  --scrollbar-thumb-hover: #8C7BFF;
 
-  --status-pending-bg:    rgba(255, 184, 120, 0.15);
-  --status-pending-text:  #FFC98A;
-  --status-pending-border: rgba(255, 201, 138, 0.35);
+  --progress-track: #2B2242;
+  --progress-fill: #8C7BFF;
 
-  --status-error-bg:      rgba(230, 110, 90, 0.15);
-  --status-error-text:    #F09080;
-  --status-error-border:  rgba(240, 144, 128, 0.35);
+  /* Glow tổng thể mạnh hơn hẳn light mode — đây là "chất đèn" của dark mode */
+  --glow-primary: rgba(140, 123, 255, 0.32);
+  --glow-pink: rgba(140, 123, 255, 0.24);
+  --glow-yellow: rgba(140, 123, 255, 0.20);
+  --glow-peach: rgba(140, 123, 255, 0.20);
+  --glow-lavender: rgba(140, 123, 255, 0.26);
 
-  --status-info-bg:       rgba(184, 151, 232, 0.15);
-  --status-info-text:     #D8C2FF;
-  --status-info-border:   rgba(216, 194, 255, 0.35);
+  --hover-overlay: rgba(255,255,255,.07);
+  --divider: #362B54;
+  --overlay: rgba(0,0,0,.68);
+  --texture-opacity: 0.03;
 
-  /* Rating / clear actions — dark */
-  --clear-btn-glow: rgba(224, 84, 114, 0.4);
-
-  /* Glass admin action buttons — dark semantic */
-  --action-info-bg: rgba(138, 180, 248, 0.12);
-  --action-info-border: rgba(138, 180, 248, 0.35);
-  --action-info-text: var(--info-text);
-  --action-info-hover-bg: rgba(138, 180, 248, 0.22);
-  --action-info-glow: rgba(138, 180, 248, 0.35);
-  --action-warning-bg: rgba(245, 196, 122, 0.12);
-  --action-warning-border: rgba(245, 196, 122, 0.35);
-  --action-warning-text: var(--warning-text);
-  --action-warning-hover-bg: rgba(245, 196, 122, 0.22);
-  --action-warning-glow: rgba(245, 196, 122, 0.35);
-  --action-destructive-bg: rgba(224, 84, 114, 0.12);
-  --action-destructive-border: rgba(224, 84, 114, 0.35);
-  --action-destructive-text: var(--destructive);
-  --action-destructive-hover-bg: rgba(224, 84, 114, 0.22);
-  --action-destructive-glow: rgba(224, 84, 114, 0.35);
-
-  /* Table — previously missing in dark mode (fell back to light values) */
-  --table-header: #2A1F3D;
-  --table-body:   #241A34;
-  --table-row-alt: #271C3A;
-  --table-row-hover: #322650;
-  --table-border: #3E2E5A;
-
-  /* Scrollbar — previously missing in dark mode */
-  --scrollbar-track: #241A34;
-  --scrollbar-thumb: #4A3768;
-  --scrollbar-thumb-hover: #6B3FA0;
-
-  --texture-opacity: 0.04;
-
-  /* Shadcn aliases */
   --color-background:         var(--background);
   --color-foreground:         var(--foreground);
   --color-card:               var(--card);
@@ -627,601 +526,83 @@
   --color-input:              var(--input-border);
   --color-input-background:   var(--input-bg);
   --color-ring:               var(--primary);
+  --color-bg-card:            var(--card);
+  --color-warm-bg:             var(--card);
+  --color-warm-surface:        var(--surface);
+  --color-warm-border:         var(--border);
+  --color-warm-border-hover:   var(--primary);
+  --color-warm-border-active:  var(--primary);
+  --color-warm-accent:         var(--primary);
+  --color-warm-highlight:      var(--primary-hover);
+  --color-warm-muted:          var(--foreground-muted);
+  --color-warm-text:           var(--foreground);
+  --color-warm-text-secondary: var(--foreground-secondary);
 
-  /* Stronger alpha so the switch's focus glow stays visible on dark bg */
-  --primaryT: rgba(155, 111, 214, 0.35);
+  --primaryT: rgba(140, 123, 255, 0.35);
 }
 
 /* ============================================================
-   BASE ELEMENTS
+   BASE — dark mode nền có glow "toả sáng" thật sự thay vì phẳng
    ============================================================ */
-
 body {
   background: linear-gradient(170deg, var(--bg-1) 0%, var(--bg-2) 55%, var(--bg-3) 100%) fixed;
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   font-family: var(--font-body);
   line-height: 1.6;
   font-size: var(--text-base);
   letter-spacing: 0.01em;
+  position: relative;
 }
-
-html {
-  scroll-behavior: smooth;
-  font-size: var(--font-size);
+/* Quầng sáng cố định phía sau nội dung — chỉ hiện rõ ở dark mode */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  background:
+    radial-gradient(600px 400px at 15% 0%, rgba(140,123,255,0.16), transparent 60%),
+    radial-gradient(500px 380px at 90% 30%, rgba(140,123,255,0.12), transparent 60%),
+    radial-gradient(700px 500px at 50% 100%, rgba(140,123,255,0.10), transparent 60%);
+  transition: opacity 0.4s ease;
 }
+.dark body::before { opacity: 1; }
 
-::selection {
-  background: rgba(107, 63, 160, 0.12);
-  color: var(--foreground);
-}
+html { scroll-behavior: smooth; font-size: var(--font-size); }
+::selection { background: rgba(91, 61, 245, 0.14); color: var(--foreground); }
+.dark ::selection { background: rgba(140, 123, 255, 0.30); }
 
-.dark ::selection {
-  background: rgba(155, 111, 214, 0.28);
-}
-
-/* ===== TYPOGRAPHY ===== */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
   line-height: 1.25;
-  color: var(--foreground);
+  color: var(--foreground);            /* mặc định = chữ thường đen/trắng */
   letter-spacing: -0.02em;
 }
-
-h1 { font-size: var(--text-5xl); letter-spacing: -0.03em; line-height: 1.1; }
+h1 { font-size: var(--text-5xl); letter-spacing: -0.03em; line-height: 1.08; }
 h2 { font-size: var(--text-4xl); letter-spacing: -0.02em; }
 h3 { font-size: var(--text-2xl); }
 h4 { font-size: var(--text-xl); }
+p  { line-height: 1.7; color: var(--foreground-secondary); }
 
-p { line-height: 1.7; color: var(--foreground-secondary); }
-
-/* ===== TRANSITIONS ===== */
-/* Theme-aware transitions only on elements that need them */
-.theme-transition, .theme-transition::before, .theme-transition::after {
-  transition: background 0.3s var(--ease-out),
-              background-color 0.3s var(--ease-out),
-              border-color 0.3s var(--ease-out),
-              color 0.25s var(--ease-out),
-              box-shadow 0.3s var(--ease-out);
+/* Dùng class này khi muốn 1 CỤM chữ nổi bật theo đúng brand — không lạm dụng toàn trang */
+.text-accent {
+  color: var(--text-accent);
 }
-.interactive-transition, .interactive-transition::before, .interactive-transition::after {
-  transition: transform 0.2s var(--ease-out),
-              opacity 0.2s var(--ease-out);
+.script-accent {
+  font-family: var(--font-script);
+  font-weight: 500;
+  color: var(--text-accent);
 }
-
-/* ============================================================
-   BUTTON SYSTEM
-   ============================================================ */
-
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  border: none; border-radius: var(--radius-lg); font-family: var(--font-body);
-  font-weight: 600; cursor: pointer; transition: all 0.3s var(--ease-out);
-  white-space: nowrap; position: relative; overflow: hidden; text-decoration: none;
-  line-height: 1; outline: none;
-}
-.btn:focus-visible { box-shadow: var(--focus-ring); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
-
-.btn-xs { padding: 6px 12px; font-size: 0.75rem; border-radius: var(--radius-sm); }
-.btn-sm { padding: 8px 16px; font-size: 0.8125rem; border-radius: var(--radius-md); }
-.btn-md { padding: 10px 20px; font-size: 0.875rem; }
-.btn-lg { padding: 14px 28px; font-size: 0.9375rem; }
-.btn-xl { padding: 16px 36px; font-size: 1rem; border-radius: var(--radius-xl); }
-
-.btn-primary {
-  background: var(--primary); color: var(--primary-foreground); box-shadow: var(--cta-shadow);
-}
-.btn-primary::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 100%);
-  opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
-}
-.btn-primary:hover { background: var(--primary-hover); box-shadow: var(--cta-shadow-hover); transform: translateY(-2px); }
-.btn-primary:hover::before { opacity: 1; }
-.btn-primary:active { background: var(--primary-pressed); transform: translateY(0); box-shadow: var(--cta-shadow); }
-
-.btn-secondary { background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-subtle); }
-.btn-secondary:hover { background: var(--chip-hover-bg); transform: translateY(-1px); }
-.btn-secondary:active { background: var(--primary-soft); transform: translateY(0); }
-
-.btn-warm {
-  background: var(--accent-warm); color: #FFFFFF;
-  box-shadow: 0 4px 20px rgba(217, 130, 74, 0.25);
-}
-.btn-warm:hover { background: var(--accent-warm-soft); box-shadow: 0 8px 28px rgba(217, 130, 74, 0.32); transform: translateY(-2px); }
-.btn-warm:active { background: var(--accent-warm); transform: translateY(0); }
-
-.btn-ghost { background: transparent; color: var(--foreground-muted); border: none; }
-.btn-ghost:hover { background: var(--chip-hover-bg); color: var(--foreground); }
-
-.btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--border-light); }
-.btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--chip-hover-bg); }
-
-.btn-destructive { background: var(--destructive); color: var(--destructive-foreground); }
-.btn-destructive:hover { opacity: 0.9; transform: translateY(-1px); }
-.btn-destructive:active { transform: translateY(0); }
-
-.btn-icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; padding: 0; border-radius: var(--radius-md);
-  background: transparent; color: var(--foreground-muted); border: none;
-  cursor: pointer; transition: all 0.2s var(--ease-out);
-}
-.btn-icon:hover { background: var(--chip-hover-bg); color: var(--foreground); transform: scale(1.05); }
-.btn-icon:active { transform: scale(0.95); }
-
-.btn-icon svg, .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-.btn-lg svg { width: 18px; height: 18px; }
-.btn-xl svg { width: 20px; height: 20px; }
-
-/* ============================================================
-   CARD SYSTEM
-   ============================================================ */
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-2xl);
+/* Nút/khối cần "phát sáng" rõ ở dark mode — gắn thêm class này */
+.glow-on-dark {
   box-shadow: var(--shadow-card);
-  transition: all 0.4s var(--ease-out);
-  position: relative;
-  overflow: hidden;
 }
-.card::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
-  background: linear-gradient(135deg, rgba(155, 111, 214, 0.14) 0%, transparent 50%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  pointer-events: none; opacity: 0; transition: opacity 0.5s var(--ease-out);
-}
-.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card-hover); border-color: var(--border); }
-.card:hover::before { opacity: 1; }
-
-.card-warm { background: var(--card-warm); }
-.card-glass {
-  background: var(--card-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-}
-.card-elevated { box-shadow: var(--shadow-card-elevated); border-color: var(--border); }
-.card-elevated:hover { box-shadow: var(--shadow-float); transform: translateY(-6px); }
-
-.card-header { padding: var(--space-6) var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); }
-.card-body { padding: 0 var(--space-6); }
-.card-footer { padding: var(--space-4) var(--space-6) var(--space-6); display: flex; align-items: center; gap: var(--space-3); }
-.card-title { font-family: var(--font-heading); font-size: var(--text-lg); font-weight: 600; color: var(--foreground); line-height: 1.3; }
-.card-subtitle { font-size: var(--text-sm); color: var(--foreground-muted); font-weight: 400; }
-
-/* ============================================================
-   BADGE SYSTEM
-   ============================================================ */
-
-.badge {
-  display: inline-flex; align-items: center; padding: var(--badge-padding);
-  border-radius: var(--badge-radius); font-family: var(--font-body); font-size: 0.6875rem;
-  font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; line-height: 1.4; gap: 4px;
-}
-.badge-green   { background: var(--accent-green);  color: var(--accent-green-text);  }
-.badge-orange  { background: var(--warning-bg, var(--accent-orange)); color: var(--warning-text, var(--accent-orange-text)); }
-.badge-red     { background: var(--error-bg, var(--accent-red));    color: var(--error-text, var(--accent-red-text));    }
-.badge-blue    { background: var(--info-bg, var(--accent-blue));   color: var(--info-text, var(--accent-blue-text));   }
-.badge-pink    { background: var(--badge-pink-bg);  color: var(--badge-pink-text); }
-.badge-yellow  { background: var(--badge-yellow-bg); color: var(--badge-yellow-text); }
-.badge-peach   { background: var(--badge-peach-bg); color: var(--badge-peach-text); }
-.badge-warm    { background: var(--badge-warm-bg);  color: var(--badge-warm-text); }
-.badge-gray    { background: var(--accent-gray);   color: var(--accent-gray-text);   }
-.badge-lavender{ background: var(--badge-purple-bg); color: var(--badge-purple-text); }
-.badge-purple  { background: var(--badge-purple-bg); color: var(--badge-purple-text); }
-
-/* ============================================================
-   INPUT SYSTEM — solid surfaces (fixes the "trong suốt" bug)
-   ============================================================ */
-
-.input, .textarea, .select {
-  padding: 12px 16px;
-  border: 1.5px solid var(--input-border);
-  border-radius: var(--input-radius);
-  background: var(--input-bg);
-  color: var(--foreground);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  outline: none;
-  transition: all 0.3s var(--ease-out);
-  width: 100%;
-  line-height: 1.5;
-}
-.input:hover, .textarea:hover, .select:hover { border-color: var(--input-hover-border); background: var(--input-hover-bg); }
-.input:focus, .input:focus-visible,
-.textarea:focus, .textarea:focus-visible,
-.select:focus {
-  border-color: var(--input-focus-border);
-  box-shadow: var(--input-focus-shadow);
-  background: var(--input-bg);
-}
-.input::placeholder, .textarea::placeholder { color: var(--input-placeholder); opacity: 0.8; }
-
-.input-sm { padding: 8px 12px; font-size: 0.8125rem; }
-.input-lg { padding: 14px 20px; font-size: 1rem; }
-
-.input-wrapper { position: relative; display: flex; align-items: center; }
-.input-wrapper .input-icon { position: absolute; left: 14px; color: var(--foreground-muted); pointer-events: none; width: 16px; height: 16px; }
-.input-wrapper .input-icon ~ .input { padding-left: 40px; }
-
-.textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
-
-.select {
-  padding: 12px 40px 12px 16px;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B5D7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-color: var(--select-bg);
-}
-.dark .select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C3B4DC' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+.dark .glow-on-dark:hover {
+  box-shadow: var(--shadow-glow-primary);
 }
 
-/* ============================================================
-   CHECKBOX & RADIO
-   ============================================================ */
-.checkbox {
-  appearance: none; width: 18px; height: 18px; border: 1.5px solid var(--input-border);
-  border-radius: 5px; background: var(--input-bg); cursor: pointer; transition: all 0.2s var(--ease-out);
-  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative;
-}
-.checkbox:checked { background: var(--primary); border-color: var(--primary); }
-.checkbox:checked::after {
-  content: ''; position: absolute; width: 5px; height: 9px; border: solid #fff;
-  border-width: 0 2px 2px 0; transform: rotate(45deg); top: 1px;
-}
-.checkbox:focus-visible { box-shadow: var(--focus-ring); }
-.checkbox:hover { border-color: var(--primary); }
-
-.radio {
-  appearance: none; width: 18px; height: 18px; border: 1.5px solid var(--input-border);
-  border-radius: 50%; background: var(--input-bg); cursor: pointer; transition: all 0.2s var(--ease-out);
-  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative;
-}
-.radio:checked { background: var(--primary); border-color: var(--primary); box-shadow: inset 0 0 0 4px var(--input-bg); }
-.radio:focus-visible { box-shadow: var(--focus-ring); }
-.radio:hover { border-color: var(--primary); }
-
-label { color: var(--foreground); font-weight: 500; font-size: 0.875rem; }
-
-hr, .separator { border: none; border-top: 1px solid var(--border); margin: 0; }
-
-a { color: var(--primary); text-decoration: none; transition: color 0.2s var(--ease-out); }
-a:hover { color: var(--primary-hover); }
-
-code, pre { font-family: var(--font-mono); font-size: 0.9em; }
-pre { background: var(--muted); padding: var(--space-4); border-radius: var(--radius-md); overflow-x: auto; }
-
-/* ===== TABLE (generic) ===== */
-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--table-body); }
-th { background: var(--table-header); color: var(--foreground); font-weight: 600; font-size: 0.8125rem; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--table-border); }
-td { padding: 12px 16px; border-bottom: 1px solid var(--table-border); color: var(--foreground-secondary); font-size: 0.875rem; background: var(--table-body); }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--table-row-hover); }
-
-/* ===== SCROLLBAR ===== */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-
-/* ============================================================
-    ADMIN CREATE BUTTON — Standardized compact design
-    ============================================================ */
-.btn-create {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: none;
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  background: linear-gradient(135deg, #F0C4E0 0%, #E0A8C8 100%);
-  color: #2A1F3B;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  overflow: hidden;
-  transition: all 0.3s var(--ease-out);
-  box-shadow: 0 2px 12px rgba(240, 196, 224, 0.25);
-  white-space: nowrap;
-  text-decoration: none;
-  line-height: 1;
-  outline: none;
-  isolation: isolate;
-}
-
-/* Animated shine sweep */
-.btn-create::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.25) 45%,
-    rgba(255, 255, 255, 0.35) 50%,
-    rgba(255, 255, 255, 0.25) 55%,
-    transparent 70%
-  );
-  background-size: 300% 100%;
-  background-position: 100% 0;
-  opacity: 0;
-  transition: opacity 0.5s ease, background-position 0.8s ease;
-  pointer-events: none;
-  border-radius: inherit;
-  z-index: 1;
-}
-
-/* Inner edge highlight */
-.btn-create::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.btn-create:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 4px 20px rgba(240, 196, 224, 0.35),
-    0 0 0 3px rgba(240, 196, 224, 0.25);
-}
-
-.btn-create:hover::before {
-  opacity: 1;
-  background-position: 0 0;
-}
-
-.btn-create:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow:
-    0 2px 12px rgba(240, 196, 224, 0.20),
-    0 0 0 2px rgba(240, 196, 224, 0.25);
-  transition: all 0.15s ease;
-}
-
-.btn-create:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 3px rgba(240, 196, 224, 0.35);
-}
-
-.btn-create svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  transition: transform 0.3s var(--ease-out);
-  position: relative;
-  z-index: 3;
-}
-
-.btn-create:hover svg {
-  transform: rotate(90deg) scale(1.1);
-}
-
-/* Spinning border glow ring */
-.btn-create .btn-create-ring {
-  position: absolute;
-  inset: -4px;
-  border-radius: calc(var(--radius-full) + 4px);
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(255, 255, 255, 0.15) 90deg,
-    transparent 180deg,
-    rgba(255, 255, 255, 0.1) 270deg,
-    transparent 360deg
-  );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.btn-create:hover .btn-create-ring {
-  opacity: 1;
-  animation: btn-create-spin 2s linear infinite;
-}
-
-/* ============================================================
-   ADMIN CREATE BUTTON — Compact variant
-   ============================================================ */
-.btn-create-sm {
-  padding: 8px 20px;
-  font-size: 0.8125rem;
-  gap: 6px;
-}
-
-.btn-create-sm svg {
-  width: 16px;
-  height: 16px;
-}
-
-.btn-create-sm:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow:
-    0 6px 24px rgba(240, 196, 224, 0.25),
-    0 0 0 3px rgba(240, 196, 224, 0.3);
-}
-
-.btn-create-sm:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow:
-    0 2px 12px rgba(240, 196, 224, 0.20),
-    0 0 0 2px rgba(240, 196, 224, 0.25);
-}
-
-@keyframes btn-create-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Dark mode adjustments */
-.dark .btn-create {
-  background: linear-gradient(135deg, #B497E8 0%, #9B6FD6 100%);
-  color: #1A1526;
-  box-shadow:
-    var(--cta-shadow),
-    0 0 0 0 rgba(155, 111, 214, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.dark .btn-create:hover {
-  box-shadow:
-    var(--cta-shadow-hover),
-    0 0 0 4px rgba(155, 111, 214, 0.2),
-    0 8px 32px rgba(155, 111, 214, 0.15);
-}
-
-.dark .btn-create:active {
-  box-shadow: var(--cta-shadow), 0 0 0 2px rgba(155, 111, 214, 0.25);
-}
-
-.dark .btn-create:focus-visible {
-  box-shadow: var(--cta-shadow-hover), 0 0 0 4px rgba(155, 111, 214, 0.3);
-}
-
-.dark .btn-create::after {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-/* ============================================================
-   MODAL ACTION BUTTONS — Cancel / Confirm / Destructive
-   ============================================================ */
-
-.btn-modal-cancel {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem; font-weight: 600;
-  background: transparent;
-  color: var(--foreground-muted);
-  border: 1.5px solid var(--border);
-  cursor: pointer;
-  transition: all 0.25s var(--ease-out);
-}
-.btn-modal-cancel:hover:not(:disabled) {
-  background: var(--chip-hover-bg);
-  border-color: var(--foreground-muted);
-  color: var(--foreground);
-}
-.btn-modal-cancel:active:not(:disabled) { transform: scale(0.97); }
-.btn-modal-cancel:disabled { opacity: .5; cursor: not-allowed; }
-
-.btn-modal-primary {
-  position: relative;
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 10px 22px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem; font-weight: 600;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: var(--primary-foreground);
-  box-shadow: var(--cta-shadow);
-  cursor: pointer;
-  overflow: hidden;
-  transition: all 0.3s var(--ease-spring);
-}
-.btn-modal-primary::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,.18) 0%, transparent 60%);
-  opacity: 0; transition: opacity .3s ease; pointer-events: none;
-}
-.btn-modal-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--cta-shadow-hover); }
-.btn-modal-primary:hover:not(:disabled)::before { opacity: 1; }
-.btn-modal-primary:active:not(:disabled) { transform: translateY(0) scale(.97); }
-.btn-modal-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
-
-.btn-modal-destructive {
-  position: relative;
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 10px 22px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem; font-weight: 600;
-  background: linear-gradient(135deg, var(--destructive) 0%, #A83636 100%);
-  color: var(--destructive-foreground);
-  box-shadow: 0 4px 16px rgba(199, 66, 66, 0.25);
-  cursor: pointer;
-  transition: all 0.3s var(--ease-spring);
-}
-.btn-modal-destructive:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(199, 66, 66, 0.35); }
-.btn-modal-destructive:active:not(:disabled) { transform: translateY(0) scale(.97); }
-.btn-modal-destructive:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
-
-.dark .btn-modal-destructive {
-  background: linear-gradient(135deg, var(--destructive) 0%, #B84A5E 100%);
-  box-shadow: 0 4px 20px rgba(224, 84, 114, 0.3);
-}
-.dark .btn-modal-destructive:hover:not(:disabled) { box-shadow: 0 8px 28px rgba(224, 84, 114, 0.4); }
-
-/* ============================================================
-    ANIMATED BUTTON — Legacy (kept for compatibility)
-    ============================================================ */
-.animated-button {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  font-size: 16px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-radius: 100px;
-  font-weight: 600;
-  cursor: pointer;
-  overflow: hidden;
-  transition: all 0.6s cubic-bezier(0.23, 1, 0.320, 1);
-  box-shadow: var(--cta-shadow);
-}
-
-.animated-button span:last-child {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  opacity: 0;
-  transition: all 0.8s cubic-bezier(0.23, 1, 0.320, 1);
-}
-
-.animated-button span:first-child {
-  position: relative;
-  z-index: 1;
-}
-
-.animated-button:hover {
-  box-shadow: var(--cta-shadow-hover);
-  transform: translateY(-2px);
-}
-
-.animated-button:active {
-  scale: 0.95;
-}
-
-.animated-button:hover span:last-child {
-  width: 150px;
-  height: 150px;
-  opacity: 1;
-}
+a { color: var(--link); text-decoration: none; transition: color 0.2s var(--ease-out); }
+a:hover { color: var(--link-hover); }

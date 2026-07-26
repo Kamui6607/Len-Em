@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion } from "motion/react";
 import { useIsMobile } from "../hooks/useMediaQuery";
+import { useLanguage } from "../context/LanguageContext";
 
 export type StitchFillState = "unfilled" | "filled";
 
@@ -226,12 +227,12 @@ export function StitchBloom({ filled = false, size = 48 }: StitchIconProps) {
 
 // Convenience array of all 6 icon components
 export const ALL_STITCH_ICONS = [
-  { key: "ring",  label: "Ring",     Comp: StitchRing        },
-  { key: "arch",  label: "Arch",     Comp: StitchArch        },
-  { key: "eight", label: "Fig. 8",   Comp: StitchFigureEight },
-  { key: "chain", label: "Chain",    Comp: StitchChain       },
-  { key: "cable", label: "Cable",    Comp: StitchCable       },
-  { key: "bloom", label: "Bloom",    Comp: StitchBloom       },
+  { key: "ring",  labelKey: "learn.stitchRing",  Comp: StitchRing        },
+  { key: "arch",  labelKey: "learn.stitchArch",  Comp: StitchArch        },
+  { key: "eight", labelKey: "learn.stitchEight", Comp: StitchFigureEight },
+  { key: "chain", labelKey: "learn.stitchChain", Comp: StitchChain       },
+  { key: "cable", labelKey: "learn.stitchCable", Comp: StitchCable       },
+  { key: "bloom", labelKey: "learn.stitchBloom", Comp: StitchBloom       },
 ];
 
 // ── Icon row (one state) ──────────────────────────────────────────────────────
@@ -245,6 +246,7 @@ export function StitchIconRow({
   size?: number;
   showLabel?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <motion.div
       variants={stitchContainerVariants}
@@ -253,7 +255,7 @@ export function StitchIconRow({
       viewport={{ once: true, amount: 0.2 }}
       style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "28px", flexWrap: "wrap" as const }}
     >
-      {ALL_STITCH_ICONS.map(({ key, label, Comp }) => (
+      {ALL_STITCH_ICONS.map(({ key, labelKey, Comp }) => (
         <motion.div
           key={key}
           variants={stitchItemVariants}
@@ -286,7 +288,7 @@ export function StitchIconRow({
                 fontWeight: filled ? 600 : 400,
               }}
             >
-              {label}
+              {t(labelKey)}
             </span>
           )}
         </motion.div>
@@ -377,6 +379,7 @@ const checkItemVariants = {
 // ═══════════════════════════════════════════════════════════════════
 
 export function RibbonTestimonialCard() {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, y: 30, rotate: -4 }}
@@ -448,7 +451,7 @@ export function RibbonTestimonialCard() {
               letterSpacing: "0.04em",
             }}
           >
-            Verified learner
+            {t("learn.verifiedLearner")}
           </span>
         </div>
 
@@ -480,11 +483,11 @@ export function RibbonTestimonialCard() {
             marginBottom: "18px",
           }}
         >
-          I picked up knitting in a single weekend. The material tags{" "}
+          {t("learn.testimonial1")}
           <span style={{ color: "var(--primary)", fontWeight: 500 }}>
-            made all the difference
-          </span>{" "}
-          — I never lost my place in a lesson.
+            {t("learn.testimonial1Highlight")}
+          </span>
+          {t("learn.testimonial1End")}
         </p>
 
         {/* Divider */}
@@ -537,7 +540,7 @@ export function RibbonTestimonialCard() {
                 letterSpacing: "0.02em",
               }}
             >
-              — Amelia R.
+              {t("learn.testimonialSig")}
             </div>
             <div
               style={{
@@ -547,7 +550,7 @@ export function RibbonTestimonialCard() {
                 marginTop: "1px",
               }}
             >
-              Beginner · 3 courses completed
+              {t("learn.testimonialBadge")}
             </div>
           </div>
         </div>
@@ -602,10 +605,11 @@ function ViewFillIcon({ Comp, label, delay }: { Comp: React.ComponentType<Stitch
 }
 
 function AnimatedStitchRow() {
+  const { t } = useLanguage();
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "28px", flexWrap: "wrap" as const }}>
-      {ALL_STITCH_ICONS.map(({ key, label, Comp }, i) => (
-        <ViewFillIcon key={key} Comp={Comp} label={label} delay={i * 0.1} />
+      {ALL_STITCH_ICONS.map(({ key, labelKey, Comp }, i) => (
+        <ViewFillIcon key={key} Comp={Comp} label={t(labelKey)} delay={i * 0.1} />
       ))}
     </div>
   );
@@ -628,6 +632,7 @@ const leftColItem = {
 };
 
 export function LearnSection() {
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
 
   return (
@@ -689,7 +694,7 @@ export function LearnSection() {
                   letterSpacing: "0.04em",
                 }}
               >
-                Xây dựng kỹ năng · Mùa 2025
+                {t("learn.eyebrow")}
               </span>
             </motion.div>
 
@@ -706,11 +711,11 @@ export function LearnSection() {
                   marginBottom: "20px",
                 }}
               >
-                Thành thạo mọi mũi móc,{" "}
+                {t("learn.headline")}{" "}
                 <span style={{ fontStyle: "italic", color: "var(--primary)" }}>
-                  một bài học
+                  {t("learn.headlineItalic")}
                 </span>{" "}
-                mỗi lần,
+                {t("learn.headlineEnd")}
               </motion.h2>
 
             {/* Checklist */}
@@ -719,16 +724,16 @@ export function LearnSection() {
               style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "32px" }}
             >
               <CheckItem
-                title="Người mới · Trung cấp · Nâng cao"
-                detail="Lộ trình có cấu trúc cho mọi trình độ — bắt đầu từ bất kỳ đâu."
+                title={t("learn.check1")}
+                detail={t("learn.check1Detail")}
               />
               <CheckItem
-                title="Video bài học từ người làm thực thụ"
-                detail="Những người làm thủ công thực tế, quay trong xưởng của họ. Không phong cách giảng đường."
+                title={t("learn.check2")}
+                detail={t("learn.check2Detail")}
               />
               <CheckItem
-                title="Nguyên liệu được gắn thẻ theo thời gian"
-                detail="Nhấn vào bất kỳ thẻ nào giữa bài học để thêm trực tiếp vào giỏ hàng."
+                title={t("learn.check3")}
+                detail={t("learn.check3Detail")}
               />
             </motion.div>
 
@@ -754,7 +759,7 @@ export function LearnSection() {
                 textDecoration: "none",
               }}
             >
-              Duyệt khóa học
+              {t("learn.cta")}
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -766,9 +771,9 @@ export function LearnSection() {
               style={{ display: "flex", gap: "24px", marginTop: "22px" }}
             >
                 {[
-                  { n: "48+", label: "khóa học" },
-                  { n: "4.9",  label: "đánh giá TB" },
-                  { n: "12k",  label: "học viên" },
+                  { n: "48+", label: t("learn.stat1") },
+                  { n: "4.9",  label: t("learn.stat2") },
+                  { n: "12k",  label: t("learn.stat3") },
                 ].map(({ n, label }) => (
                 <div key={label}>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)", letterSpacing: "-0.02em", lineHeight: 1 }}>
@@ -845,7 +850,7 @@ export function LearnSection() {
                   }}
                 />
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", fontWeight: 600, color: "var(--foreground)" }}>
-                  Bài 4 · Móc lỗ tạm
+                  {t("learn.lesson4")}
                 </span>
               </motion.div>
 
@@ -873,7 +878,7 @@ export function LearnSection() {
                   <circle cx="5" cy="5" r="4" fill="var(--accent-pink)" stroke="white" strokeWidth="0.8"/>
                 </svg>
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.62rem", fontWeight: 600, color: "white" }}>
-                  Sợi Merino · đã gắn thẻ
+                  {t("learn.merinoTagged")}
                 </span>
               </motion.div>
             </motion.div>
@@ -931,7 +936,7 @@ export function LearnSection() {
                 letterSpacing: "0.06em",
               }}
             >
-              6 mẫu mũi móc · di chuột để tô màu
+              {t("learn.stitchLabel")}
             </span>
           </div>
 

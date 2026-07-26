@@ -25,23 +25,23 @@ export interface FetchProductsParams {
 
 /**
  * Map frontend sort value to backend sort value.
- * Backend supports: newest, price-asc, price-desc, rating
+ * Backend only supports: newest, rating
+ * price-asc and price-desc are NOT supported (return 400).
  * "popular" is not supported — fallback to no sort param.
+ * "oldest" is not supported — fallback to no sort param (backend default).
  */
 function mapSort(sort: string | undefined): string | undefined {
   if (!sort) return undefined;
   // Only pass through sort values the backend actually supports
-  const validSorts = ["newest", "price-asc", "price-desc", "rating"];
+  const validSorts = ["newest", "rating"];
   if (validSorts.includes(sort)) return sort;
-  // "popular" is not supported by the backend — omit sort entirely
+  // "popular", "price-asc", "price-desc", "oldest" are not supported by the backend
   return undefined;
 }
 
 /**
  * Fetch products from the real backend with full filter + sort + pagination.
  * Throws on error — no mock fallback.
- * Only sends query params the backend actually supports:
- *   category, search, sort, page, limit
  */
 export async function fetchProducts(
   params: FetchProductsParams = {}
@@ -53,8 +53,11 @@ export async function fetchProducts(
     queryParams.category = params.category;
   }
   if (params.search) queryParams.search = params.search;
+  
+  // Map frontend sort to backend sort string
   const mappedSort = mapSort(params.sort);
   if (mappedSort) queryParams.sort = mappedSort;
+  
   if (params.page) queryParams.page = params.page;
   if (params.limit) queryParams.limit = params.limit;
 

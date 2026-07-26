@@ -37,8 +37,8 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
           "fixed top-4 left-4 z-40 lg:hidden p-2.5 rounded-xl shadow-lg transition-all duration-200",
           "hover:scale-110 hover:shadow-xl",
           isDark
-            ? "bg-[var(--card)] border border-[rgba(155,111,214,0.3)] text-[var(--foreground)]"
-            : "bg-[var(--accent-cream)] border border-[rgba(240,196,224,0.3)] text-[var(--primary)]"
+            ? "bg-[var(--card)] border border-[rgba(124,99,255,0.3)] text-[var(--foreground)]"
+            : "bg-[var(--accent-cream)] border border-[rgba(232,222,255,0.3)] text-[var(--primary)]"
         )}
         aria-label="Open sidebar"
       >
@@ -66,11 +66,11 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
             ? "linear-gradient(180deg, #1C1526 0%, #241A34 100%)"
             : "var(--bg-gradient-180)",
           borderRight: isDark
-            ? "1px solid rgba(155,111,214,0.2)"
+            ? "1px solid rgba(124,99,255,0.2)"
             : "1px solid var(--border-light)",
           boxShadow: isDark
-            ? "4px 0 24px rgba(155,111,214,0.15)"
-            : "4px 0 20px rgba(107,63,160,0.08)",
+            ? "4px 0 24px rgba(124,99,255,0.15)"
+            : "4px 0 20px rgba(91,61,245,0.08)",
         }}
       >
 
@@ -91,18 +91,18 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
                   style={{
                     background: active
                       ? isDark
-                        ? "rgba(155,111,214,0.25)"
+                        ? "rgba(124,99,255,0.25)"
                         : "var(--chip-active-bg)"
                       : "transparent",
                     color: active
-                      ? isDark ? "#D8C2FF" : "var(--primary)"
+                      ? isDark ? "#C9BBFF" : "var(--primary)"
                       : isDark ? "rgba(255,255,255,0.65)" : "var(--foreground-muted)",
                   }}
                 onMouseEnter={(e) => {
                   if (!active) {
                     e.currentTarget.style.background = isDark
-                      ? "rgba(155,111,214,0.15)"
-                      : "rgba(240,196,224,0.2)";
+                      ? "rgba(124,99,255,0.15)"
+                      : "rgba(232,222,255,0.2)";
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -115,7 +115,7 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
                   className="w-4.5 h-4.5 shrink-0 transition-colors duration-200"
                   style={{
                     color: active
-                      ? isDark ? "#D8C2FF" : "#6B3FA0"
+                      ? isDark ? "#C9BBFF" : "#5B3DF5"
                       : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)",
                   }}
                 />
@@ -125,11 +125,11 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
                     className="ml-auto w-1 h-4 rounded-full transition-all duration-200"
                     style={{
                       background: isDark
-                        ? "linear-gradient(180deg, #D8C2FF 0%, #9B6FD6 100%)"
-                        : "linear-gradient(180deg, #F0C4E0 0%, #6B3FA0 100%)",
+                        ? "linear-gradient(180deg, #C9BBFF 0%, #7C63FF 100%)"
+                        : "linear-gradient(180deg, #E8DEFF 0%, #5B3DF5 100%)",
                       boxShadow: isDark
-                        ? "0 0 10px rgba(155,111,214,0.6)"
-                        : "0 0 10px rgba(240,196,224,0.6)",
+                        ? "0 0 10px rgba(124,99,255,0.6)"
+                        : "0 0 10px rgba(91,61,245,0.6)",
                     }}
                   />
                 )}
@@ -143,7 +143,7 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
           className="px-3 py-3 border-t shrink-0 space-y-1"
           style={{
             borderColor: isDark
-              ? "rgba(155,111,214,0.15)"
+              ? "rgba(124,99,255,0.15)"
               : "var(--border-light)",
           }}
         >
