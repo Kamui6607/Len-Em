@@ -86,7 +86,7 @@ const homeNavLinks = [
 // ── Stagger cho danh sách link trong mobile drawer ─────────────────────────────
 const drawerListVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.08 } },
+  show: { transition: { staggerChildren: 0.055, delayChildren: 0.1 } },
 };
 const drawerItemVariants = {
   hidden: { opacity: 0, x: 24 },
@@ -96,6 +96,10 @@ const drawerItemVariants = {
     transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
   },
 };
+
+// ── Shared "glass chip" treatment for icon-only buttons in the desktop bar ──
+const iconChipClass =
+  "relative flex items-center justify-center rounded-full min-h-[42px] min-w-[42px] border border-[var(--chip-border)] bg-[var(--chip-bg)] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)] hover:bg-[var(--chip-hover-bg)] hover:border-[var(--primary)]/40";
 
 export function Navigation({ cartCount }: NavigationProps) {
   const { t } = useLanguage();
@@ -126,7 +130,7 @@ export function Navigation({ cartCount }: NavigationProps) {
 
   const isHomePage = location.pathname === "/";
   const isAboutPage = location.pathname === "/about";
-  
+
   // Only use homeNavLinks on Home and About Us pages, otherwise use navLinks
   const displayedNavLinks = (isHomePage || isAboutPage) ? homeNavLinks : navLinks;
 
@@ -236,7 +240,7 @@ export function Navigation({ cartCount }: NavigationProps) {
 
   const navigateTo = (href: string, sectionId?: string) => {
     setIsMobileMenuOpen(false);
-    
+
     // If clicking HOME (href="/"), always scroll to top
     if (href === "/" && !sectionId) {
       if (!isHomePage) {
@@ -249,7 +253,7 @@ export function Navigation({ cartCount }: NavigationProps) {
       }
       return;
     }
-    
+
     // If on About Us page and clicking a section link, go to Home first then scroll
     if (isAboutPage && sectionId) {
       navigate("/");
@@ -258,13 +262,13 @@ export function Navigation({ cartCount }: NavigationProps) {
       }, 100);
       return;
     }
-    
+
     // If on Home page and clicking a section link, just scroll
     if (isHomePage && sectionId) {
       scrollToSection(sectionId);
       return;
     }
-    
+
     // Otherwise, navigate to the href
     navigate(href);
   };
@@ -293,6 +297,20 @@ export function Navigation({ cartCount }: NavigationProps) {
             : "border-[var(--border-light)] border-t-0 border-x-0 bg-[var(--glass-bg)] backdrop-blur-[20px]",
         )}
       >
+        {/* Thread seam — a hairline running-stitch that appears once the bar lifts off the page */}
+        <motion.div
+          aria-hidden="true"
+          initial={false}
+          animate={{ opacity: isFloating ? 1 : 0 }}
+          transition={{ duration: 0.3 }}
+          className="pointer-events-none absolute inset-x-6 -bottom-px h-px"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, var(--primary) 0 6px, transparent 6px 12px)",
+            opacity: 0.35,
+          }}
+        />
+
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           {/* Back button for mobile */}
           {showBackButton && (
@@ -308,42 +326,52 @@ export function Navigation({ cartCount }: NavigationProps) {
             </Button>
           )}
 
-          {/* Logo */}
+          {/* Logo — mark reads as a wound spool: a dashed thread ring that loosens on hover */}
           <Link to="/" className="group relative flex items-center gap-3">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              whileHover={{ rotate: -6, scale: 1.06 }}
-              whileTap={{ scale: 0.94 }}
-              className="relative flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-hover)] text-lg font-bold text-white shadow-[0_8px_24px_rgba(107,63,160,0.25)]"
-            >
-              L
+            <div className="relative flex size-11 items-center justify-center">
               <motion.span
-                initial={{ opacity: 0, scale: 0 }}
-                whileHover={{ opacity: 1, scale: 1 }}
-                className="pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-white text-[var(--color-primary)] shadow-sm"
-              >
-                <Sparkles className="size-2.5" />
-              </motion.span>
-            </motion.div>
+                aria-hidden="true"
+                className="absolute inset-[-5px] rounded-full border border-dashed"
+                style={{ borderColor: "var(--primary)", opacity: 0.35 }}
+                initial={{ rotate: 0 }}
+                whileHover={{ rotate: 50 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              />
               <motion.div
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                className="leading-none"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                whileHover={{ rotate: -6, scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                className="relative flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-hover)] text-lg font-bold text-white shadow-[0_8px_24px_rgba(107,63,160,0.25)]"
               >
-                <p className="font-heading text-2xl font-bold tracking-tight text-[var(--foreground)]">
-                  Len<span className="text-[var(--primary)]">&</span>em
-                </p>
-                <p className="hidden text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--foreground-muted)] sm:block">
-                  {t("nav.tagline")}
-                </p>
+                L
+                <motion.span
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileHover={{ opacity: 1, scale: 1 }}
+                  className="pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-white text-[var(--color-primary)] shadow-sm"
+                >
+                  <Sparkles className="size-2.5" />
+                </motion.span>
               </motion.div>
+            </div>
+            <motion.div
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="leading-none"
+            >
+              <p className="font-heading text-2xl font-bold tracking-tight text-[var(--foreground)]">
+                Len<span className="text-[var(--primary)]">&</span>em
+              </p>
+              <p className="hidden text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--foreground-muted)] sm:block">
+                {t("nav.tagline")}
+              </p>
+            </motion.div>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-1.5 md:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             {displayedNavLinks.map((item) => {
               const Icon = item.icon;
               const active = isActive(
@@ -351,7 +379,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                 "sectionId" in item ? (item.sectionId as string) : undefined,
               );
               return (
-              <motion.button
+                <motion.button
                   key={item.label + item.href}
                   type="button"
                   whileHover={{ y: -1 }}
@@ -365,13 +393,13 @@ export function Navigation({ cartCount }: NavigationProps) {
                     )
                   }
                   className={cn(
-                    "relative flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold tracking-[0.1em] select-none",
+                    "group/link relative flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold tracking-[0.1em] select-none",
                     active
                       ? "text-[var(--primary)]"
                       : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]",
                   )}
                 >
-                  {/* Pill background - AnimatePresence ensures smooth crossfade between links */}
+                  {/* Soft hover/active wash */}
                   <AnimatePresence mode="wait">
                     {active && (
                       <motion.span
@@ -385,20 +413,33 @@ export function Navigation({ cartCount }: NavigationProps) {
                           damping: 28,
                           mass: 0.6,
                         }}
-                        className="absolute inset-0 -z-10 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]"
+                        className="absolute inset-0 -z-10 rounded-full bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]"
                       />
                     )}
                   </AnimatePresence>
-                  
-                  {/* Underline */}
-                  <motion.span
-                    className="absolute -bottom-0.5 left-3 right-3 h-[2px] rounded-full bg-[var(--primary)]"
-                    initial={false}
-                    animate={active ? { scaleX: 1, opacity: 0.5 } : { scaleX: 0, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 350, damping: 26, mass: 0.6 }}
-                    style={{ transformOrigin: "center" }}
-                  />
-                  
+
+                  {/* Running-stitch underline — draws in on active, peeks on hover */}
+                  <span className="pointer-events-none absolute bottom-1 left-3 right-3 flex justify-center overflow-hidden">
+                    <motion.span
+                      className="h-0 w-full border-b-2 border-dashed"
+                      style={{ borderColor: "var(--primary)" }}
+                      initial={false}
+                      animate={{
+                        scaleX: active ? 1 : 0,
+                        opacity: active ? 0.55 : 0,
+                      }}
+                      transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                    />
+                  </span>
+                  <span className="pointer-events-none absolute bottom-1 left-3 right-3 flex justify-center overflow-hidden opacity-0 transition-opacity duration-200 group-hover/link:opacity-40">
+                    {!active && (
+                      <span
+                        className="h-0 w-full border-b-2 border-dashed"
+                        style={{ borderColor: "var(--foreground-muted)" }}
+                      />
+                    )}
+                  </span>
+
                   {/* Icon */}
                   <span style={{ color: active ? "var(--primary)" : undefined }}>
                     <Icon className="size-4" />
@@ -412,13 +453,14 @@ export function Navigation({ cartCount }: NavigationProps) {
           {/* Desktop Right */}
           <div className="hidden items-center gap-2 md:flex">
             {/* ── Search button + input ── */}
+            {isAuthenticated && !isHomePage && !isAboutPage && (
             <div className="relative flex items-center">
               <AnimatePresence mode="wait">
                 {searchOpen ? (
                   <motion.form
                     key="search-form"
                     initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 220, opacity: 1 }}
+                    animate={{ width: 224, opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
                     transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                     onSubmit={handleSearch}
@@ -427,7 +469,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                     <div className="relative">
                       <Search
                         size={15}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] pointer-events-none"
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] pointer-events-none"
                       />
                       <input
                         ref={searchInputRef}
@@ -443,7 +485,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                                 ? t("nav.searchDiy")
                                 : t("nav.search")
                         }
-                        className="w-full h-9 pl-9 pr-3 rounded-full border border-[var(--border)] bg-[var(--card)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] transition-colors"
+                        className="w-full h-[42px] pl-9 pr-3 rounded-full border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:shadow-[var(--input-focus-shadow)] transition-colors"
                       />
                     </div>
                   </motion.form>
@@ -454,102 +496,83 @@ export function Navigation({ cartCount }: NavigationProps) {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
-                    whileHover={{ scale: 1.1 }}
+                    whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={toggleSearch}
-                    className="nav-icon-btn flex items-center justify-center rounded-full min-h-[44px] min-w-[44px] text-[var(--foreground-muted)] hover:text-[var(--primary)] transition-colors"
+                    className={iconChipClass}
                     aria-label="Search"
                   >
-                    <Search className="size-5" />
+                    <Search className="size-[18px]" />
                   </motion.button>
                 )}
               </AnimatePresence>
             </div>
+            )}
 
             {showFullActions && (
               <>
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="nav-icon-btn"
-                >
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className="relative rounded-full text-[var(--foreground)] min-h-[44px] min-w-[44px] hover:bg-[var(--accent-blush)] transition-colors overflow-visible"
+                <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}>
+                  <Link
+                    to="/love"
+                    aria-label="Favorites"
+                    className={cn(iconChipClass, "overflow-visible")}
                   >
-                    <Link to="/love" aria-label="Favorites">
-                      <Heart className="size-5" />
-                      {favorites.length + favoriteKits.length > 0 && (
-                        <Counter>
-                          {favorites.length + favoriteKits.length}
-                        </Counter>
-                      )}
-                    </Link>
-                  </Button>
+                    <Heart className="size-[18px]" />
+                    {favorites.length + favoriteKits.length > 0 && (
+                      <Counter>{favorites.length + favoriteKits.length}</Counter>
+                    )}
+                  </Link>
                 </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="nav-icon-btn"
-                >
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className="relative rounded-full text-[var(--foreground)] min-h-[44px] min-w-[44px] hover:bg-[var(--accent-blush)] transition-colors overflow-visible"
+                <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}>
+                  <Link
+                    to="/cart"
+                    aria-label="Cart"
+                    className={cn(iconChipClass, "overflow-visible")}
                   >
-                    <Link to="/cart" aria-label="Cart">
-                      <ShoppingCart className="size-5" />
-                      {cartCount > 0 && <Counter>{cartCount}</Counter>}
-                    </Link>
-                  </Button>
+                    <ShoppingCart className="size-[18px]" />
+                    {cartCount > 0 && <Counter>{cartCount}</Counter>}
+                  </Link>
                 </motion.div>
               </>
             )}
 
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              className="nav-icon-btn"
-            >
+            <div className="mx-1 h-6 w-px bg-[var(--divider)]" aria-hidden="true" />
+
+            <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} className="nav-icon-btn">
               <LanguageToggle />
             </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              className="nav-icon-btn"
-            >
+            <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} className="nav-icon-btn">
               <ThemeToggle />
             </motion.div>
+
             {showAuthButtons && (
-              <>
+              <div className="ml-1 flex items-center gap-1.5">
                 <motion.button
                   whileHover={{ y: -1 }}
                   type="button"
                   onClick={() => navigate("/auth/login")}
-                  className="relative flex items-center gap-2 px-4 py-2 text-sm font-bold tracking-[0.12em] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)]"
+                  className="relative flex items-center gap-2 px-3.5 py-2 text-sm font-bold tracking-[0.1em] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)]"
                 >
                   <LogIn className="size-4" />
                   LOGIN
                 </motion.button>
                 <motion.button
-                  whileHover={{ y: -1 }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
                   type="button"
                   onClick={() => navigate("/auth/register")}
-                  className="relative flex items-center gap-2 px-4 py-2 text-sm font-bold tracking-[0.12em] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)]"
+                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-4 py-2 text-sm font-bold tracking-[0.1em] text-white shadow-[0_6px_18px_rgba(107,63,160,0.28)] transition-shadow hover:shadow-[0_10px_26px_rgba(107,63,160,0.38)]"
                 >
                   <UserPlus className="size-4" />
                   REGISTER
                 </motion.button>
-              </>
+              </div>
             )}
             {isAuthenticated && !isHomePage && !isAboutPage && (
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="nav-icon-btn"
+                className="nav-icon-btn ml-1"
               >
                 <div className="relative">
                   <UserMenu position="top" />
@@ -619,9 +642,20 @@ export function Navigation({ cartCount }: NavigationProps) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 320, damping: 34 }}
-              className="fixed right-0 top-0 z-50 h-dvh w-[82vw] max-w-sm border-l border-[var(--border-light)] bg-[var(--background)] p-5 shadow-2xl md:hidden"
+              className="fixed right-0 top-0 z-50 flex h-dvh w-[82vw] max-w-sm flex-col overflow-hidden border-l border-[var(--border-light)] bg-[var(--background)] shadow-2xl md:hidden"
             >
-              <div className="mb-8 flex items-center justify-between">
+              {/* Seam along the hinge edge — reads as a stitched fold */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-0 w-px"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(180deg, var(--primary) 0 6px, transparent 6px 12px)",
+                  opacity: 0.3,
+                }}
+              />
+
+              <div className="flex items-center justify-between p-5 pb-4">
                 <p className="font-heading text-2xl font-bold text-[var(--foreground)]">
                   Len<span className="text-[var(--primary)]">&</span>em
                 </p>
@@ -629,150 +663,137 @@ export function Navigation({ cartCount }: NavigationProps) {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="min-h-[44px] min-w-[44px]"
+                  className="min-h-[44px] min-w-[44px] rounded-full"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <X className="size-5" />
                 </Button>
               </div>
 
-              <motion.nav
-                variants={drawerListVariants}
-                initial="hidden"
-                animate="show"
-                className="space-y-2"
-              >
-                {displayedNavLinks.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(
-                    item.href,
-                    "sectionId" in item
-                      ? (item.sectionId as string)
-                      : undefined,
-                  );
-                  return (
-                    <motion.button
-                      key={item.label + item.href}
-                      variants={drawerItemVariants}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={() =>
-                        navigateTo(
-                          item.href,
-                          "sectionId" in item
-                            ? (item.sectionId as string)
-                            : undefined,
-                        )
-                      }
-                      className={cn(
-                        "relative flex w-full items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 text-left font-bold text-[var(--foreground)] transition-colors min-h-[44px]",
-                        active
-                          ? "bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] text-[var(--primary)]"
-                          : "hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
-                      )}
-                    >
-                      <Icon className="size-5" />
-                      {item.label}
-                      {active && (
+              <div className="flex-1 overflow-y-auto px-5 pb-5">
+                <motion.nav
+                  variants={drawerListVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="space-y-1"
+                >
+                  {displayedNavLinks.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(
+                      item.href,
+                      "sectionId" in item
+                        ? (item.sectionId as string)
+                        : undefined,
+                    );
+                    return (
+                      <motion.button
+                        key={item.label + item.href}
+                        variants={drawerItemVariants}
+                        whileTap={{ scale: 0.98 }}
+                        type="button"
+                        onClick={() =>
+                          navigateTo(
+                            item.href,
+                            "sectionId" in item
+                              ? (item.sectionId as string)
+                              : undefined,
+                          )
+                        }
+                          className={cn(
+                            "relative flex w-full items-center gap-3 overflow-hidden rounded-2xl py-2.5 pl-4 pr-3 text-left font-bold text-[var(--foreground)] transition-colors min-h-[44px]",
+                            active
+                              ? "bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-[var(--primary)]"
+                              : "hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]",
+                          )}
+                      >
+                        {/* Stitch marker — replaces the plain active dot */}
                         <motion.span
-                          layoutId="mobile-active-dot"
-                      className="ml-auto size-2 rounded-full bg-[var(--primary)]"
+                          aria-hidden="true"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full"
+                          style={{ background: "var(--primary)" }}
+                          initial={false}
+                          animate={{ opacity: active ? 1 : 0, scaleY: active ? 1 : 0.3 }}
+                          transition={{ duration: 0.2 }}
                         />
-                      )}
-                    </motion.button>
-                  );
-                })}
+                        <span
+                          className={cn(
+                            "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                            active
+                              ? "bg-[var(--primary)] text-white"
+                              : "bg-[var(--chip-bg)] text-[var(--foreground-muted)]",
+                          )}
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                        {item.label}
+                      </motion.button>
+                    );
+                  })}
 
-                {showAuthButtons && (
-                  <>
-                    <motion.button
-                      variants={drawerItemVariants}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={() => navigateTo("/auth/login")}
-                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-bold text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] min-h-[44px]"
-                     >
-                       <LogIn className="size-5" />
-                       LOGIN
-                     </motion.button>
-                     <motion.button
-                       variants={drawerItemVariants}
-                       whileTap={{ scale: 0.98 }}
-                       type="button"
-                       onClick={() => navigateTo("/auth/register")}
-                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-bold text-[var(--foreground)] transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] min-h-[44px]"
-                     >
-                      <UserPlus className="size-5" />
-                      REGISTER
-                    </motion.button>
-                  </>
+                  {showAuthButtons && (
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <motion.button
+                        variants={drawerItemVariants}
+                        whileTap={{ scale: 0.98 }}
+                        type="button"
+                        onClick={() => navigateTo("/auth/login")}
+                        className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--chip-border)] px-4 py-3 text-center font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--chip-hover-bg)] min-h-[44px]"
+                      >
+                        <LogIn className="size-4" />
+                        LOGIN
+                      </motion.button>
+                      <motion.button
+                        variants={drawerItemVariants}
+                        whileTap={{ scale: 0.98 }}
+                        type="button"
+                        onClick={() => navigateTo("/auth/register")}
+                        className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-4 py-3 text-center font-bold text-white shadow-[0_6px_18px_rgba(107,63,160,0.28)] min-h-[44px]"
+                      >
+                        <UserPlus className="size-4" />
+                        REGISTER
+                      </motion.button>
+                    </div>
+                  )}
+
+                  {(isAuthenticated && isHomePage) || (isAuthenticated && isAboutPage) ? (
+                    <motion.div variants={drawerItemVariants} className="pt-2">
+                      <ShimmerCTA
+                        full
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          navigate("/learn");
+                        }}
+                      />
+                    </motion.div>
+                  ) : null}
+                </motion.nav>
+              </div>
+
+              <div className="shrink-0 border-t border-[var(--border-light)] px-5 py-4 space-y-3">
+                <div className="flex items-center justify-between rounded-2xl border border-[var(--border-light)] px-4 py-3">
+                  <span className="text-sm font-bold text-[var(--foreground-muted)]">
+                    Ngôn ngữ & Giao diện
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <LanguageToggle />
+                    <ThemeToggle />
+                  </div>
+                </div>
+
+                {showFullActions && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      signOut();
+                      navigate("/auth/login", { replace: true });
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-center font-bold text-[var(--error-text)] transition-colors hover:brightness-105 min-h-[44px]"
+                  >
+                    <LogOut className="size-5" />
+                    LOGOUT
+                  </button>
                 )}
-
-                {(isAuthenticated && isHomePage) || (isAuthenticated && isAboutPage) ? (
-                  <motion.div variants={drawerItemVariants} className="pt-2">
-                    <ShimmerCTA
-                      full
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate("/learn");
-                      }}
-                    />
-                  </motion.div>
-                ) : null}
-              </motion.nav>
-
-              {showFullActions && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                  className="mt-8 grid grid-cols-2 gap-3"
-                >
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="rounded-full min-h-[44px]"
-                  >
-                    <Link to="/love" onClick={() => setIsMobileMenuOpen(false)}>
-                      Saved ({favorites.length + favoriteKits.length})
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    className="rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)] min-h-[44px]"
-                  >
-                    <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)}>
-                      Cart ({cartCount})
-                    </Link>
-                  </Button>
-                </motion.div>
-              )}
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="mt-6 flex items-center justify-between rounded-2xl border border-[var(--border-light)] p-3"
-              >
-                <span className="text-sm font-bold text-[var(--foreground-muted)]">
-                  Theme
-                </span>
-                <ThemeToggle />
-              </motion.div>
-
-              {showFullActions && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    signOut();
-                    navigate("/auth/login", { replace: true });
-                  }}
-                  className="mt-2 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-bold text-[var(--foreground-muted)] transition-colors hover:bg-destructive/10 min-h-[44px]"
-                >
-                  <LogOut className="size-5" />
-                  LOGOUT
-                </button>
-              )}
+              </div>
             </motion.aside>
           </>
         )}
@@ -822,7 +843,7 @@ function Counter({ children }: { children: React.ReactNode }) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0, opacity: 0 }}
         transition={{ type: "spring", stiffness: 500, damping: 22 }}
-        className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-[var(--destructive)] text-[10px] font-bold text-white shadow-sm z-10"
+        className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-[var(--destructive)] text-[10px] font-bold text-white shadow-sm z-10 ring-2 ring-[var(--background)]"
       >
         {children}
       </motion.span>

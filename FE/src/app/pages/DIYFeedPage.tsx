@@ -1,11 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Heart, Search, ShoppingBag, Bookmark } from "lucide-react";
+import { Heart, Search, ShoppingBag, Bookmark, PackageOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
-import { ProductSkeleton } from "../../components/skeletons/ProductSkeleton";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -43,11 +42,10 @@ export function DIYFeedPage() {
     try {
       const { data } = await diyService.getAllPosts({ page: 1, limit: 20 });
       setPosts(data.data.posts);
-      
-      // Fetch creator info for each post
-      const creatorIds = [...new Set(data.data.posts.map(p => p.creatorId))];
+
+      const creatorIds = [...new Set(data.data.posts.map((p) => p.creatorId))];
       const creatorMap: Record<string, CreatorInfo> = {};
-      
+
       for (const creatorId of creatorIds) {
         try {
           const { data: userData } = await userService.getUserById(creatorId);
@@ -55,9 +53,10 @@ export function DIYFeedPage() {
             creatorMap[creatorId] = {
               userId: userData.data.result.userId,
               fullName: userData.data.result.fullName,
-              avatar: typeof userData.data.result.avatar === 'object' 
-                ? userData.data.result.avatar?.url 
-                : userData.data.result.avatar,
+              avatar:
+                typeof userData.data.result.avatar === "object"
+                  ? userData.data.result.avatar?.url
+                  : userData.data.result.avatar,
             };
           }
         } catch {
@@ -107,9 +106,9 @@ export function DIYFeedPage() {
     toast.success(wasSaved ? "DIY post removed from saved" : "DIY post saved");
   };
 
-  // Filter: only show approved posts + search filter
-  const filteredPosts = posts.filter((post) => {
-    if (post.status !== "approved") return false;
+  const approvedPosts = useMemo(() => posts.filter((p) => p.status === "approved"), [posts]);
+
+  const filteredPosts = approvedPosts.filter((post) => {
     if (!search.trim()) return true;
     return post.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()));
   });
@@ -124,23 +123,29 @@ export function DIYFeedPage() {
     return 0;
   });
 
+  const totalLikes = useMemo(
+    () => approvedPosts.reduce((sum, p) => sum + (p.likeCount ?? 0), 0),
+    [approvedPosts]
+  );
+  const heroImages = useMemo(
+    () => approvedPosts.slice(0, 3).map((p) => p.images[0]).filter(Boolean),
+    [approvedPosts]
+  );
+
   if (loading) {
     return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+      <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
         <div className="mx-auto max-w-7xl">
-          <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
-            <Badge variant="secondary" className="mb-4">{t("nav.diy")}</Badge>
-            <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-              {t("diyFeed.headline")}
-            </h1>
-            <p className="max-w-3xl text-muted-foreground md:text-lg">
-              {t("diyFeed.subtitle")}
-            </p>
-          </section>
+          <section className="mb-8 h-[220px] animate-pulse rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background md:h-[260px]" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-                <ProductSkeleton className="w-full rounded-none" />
+                <div className="aspect-[4/5] w-full animate-pulse bg-muted" />
+                <div className="space-y-2.5 p-3 md:p-4">
+                  <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                </div>
               </div>
             ))}
           </div>
@@ -152,107 +157,198 @@ export function DIYFeedPage() {
   return (
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <div className="mx-auto max-w-7xl">
-        <section className="mb-8 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
-          <Badge variant="secondary" className="mb-4">{t("nav.diy")}</Badge>
-          <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            {t("diyFeed.headline")}
-          </h1>
-          <p className="max-w-3xl text-muted-foreground md:text-lg">
-            {t("diyFeed.subtitle")}
-          </p>
+        {/* Hero */}
+        <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
+          <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-primary/10 blur-3xl" />
+          <div className="grid items-center gap-8 lg:grid-cols-[1.3fr_1fr]">
+            <div>
+              <Badge variant="secondary" className="mb-4">
+                {t("nav.diy")}
+              </Badge>
+              <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
+                {t("diyFeed.headline")}
+              </h1>
+              <p className="max-w-xl text-muted-foreground md:text-lg">{t("diyFeed.subtitle")}</p>
+
+              {approvedPosts.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-6">
+                  <div>
+                    <p className="text-2xl font-semibold leading-none">{approvedPosts.length}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{t("diyFeed.all")}</p>
+                  </div>
+                  <div className="h-9 w-px bg-border" />
+                  <div>
+                    <p className="text-2xl font-semibold leading-none">{totalLikes.toLocaleString()}</p>
+                    <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                      <Heart className="size-3.5" /> {t("diyFeed.bought") ? "yêu thích" : "likes"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {heroImages.length > 0 && (
+              <div className="relative hidden h-56 lg:block">
+                {heroImages.map((src, i) => (
+                  <motion.img
+                    key={src + i}
+                    src={src}
+                    alt=""
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    className="absolute size-40 rounded-2xl border-4 border-background object-cover shadow-xl"
+                    style={{
+                      right: `${i * 44}px`,
+                      top: `${i * 28}px`,
+                      zIndex: 3 - i,
+                      transform: `rotate(${(i - 1) * 4}deg)`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
+        {/* Filters */}
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FeedFilter)}>
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-fit sm:grid-cols-3">
+            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 sm:w-fit">
               <TabsTrigger value="all">{t("diyFeed.all")}</TabsTrigger>
               <TabsTrigger value="newest">{t("diyFeed.newest")}</TabsTrigger>
               <TabsTrigger value="purchased">{t("diyFeed.mostPurchased")}</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="relative w-full lg:max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t("diyFeed.searchPlaceholder")}
-              className="pl-9"
-            />
+          <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("diyFeed.searchPlaceholder")}
+                className="pl-9"
+              />
+            </div>
+            <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
+              {sortedPosts.length} kết quả
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {sortedPosts.map((post, index) => {
-            const creator = creators[post.creatorId];
-            return (
-              <motion.article
-                key={post._id}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: index * 0.045 }}
-                className="group overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-xl"
-              >
-                <div className="relative overflow-hidden bg-muted">
-                  <img src={post.images[0]} alt={post.title} className="w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 p-3 opacity-100 md:opacity-0 md:transition-opacity group-hover:md:opacity-100">
-                    <Button asChild size="sm" variant="secondary">
-                      <Link to={`/diy/${post._id}`} onClick={(e) => { if (!isAuthenticated) { e.preventDefault(); navigate("/auth/login"); } }}>{t("diyFeed.viewMaterial")}</Link>
-                    </Button>
-                    <Button size="sm" onClick={() => requireAuth(() => buyCombo(post))}>
-                      <ShoppingBag className="size-4" /> {t("diyFeed.buyNow")}
-                    </Button>
-                  </div>
-                </div>
+        {/* Grid / empty state */}
+        {sortedPosts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
+            <PackageOpen className="mb-3 size-10 text-muted-foreground" />
+            <p className="font-medium">Không tìm thấy công thức nào</p>
+            <p className="mt-1 text-sm text-muted-foreground">Thử một từ khóa khác hoặc xóa bộ lọc</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {sortedPosts.map((post, index) => {
+              const creator = creators[post.creatorId];
+              const saved = isDIYPostSaved(post._id);
+              return (
+                <motion.article
+                  key={post._id}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: index * 0.045 }}
+                  className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-xl"
+                >
+                  <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                    <img
+                      src={post.images[0]}
+                      alt={post.title}
+                      className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
 
-                <div className="space-y-3 p-3 md:p-4">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="size-8">
-                      <AvatarImage src={creator?.avatar} alt={creator?.fullName} />
-                      <AvatarFallback>{creator?.fullName?.charAt(0) || "C"}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{creator?.fullName || t("diyFeed.creator")}</p>
+                    <button
+                      type="button"
+                      onClick={() => requireAuth(() => savePost(post))}
+                      aria-label={saved ? "Bỏ lưu" : "Lưu công thức"}
+                      className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-background"
+                    >
+                      <Bookmark className={saved ? "size-4 fill-primary text-primary" : "size-4"} />
+                    </button>
+
+                    {post.purchaseCount != null && post.purchaseCount > 0 && (
+                      <Badge className="absolute left-2 top-2 z-10 bg-background/80 text-foreground backdrop-blur">
+                        {post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}
+                      </Badge>
+                    )}
+
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 pt-10 opacity-100 md:opacity-0 md:transition-opacity group-hover:md:opacity-100">
+                      <Button asChild size="sm" variant="secondary">
+                        <Link
+                          to={`/diy/${post._id}`}
+                          onClick={(e) => {
+                            if (!isAuthenticated) {
+                              e.preventDefault();
+                              navigate("/auth/login");
+                            }
+                          }}
+                        >
+                          {t("diyFeed.viewMaterial")}
+                        </Link>
+                      </Button>
+                      <Button size="sm" onClick={() => requireAuth(() => buyCombo(post))}>
+                        <ShoppingBag className="size-4" /> {t("diyFeed.buyNow")}
+                      </Button>
                     </div>
                   </div>
 
-                  <Link to={`/diy/${post._id}`} className="block font-semibold leading-tight hover:text-primary">
-                    {post.title}
-                  </Link>
+                  <div className="flex flex-1 flex-col gap-2.5 p-3 md:p-4">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="size-6">
+                        <AvatarImage src={creator?.avatar} alt={creator?.fullName} />
+                        <AvatarFallback className="text-[10px]">
+                          {creator?.fullName?.charAt(0) || "C"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="truncate text-xs font-medium text-muted-foreground">
+                        {creator?.fullName || t("diyFeed.creator")}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-primary font-semibold">
-                      {post.price != null && post.price > 0
-                        ? formatPrice(post.price)
-                        : <span className="text-muted-foreground">{t("diyFeed.free")}</span>}
-                    </span>
-                    {post.purchaseCount != null && post.purchaseCount > 0 && (
-                      <span className="text-xs text-muted-foreground">{post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {post.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-[11px]">#{tag}</Badge>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><Heart className="size-4" />{post.likeCount.toLocaleString()}</span>
-                    <button
-                      type="button"
-                      onClick={() => savePost(post)}
-                      className="flex items-center gap-1 transition-colors hover:text-primary"
+                    <Link
+                      to={`/diy/${post._id}`}
+                      className="line-clamp-2 min-h-[2.5em] font-semibold leading-tight hover:text-primary"
                     >
-                      {isDIYPostSaved(post._id) ? <Bookmark className="size-4 fill-current" /> : <Bookmark className="size-4" />}
-                      {post.saveCount?.toLocaleString() ?? 0}
-                    </button>
+                      {post.title}
+                    </Link>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {post.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-auto flex items-center justify-between pt-1">
+                      <span className="font-semibold text-primary">
+                        {post.price != null && post.price > 0 ? (
+                          formatPrice(post.price)
+                        ) : (
+                          <span className="font-normal text-muted-foreground">{t("diyFeed.free")}</span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Heart className="size-3.5" />
+                        {post.likeCount.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </motion.article>
-            );
-          })}
-        </div>
+                </motion.article>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

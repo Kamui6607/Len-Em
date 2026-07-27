@@ -641,17 +641,19 @@ export function LearnSection() {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.5 }}
-      className="px-4 py-16 sm:px-8"
+      className="px-4 sm:px-8"
       style={{
         position: "relative",
         overflow: "hidden",
+        paddingTop: "var(--section-py-sm)",
+        paddingBottom: "var(--section-py-sm)",
       }}
     >
       {/* Background ambient glows */}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         <div style={{ position: "absolute", width: "340px", height: "260px", top: "40%", left: "38%", borderRadius: "50%", background: "radial-gradient(ellipse, var(--glow-primary) 0%, transparent 70%)", filter: "blur(52px)" }} />
         {/* Fiber texture */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%236B3FA0' fill-opacity='0.028'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23F0C4E0' fill-opacity='0.022'/%3E%3C/svg%3E")` }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.028'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.022'/%3E%3C/svg%3E")` }} />
       </div>
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: "1200px", margin: "0 auto" }}>

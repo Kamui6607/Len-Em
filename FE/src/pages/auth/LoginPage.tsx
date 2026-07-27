@@ -9,9 +9,30 @@ import {
   Loader as Loader2,
   CircleAlert as AlertCircle,
   Sparkles,
+  BookOpen,
+  Palette,
+  ShoppingBag,
 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
+
+const welcomeFeatures = [
+  {
+    icon: BookOpen,
+    title: "Lộ trình học đan móc bài bản",
+    desc: "Từ mũi đan đầu tiên đến thành phẩm hoàn chỉnh",
+  },
+  {
+    icon: Palette,
+    title: "Kho cảm hứng DIY mỗi tuần",
+    desc: "Mẫu mới, kỹ thuật mới từ cộng đồng Len&Em",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Kit nguyên liệu chọn sẵn",
+    desc: "Đủ len, kim, phụ kiện — giao tận nơi",
+  },
+];
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -48,13 +69,256 @@ export function LoginPage() {
   return (
     <>
       <style>{`
-        .login-root {
+        .login-shell {
           min-height: 100vh;
+          display: flex;
+          background: var(--background);
+        }
+
+        /* ============================================================
+           LEFT — Welcome panel (desktop only)
+           ============================================================ */
+        .welcome-panel {
+          display: none;
+          position: relative;
+          width: 44%;
+          min-height: 100vh;
+          padding: 56px 48px;
+          flex-direction: column;
+          justify-content: space-between;
+          overflow: hidden;
+          background: linear-gradient(160deg, var(--brand-600, var(--primary)) 0%, var(--brand-700, var(--primary-hover)) 65%, var(--brand-800, var(--primary-pressed)) 100%);
+          color: #fff;
+          transition: background 0.4s ease;
+        }
+        @media (min-width: 1024px) {
+          .welcome-panel { display: flex; }
+        }
+        /* Dark mode: swap the vivid daytime gradient for the site's night-atelier glow */
+        .dark .welcome-panel {
+          background: linear-gradient(165deg, var(--bg-1) 0%, var(--bg-2) 55%, var(--bg-3) 100%);
+          border-right: 1px solid var(--border-light);
+          box-shadow: inset -1px 0 0 rgba(140,123,255,0.06);
+        }
+
+        /* Yarn-dot texture */
+        .welcome-panel::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(rgba(255,255,255,0.10) 1.5px, transparent 1.5px);
+          background-size: 22px 22px;
+          opacity: 0.5;
+          pointer-events: none;
+        }
+        /* Soft glow blob — sunlit highlight in light mode */
+        .welcome-panel::after {
+          content: '';
+          position: absolute;
+          top: -120px;
+          right: -100px;
+          width: 340px;
+          height: 340px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 70%);
+          pointer-events: none;
+          transition: background 0.4s ease;
+        }
+        .dark .welcome-panel::after {
+          background: radial-gradient(circle, rgba(140,123,255,0.32) 0%, transparent 70%);
+        }
+        /* Multi-point ambient glow — only lit up at night */
+        .welcome-atmosphere {
+          position: absolute;
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.4s ease;
+          background:
+            radial-gradient(420px 320px at 12% 18%, rgba(140,123,255,0.26), transparent 62%),
+            radial-gradient(380px 320px at 88% 78%, rgba(140,123,255,0.18), transparent 62%);
+        }
+        .dark .welcome-atmosphere { opacity: 1; }
+
+        .welcome-stitch-ring {
+          position: absolute;
+          bottom: -140px;
+          left: -140px;
+          width: 380px;
+          height: 380px;
+          border-radius: 50%;
+          border: 2px dashed rgba(255,255,255,0.18);
+          animation: spin-slow 60s linear infinite;
+          pointer-events: none;
+          transition: border-color 0.4s ease, filter 0.4s ease;
+        }
+        .welcome-stitch-ring--inner {
+          position: absolute;
+          bottom: -70px;
+          left: -70px;
+          width: 240px;
+          height: 240px;
+          border-radius: 50%;
+          border: 2px dashed rgba(255,255,255,0.14);
+          animation: spin-slow-rev 46s linear infinite;
+          pointer-events: none;
+          transition: border-color 0.4s ease, filter 0.4s ease;
+        }
+        .dark .welcome-stitch-ring {
+          border-color: rgba(140,123,255,0.38);
+          filter: drop-shadow(0 0 22px rgba(140,123,255,0.22));
+        }
+        .dark .welcome-stitch-ring--inner {
+          border-color: rgba(140,123,255,0.3);
+          filter: drop-shadow(0 0 16px rgba(140,123,255,0.18));
+        }
+        @keyframes spin-slow { to { transform: rotate(360deg); } }
+        @keyframes spin-slow-rev { to { transform: rotate(-360deg); } }
+
+        .welcome-content { position: relative; z-index: 1; }
+
+        .welcome-logo {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 64px;
+        }
+        .welcome-logo-mark {
+          position: relative;
+          width: 42px;
+          height: 42px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.16);
+          border: 1px solid rgba(255,255,255,0.28);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: var(--font-heading);
+          font-weight: 700;
+          font-size: 1.15rem;
+          transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .dark .welcome-logo-mark {
+          background: rgba(140,123,255,0.16);
+          border-color: rgba(140,123,255,0.4);
+          box-shadow: 0 0 22px rgba(140,123,255,0.25);
+        }
+        .welcome-logo-name {
+          font-family: var(--font-heading);
+          font-weight: 700;
+          font-size: 1.4rem;
+          letter-spacing: -0.01em;
+        }
+
+        .welcome-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.75);
+          margin-bottom: 18px;
+        }
+        .welcome-eyebrow-dash {
+          width: 22px;
+          height: 0;
+          border-bottom: 2px dashed rgba(255,255,255,0.55);
+          transition: border-color 0.4s ease;
+        }
+        .dark .welcome-eyebrow-dash {
+          border-bottom-color: rgba(140,123,255,0.65);
+        }
+
+        .welcome-title {
+          font-family: var(--font-heading);
+          font-size: clamp(1.9rem, 2.6vw, 2.5rem);
+          font-weight: 700;
+          line-height: 1.18;
+          letter-spacing: -0.02em;
+          max-width: 420px;
+          margin-bottom: 16px;
+        }
+        .welcome-sub {
+          font-size: 0.9375rem;
+          line-height: 1.7;
+          color: rgba(255,255,255,0.78);
+          max-width: 380px;
+          margin-bottom: 44px;
+        }
+
+        .welcome-features {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .welcome-feature {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+        }
+        .welcome-feature-icon {
+          flex-shrink: 0;
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .dark .welcome-feature-icon {
+          background: rgba(140,123,255,0.14);
+          border-color: rgba(140,123,255,0.32);
+          box-shadow: 0 0 14px rgba(140,123,255,0.15);
+        }
+        .welcome-feature-title {
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin-bottom: 2px;
+        }
+        .welcome-feature-desc {
+          font-size: 0.8125rem;
+          color: rgba(255,255,255,0.65);
+          line-height: 1.5;
+        }
+
+        .welcome-quote {
+          position: relative;
+          z-index: 1;
+          padding-top: 28px;
+          border-top: 1px dashed rgba(255,255,255,0.22);
+          transition: border-color 0.4s ease;
+        }
+        .dark .welcome-quote {
+          border-top-color: rgba(140,123,255,0.32);
+        }
+        .welcome-quote-text {
+          font-family: var(--font-script);
+          font-size: 1.5rem;
+          line-height: 1.4;
+          color: #fff;
+          margin-bottom: 6px;
+        }
+        .welcome-quote-by {
+          font-size: 0.75rem;
+          color: rgba(255,255,255,0.6);
+          letter-spacing: 0.04em;
+        }
+
+        /* ============================================================
+           RIGHT — Form side
+           ============================================================ */
+        .login-form-side {
+          position: relative;
+          flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 24px;
-          background: var(--background);
         }
         .login-card {
           width: 100%;
@@ -76,8 +340,36 @@ export function LoginPage() {
           left: 0;
           right: 0;
           height: 3px;
+          background-image: repeating-linear-gradient(90deg, var(--primary) 0 10px, transparent 10px 18px);
+          opacity: 0.85;
+        }
+        .mobile-brand {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-bottom: 24px;
+        }
+        .mobile-brand-mark {
+          width: 34px;
+          height: 34px;
+          border-radius: 11px;
           background: var(--cta-gradient);
-          opacity: 0.8;
+          color: #fff;
+          font-family: var(--font-heading);
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .mobile-brand-name {
+          font-family: var(--font-heading);
+          font-weight: 700;
+          font-size: 1.15rem;
+          color: var(--foreground);
+        }
+        @media (min-width: 1024px) {
+          .mobile-brand { display: none; }
         }
         .form-header {
           text-align: center;
@@ -359,144 +651,208 @@ export function LoginPage() {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+          .welcome-stitch-ring, .welcome-stitch-ring--inner { animation: none; }
+        }
       `}</style>
 
-      <AnimatedBackgroundAuth />
-      <div className="login-root">
-        <div className="login-card">
-          {/* Decorative glow */}
-          <div
-            style={{
-              position: "absolute",
-              top: "-80px",
-              right: "-80px",
-              width: "200px",
-              height: "200px",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, var(--primary) 0%, transparent 70%)",
-              opacity: 0.08,
-              pointerEvents: "none",
-            }}
-          />
+      <div className="login-shell">
+        {/* ── Left: welcome panel (lg and up) ── */}
+        <aside className="welcome-panel">
+          <span className="welcome-atmosphere" aria-hidden="true" />
+          <span className="welcome-stitch-ring" aria-hidden="true" />
+          <span className="welcome-stitch-ring--inner" aria-hidden="true" />
 
-          <div className="form-header">
-            <div className="form-eyebrow">
-              <Sparkles size={14} />
-              Welcome back
+          <div className="welcome-content">
+            <div className="welcome-logo">
+              <span className="welcome-logo-mark">L</span>
+              <span className="welcome-logo-name">
+                Len&amp;em
+              </span>
             </div>
-            <div className="form-title">Sign in</div>
-            <p className="form-sub">Continue your cozy crafting journey</p>
+
+            <div className="welcome-eyebrow">
+              <span className="welcome-eyebrow-dash" />
+              Chào mừng trở lại
+            </div>
+            <h1 className="welcome-title">
+              Nơi từng mũi đan kể một câu chuyện ấm áp
+            </h1>
+            <p className="welcome-sub">
+              Đăng nhập để tiếp tục hành trình sáng tạo của bạn — lưu mẫu yêu thích,
+              theo dõi đơn hàng và nhận gợi ý được chọn riêng cho bạn.
+            </p>
+
+            <div className="welcome-features">
+              {welcomeFeatures.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div className="welcome-feature" key={f.title}>
+                    <span className="welcome-feature-icon">
+                      <Icon size={17} />
+                    </span>
+                    <div>
+                      <div className="welcome-feature-title">{f.title}</div>
+                      <div className="welcome-feature-desc">{f.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            {error && (
-              <div className="err-box">
-                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-                <span>{error}</span>
-              </div>
-            )}
+          <div className="welcome-quote">
+            <p className="welcome-quote-text">
+              “Mỗi mũi chỉ là một nhịp thở chậm lại.”
+            </p>
+            <p className="welcome-quote-by">— Len&amp;Em</p>
+          </div>
+        </aside>
 
-            <div className="field">
-              <label className="field-label">Email or Username</label>
-              <div className="field-wrap">
-                <Mail size={16} className="field-icon" />
-                <input
-                  type="text"
-                  className="field-input"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
-              </div>
+        {/* ── Right: form ── */}
+        <div className="login-form-side">
+          <AnimatedBackgroundAuth />
+          <div className="login-card">
+            {/* Decorative glow */}
+            <div
+              style={{
+                position: "absolute",
+                top: "-80px",
+                right: "-80px",
+                width: "200px",
+                height: "200px",
+                borderRadius: "50%",
+                background: "radial-gradient(circle, var(--primary) 0%, transparent 70%)",
+                opacity: 0.08,
+                pointerEvents: "none",
+              }}
+            />
+
+            <div className="mobile-brand">
+              <span className="mobile-brand-mark">L</span>
+              <span className="mobile-brand-name">Len&amp;em</span>
             </div>
 
-            <div className="field">
-              <label className="field-label">Password</label>
-              <div className="field-wrap">
-                <Lock size={16} className="field-icon" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="field-input field-input-pr"
-                  placeholder="Your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="eye-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+            <div className="form-header">
+              <div className="form-eyebrow">
+                <Sparkles size={14} />
+                Welcome back
               </div>
+              <div className="form-title">Sign in</div>
+              <p className="form-sub">Continue your cozy crafting journey</p>
             </div>
 
-            <div className="form-row">
-              <label className="remember">
-                <input type="checkbox" defaultChecked /> Remember me
-              </label>
-              <Link to="/auth/forgot-password" className="forgot-link">
-                Forgot password?
-              </Link>
-            </div>
-
-            <button type="submit" className="submit-btn" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 size={17} style={{ animation: "spin 0.8s linear infinite" }} />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  Sign in <ArrowRight size={17} />
-                </>
+            <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="err-box">
+                  <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>{error}</span>
+                </div>
               )}
-            </button>
-          </form>
 
-          <div className="divider">
-            <div className="divider-line" />
-            <span>New to Len&Em?</span>
-            <div className="divider-line" />
-          </div>
+              <div className="field">
+                <label className="field-label">Email or Username</label>
+                <div className="field-wrap">
+                  <Mail size={16} className="field-icon" />
+                  <input
+                    type="text"
+                    className="field-input"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
 
-          <p className="reg-txt">
-            <Link to="/auth/register">Create an account</Link> and start your journey ✦
-          </p>
+              <div className="field">
+                <label className="field-label">Password</label>
+                <div className="field-wrap">
+                  <Lock size={16} className="field-icon" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="field-input field-input-pr"
+                    placeholder="Your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="eye-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
 
-          <div className="sep" />
+              <div className="form-row">
+                <label className="remember">
+                  <input type="checkbox" defaultChecked /> Remember me
+                </label>
+                <Link to="/auth/forgot-password" className="forgot-link">
+                  Forgot password?
+                </Link>
+              </div>
 
-          <div className="demo-box">
-            <div className="demo-title">
-              🔑 Demo accounts — password: <strong>123456</strong>
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 size={17} style={{ animation: "spin 0.8s linear infinite" }} />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign in <ArrowRight size={17} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="divider">
+              <div className="divider-line" />
+              <span>New to Len&Em?</span>
+              <div className="divider-line" />
             </div>
-            <div className="demo-grid">
-              <div className="demo-chip">
-                <div className="demo-role">
-                  <span className="demo-dot dot-admin" />
-                  Admin
-                </div>
-                admin
+
+            <p className="reg-txt">
+              <Link to="/auth/register">Create an account</Link> and start your journey ✦
+            </p>
+
+            <div className="sep" />
+
+            <div className="demo-box">
+              <div className="demo-title">
+                🔑 Demo accounts — password: <strong>123456</strong>
               </div>
-              <div className="demo-chip">
-                <div className="demo-role">
-                  <span className="demo-dot dot-staff" />
-                  Staff
+              <div className="demo-grid">
+                <div className="demo-chip">
+                  <div className="demo-role">
+                    <span className="demo-dot dot-admin" />
+                    Admin
+                  </div>
+                  admin
                 </div>
-                staff1
-              </div>
-              <div className="demo-chip">
-                <div className="demo-role">
-                  <span className="demo-dot dot-user" />
-                  Customer
+                <div className="demo-chip">
+                  <div className="demo-role">
+                    <span className="demo-dot dot-staff" />
+                    Staff
+                  </div>
+                  staff1
                 </div>
-                customer1
+                <div className="demo-chip">
+                  <div className="demo-role">
+                    <span className="demo-dot dot-user" />
+                    Customer
+                  </div>
+                  customer1
+                </div>
               </div>
             </div>
           </div>

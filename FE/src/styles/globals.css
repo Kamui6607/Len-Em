@@ -731,3 +731,13 @@ body.lang-switching * {
 .dropdown-item:last-child {
   margin-bottom: 0.25rem;
 }
+
+/* Card shell responsive min-height — tránh dư/thiếu trên mobile */
+.card-shell {
+  min-height: 430px;
+}
+@media (max-width: 480px) {
+  .card-shell {
+    min-height: 360px;
+  }
+}

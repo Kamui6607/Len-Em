@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { ArrowLeft, Heart, ShoppingCart, Package, Check, AlertCircle, Star, Truck, ShieldCheck, RotateCcw, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart, Package, Check, Star, Truck, ShieldCheck, RotateCcw, Minus, Plus } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
 import { useAuth } from "../../hooks/useAuth";
@@ -43,6 +43,77 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
   );
 }
 
+/**
+ * Stock status thresholds:
+ * >70%  -> success (xanh lá)  "Còn nhiều hàng"
+ * 30-70% -> warning (cam)     "Số lượng có hạn"
+ * <30%  -> error (đỏ)         "Sắp hết hàng"
+ * 0     -> muted (xám)        "Hết hàng"
+ */
+function getStockStatus(stock: number, percent: number) {
+  if (stock === 0) {
+    return { key: "empty", colorVar: "var(--muted-foreground)", label: "Hết hàng" };
+  }
+  if (percent > 70) {
+    return { key: "high", colorVar: "var(--success-text)", label: "Còn nhiều hàng" };
+  }
+  if (percent >= 30) {
+    return { key: "mid", colorVar: "var(--warning-text)", label: "Số lượng có hạn" };
+  }
+  return { key: "low", colorVar: "var(--error-text)", label: "Sắp hết hàng" };
+}
+
+/** Thanh tồn kho hình một đoạn dây len — vân xoắn nhẹ, đổi màu theo mức tồn kho. */
+function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }) {
+  const percent =
+    maxStock > 0 ? Math.min(100, Math.max(0, Math.round((stock / maxStock) * 100))) : 0;
+  const status = getStockStatus(stock, percent);
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className="relative h-3 w-full max-w-[200px] overflow-hidden rounded-full"
+        style={{ background: "var(--muted)" }}
+      >
+        {/* nền dây - vân xoắn mờ */}
+        <svg className="absolute inset-0 h-full w-full" style={{ opacity: 0.35 }} preserveAspectRatio="none">
+          <defs>
+            <pattern id="yarn-twist-track" width="7" height="7" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+              <rect width="3.5" height="7" className="fill-foreground/25" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#yarn-twist-track)" />
+        </svg>
+
+        {/* phần dây đã "xe" theo % tồn kho */}
+        <div
+          className="relative h-full rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${percent}%`, backgroundColor: status.colorVar }}
+        >
+          <svg className="absolute inset-0 h-full w-full" style={{ opacity: 0.3 }} preserveAspectRatio="none">
+            <defs>
+              <pattern id={`yarn-twist-${status.key}`} width="6" height="6" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+                <rect width="3" height="6" fill="white" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#yarn-twist-${status.key})`} />
+          </svg>
+          {/* đầu dây - đánh dấu mốc hiện tại */}
+          {percent > 0 && (
+            <span
+              className="absolute -right-0.5 top-1/2 size-3 -translate-y-1/2 rounded-full border-2 border-background"
+              style={{ backgroundColor: status.colorVar }}
+            />
+          )}
+        </div>
+      </div>
+      <span className="whitespace-nowrap text-xs font-medium" style={{ color: status.colorVar }}>
+        {status.label}
+      </span>
+    </div>
+  );
+}
+
 export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -57,7 +128,6 @@ export function ProductDetail() {
 
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
-  // Get current cart item quantity for this variant
   const currentCartItem = useMemo(() => {
     if (!selectedVariant) return null;
     return cartItems.find(item => item.productId === product?.id && item.variantId === selectedVariant.id);
@@ -71,14 +141,12 @@ export function ProductDetail() {
 
   useEffect(() => {
     if (!id) return;
-    // First check mock data
     const mockProduct = products.find((p) => p.id === id);
     if (mockProduct) {
       setProduct(mockProduct);
       setLoading(false);
       return;
     }
-    // Fallback to API fetch
     fetchProductById(id)
       .then((apiProduct) => {
         if (apiProduct) {
@@ -102,7 +170,6 @@ export function ProductDetail() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Map product variants to the UI format
   const variantItems: ProductVariantUI[] = useMemo(() => {
     return (
       product?.variants?.map((v) => ({
@@ -116,12 +183,17 @@ export function ProductDetail() {
     );
   }, [product]);
 
-  // Current display data from selected variant
   const currentImage = selectedVariant?.images?.[activeImageIndex] ?? product?.image ?? "";
   const currentPrice = selectedVariant?.price ?? variantItems[0]?.price ?? 0;
   const currentStock = selectedVariant?.stock ?? 0;
   const currentColor = selectedVariant?.color;
   const totalStock = product ? getTotalStock(product as Product) : 0;
+
+  // Mốc "đầy dây" để so tỉ lệ: lấy biến thể có tồn kho cao nhất làm chuẩn
+  const maxVariantStock = useMemo(() => {
+    if (variantItems.length === 0) return currentStock || 1;
+    return Math.max(...variantItems.map((v) => v.stock), 1);
+  }, [variantItems, currentStock]);
 
   const handleVariantChange = useCallback((variant: ProductVariantUI) => {
     setSelectedVariant(variant);
@@ -196,7 +268,6 @@ export function ProductDetail() {
   return (
     <div className="min-h-screen bg-background py-8 px-4 sm:py-12 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <div className="max-w-6xl mx-auto">
-        {/* Breadcrumb */}
         <Link
           to="/shop"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors text-sm"
@@ -221,7 +292,6 @@ export function ProductDetail() {
                   }
                 }}
               />
-              {/* Favorite button overlay */}
               <button
                 type="button"
                 title="Toggle favorite"
@@ -238,7 +308,6 @@ export function ProductDetail() {
               >
                 <Heart className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
               </button>
-              {/* Color indicator on image */}
               {currentColor && selectedVariant?.hexCode && (
                 <div
                   className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
@@ -259,7 +328,6 @@ export function ProductDetail() {
               )}
             </div>
 
-            {/* Thumbnail gallery */}
             {hasMultipleImages && (
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {selectedVariant?.images?.map((img, idx) => (
@@ -291,7 +359,6 @@ export function ProductDetail() {
 
           {/* Right Column — Product Info */}
           <div className="space-y-6">
-            {/* Header */}
             <div>
               <div className="flex items-start justify-between gap-4 mb-2">
                 <div>
@@ -316,7 +383,6 @@ export function ProductDetail() {
 
               <StarRating rating={product.rating} count={product.reviewCount} />
 
-              {/* Price */}
               <div className="mt-4 flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-primary">
                   {formatPrice(currentPrice)}
@@ -331,12 +397,11 @@ export function ProductDetail() {
               </div>
             </div>
 
-            {/* Description */}
             <p className="text-muted-foreground leading-relaxed">
               {product.description}
             </p>
 
-            {/* Variant Selector */}
+            {/* Variant Selector + Stock — một khối thống nhất, không tách rời */}
             {variantItems.length > 0 && (
               <div className="bg-card border border-border rounded-2xl p-5">
                 <ProductVariantSelector
@@ -344,37 +409,16 @@ export function ProductDetail() {
                   onVariantChange={handleVariantChange}
                 />
 
-                {/* Stock indicator */}
                 <div className="mt-4 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Availability</span>
-                    <span
-                      className={cn(
-                        "font-medium flex items-center gap-1.5",
-                        currentStock > 10
-                          ? "text-[var(--success-text)]"
-                          : currentStock > 0
-                          ? "text-[var(--warning-text)]"
-                          : "text-destructive"
-                      )}
-                    >
-                      {currentStock > 10 ? (
-                        <>
-                          <Check className="w-4 h-4" /> In Stock
-                        </>
-                      ) : currentStock > 0 ? (
-                        <>
-                          <AlertCircle className="w-4 h-4" /> Only {currentStock} left
-                        </>
-                      ) : (
-                        <>
-                          <Package className="w-4 h-4" /> Sold Out
-                        </>
-                      )}
+                  <div className="mb-2.5 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Tồn kho</span>
+                    <span className="font-medium">
+                      {currentStock > 0 ? `${currentStock} sản phẩm` : "Hết hàng"}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {totalStock} units total across all variants
+                  <YarnStockMeter stock={currentStock} maxStock={maxVariantStock} />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {totalStock} sản phẩm trên tất cả màu
                   </p>
                 </div>
               </div>
@@ -382,15 +426,8 @@ export function ProductDetail() {
 
             {/* Yarn-specific details */}
             {product.category === "yarn" && (
-              <div
-                className="space-y-3 p-5 rounded-2xl"
-                style={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border-subtle)",
-                  boxShadow: "var(--shadow-card)",
-                }}
-              >
-                <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Yarn Specifications</h3>
+              <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+                <h3 className="text-sm font-semibold">Yarn Specifications</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {product.material && (
                     <div className="space-y-1">
@@ -422,15 +459,8 @@ export function ProductDetail() {
 
             {/* Kit-specific details */}
             {product.category === "kit" && (
-              <div
-                className="space-y-3 p-5 rounded-2xl"
-                style={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border-subtle)",
-                  boxShadow: "var(--shadow-card)",
-                }}
-              >
-                <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Kit Details</h3>
+              <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+                <h3 className="text-sm font-semibold">Kit Details</h3>
                 {product.difficulty && (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Difficulty:</span>
@@ -466,7 +496,6 @@ export function ProductDetail() {
               </div>
             )}
 
-            {/* Quantity Selector */}
             {currentStock > 0 && (
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium">Quantity</span>
@@ -502,20 +531,13 @@ export function ProductDetail() {
               </div>
             )}
 
-            {/* Add to Cart */}
             <div className="space-y-3 pt-2">
               <button
                 type="button"
                 onClick={handleAddToCart}
                 disabled={currentStock === 0}
-                className={cn(
-                  "add-to-cart-btn",
-                  currentStock === 0 && "opacity-50 cursor-not-allowed"
-                )}
-                style={{
-                  touchAction: "manipulation",
-                  WebkitTapHighlightColor: "transparent",
-                }}
+                className={cn("add-to-cart-btn", currentStock === 0 && "opacity-50 cursor-not-allowed")}
+                style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
               >
                 <div className="btn-text">
                   <ShoppingCart className="w-5 h-5" />
@@ -539,7 +561,6 @@ export function ProductDetail() {
               </button>
             </div>
 
-            {/* Trust badges */}
             <div className="pt-4 border-t border-border grid grid-cols-3 gap-4">
               <div className="text-center">
                 <Truck className="w-5 h-5 text-primary mx-auto mb-1" />
@@ -557,7 +578,6 @@ export function ProductDetail() {
           </div>
         </div>
 
-        {/* Related Products */}
         <div className="mt-16">
           <h2 className="text-xl mb-6">You Might Also Like</h2>
           <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 scrollbar-none">
@@ -571,9 +591,7 @@ export function ProductDetail() {
                     key={related.id}
                     to={`/shop/product/${related.id}`}
                     className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20 shrink-0 w-[180px] md:w-auto"
-                    style={{
-                      boxShadow: "0 0 0 transparent",
-                    }}
+                    style={{ boxShadow: "0 0 0 transparent" }}
                     onMouseEnter={(event) => {
                       event.currentTarget.style.boxShadow = "0 14px 36px color-mix(in srgb, var(--primary) 8%, transparent)";
                     }}
@@ -601,7 +619,6 @@ export function ProductDetail() {
         </div>
       </div>
 
-      {/* ── Mobile sticky bottom bar ── */}
       {!scrolledToBottom && (
         <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/97 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
           <div className="flex flex-col items-center gap-2">
@@ -609,34 +626,31 @@ export function ProductDetail() {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Price:</p>
               <p className="text-base font-bold text-primary">{formatPrice(currentPrice)}</p>
             </div>
-             <button
-               onClick={handleAddToCart}
-               disabled={currentStock === 0}
-               className={cn(
-                 "add-to-cart-btn",
-                 currentStock === 0 && "opacity-50 cursor-not-allowed"
-               )}
-             >
-               <div className="btn-text">
-                 <ShoppingCart className="w-5 h-5" />
-                 {currentStock > 0 ? "Add to Cart" : "Sold Out"}
-               </div>
-               <div className="btn-icon">
-                 <svg
-                   xmlns="http://www.w3.org/2000/svg"
-                   viewBox="0 0 24 24"
-                   fill="none"
-                   stroke="currentColor"
-                   strokeWidth="2.5"
-                   strokeLinecap="round"
-                   strokeLinejoin="round"
-                 >
-                   <circle cx="9" cy="21" r="1" />
-                   <circle cx="20" cy="21" r="1" />
-                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                 </svg>
-               </div>
-             </button>
+            <button
+              onClick={handleAddToCart}
+              disabled={currentStock === 0}
+              className={cn("add-to-cart-btn", currentStock === 0 && "opacity-50 cursor-not-allowed")}
+            >
+              <div className="btn-text">
+                <ShoppingCart className="w-5 h-5" />
+                {currentStock > 0 ? "Add to Cart" : "Sold Out"}
+              </div>
+              <div className="btn-icon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="9" cy="21" r="1" />
+                  <circle cx="20" cy="21" r="1" />
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                </svg>
+              </div>
+            </button>
           </div>
         </div>
       )}

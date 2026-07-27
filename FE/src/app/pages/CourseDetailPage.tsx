@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
-import { BookOpen, Clock, Play, Star, Users, ShoppingCart } from "lucide-react";
+import { BookOpen, Clock, Play, Star, Users, ShoppingCart, PackageSearch } from "lucide-react";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import { Badge } from "../components/ui/badge";
@@ -27,6 +27,71 @@ const levelStyles: Record<CourseLevel, string> = {
   intermediate: "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
   advanced: "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
 };
+
+// Shared page styles — rendered once, on the real content. (Previously this
+// block only existed inside the loading-skeleton branch, so the CTA button
+// below had no CSS to hook into once loading finished — it papered over that
+// with an inline style object and manual onMouseEnter/onMouseLeave handlers.
+// Now that the class is actually available, that duplication is gone.)
+const PAGE_STYLES = `
+  .learn-start-btn {
+    background: var(--accent-blush);
+    color: var(--foreground);
+    border: 2px solid var(--primary);
+    box-shadow: 0 4px 16px var(--glow-pink);
+    transition: all 0.2s ease;
+  }
+  .learn-start-btn:hover:not(:disabled) {
+    background: var(--accent-pink);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(240,196,224,0.45);
+  }
+  .learn-start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .dark .learn-start-btn {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+    box-shadow: 0 4px 16px rgba(155,111,214,0.3);
+  }
+  .dark .learn-start-btn:hover:not(:disabled) {
+    background: var(--primary-hover);
+    box-shadow: 0 8px 24px rgba(155,111,214,0.45);
+  }
+
+  /* Small stat chip next to the "Lessons" heading — keeps that header row
+     from being just a lonely title with empty space beside it. */
+  .lessons-summary-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 0.78rem; font-weight: 600; color: var(--foreground-secondary);
+    white-space: nowrap;
+  }
+  .lessons-summary-chip svg { color: var(--primary); }
+
+  /* Empty-state card for "no combo linked" — replaces a single line of
+     italic text with something that actually fills the sidebar slot. */
+  .combo-empty-card {
+    text-align: center;
+    padding: 2.25rem 1.25rem;
+    border-radius: 20px;
+    border: 1px dashed var(--border);
+    background: var(--surface);
+  }
+  .combo-empty-card svg { margin: 0 auto 0.75rem; color: var(--foreground-muted); opacity: 0.5; }
+  .combo-empty-card p { font-size: 0.85rem; color: var(--foreground-muted); margin: 0 0 1rem; }
+  .combo-empty-card a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 20px; border-radius: 999px;
+    background: var(--primary); color: var(--primary-foreground);
+    font-size: 0.82rem; font-weight: 600; text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  .combo-empty-card a:hover { background: var(--primary-hover); transform: translateY(-1px); }
+`;
 
 /**
  * Extract ID from various reference formats.
@@ -302,36 +367,9 @@ export function CourseDetailPage() {
   }, [products]);
 
   if (loading) {
-  return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
-      <style>{`
-        .learn-start-btn {
-          background: var(--accent-blush);
-          color: var(--foreground);
-          border: 2px solid var(--primary);
-          box-shadow: 0 4px 16px var(--glow-pink);
-        }
-        .learn-start-btn:hover:not(:disabled) {
-          background: var(--accent-pink);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(240,196,224,0.45);
-        }
-        .learn-start-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-        .dark .learn-start-btn {
-          background: var(--primary);
-          color: var(--primary-foreground);
-          border-color: var(--primary);
-          box-shadow: 0 4px 16px rgba(155,111,214,0.3);
-        }
-        .dark .learn-start-btn:hover:not(:disabled) {
-          background: var(--primary-hover);
-          box-shadow: 0 8px 24px rgba(155,111,214,0.45);
-        }
-      `}</style>
-      <div className="mx-auto max-w-7xl">
+    return (
+      <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+        <div className="mx-auto max-w-7xl">
           <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
             <main className="space-y-8">
               <section className="overflow-hidden rounded-3xl border bg-card">
@@ -425,12 +463,20 @@ export function CourseDetailPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+      <style>{PAGE_STYLES}</style>
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
           <main className="space-y-8">
             <section className="overflow-hidden rounded-3xl border bg-card">
-              <div className="relative w-full bg-muted">
-                <img src={course.thumbnail} alt={course.title} className="w-full object-fill" style={{ minHeight: "240px", maxHeight: "400px" }} />
+              <div
+                className="relative w-full overflow-hidden bg-muted"
+                style={{ height: "clamp(240px, 40vw, 400px)" }}
+              >
+                <img
+                  src={course.thumbnail}
+                  alt={course.title}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
                   <Badge className={cn("mb-4 border", levelStyles[course.level])}>{levelLabels[course.level]}</Badge>
@@ -459,22 +505,6 @@ export function CourseDetailPage() {
                     disabled={enrolling}
                     onClick={(e) => handleEnrollAndStart(e)}
                     className="learn-start-btn inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold transition-all"
-                    style={{
-                      background: "var(--accent-blush)",
-                      color: "var(--foreground)",
-                      border: "2px solid var(--primary)",
-                      boxShadow: "0 4px 16px var(--glow-pink)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "var(--accent-pink)";
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "0 8px 24px rgba(240,196,224,0.45)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "var(--accent-blush)";
-                      e.currentTarget.style.transform = "";
-                      e.currentTarget.style.boxShadow = "0 4px 16px var(--glow-pink)";
-                    }}
                   >
                     <Play className="size-4" />
                     {enrolling ? "Enrolling..." : isEnrolled ? "Start" : "Bắt đầu học"}
@@ -484,7 +514,13 @@ export function CourseDetailPage() {
             </section>
 
             <section className="rounded-2xl border bg-card p-6 mb-20 md:mb-0">
-              <h2 className="mb-4 text-2xl font-semibold">Lessons</h2>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-2xl font-semibold">Lessons</h2>
+                <span className="lessons-summary-chip">
+                  <Clock size={13} />
+                  {course.totalDuration} min · {course.totalLessons} lessons
+                </span>
+              </div>
               <Accordion type="single" collapsible defaultValue={lessons[0]?._id}>
                 {lessons.map((lesson) => (
                   <AccordionItem key={lesson._id} value={lesson._id}>
@@ -538,15 +574,14 @@ export function CourseDetailPage() {
               </div>
 
               {kits.length === 0 && (
-                <p
-                  style={{
-                    fontFamily: "'Caveat', cursive",
-                    fontSize: "0.9rem",
-                    color: "var(--foreground-muted)",
-                  }}
-                >
-                  No material combos linked to this course.
-                </p>
+                <div className="combo-empty-card">
+                  <PackageSearch size={34} />
+                  <p>No material combos linked to this course yet.</p>
+                  <Link to="/shop">
+                    <ShoppingCart className="size-3.5" />
+                    Browse the shop
+                  </Link>
+                </div>
               )}
 
               <div className="space-y-4">

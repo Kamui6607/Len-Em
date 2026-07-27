@@ -252,6 +252,14 @@
   --overlay: rgba(24,24,27,.35);
   --texture-opacity: 0.02;
 
+  /* ============================================================
+     SECTION SPACING SCALE — nhịp khoảng cách nhất quán giữa các section
+     Dùng clamp() để tự co giãn mượt theo viewport, tránh dư/thiếu
+     ============================================================ */
+  --section-py-sm: clamp(3rem, 6vw, 4rem);     /* Hero, How-it-works, Learn */
+  --section-py-md: clamp(4.5rem, 9vw, 6rem);   /* Shop, DIY */
+  --section-py-lg: clamp(5.5rem, 11vw, 7.5rem); /* ClosingCTA */
+
   /* ── Spacing / Typography / Radius / Z / Anim — không đổi ── */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
@@ -606,3 +614,15 @@ p  { line-height: 1.7; color: var(--foreground-secondary); }
 
 a { color: var(--link); text-decoration: none; transition: color 0.2s var(--ease-out); }
 a:hover { color: var(--link-hover); }
+
+/* ============================================================
+   SCROLL ANCHOR OFFSET — bù trừ chiều cao Navbar sticky (h-20 = 80px)
+   khi nhảy tới section qua homeNavLinks / scrollIntoView
+   ============================================================ */
+#section-hero,
+#section-how-it-works,
+#section-learn,
+#section-shop,
+#section-diy {
+  scroll-margin-top: 110px; /* 80px navbar + ~12px mt-3 (floating) + 18px đệm thở */
+}

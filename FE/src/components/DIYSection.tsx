@@ -69,7 +69,7 @@ export const CREATORS: Creator[] = [
     project: "Merino Wrap · Bulky",
     likes: 892,
     img: "https://images.unsplash.com/photo-1651342703853-2594571bb96a?auto=format&fit=crop&w=600&q=80",
-    avatarFrom: "var(--accent-butter)",
+    avatarFrom: "var(--accent-warm)",
     avatarTo: "var(--decor-avatar-s)",
     initial: "S",
   },
@@ -791,7 +791,7 @@ function DIYHeading() {
 
 // ── Floating creator photo wrapper ─────────────────────────────────────────────
 
-function useIsNarrow(breakpoint = 720) {
+function useIsNarrow(breakpoint = 1024) {
   const [narrow, setNarrow] = useState(
     typeof window !== "undefined" ? window.innerWidth < breakpoint : false,
   );
@@ -1029,7 +1029,10 @@ export function DIYSection({ hoveredIndex = -1 }: { hoveredIndex?: number }) {
       style={{
         position: "relative",
         overflow: "hidden",
-        padding: "5.5rem 2rem 6rem",
+        paddingTop: "var(--section-py-md)",
+        paddingBottom: "var(--section-py-md)",
+        paddingLeft: "2rem",
+        paddingRight: "2rem",
       }}
     >
       {/* Ambient glows */}
@@ -1059,7 +1062,7 @@ export function DIYSection({ hoveredIndex = -1 }: { hoveredIndex?: number }) {
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%236B3FA0' fill-opacity='0.025'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23F0C4E0' fill-opacity='0.02'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.025'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.02'/%3E%3C/svg%3E")`,
           }}
         />
       </div>

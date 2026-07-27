@@ -9,6 +9,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
 
@@ -635,6 +636,12 @@ export const ProductCard = memo(function ProductCard({
   const [isHovered, setIsHovered] = useState(false);
   const [quickViewHovered, setQuickViewHovered] = useState(false);
 
+  // Thiết bị có chuột thật (desktop) mới dùng cơ chế hover-to-reveal.
+  // Trên mobile/tablet cảm ứng, luôn hiện sẵn phần Add to cart + rating
+  // vì không có sự kiện hover nào từng xảy ra.
+  const supportsHover = useMediaQuery("(hover: hover) and (pointer: fine)");
+  const showReveal = supportsHover ? isHovered : true;
+
   const prices = product.variants?.map((variant) => variant.price) ?? [
     getBasePrice(product),
   ];
@@ -696,7 +703,7 @@ export const ProductCard = memo(function ProductCard({
     //    wrapper that never changes size — its content is an absolutely
     //    positioned layer that only fades/slides inside that fixed box.
     <motion.article
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 1, y: 0 }}
       animate={{
         opacity: 1,
         y: isHovered ? -6 : 0,
@@ -933,8 +940,8 @@ export const ProductCard = memo(function ProductCard({
             type="button"
             initial={false}
             animate={{
-              opacity: isHovered ? 1 : 0,
-              scale: isHovered ? 1 : 0.85,
+              opacity: showReveal ? 1 : 0,
+              scale: showReveal ? 1 : 0.85,
             }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             onMouseEnter={() => setQuickViewHovered(true)}
@@ -972,7 +979,7 @@ export const ProductCard = memo(function ProductCard({
               cursor: "pointer",
               whiteSpace: "nowrap",
               zIndex: 6,
-              pointerEvents: isHovered ? "auto" : "none",
+              pointerEvents: showReveal ? "auto" : "none",
               fontFamily: "'Inter', sans-serif",
               fontSize: "0.74rem",
               fontWeight: 700,
@@ -1145,9 +1152,9 @@ export const ProductCard = memo(function ProductCard({
             `align-items: start` (see .product-grid in Shop.tsx), this
             card growing on hover no longer stretches its row siblings —
             so there's no need to reserve fixed empty space up front. */}
-        <div style={{ marginTop: isHovered ? "2px" : "0" }}>
+        <div style={{ marginTop: showReveal ? "2px" : "0" }}>
           <AnimatePresence initial={false}>
-            {isHovered && (
+            {showReveal && (
               <motion.div
                 key="reveal"
                 initial={{ height: 0, opacity: 0 }}

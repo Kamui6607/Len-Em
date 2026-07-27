@@ -149,6 +149,7 @@ function CardShell({
 }) {
   return (
     <div
+      className="card-shell"
       style={{
         position: "relative",
         borderRadius: "22px",
@@ -159,7 +160,6 @@ function CardShell({
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        minHeight: "430px",
         ...style,
       }}
     >
@@ -1107,7 +1107,7 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
             style={{
               position: "absolute",
               inset: 0,
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%236B3FA0' fill-opacity='0.05'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.05'/%3E%3C/svg%3E")`,
             }}
           />
 
@@ -1424,10 +1424,12 @@ export function HowItWorksSection() {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.5 }}
-      className="px-4 py-16 sm:px-8 sm:py-20"
+      className="px-4 sm:px-8"
       style={{
         position: "relative",
         overflow: "hidden",
+        paddingTop: "var(--section-py-sm)",
+        paddingBottom: "var(--section-py-sm)",
       }}
     >
       {/* Ambient blobs */}

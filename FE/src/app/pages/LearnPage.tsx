@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { BookOpen, Clock, SlidersHorizontal, Star, Users, Play } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  SlidersHorizontal,
+  Star,
+  Users,
+  Play,
+  PlayCircle,
+  Gauge,
+  Tag,
+  X,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
@@ -23,6 +34,14 @@ const levelStyles: Record<CourseLevel, string> = {
   intermediate: "border-yellow-200 bg-[var(--accent-orange)] text-[var(--accent-orange-text)]",
   advanced: "border-red-200 bg-[var(--accent-red)] text-[var(--accent-red-text)]",
 };
+
+const LEVEL_EMOJI: Record<CourseLevel, string> = {
+  beginner: "🌱",
+  intermediate: "🌿",
+  advanced: "🌳",
+};
+
+type ActiveFilterChip = { type: "level" | "tag"; value: string; label: string };
 
 export function LearnPage() {
   const { t } = useLanguage();
@@ -78,6 +97,29 @@ export function LearnPage() {
     setter: (next: T[]) => void,
   ) => {
     setter(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  };
+
+  const toggleLevel = (level: CourseLevel) =>
+    toggleValue(level, selectedLevels, setSelectedLevels);
+  const toggleTag = (tag: string) => toggleValue(tag, selectedTags, setSelectedTags);
+
+  const resetFilters = () => {
+    setSelectedLevels([]);
+    setSelectedTags([]);
+  };
+
+  const hasActiveFilters = selectedLevels.length > 0 || selectedTags.length > 0;
+
+  // Drives the removable chip strip above the course grid — a single place
+  // to see and undo every active filter without reopening the panel.
+  const activeChips: ActiveFilterChip[] = [
+    ...selectedLevels.map((level) => ({ type: "level" as const, value: level, label: levelLabels[level] })),
+    ...selectedTags.map((tag) => ({ type: "tag" as const, value: tag, label: tag })),
+  ];
+
+  const removeChip = (chip: ActiveFilterChip) => {
+    if (chip.type === "level") toggleLevel(chip.value as CourseLevel);
+    else toggleTag(chip.value);
   };
 
   // Handle enroll click
@@ -138,11 +180,92 @@ export function LearnPage() {
           cursor: pointer; transition: all 0.2s ease;
         }
         .learn-filter-panel label:hover { color: var(--accent-peach); }
-        .learn-filter-panel h3 { font-family: var(--font-heading); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; }
+        .learn-filter-panel h3 {
+          font-family: var(--font-heading); font-weight: 700; font-size: 0.85rem;
+          letter-spacing: 0.06em; text-transform: uppercase;
+          display: flex; align-items: center; gap: 6px;
+        }
+        .learn-filter-panel h3 svg { color: var(--primary); opacity: 0.8; flex-shrink: 0; }
         .dark .learn-filter-panel { background: var(--surface) !important; border-color: rgba(155,111,214,0.15) !important; }
         .dark .learn-filter-panel label:hover { color: var(--primary); }
         .dark .learn-filter-panel .text-muted-foreground { color: var(--foreground-muted) !important; }
         .dark .learn-filter-panel h3.text-muted-foreground { color: var(--foreground-muted) !important; }
+
+        /* ── Hero ── */
+        .learn-hero { position: relative; overflow: hidden; }
+        .learn-hero-decor {
+          position: absolute; top: -50px; right: -30px;
+          opacity: 0.10; pointer-events: none; color: var(--primary);
+          transform: rotate(-12deg);
+        }
+        .learn-hero-row {
+          position: relative; z-index: 1;
+          display: flex; align-items: flex-start; justify-content: space-between;
+          gap: 1.5rem; flex-wrap: wrap;
+        }
+        .hero-stats { display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
+        .hero-stat {
+          display: inline-flex; align-items: center; gap: 7px;
+          padding: 9px 16px; border-radius: 14px;
+          background: var(--card); border: 1px solid var(--border);
+          font-size: 0.8rem; font-weight: 600; color: var(--foreground-secondary);
+          white-space: nowrap;
+        }
+        .hero-stat svg { color: var(--primary); }
+        @media (max-width: 768px) { .hero-stats { display: none; } }
+
+        .quick-level-row { display: flex; gap: 8px; margin-top: 1.1rem; flex-wrap: wrap; }
+        .quick-level-pill {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 7px 14px; border-radius: 999px;
+          font-size: 0.8rem; font-weight: 600;
+          border: 1.5px solid var(--border); background: var(--card);
+          color: var(--foreground); cursor: pointer; transition: all 0.2s ease;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .quick-level-pill:hover { border-color: var(--primary); background: var(--accent-blush); }
+        .quick-level-pill.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+
+        /* ── Active filter chip strip ── */
+        .filter-active-strip {
+          display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+          margin-bottom: 1.25rem;
+        }
+        .filter-active-label { font-size: 0.78rem; font-weight: 600; color: var(--foreground-muted); margin-right: 2px; }
+        .filter-active-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px; background: var(--primary); color: var(--primary-foreground);
+          border-radius: 20px; font-size: 0.76rem; font-weight: 500;
+        }
+        .filter-active-x { cursor: pointer; opacity: 0.75; line-height: 1; font-size: 1rem; }
+        .filter-active-x:hover { opacity: 1; }
+        .filter-active-clear {
+          font-size: 0.78rem; color: var(--primary); background: none; border: none;
+          cursor: pointer; text-decoration: underline; font-weight: 500; padding: 0;
+        }
+
+        /* Live "showing X of Y" note so a short filter list never trails off
+           into empty sidebar space. */
+        .learn-filter-summary {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 0.76rem; color: var(--foreground-muted);
+          padding-top: 0.9rem; margin-top: 1.2rem;
+          border-top: 1px solid var(--border);
+        }
+        .learn-filter-summary strong { color: var(--foreground); }
+
+        /* ── Empty state (grid previously rendered nothing here) ── */
+        .learn-empty-state {
+          text-align: center; padding: 4rem 1.5rem;
+          color: var(--foreground-muted);
+          border: 1px dashed var(--border); border-radius: 20px;
+        }
+        .learn-empty-cta {
+          margin-top: 14px; padding: 9px 22px; border-radius: 999px;
+          border: none; background: var(--primary); color: var(--primary-foreground);
+          font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+        }
+        .learn-empty-cta:hover { background: var(--primary-hover); transform: translateY(-1px); }
 
         /* Card styling cải thiện */
         .learn-course-card {
@@ -185,14 +308,44 @@ export function LearnPage() {
       `}</style>
 
       <div className="mx-auto max-w-7xl">
-        <div className="mb-10 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-8">
-          <Badge variant="secondary" className="mb-4">{t("nav.learn")}</Badge>
-          <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            {t("learnPage.headline")}
-          </h1>
-          <p className="max-w-3xl text-muted-foreground md:text-lg">
-            {t("learnPage.subtitle")}
-          </p>
+        <div className="learn-hero mb-10 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-8">
+          <BookOpen size={220} className="learn-hero-decor" />
+          <div className="learn-hero-row">
+            <div>
+              <Badge variant="secondary" className="mb-4">{t("nav.learn")}</Badge>
+              <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
+                {t("learnPage.headline")}
+              </h1>
+              <p className="max-w-3xl text-muted-foreground md:text-lg">
+                {t("learnPage.subtitle")}
+              </p>
+
+              {/* Quick level pills — jump straight to a level without opening the filter panel */}
+              <div className="quick-level-row">
+                {(Object.keys(levelLabels) as CourseLevel[]).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    className={`quick-level-pill ${selectedLevels.includes(level) ? "active" : ""}`}
+                    onClick={() => toggleLevel(level)}
+                  >
+                    {LEVEL_EMOJI[level]} {levelLabels[level]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="hero-stats">
+              <div className="hero-stat">
+                <BookOpen size={15} />
+                <strong>{courses.length}</strong>&nbsp;{t("learnPage.courses")}
+              </div>
+              <div className="hero-stat">
+                <PlayCircle size={15} />
+                <strong>{freeVideos.length}</strong>&nbsp;{t("learnPage.freeVideos")}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
@@ -217,10 +370,7 @@ export function LearnPage() {
               <h2 className="font-semibold">{t("learnPage.filters")}</h2>
               <motion.button
                 type="button"
-                onClick={() => {
-                  setSelectedLevels([]);
-                  setSelectedTags([]);
-                }}
+                onClick={resetFilters}
                 className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
                 style={{
                   borderColor: "var(--clear-btn-border)",
@@ -237,31 +387,38 @@ export function LearnPage() {
               </motion.button>
             </div>
 
-            <FilterGroup title={t("learnPage.level")}>
+            <FilterGroup title={t("learnPage.level")} icon={<Gauge size={13} />}>
               {(Object.keys(levelLabels) as CourseLevel[]).map((level) => (
                 <FilterCheckbox
                   key={level}
                   id={`level-${level}`}
                   label={levelLabels[level]}
                   checked={selectedLevels.includes(level)}
-                  onCheckedChange={() => toggleValue(level, selectedLevels, setSelectedLevels)}
+                  onCheckedChange={() => toggleLevel(level)}
                 />
               ))}
             </FilterGroup>
 
             <Separator className="my-5" />
 
-            <FilterGroup title={t("learnPage.tags")}>
+            <FilterGroup title={t("learnPage.tags")} icon={<Tag size={13} />}>
               {tags.map((tag) => (
                 <FilterCheckbox
                   key={tag}
                   id={`tag-${tag}`}
                   label={tag}
                   checked={selectedTags.includes(tag)}
-                  onCheckedChange={() => toggleValue(tag, selectedTags, setSelectedTags)}
+                  onCheckedChange={() => toggleTag(tag)}
                 />
               ))}
             </FilterGroup>
+
+            {!loading && (
+              <div className="learn-filter-summary">
+                <SlidersHorizontal size={13} />
+                {t("learnPage.show")} <strong>{filteredCourses.length}</strong> / {courses.length} {t("learnPage.courses")}
+              </div>
+            )}
           </aside>
 
           <main className="space-y-12">
@@ -279,11 +436,56 @@ export function LearnPage() {
                 </div>
               </div>
 
+              <AnimatePresence>
+                {activeChips.length > 0 && (
+                  <motion.div
+                    className="filter-active-strip"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <span className="filter-active-label">{t("learnPage.filters")}:</span>
+                    {activeChips.map((chip) => (
+                      <motion.span
+                        key={`${chip.type}-${chip.value}`}
+                        className="filter-active-chip"
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.85 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {chip.label}
+                        <span className="filter-active-x" onClick={() => removeChip(chip)}>
+                          ×
+                        </span>
+                      </motion.span>
+                    ))}
+                    <button type="button" className="filter-active-clear" onClick={resetFilters}>
+                      {t("learnPage.resetAll")}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {loading ? (
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <ProductSkeleton key={i} />
                   ))}
+                </div>
+              ) : filteredCourses.length === 0 ? (
+                <div className="learn-empty-state">
+                  <BookOpen size={44} style={{ margin: "0 auto 1rem", opacity: 0.3 }} />
+                  <p style={{ fontWeight: 500, marginBottom: 4 }}>
+                    {t("learnPage.noCourses") ?? "No courses match these filters"}
+                  </p>
+                  <p style={{ fontSize: "0.83rem" }}>Try a different level or tag</p>
+                  {hasActiveFilters && (
+                    <button type="button" className="learn-empty-cta" onClick={resetFilters}>
+                      {t("learnPage.resetAll")}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -425,10 +627,7 @@ export function LearnPage() {
                 <h2 className="font-semibold text-lg">{t("learnPage.filters")}</h2>
                 <motion.button
                   type="button"
-                  onClick={() => {
-                    setSelectedLevels([]);
-                    setSelectedTags([]);
-                  }}
+                  onClick={resetFilters}
                   className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
                   style={{
                     borderColor: "var(--clear-btn-border)",
@@ -445,28 +644,28 @@ export function LearnPage() {
                 </motion.button>
               </div>
 
-              <FilterGroup title={t("learnPage.level")}>
+              <FilterGroup title={t("learnPage.level")} icon={<Gauge size={13} />}>
                 {(Object.keys(levelLabels) as CourseLevel[]).map((level) => (
                   <FilterCheckbox
                     key={level}
                     id={`mobile-level-${level}`}
                     label={levelLabels[level]}
                     checked={selectedLevels.includes(level)}
-                    onCheckedChange={() => setSelectedLevels(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level])}
+                    onCheckedChange={() => toggleLevel(level)}
                   />
                 ))}
               </FilterGroup>
 
               <Separator className="my-4" />
 
-              <FilterGroup title={t("learnPage.tags")}>
+              <FilterGroup title={t("learnPage.tags")} icon={<Tag size={13} />}>
                 {tags.map((tag) => (
                   <FilterCheckbox
                     key={tag}
                     id={`mobile-tag-${tag}`}
                     label={tag}
                     checked={selectedTags.includes(tag)}
-                    onCheckedChange={() => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                    onCheckedChange={() => toggleTag(tag)}
                   />
                 ))}
               </FilterGroup>
@@ -485,10 +684,13 @@ export function LearnPage() {
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterGroup({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {icon}
+        {title}
+      </h3>
       <div className="space-y-3">{children}</div>
     </div>
   );

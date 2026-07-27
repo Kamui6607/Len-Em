@@ -12,7 +12,7 @@ function ShopHeading() {
   const { t } = useLanguage();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 1, y: 0 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
       transition={{ duration: 0.5 }}
@@ -87,7 +87,10 @@ function ShopHeading() {
 
 export function ShopSection() {
   return (
-    <section className="px-4 py-20 sm:px-8 sm:py-28">
+    <section
+      className="px-4 sm:px-8"
+      style={{ paddingTop: "var(--section-py-md)", paddingBottom: "var(--section-py-md)" }}
+    >
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         {/* Heading */}
         <ShopHeading />

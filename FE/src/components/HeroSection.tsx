@@ -51,7 +51,8 @@ function useViewportScale() {
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      if (w < 480) setScale(0.58);
+      if (w < 375) setScale(0.48);
+      else if (w < 480) setScale(0.58);
       else if (w < 768) setScale(0.75);
       else setScale(1);
     };
@@ -298,7 +299,7 @@ function HeroCTAs() {
         }}
       >
         <div className="flex -space-x-2">
-          {["#C084CC", "#A3B18A", "#D4A373"].map((c, i) => (
+          {["var(--brand-300)", "var(--brand-500)", "var(--brand-700)"].map((c, i) => (
             <div
               key={i}
               className="rounded-full border-2"
@@ -606,14 +607,14 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
       style={{
-        paddingTop: "3rem",
-        paddingBottom: "3rem",
+        paddingTop: "var(--section-py-sm)",
+        paddingBottom: "var(--section-py-sm)",
       }}
     >
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%236B3FA0' fill-opacity='0.03'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%236B3FA0' fill-opacity='0.02'/%3E%3Crect x='1' y='4' width='1' height='1' fill='%23F0C4E0' fill-opacity='0.025'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.03'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%235B3DF5' fill-opacity='0.02'/%3E%3Crect x='1' y='4' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.025'/%3E%3C/svg%3E")`,
           zIndex: 0,
         }}
       />
@@ -630,7 +631,7 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
       />
 
       <div
-        className={`relative mx-auto flex gap-8 lg:gap-12 ${stacked ? "flex-col items-center text-center" : "flex-row items-center"}`}
+        className={`relative mx-auto flex ${stacked ? "flex-col items-center text-center gap-6" : "flex-row items-center gap-8 lg:gap-12"}`}
         style={{ maxWidth: "1200px", zIndex: 1 }}
       >
         <motion.div

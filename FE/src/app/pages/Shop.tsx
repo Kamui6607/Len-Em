@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Package, Search, SlidersHorizontal, X, Heart } from "lucide-react";
+import {
+  Package,
+  Search,
+  SlidersHorizontal,
+  X,
+  Heart,
+  Tag,
+  Palette,
+  Layers3,
+  Gauge,
+  DollarSign,
+  Sparkles,
+  Boxes,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
 import { useProducts } from "../hooks/useProducts";
@@ -48,6 +61,41 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Newest first" },
 ];
 
+// Small icon shown next to each filter section label — purely orientation,
+// so the sidebar reads at a glance instead of as a wall of identical text.
+const FILTER_ICONS: Record<string, React.ReactNode> = {
+  category: <Tag size={13} />,
+  color: <Palette size={13} />,
+  material: <Layers3 size={13} />,
+  weight: <Gauge size={13} />,
+  difficulty: <Sparkles size={13} />,
+  price: <DollarSign size={13} />,
+  level: <Gauge size={13} />,
+};
+
+function FilterLabel({ icon, children }: { icon: keyof typeof FILTER_ICONS; children: React.ReactNode }) {
+  return (
+    <span className="filter-group-label">
+      {FILTER_ICONS[icon]}
+      {children}
+    </span>
+  );
+}
+
+// Builds a compact page list with ellipses so pagination never sprawls
+// across the screen once a catalog has more than a handful of pages.
+function getPaginationRange(current: number, total: number): (number | "dots")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const range: (number | "dots")[] = [1];
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+  if (left > 2) range.push("dots");
+  for (let i = left; i <= right; i++) range.push(i);
+  if (right < total - 1) range.push("dots");
+  range.push(total);
+  return range;
+}
+
 // ── Price range filter component (standalone to preserve input focus) ──
 function PriceRangeFilter({ onApply }: { onApply: (min: number, max: number) => void }) {
   const [minPrice, setMinPrice] = useState(0);
@@ -55,7 +103,7 @@ function PriceRangeFilter({ onApply }: { onApply: (min: number, max: number) => 
 
   return (
     <div className="filter-group">
-      <span className="filter-group-label">Price range</span>
+      <FilterLabel icon="price">Price range</FilterLabel>
       <div className="price-inputs">
         <input
           className="price-input"
@@ -76,18 +124,7 @@ function PriceRangeFilter({ onApply }: { onApply: (min: number, max: number) => 
       <button
         type="button"
         onClick={() => onApply(minPrice, maxPrice)}
-        style={{
-          marginTop: "8px",
-          width: "100%",
-          padding: "8px",
-          borderRadius: "10px",
-          border: "none",
-          background: "var(--primary)",
-          color: "var(--primary-foreground)",
-          fontSize: "0.82rem",
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
+        className="price-find-btn"
       >
         Find
       </button>
@@ -122,45 +159,53 @@ export function Shop() {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"products" | "combo">("products");
-const [kits, setKits] = useState<Kit[]>([]);
-const [kitsLoading, setKitsLoading] = useState(false);
-const [kitLevel, setKitLevel] = useState<string>("all");
-const [kitMinPrice, setKitMinPrice] = useState<number>(0);
-const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
+  const [kits, setKits] = useState<Kit[]>([]);
+  const [kitsLoading, setKitsLoading] = useState(false);
+  const [kitLevel, setKitLevel] = useState<string>("all");
+  const [kitMinPrice, setKitMinPrice] = useState<number>(0);
+  const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
 
-// Kit level options for combo filter
-const KIT_LEVEL_OPTIONS = [
-  { value: "all", label: "All Levels", emoji: "🎁" },
-  { value: "beginner", label: "Beginner", emoji: "🌱" },
-  { value: "intermediate", label: "Intermediate", emoji: "🌿" },
-  { value: "advanced", label: "Advanced", emoji: "🌳" },
-];
+  // Kit level options for combo filter
+  const KIT_LEVEL_OPTIONS = [
+    { value: "all", label: "All Levels", emoji: "🎁" },
+    { value: "beginner", label: "Beginner", emoji: "🌱" },
+    { value: "intermediate", label: "Intermediate", emoji: "🌿" },
+    { value: "advanced", label: "Advanced", emoji: "🌳" },
+  ];
 
-// Check if kit level filter is active
-const hasActiveKitLevel = kitLevel !== "all";
+  // Check if kit level filter is active
+  const hasActiveKitLevel = kitLevel !== "all";
+  const hasActiveKitFilters = hasActiveKitLevel || kitMinPrice > 0 || kitMaxPrice > 0;
 
-// Filter kits by price range
-const filteredKits = useMemo(() => {
-  if (kitMinPrice <= 0 && kitMaxPrice <= 0) return kits;
-  return kits.filter((kit) => {
-    return (
-      (kitMinPrice <= 0 || kit.price >= kitMinPrice) &&
-      (kitMaxPrice <= 0 || kit.price <= kitMaxPrice)
-    );
-  });
-}, [kits, kitMinPrice, kitMaxPrice]);
+  // Filter kits by price range
+  const filteredKits = useMemo(() => {
+    if (kitMinPrice <= 0 && kitMaxPrice <= 0) return kits;
+    return kits.filter((kit) => {
+      return (
+        (kitMinPrice <= 0 || kit.price >= kitMinPrice) &&
+        (kitMaxPrice <= 0 || kit.price <= kitMaxPrice)
+      );
+    });
+  }, [kits, kitMinPrice, kitMaxPrice]);
 
-// Fetch kits when switching to combo view
-useEffect(() => {
-  if (viewMode === "combo") {
-    setKitsLoading(true);
-    kitService
-      .getAll({ page: 1, limit: 50, level: kitLevel === "all" ? undefined : kitLevel })
-      .then((res) => setKits(res.data.data?.kits ?? []))
-      .catch(() => toast.error("Failed to load kits"))
-      .finally(() => setKitsLoading(false));
-  }
-}, [viewMode, kitLevel]);
+  const clearKitFilters = () => {
+    setKitLevel("all");
+    setKitMinPrice(0);
+    setKitMaxPrice(0);
+  };
+
+  // Fetch kits when switching to combo view
+  useEffect(() => {
+    if (viewMode === "combo") {
+      setKitsLoading(true);
+      kitService
+        .getAll({ page: 1, limit: 50, level: kitLevel === "all" ? undefined : kitLevel })
+        .then((res) => setKits(res.data.data?.kits ?? []))
+        .catch(() => toast.error("Failed to load kits"))
+        .finally(() => setKitsLoading(false));
+    }
+  }, [viewMode, kitLevel]);
+
   const [recommendationsDismissed, setRecommendationsDismissed] = useState(
     () => localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true",
   );
@@ -269,7 +314,7 @@ useEffect(() => {
     setRecommendationsDismissed(true);
   };
 
-const getEmptyStateMessage = () => {
+  const getEmptyStateMessage = () => {
     if (filters.search) return `No products found for "${filters.search}"`;
     if (filters.color.length > 0) return "No products in the selected color";
     if (filters.material.length > 0)
@@ -280,23 +325,28 @@ const getEmptyStateMessage = () => {
     return "No products found";
   };
 
+  const paginationRange = useMemo(
+    () => getPaginationRange(currentPage, totalPages),
+    [currentPage, totalPages],
+  );
+
   // Kit filter content for combo view
   const KitFilterContent = ({ showHeader = true }: { showHeader?: boolean }) => (
     <>
       {showHeader && (
         <div className="filter-header">
           <span className="filter-title">Filters</span>
-          {hasActiveKitLevel && (
+          {hasActiveKitFilters && (
             <motion.button
               type="button"
-              onClick={() => setKitLevel("all")}
+              onClick={clearKitFilters}
               className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
               style={{
                 borderColor: "var(--clear-btn-border)",
                 background: "var(--clear-btn-bg)",
                 color: "var(--clear-btn-text)",
               }}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.05,
                 boxShadow: "0 4px 12px var(--clear-btn-glow)"
               }}
@@ -310,7 +360,7 @@ const getEmptyStateMessage = () => {
 
       {/* Level filter for kits */}
       <div className="filter-group">
-        <span className="filter-group-label">Level</span>
+        <FilterLabel icon="level">Level</FilterLabel>
         <div className="filter-chip-group">
           {KIT_LEVEL_OPTIONS.map((level) => (
             <button
@@ -326,7 +376,7 @@ const getEmptyStateMessage = () => {
 
       {/* Price range for kits */}
       <div className="filter-group">
-        <span className="filter-group-label">Price range</span>
+        <FilterLabel icon="price">Price range</FilterLabel>
         <div className="price-inputs">
           <input
             className="price-input"
@@ -345,6 +395,13 @@ const getEmptyStateMessage = () => {
           />
         </div>
       </div>
+
+      {!kitsLoading && (
+        <div className="filter-summary">
+          <Boxes size={13} />
+          Showing <strong>{filteredKits.length}</strong> of {kits.length} combos
+        </div>
+      )}
     </>
   );
 
@@ -363,7 +420,7 @@ const getEmptyStateMessage = () => {
                 background: "var(--clear-btn-bg)",
                 color: "var(--clear-btn-text)",
               }}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.05,
                 boxShadow: "0 4px 12px var(--clear-btn-glow)"
               }}
@@ -392,7 +449,7 @@ const getEmptyStateMessage = () => {
 
       {/* Category */}
       <div className="filter-group">
-        <span className="filter-group-label">Category</span>
+        <FilterLabel icon="category">Category</FilterLabel>
         <div className="filter-chip-group">
           {categoryOptions.map(([key, cat]) => (
             <button
@@ -409,7 +466,7 @@ const getEmptyStateMessage = () => {
       {/* Color */}
       {dynamicFilters.colors.length > 0 && (
         <div className="filter-group">
-          <span className="filter-group-label">Color</span>
+          <FilterLabel icon="color">Color</FilterLabel>
           <div className="filter-chip-group">
             {dynamicFilters.colors.map((c) => (
               <button
@@ -437,7 +494,7 @@ const getEmptyStateMessage = () => {
       {/* Material */}
       {dynamicFilters.materials.length > 0 && (
         <div className="filter-group">
-          <span className="filter-group-label">Material</span>
+          <FilterLabel icon="material">Material</FilterLabel>
           <div className="filter-chip-group">
             {dynamicFilters.materials.map((m) => (
               <button
@@ -455,7 +512,7 @@ const getEmptyStateMessage = () => {
       {/* Weight */}
       {dynamicFilters.weights.length > 0 && (
         <div className="filter-group">
-          <span className="filter-group-label">Weight</span>
+          <FilterLabel icon="weight">Weight</FilterLabel>
           <div className="filter-chip-group">
             {dynamicFilters.weights.map((w) => (
               <button
@@ -473,7 +530,7 @@ const getEmptyStateMessage = () => {
       {/* Difficulty */}
       {dynamicFilters.difficulties.length > 0 && (
         <div className="filter-group">
-          <span className="filter-group-label">Difficulty</span>
+          <FilterLabel icon="difficulty">Difficulty</FilterLabel>
           <div className="filter-chip-group">
             {dynamicFilters.difficulties.map((d) => (
               <button
@@ -495,14 +552,25 @@ const getEmptyStateMessage = () => {
           updateFilter("maxPrice", max);
         }}
       />
+
+      {!isLoading && (
+        <div className="filter-summary">
+          <Boxes size={13} />
+          Showing <strong>{displayedProducts.length}</strong> of {totalCount} products
+        </div>
+      )}
     </>
   );
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom)+8px)] md:pb-8">
+    <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-8">
       <style>{`
         /* ── View mode toggle buttons ── */
         .shop-mode-btn {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
           border: 2px solid var(--primary);
           transition: all 0.2s ease;
           background: var(--card);
@@ -533,6 +601,21 @@ const getEmptyStateMessage = () => {
           color: var(--primary-foreground);
           box-shadow: 0 2px 8px rgba(155, 111, 214, 0.3);
         }
+        .mode-count {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 20px;
+          height: 20px;
+          padding: 0 6px;
+          border-radius: 999px;
+          background: rgba(0,0,0,0.08);
+          font-size: 0.7rem;
+          font-weight: 700;
+        }
+        .dark .mode-count { background: rgba(255,255,255,0.14); }
+        .shop-mode-active .mode-count { background: rgba(0,0,0,0.12); }
+        .dark .shop-mode-active .mode-count { background: rgba(255,255,255,0.22); }
 
         /* ── Top bar ── */
         .shop-top {
@@ -544,8 +627,26 @@ const getEmptyStateMessage = () => {
           content: ''; position: absolute; inset: 0; pointer-events: none;
           background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
+        .shop-top::after {
+          content: '';
+          position: absolute;
+          top: -40px;
+          right: -40px;
+          width: 220px;
+          height: 220px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 70%);
+          pointer-events: none;
+        }
         .shop-container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
 
+        .shop-headline-row {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
         .shop-headline {
           font-size: clamp(1.4rem, 5vw, 2rem);
           font-weight: 700; color: #fff; margin-bottom: 0.25rem; letter-spacing: -0.02em;
@@ -553,6 +654,18 @@ const getEmptyStateMessage = () => {
         .shop-subhead {
           color: rgba(255,255,255,0.75); font-size: 0.875rem; margin-bottom: 1rem;
         }
+        .shop-stat-chip {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 6px 14px; margin-bottom: 1rem;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.16);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.28);
+          color: #fff; font-size: 0.8rem; font-weight: 600;
+          white-space: nowrap;
+        }
+        @media (max-width: 640px) { .shop-stat-chip { display: none; } }
 
         /* ── Search ── */
         .search-wrap { position: relative; max-width: 480px; }
@@ -573,10 +686,34 @@ const getEmptyStateMessage = () => {
         .search-input::placeholder { color: rgba(255,255,255,0.65); }
         .search-input:focus { background: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.55); }
 
+        /* ── Quick category nav (fills the top-bar, doubles as breadcrumb) ── */
+        .quick-nav {
+          display: flex; gap: 8px; margin-top: 14px;
+          overflow-x: auto; padding-bottom: 2px;
+          scrollbar-width: none;
+        }
+        .quick-nav::-webkit-scrollbar { display: none; }
+        .quick-nav-pill {
+          flex-shrink: 0;
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 7px 14px; border-radius: 999px;
+          font-size: 0.8rem; font-weight: 600;
+          border: 1.5px solid rgba(255,255,255,0.32);
+          background: rgba(255,255,255,0.10);
+          color: rgba(255,255,255,0.92);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          cursor: pointer; white-space: nowrap;
+          transition: all 0.2s ease;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .quick-nav-pill:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+        .quick-nav-pill.active { background: #fff; color: var(--primary); border-color: #fff; }
+
         /* ── Body layout ── */
         .shop-body {
           max-width: 1200px; margin: 0 auto; padding: 1rem;
-          display: grid; grid-template-columns: 220px 1fr; gap: 1.25rem;
+          display: grid; grid-template-columns: 240px 1fr; gap: 1.25rem;
         }
         @media (max-width: 768px) {
           .shop-body { grid-template-columns: 1fr; }
@@ -586,7 +723,7 @@ const getEmptyStateMessage = () => {
         .filter-panel {
           background: var(--card-bg, var(--card));
           border-radius: 14px; border: 1px solid var(--border);
-          padding: 1rem; height: fit-content;
+          padding: 1.1rem; height: fit-content;
           position: sticky; top: 6rem;
           max-height: calc(100vh - 8rem);
           overflow-y: auto;
@@ -645,8 +782,17 @@ const getEmptyStateMessage = () => {
         }
         .filter-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--foreground); font-family: var(--font-heading); }
         .filter-clear { font-size: 0.78rem; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; font-weight: 500; }
-        .filter-group { margin-bottom: 1rem; }
-        .filter-group-label { font-size: 0.8rem; font-weight: 600; color: var(--foreground-secondary); display: block; margin-bottom: 0.45rem; letter-spacing: 0.02em; }
+        .filter-group {
+          padding-bottom: 0.9rem; margin-bottom: 0.9rem;
+          border-bottom: 1px dashed var(--border-subtle);
+        }
+        .filter-group:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .filter-group-label {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 0.8rem; font-weight: 600; color: var(--foreground-secondary);
+          margin-bottom: 0.45rem; letter-spacing: 0.02em;
+        }
+        .filter-group-label svg { color: var(--primary); opacity: 0.8; flex-shrink: 0; }
         .filter-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
         .chip-filter {
           display: inline-flex; align-items: center; gap: 5px;
@@ -662,6 +808,17 @@ const getEmptyStateMessage = () => {
         .dark .chip-filter:hover, .dark .chip-filter:active { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
         .chip-filter.active { background: var(--accent-blush); color: var(--foreground); border-color: var(--primary); }
         .dark .chip-filter.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+
+        /* Live "showing X of Y" note anchored under the filters, so a short
+           filter list never ends in dead whitespace. */
+        .filter-summary {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 0.76rem; color: var(--foreground-muted);
+          padding-top: 0.6rem; margin-top: 0.1rem;
+          border-top: 1px solid var(--border-subtle);
+        }
+        .filter-summary svg { color: var(--primary); opacity: 0.7; flex-shrink: 0; }
+        .filter-summary strong { color: var(--foreground); }
 
         /* Add to cart button - same style as enroll */
         .add-cart-btn {
@@ -696,6 +853,14 @@ const getEmptyStateMessage = () => {
         }
         .price-input:focus { border-color: var(--primary); }
         .price-sep { color: var(--foreground-muted); font-size: 0.75rem; }
+        .price-find-btn {
+          margin-top: 8px; width: 100%; padding: 8px;
+          border-radius: 10px; border: none;
+          background: var(--primary); color: var(--primary-foreground);
+          font-size: 0.82rem; font-weight: 600; cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .price-find-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
 
         /* ── Sort / results bar ── */
         .sort-bar {
@@ -782,6 +947,20 @@ const getEmptyStateMessage = () => {
         .page-btn:hover { border-color: var(--primary); }
         .page-btn.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
         .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .page-dots {
+          min-width: 24px; text-align: center;
+          color: var(--foreground-muted); font-size: 0.85rem;
+          user-select: none;
+        }
+
+        /* ── Empty state ── */
+        .empty-state-cta {
+          margin-top: 16px; padding: 9px 22px; border-radius: 999px;
+          border: none; background: var(--primary); color: var(--primary-foreground);
+          font-weight: 600; font-size: 0.85rem; cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .empty-state-cta:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px var(--glow-primary); }
 
         /* ── Loader ── */
         .loading-dots {
@@ -799,15 +978,30 @@ const getEmptyStateMessage = () => {
           from { opacity: 0.25; transform: scale(0.8); }
           to   { opacity: 1; transform: scale(1.2); }
         }
+
+        /* ── Kit / combo cards ── */
+        .kit-card-meta {
+          display: flex; align-items: center; gap: 5px;
+          font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;
+          text-transform: uppercase; color: var(--primary);
+        }
       `}</style>
 
       {/* ── TOP BAR ── */}
       <div className="shop-top">
         <div className="shop-container">
-          <div className="shop-headline">
-            {meta.emoji} {meta.label}
+          <div className="shop-headline-row">
+            <div>
+              <div className="shop-headline">
+                {meta.emoji} {meta.label}
+              </div>
+              <div className="shop-subhead">{meta.desc}</div>
+            </div>
+            <div className="shop-stat-chip">
+              <Sparkles size={14} />
+              <strong>{totalCount}</strong>&nbsp;items in the shop
+            </div>
           </div>
-          <div className="shop-subhead">{meta.desc}</div>
           <div className="search-wrap">
             <Search size={16} className="search-icon" />
             <input
@@ -817,10 +1011,24 @@ const getEmptyStateMessage = () => {
               onChange={(e) => updateFilter("search", e.target.value)}
             />
           </div>
+          {viewMode === "products" && (
+            <div className="quick-nav">
+              {categoryOptions.map(([key, cat]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`quick-nav-pill ${filters.category === key ? "active" : ""}`}
+                  onClick={() => updateFilter("category", key)}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-{/* ── BODY ── */}
+      {/* ── BODY ── */}
       <div className="shop-body">
         {/* Desktop sidebar - show different filters based on viewMode */}
         <aside className="filter-panel">
@@ -878,7 +1086,7 @@ const getEmptyStateMessage = () => {
               </section>
             )}
 
-          {/* View mode toggle - dùng CSS class thuần để tránh lỗi inline style */}
+          {/* View mode toggle */}
           <div className="flex items-center gap-2 mb-3">
             <button
               type="button"
@@ -888,6 +1096,7 @@ const getEmptyStateMessage = () => {
               }`}
             >
               🛍️ Products
+              <span className="mode-count">{totalCount}</span>
             </button>
             <button
               type="button"
@@ -897,6 +1106,7 @@ const getEmptyStateMessage = () => {
               }`}
             >
               🎁 Combo
+              {kits.length > 0 && <span className="mode-count">{kits.length}</span>}
             </button>
           </div>
 
@@ -1025,15 +1235,21 @@ const getEmptyStateMessage = () => {
                       >
                         ‹
                       </button>
-                      {Array.from({ length: totalPages }, (_, i) => (
-                        <button
-                          key={i + 1}
-                          className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
-                          onClick={() => goToPage(i + 1)}
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
+                      {paginationRange.map((page, i) =>
+                        page === "dots" ? (
+                          <span key={`dots-${i}`} className="page-dots">
+                            …
+                          </span>
+                        ) : (
+                          <button
+                            key={page}
+                            className={`page-btn ${currentPage === page ? "active" : ""}`}
+                            onClick={() => goToPage(page)}
+                          >
+                            {page}
+                          </button>
+                        ),
+                      )}
                       <button
                         className="page-btn"
                         disabled={currentPage >= totalPages}
@@ -1062,12 +1278,17 @@ const getEmptyStateMessage = () => {
                   <p style={{ fontSize: "0.83rem" }}>
                     Try adjusting your filters
                   </p>
+                  {hasActiveFilters && (
+                    <button type="button" className="empty-state-cta" onClick={clearFilters}>
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-{/* Combo (Kits) content — only show if viewMode === "combo" */}
+          {/* Combo (Kits) content — only show if viewMode === "combo" */}
           {viewMode === "combo" && (
             <>
               <div className="sort-bar">
@@ -1078,7 +1299,7 @@ const getEmptyStateMessage = () => {
                   >
                     <SlidersHorizontal size={14} />
                     Filters
-                    {hasActiveKitLevel && (
+                    {hasActiveKitFilters && (
                       <span
                         style={{
                           background: "var(--primary)",
@@ -1093,7 +1314,7 @@ const getEmptyStateMessage = () => {
                           fontWeight: 700,
                         }}
                       >
-                        1
+                        {[hasActiveKitLevel, kitMinPrice > 0 || kitMaxPrice > 0].filter(Boolean).length}
                       </span>
                     )}
                   </button>
@@ -1115,103 +1336,114 @@ const getEmptyStateMessage = () => {
                 <div className="text-center py-12 text-muted-foreground">
                   <Package size={44} className="mx-auto mb-3 opacity-40" />
                   <p>No kits found</p>
+                  {hasActiveKitFilters && (
+                    <button type="button" className="empty-state-cta" onClick={clearKitFilters}>
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               ) : (
-                <>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredKits.map((kit) => {
-                      const isFavorite = isFavoriteKit(kit._id);
-                      
-                      return (
-                        <Link
-                          key={kit._id}
-                          to={`/kits/${kit._id}`}
-                          className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                          aria-label={`${t("shop.kitDetail")} ${kit.name}`}
-                        >
-                          <div className="aspect-[4/3] overflow-hidden bg-muted relative">
-                            <img
-                              src={kit.thumbnail}
-                              alt={kit.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                if (!target.dataset.fallback) {
-                                  target.dataset.fallback = "true";
-                                  target.src = `https://picsum.photos/seed/${kit._id}/400/300`;
-                                }
-                              }}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredKits.map((kit) => {
+                    const isFavorite = isFavoriteKit(kit._id);
+
+                    return (
+                      <Link
+                        key={kit._id}
+                        to={`/kits/${kit._id}`}
+                        className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={`${t("shop.kitDetail")} ${kit.name}`}
+                      >
+                        <div className="aspect-[4/3] overflow-hidden bg-muted relative">
+                          <img
+                            src={kit.thumbnail}
+                            alt={kit.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (!target.dataset.fallback) {
+                                target.dataset.fallback = "true";
+                                target.src = `https://picsum.photos/seed/${kit._id}/400/300`;
+                              }
+                            }}
+                          />
+                          {/* Favorite button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleFavoriteKit(kit._id);
+                              toast.success(
+                                isFavorite
+                                  ? t("shop.removedFromFavorites")
+                                  : "Added to favorites"
+                              );
+                            }}
+                            className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+                            style={{
+                              background: "var(--card-glass)",
+                              backdropFilter: "blur(14px) saturate(160%)",
+                              WebkitBackdropFilter: "blur(14px) saturate(160%)",
+                              border: "1px solid var(--border-subtle)",
+                              boxShadow: "var(--shadow-md)",
+                              touchAction: "manipulation",
+                              WebkitTapHighlightColor: "transparent",
+                            }}
+                          >
+                            <Heart
+                              className={cn(
+                                "w-4 h-4 transition-colors",
+                                isFavorite
+                                  ? "fill-destructive text-destructive"
+                                  : "text-muted-foreground hover:text-destructive"
+                              )}
                             />
-                            {/* Favorite button */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                toggleFavoriteKit(kit._id);
-                                toast.success(
-                                  isFavorite
-                                    ? t("shop.removedFromFavorites")
-                                    : t("shop.addedToCart")
-                                );
-                              }}
-                              className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-                              style={{
-                                background: "var(--card-glass)",
-                                backdropFilter: "blur(14px) saturate(160%)",
-                                WebkitBackdropFilter: "blur(14px) saturate(160%)",
-                                border: "1px solid var(--border-subtle)",
-                                boxShadow: "var(--shadow-md)",
-                                touchAction: "manipulation",
-                                WebkitTapHighlightColor: "transparent",
-                              }}
-                            >
-                              <Heart
-                                className={cn(
-                                  "w-4 h-4 transition-colors",
-                                  isFavorite
-                                    ? "fill-destructive text-destructive"
-                                    : "text-muted-foreground hover:text-destructive"
-                                )}
-                              />
-                            </button>
+                          </button>
+                          <span
+                            className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold capitalize"
+                            style={{
+                              background: "var(--card-glass)",
+                              backdropFilter: "blur(14px) saturate(160%)",
+                              WebkitBackdropFilter: "blur(14px) saturate(160%)",
+                              border: "1px solid var(--border-subtle)",
+                              color: "var(--primary)",
+                            }}
+                          >
+                            {kit.level}
+                          </span>
+                        </div>
+                        <div className="p-4 space-y-2">
+                          <div className="kit-card-meta">
+                            <Boxes size={12} />
+                            {kit.productIds.length} products included
                           </div>
-                          <div className="p-4 space-y-2">
-                            <h3 className="font-semibold group-hover:text-primary">
-                              {kit.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {kit.description}
-                            </p>
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-lg font-bold text-primary">
-                                {formatPrice(kit.price)}
-                              </span>
-                              <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
-                                {kit.level}
-                              </span>
-                            </div>
-                            <div className="pt-1 flex items-center justify-between gap-3">
-                              <p className="text-xs text-muted-foreground">
-                                {kit.productIds.length} products included
-                              </p>
-                              <span className="text-xs font-medium text-primary">
-                                {t("shop.viewDetails")} →
-                              </span>
-                            </div>
+                          <h3 className="font-semibold group-hover:text-primary">
+                            {kit.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {kit.description}
+                          </p>
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-lg font-bold text-primary">
+                              {formatPrice(kit.price)}
+                            </span>
+                            <span className="text-xs font-medium text-primary">
+                              {t("shop.viewDetails")} →
+                            </span>
                           </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
             </>
           )}
         </div>
       </div>
 
-{/* ── Mobile filter drawer ── */}
+      {/* ── Mobile filter drawer ── */}
       <AnimatePresence>
         {filterOpen && (
           <>
@@ -1264,7 +1496,7 @@ const getEmptyStateMessage = () => {
                   e.currentTarget.style.boxShadow = "";
                 }}
               >
-                {viewMode === "products" 
+                {viewMode === "products"
                   ? `Show ${resultCount} results`
                   : `Show ${filteredKits.length} results`
                 }

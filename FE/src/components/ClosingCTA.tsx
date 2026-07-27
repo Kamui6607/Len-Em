@@ -21,12 +21,20 @@ export function BowKnotGraphic({
 }) {
   const reduce = useReducedMotion();
   const draw = animate && !reduce;
-  const pathProps = draw ? {
-    initial: { pathLength: 0 },
-    whileInView: { pathLength: 1 },
-    viewport: { once: true },
-    transition: { duration: 1.1, ease: "easeInOut" },
-  } : {};
+
+  // Luôn có object đầy đủ, không bao giờ {} — chỉ đổi giá trị bên trong.
+  // Khi draw=false, animate về đúng initial (pathLength giữ nguyên trạng
+  // thái vẽ đầy đủ) thay vì bỏ hẳn props animation.
+  const pathProps1 = {
+    initial: { pathLength: draw ? 0 : 1 },
+    animate: { pathLength: 1 },
+    transition: draw ? { duration: 1.1, ease: "easeInOut" } : { duration: 0 },
+  };
+  const pathProps2 = {
+    initial: { pathLength: draw ? 0 : 1 },
+    animate: { pathLength: 1 },
+    transition: draw ? { duration: 0.8, delay: 0.3 } : { duration: 0 },
+  };
 
   const h = width * 0.52;
   return (
@@ -84,7 +92,7 @@ export function BowKnotGraphic({
         strokeWidth="1.6"
         strokeLinecap="round"
         fill="none"
-        {...pathProps}
+        {...pathProps1}
       />
       <path
         d="M44,22 C42,30 36,38 30,44"
@@ -102,7 +110,7 @@ export function BowKnotGraphic({
         strokeWidth="1.6"
         strokeLinecap="round"
         fill="none"
-        {...(draw ? { initial: { pathLength: 0 }, whileInView: { pathLength: 1 }, viewport: { once: true }, transition: { duration: 0.8, delay: 0.3 } } : {})}
+        {...pathProps2}
       />
       <path
         d="M44,22 C46,30 52,38 58,44"
@@ -171,7 +179,10 @@ export function ClosingCTA() {
         position: "relative",
         overflow: "hidden",
         background: "var(--primary)",
-        padding: "7rem 2rem 7.5rem",
+        paddingTop: "var(--section-py-lg)",
+        paddingBottom: "var(--section-py-lg)",
+        paddingLeft: "2rem",
+        paddingRight: "2rem",
       }}
     >
       {/* ── Soft radial warm-glow graphic ── */}
@@ -183,10 +194,11 @@ export function ClosingCTA() {
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0 }}
           style={{
             position: "absolute",
-            width: "680px", height: "480px",
+            width: "clamp(340px, 90vw, 680px)",
+            height: "clamp(240px, 60vw, 480px)",
             top: "-100px", left: "8%",
             borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(240,196,224,0.28) 0%, transparent 65%)",
+            background: "radial-gradient(ellipse, var(--glow-pink) 0%, transparent 65%)",
             filter: "blur(48px)",
           }}
         />
@@ -197,10 +209,11 @@ export function ClosingCTA() {
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
           style={{
             position: "absolute",
-            width: "560px", height: "380px",
+            width: "clamp(280px, 75vw, 560px)",
+            height: "clamp(190px, 50vw, 380px)",
             bottom: "-80px", right: "5%",
             borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(245,239,168,0.22) 0%, transparent 65%)",
+            background: "radial-gradient(ellipse, var(--glow-yellow) 0%, transparent 65%)",
             filter: "blur(44px)",
           }}
         />
@@ -211,11 +224,12 @@ export function ClosingCTA() {
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 3 }}
           style={{
             position: "absolute",
-            width: "900px", height: "560px",
+            width: "clamp(360px, 95vw, 900px)",
+            height: "clamp(240px, 60vw, 560px)",
             top: "50%", left: "50%",
             transform: "translate(-50%, -50%)",
             borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(255,255,255,0.09) 0%, rgba(155,111,214,0.12) 40%, transparent 70%)",
+            background: "radial-gradient(ellipse, rgba(255,255,255,0.09) 0%, var(--glow-lavender) 40%, transparent 70%)",
             filter: "blur(32px)",
           }}
         />
@@ -230,7 +244,8 @@ export function ClosingCTA() {
             style={{
               position: "absolute", left: `${left}%`, bottom: "10%",
               width: "5px", height: "5px", borderRadius: "50%",
-              background: i % 2 === 0 ? "rgba(240,196,224,0.7)" : "rgba(245,239,168,0.7)",
+              background: i % 2 === 0 ? "var(--brand-300)" : "var(--brand-200)",
+              opacity: 0.7,
             }}
           />
         ))}
@@ -293,7 +308,8 @@ export function ClosingCTA() {
               key={i}
               cx={`${cx}%`} cy={`${cy}%`}
               r={i % 3 === 0 ? 3 : 2}
-              fill={i % 2 === 0 ? "rgba(240,196,224,0.6)" : "rgba(245,239,168,0.5)"}
+              fill={i % 2 === 0 ? "var(--brand-300)" : "var(--brand-200)"}
+              fillOpacity={i % 2 === 0 ? 0.6 : 0.5}
             />
           ))}
         </svg>
@@ -664,11 +680,11 @@ export function LenEmFooter() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.1 }}
-          className="grid grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr] gap-3 sm:gap-6 lg:gap-16"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr] gap-y-8 gap-x-4 sm:gap-6 lg:gap-16"
           style={{ padding: "36px 0 32px", borderBottom: "1px solid var(--footer-border)" }}
         >
           {/* ── Brand column ── */}
-          <motion.div variants={footerItemVariants} className="col-span-3 lg:col-span-1">
+            <motion.div variants={footerItemVariants} className="col-span-2 sm:col-span-3 lg:col-span-1">
             <FooterLogo />
 
             <p style={{
