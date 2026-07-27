@@ -96,7 +96,7 @@ export function Purchased() {
         item.quantity,
       );
     });
-    toast.success(t("purchased.toastReorderSuccess", { count: items.length }));
+    toast.success(t("purchased.toastReorderSuccess", undefined, { count: items.length }));
     navigate("/cart");
   };
 
@@ -161,7 +161,7 @@ export function Purchased() {
           </p>
           {total > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
-              {t("purchased.showingOrders", { count: orders.length, total })}
+              {t("purchased.showingOrders", undefined, { count: orders.length, total })}
             </p>
           )}
         </div>
@@ -198,7 +198,7 @@ export function Purchased() {
                       </span>
                       <div>
                         <h3 className="font-semibold">
-                          {t("purchased.orderNumber", { id: order._id.slice(-8).toUpperCase() })}
+                          {t("purchased.orderNumber", undefined, { id: order._id.slice(-8).toUpperCase() })}
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="w-3 h-3" />
@@ -236,7 +236,7 @@ export function Purchased() {
                               </p>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                 <span>x{item.quantity}</span>
-                                {item.color && <span>{t("purchased.colorLabel", { color: item.color })}</span>}
+                                {item.color && <span>{t("purchased.colorLabel", undefined, { color: item.color })}</span>}
                               </div>
                             </div>
                             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
@@ -286,7 +286,7 @@ export function Purchased() {
                           ✅ {t("purchased.markAsDone")}
                         </button>
                       )}
-                      {order.orderStatus !== "CANCELLED" && (
+                      {order.orderStatus !== "CANCELLED" && order.orderStatus !== "DELIVERED" && (
                         <button
                           onClick={(e) => {
                             e.preventDefault();
@@ -315,7 +315,7 @@ export function Purchased() {
                     {t("purchased.previousButton")}
                   </button>
                   <span className="text-sm text-muted-foreground">
-                    {t("purchased.pageInfo", { page, totalPages })}
+                    {t("purchased.pageInfo", undefined, { page, totalPages })}
                   </span>
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

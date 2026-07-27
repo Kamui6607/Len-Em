@@ -179,7 +179,6 @@ function HeroHeadline() {
           lineHeight: 1.08,
         }}
       >
-        <span>{t("hero.headline2")}</span>
         <span className="relative inline-block" style={{ paddingBottom: "4px" }}>
           <span style={{ fontStyle: "italic", fontWeight: 600, color: "var(--color-primary)" }}>
             {t("hero.headline2Alt")}

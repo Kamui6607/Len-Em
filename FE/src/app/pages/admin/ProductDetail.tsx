@@ -29,6 +29,7 @@ export function ProductDetail() {
       setLoading(true);
       try {
         const res = await productService.getById(id);
+        // res = AxiosResponse<ApiResponse<{ product: Product }>> = { data: { status, data: { product } } }
         if (!cancelled) {
           setProduct(res.data.data?.product ?? null);
         }

@@ -131,10 +131,11 @@ export function ProductManagement() {
       if (showInactive) params.includeInactive = true;
 
       const { data: response } = await productService.getAll(params);
-      const data = response.data;
-      setProducts(data.products ?? []);
-      setTotal(data.total ?? 0);
-      setTotalPages(data.totalPages ?? 1);
+      // response = ApiResponse<ProductsListResponse> = { status, data: ProductsListResponse }
+      const apiData = response.data;
+      setProducts(apiData?.products ?? []);
+      setTotal(apiData?.total ?? 0);
+      setTotalPages(apiData?.totalPages ?? 1);
     } catch {
       toast.error("Failed to load products");
     } finally {
@@ -249,7 +250,8 @@ export function ProductManagement() {
       };
 
       if (editingId) {
-        const { variants, ...updatePayload } = payload;
+        const { variants, imageFile: _imageFile, ...updatePayload } = payload;
+        void _imageFile;
         await productService.update(editingId, {
           ...updatePayload,
           variants: variants.map((variant) => {

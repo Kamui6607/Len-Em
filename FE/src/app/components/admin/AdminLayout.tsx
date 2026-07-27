@@ -12,6 +12,7 @@ import {
   Scissors,
   BookOpen,
   Video,
+  RotateCcw,
 } from "lucide-react";
 import { DashboardShell } from "../dashboard/DashboardShell";
 import type { NavItem } from "../dashboard/Sidebar";
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { path: "/admin/lessons", label: "Lessons", icon: Video },
   { path: "/admin/diy-posts", label: "DIY Management", icon: Scissors },
   { path: "/admin/reports", label: "Report Management", icon: Flag },
+  { path: "/admin/refunds", label: "Refunds", icon: RotateCcw },
   { path: "/admin/payments", label: "Payments", icon: DollarSign },
   { path: "/admin/roles", label: "Roles", icon: ShieldCheck },
   { path: "/admin/permissions", label: "Permissions", icon: Shield },

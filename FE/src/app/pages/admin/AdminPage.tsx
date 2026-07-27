@@ -6,6 +6,7 @@ import { ProductManagement } from "./ProductManagement";
 import { ProductDetail } from "./ProductDetail";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./AdminReports";
+import { AdminRefunds } from "./AdminRefunds";
 import { Permissions } from "./Permissions";
 import { Roles } from "./Roles";
 import { RoleDetail } from "./RoleDetail";
@@ -26,7 +27,8 @@ export function AdminPage() {
         <Route path="products/:productId" element={<ProductDetail />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="reports" element={<AdminReports />} />
-        <Route path="payments" element={<AdminOrders />} />
+        <Route path="refunds" element={<AdminRefunds />} />
+        <Route path="payments" element={<AdminRefunds />} />
         <Route path="diy-posts" element={<AdminDIYPosts />} />
         <Route path="diy-posts/new" element={<DIYFormPage />} />
         <Route path="permissions" element={<Permissions />} />

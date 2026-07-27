@@ -36,6 +36,13 @@ export const diyService = {
     });
   },
 
+  /** PATCH /diy-posts/{id}/status — Update DIY post status (Admin) */
+  updatePostStatus: (id: string, data: { status: string }) =>
+    axiosClient.patch<{ status: string; data: { post: DIYPost } }>(
+      `/diy-posts/${id}/status`,
+      data,
+    ),
+
   deletePost: (id: string) =>
     axiosClient.delete(`/diy-posts/${id}`),
 };

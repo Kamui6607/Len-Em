@@ -13,7 +13,9 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { diyService } from "../../features/diy/services/diy.service";
+import { kitService } from "../../api/kitService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
+import type { KitProduct } from "../../api/kitService";
 import { formatPrice } from "../../lib/formatPrice";
 import { userService } from "../../features/users/services/user.service";
 
@@ -83,21 +85,36 @@ export function DIYFeedPage() {
     action();
   };
 
-  const buyCombo = (post: DIYPost) => {
-    addKitToCart({
-      kitId: post._id,
-      name: post.title,
-      thumbnail: post.images[0],
-      price: post.price ?? 0,
-      products: (post.linkedProduct ?? []).map((item) => ({
-        productId: item.productId,
-        variantId: "default",
-        name: item.productId,
-        image: post.images[0],
-        price: (post.price ?? 0) / (post.linkedProduct?.length || 1),
-      })),
-    });
-    toast.success("Materials added to cart");
+  const buyCombo = async (post: DIYPost) => {
+    try {
+      const combos = post.linkedCombo ?? [];
+      if (combos.length === 0) {
+        toast.error("No combo available for this post");
+        return;
+      }
+
+      // Fetch the first linked combo kit from the API
+      const comboId = combos[0].comboId;
+      const { data: kitResponse } = await kitService.getById(comboId);
+      const kit = kitResponse.data.kit;
+
+      addKitToCart({
+        kitId: kit._id,
+        name: kit.name,
+        thumbnail: kit.thumbnail,
+        price: kit.price,
+        products: kit.productIds.map((product: KitProduct) => ({
+          productId: product._id,
+          variantId: "default",
+          name: product.name,
+          image: product.variants[0]?.image ?? product.image,
+          price: 0,
+        })),
+      });
+      toast.success("Added kit to cart");
+    } catch {
+      toast.error("Failed to load kit details");
+    }
   };
 
   const savePost = (post: DIYPost) => {
@@ -106,7 +123,7 @@ export function DIYFeedPage() {
     toast.success(wasSaved ? "DIY post removed from saved" : "DIY post saved");
   };
 
-  const approvedPosts = useMemo(() => posts.filter((p) => p.status === "approved"), [posts]);
+  const approvedPosts = useMemo(() => posts.filter((p) => p.status !== "pending"), [posts]);
 
   const filteredPosts = approvedPosts.filter((post) => {
     if (!search.trim()) return true;

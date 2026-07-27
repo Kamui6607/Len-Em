@@ -89,27 +89,23 @@ export function Checkout() {
 
     setSubmitting(true);
     try {
-      const payload: CreateOrderRequest & { kits?: Array<{ kitId: string }> } =
-        {
-          items: [
-            ...cartItems.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              color: item.color,
-              hexCode: item.hexCode,
+      const payload: CreateOrderRequest = {
+        items: [
+          ...cartItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            color: item.color,
+            hexCode: item.hexCode,
+          })),
+          ...cartKits.flatMap((kit) =>
+            kit.products.map((p) => ({
+              productId: p.productId,
+              quantity: 1,
+              color: "",
+              hexCode: "",
             })),
-            ...cartKits.flatMap((kit) =>
-              kit.products.map((p) => ({
-                productId: p.productId,
-                quantity: 1,
-                color: "",
-                hexCode: "",
-              })),
-            ),
-          ],
-          ...(cartKits.length > 0
-            ? { kits: cartKits.map((k) => ({ kitId: k.kitId })) }
-            : {}),
+          ),
+        ],
           shippingAddress: {
             fullName: data.fullName,
             phone: data.phone,

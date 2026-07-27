@@ -1,22 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { diyService } from "../../../features/diy/services/diy.service";
 import type { DIYPost } from "../../../features/diy/types/diy.types";
 import {
   CheckCircle,
-  XCircle,
   Eye,
   Trash2,
   ChevronUp,
   ChevronDown,
   Check,
   Plus,
+  Edit3,
+  X,
 } from "lucide-react";
 import { ReportButton } from "../../components/ReportButton";
 
-const STATUS_OPTIONS = ["", "pending", "approved", "rejected"];
+const STATUS_OPTIONS = ["", "Pending", "Done"];
 
 type SortField = "id" | "title" | "status" | "date";
 type SortDirection = "asc" | "desc";
@@ -35,6 +35,11 @@ export function AdminDIYPosts() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<DIYPost | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit modal state
+  const [editModal, setEditModal] = useState<DIYPost | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", tags: "", price: 0 });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -57,18 +62,45 @@ export function AdminDIYPosts() {
     fetchPosts();
   }, [fetchPosts]);
 
-  const handleUpdateStatus = async (
-    id: string,
-    status: "pending" | "approved" | "rejected",
-  ) => {
+  const openEditModal = (post: DIYPost) => {
+    setEditModal(post);
+    setEditForm({
+      title: post.title,
+      description: post.description || "",
+      tags: (post.tags || []).join(", "),
+      price: post.price ?? 0,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editModal) return;
+    setSavingEdit(true);
+    try {
+      await diyService.updatePost(editModal._id, {
+        title: editForm.title.trim(),
+        description: editForm.description.trim(),
+        tags: editForm.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        price: editForm.price,
+      });
+      toast.success("Post updated successfully");
+      setEditModal(null);
+      fetchPosts();
+    } catch {
+      toast.error("Failed to update post");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmPost = async (id: string) => {
     setStatusUpdating(true);
     try {
-      await diyService.updatePost(id, { status });
-      toast.success(`Post marked as ${status}`);
+      await diyService.updatePostStatus(id, { status: "Done" });
+      toast.success("Post confirmed");
       setSelectedPost(null);
       fetchPosts();
     } catch {
-      toast.error("Failed to update status");
+      toast.error("Failed to confirm post");
     } finally {
       setStatusUpdating(false);
     }
@@ -148,6 +180,16 @@ export function AdminDIYPosts() {
     const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
     return sortDirection === "asc" ? cmp : -cmp;
   });
+
+  const displayStatus = (post: DIYPost) => {
+    const st = (post.status || "Pending").toLowerCase();
+    return st === "done" ? "Done" : "Pending";
+  };
+
+  const isPending = (post: DIYPost) => {
+    const st = (post.status || "Pending").toLowerCase();
+    return st !== "done";
+  };
 
   return (
     <div className="space-y-6">
@@ -232,7 +274,7 @@ export function AdminDIYPosts() {
                           className="w-full px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)] transition-colors flex items-center justify-between"
                           style={{ color: "var(--foreground)" }}
                         >
-                          <span className="capitalize">{s}</span>
+                          <span>{s}</span>
                           {filterStatus === s && (
                             <Check
                               className="w-4 h-4"
@@ -275,7 +317,7 @@ export function AdminDIYPosts() {
                     <SortableHeader label="Title" field="title" />
                     <SortableHeader label="Status" field="status" />
                     <SortableHeader label="Date" field="date" />
-                    <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[120px]">
+                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[200px]">
                       Actions
                     </th>
                   </tr>
@@ -294,26 +336,43 @@ export function AdminDIYPosts() {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`badge ${post.status === "pending" ? "badge-orange" : post.status === "approved" ? "badge-green" : "badge-red"}`}
+                          className={`badge ${isPending(post) ? "badge-orange" : "badge-green"}`}
                         >
-                          {post.status}
+                          {displayStatus(post)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {format(new Date(post.createdAt), "MMM dd, yyyy")}
+                        {(() => { try { return new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); } catch { return "—"; } })()}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {isPending(post) && (
+                            <button
+                              onClick={() => handleConfirmPost(post._id)}
+                              disabled={statusUpdating}
+                              className="admin-action-btn edit"
+                              title="Confirm"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openEditModal(post)}
+                            className="admin-action-btn edit"
+                            title="Edit"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => setSelectedPost(post)}
-                            className="admin-action-btn view text-xs"
+                            className="admin-action-btn view"
                             title="View details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setPostToDelete(post)}
-                            className="admin-action-btn delete text-xs"
+                            className="admin-action-btn delete"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -339,14 +398,14 @@ export function AdminDIYPosts() {
                       {post.title}
                     </span>
                     <span
-                      className={`badge ml-2 whitespace-nowrap ${post.status === "pending" ? "badge-orange" : post.status === "approved" ? "badge-green" : "badge-red"}`}
+                      className={`badge ml-2 whitespace-nowrap ${isPending(post) ? "badge-orange" : "badge-green"}`}
                     >
-                      {post.status}
+                      {displayStatus(post)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">
                     #{post._id.slice(-8)} •{" "}
-                    {format(new Date(post.createdAt), "MMM dd, yyyy")}
+                    {(() => { try { return new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); } catch { return "—"; } })()}
                   </p>
                   <button
                     onClick={() => setSelectedPost(post)}
@@ -382,6 +441,7 @@ export function AdminDIYPosts() {
         )}
       </div>
 
+      {/* Delete Confirm Dialog */}
       {postToDelete && (
         <div
           className="admin-dialog-overlay"
@@ -418,19 +478,14 @@ export function AdminDIYPosts() {
                 disabled={deleting}
                 className="btn-modal-destructive"
               >
-                {deleting ? (
-                  "Deleting…"
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" /> Delete Post
-                  </>
-                )}
+                {deleting ? "Deleting…" : <><Trash2 className="w-4 h-4" /> Delete Post</>}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* View Detail Modal */}
       {selectedPost && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -450,9 +505,9 @@ export function AdminDIYPosts() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`badge ${selectedPost.status === "pending" ? "badge-orange" : selectedPost.status === "approved" ? "badge-green" : "badge-red"}`}
+                    className={`badge ${isPending(selectedPost) ? "badge-orange" : "badge-green"}`}
                   >
-                    {selectedPost.status}
+                    {displayStatus(selectedPost)}
                   </span>
                   <ReportButton
                     targetType="diy_post"
@@ -464,62 +519,88 @@ export function AdminDIYPosts() {
             </div>
             <div className="admin-dialog-body">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Description
-                </p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
                 <p className="text-sm">{selectedPost.description}</p>
               </div>
               {selectedPost.images && selectedPost.images.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Images
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Images</p>
                   <div className="flex gap-2 flex-wrap">
                     {selectedPost.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img}
-                        alt=""
-                        className="w-20 h-20 rounded-lg object-cover"
-                      />
+                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-lg object-cover" />
                     ))}
                   </div>
                 </div>
               )}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Created
-                </p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Created</p>
                 <p className="text-sm">
-                  {format(
-                    new Date(selectedPost.createdAt),
-                    "MMM dd, yyyy HH:mm",
-                  )}
+                  {(() => { try { return new Date(selectedPost.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return "—"; } })()}
                 </p>
               </div>
-              {selectedPost.status === "pending" && (
+              {isPending(selectedPost) && (
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                   <button
-                    onClick={() =>
-                      handleUpdateStatus(selectedPost._id, "approved")
-                    }
+                    onClick={() => handleConfirmPost(selectedPost._id)}
                     disabled={statusUpdating}
                     className="btn-primary"
                   >
-                    <CheckCircle className="w-4 h-4 inline mr-1" /> Approve
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleUpdateStatus(selectedPost._id, "rejected")
-                    }
-                    disabled={statusUpdating}
-                    className="btn-destructive"
-                  >
-                    <XCircle className="w-4 h-4 inline mr-1" /> Reject
+                    <CheckCircle className="w-4 h-4 inline mr-1" /> Confirm
                   </button>
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setEditModal(null)}
+        >
+          <div
+            className="admin-dialog-content max-w-lg w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="admin-dialog-header">
+              <h3 className="text-base font-semibold">Edit DIY Post</h3>
+              <button
+                onClick={() => setEditModal(null)}
+                style={{ color: "var(--foreground-muted)" }}
+                className="admin-action-btn absolute top-4 right-4"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }}>
+              <div className="admin-dialog-body space-y-4">
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    Title <span className="text-destructive">*</span>
+                  </label>
+                  <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="input w-full" placeholder="Post title" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Description</label>
+                  <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className="input w-full resize-none" placeholder="Post description" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Tags (comma separated)</label>
+                  <input type="text" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="input w-full" placeholder="e.g. funny, pokemon, ghibli" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Price</label>
+                  <input type="number" value={editForm.price || ""} onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })} className="input w-full" placeholder="0 for free" min={0} />
+                </div>
+              </div>
+              <div className="admin-dialog-footer">
+                <button type="button" onClick={() => setEditModal(null)} disabled={savingEdit} className="btn-modal-cancel">Cancel</button>
+                <button type="submit" disabled={savingEdit} className="btn-modal-primary">{savingEdit ? "Saving…" : "Update Post"}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -34,7 +34,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string, fallback?: string, params?: Record<string, string | number>): string => {
+    (key: string, fallback?: string | Record<string, string | number>, params?: Record<string, string | number>): string => {
       const keys = key.split(".");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let val: any = lang === "en" ? enDict : viDict;
@@ -42,16 +42,19 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (val && typeof val === "object" && k in val) {
           val = val[k];
         } else {
-          return fallback ?? key;
+          return typeof fallback === "string" ? fallback : key;
         }
       }
-      if (typeof val !== "string") return fallback ?? key;
+      if (typeof val !== "string") return typeof fallback === "string" ? fallback : key;
+      
+      // Support both t(key, params) and t(key, fallback, params) signatures
+      const resolvedParams = params ?? (typeof fallback === "object" ? fallback : undefined);
       
       // Replace placeholders with params if provided
-      if (params) {
+      if (resolvedParams) {
         return val.replace(/\{(\w+)\}/g, (match, paramKey) => {
-          if (paramKey in params) {
-            return String(params[paramKey]);
+          if (paramKey in resolvedParams) {
+            return String(resolvedParams[paramKey]);
           }
           return match;
         });

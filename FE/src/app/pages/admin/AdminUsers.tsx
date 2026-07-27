@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Users, UserCheck, UserX, Lock, BarChart3 } from "lucide-react";
 import { createPortal } from "react-dom";
 import {
@@ -17,9 +17,12 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Plus,
   Edit3,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   userService,
@@ -31,36 +34,14 @@ import { useAuth } from "../../../hooks/useAuth";
 import { toast } from "sonner";
 import type { UserStatistics } from "../../../features/users/services/user.service";
 import { authService } from "../../../services/auth.service";
-
-// ─── Role config ──────────────────────────────────────────────────────────────
-
-const ROLE_OPTIONS = [
-  { id: "6a250549d5316cfeb83101c0", name: "Admin" },
-  { id: "6a250549d5316cfeb83101c1", name: "Staff" },
-  { id: "6a250549d5316cfeb83101c2", name: "Customer" },
-];
-
-const ROLE_NAME_MAP = ROLE_OPTIONS.reduce<Record<string, string>>(
-  (acc, role) => ({ ...acc, [role.id]: role.name }),
-  {},
-);
-
-function extractRoleName(
-  roleId: { _id: string; roleName: string } | string | undefined,
-): string {
-  if (!roleId) return "User";
-  if (typeof roleId === "string") return ROLE_NAME_MAP[roleId] || "User";
-  return roleId.roleName || "User";
-}
-
-function extractRoleId(
-  roleId: { _id: string; roleName: string } | string | undefined,
-): string {
-  if (!roleId) return "";
-  return typeof roleId === "string" ? roleId : roleId._id;
-}
+import { roleService, normalizeRoles } from "../../../api/roleService";
+import type { Role } from "../../../types/role";
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
+// NOTE: only tokens that actually exist in theme.css are used here.
+// "Customer" previously pointed at --accent-orange / badge-orange, neither of
+// which is defined anywhere in theme.css or globals.css, so that badge was
+// silently unstyled. Swapped to the existing --badge-warm-* pair instead.
 
 const ROLE_STYLE: Record<
   string,
@@ -85,9 +66,9 @@ const ROLE_STYLE: Record<
     icon: <User className="w-3 h-3" />,
   },
   Customer: {
-    badge: "badge-orange",
-    avatar: "badge-orange",
-    item: "text-[var(--accent-orange-text)]",
+    badge: "badge-warm",
+    avatar: "badge-warm",
+    item: "text-[var(--badge-warm-text)]",
     icon: <ShoppingBag className="w-3 h-3" />,
   },
 };
@@ -126,6 +107,47 @@ function getRoleStyle(roleName: string) {
 
 function getStatusStyle(status: string) {
   return STATUS_STYLE[status] ?? STATUS_STYLE.ACTIVE;
+}
+
+// ─── Small hooks (shared by both dropdown components below) ──────────────────
+
+/** Closes an open portal menu on outside click, scroll, or resize. */
+function useDismissPortal(
+  open: boolean,
+  onDismiss: () => void,
+  refs: Array<React.RefObject<HTMLElement | null>>,
+) {
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node;
+      const isInside = refs.some((r) => r.current?.contains(target));
+      if (!isInside) onDismiss();
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refs, onDismiss]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", onDismiss, true);
+    window.addEventListener("resize", onDismiss);
+    return () => {
+      window.removeEventListener("scroll", onDismiss, true);
+      window.removeEventListener("resize", onDismiss);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, onDismiss]);
+}
+
+/** Debounces a fast-changing value (used for the search input). */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 // ─── Badges ───────────────────────────────────────────────────────────────────
@@ -171,7 +193,7 @@ function UserAvatar({ name, roleName }: { name: string; roleName: string }) {
   );
 }
 
-// ─── Filter Select ────────────────────────────────────────────────────────────
+// ─── Filter Select (toolbar dropdowns) ────────────────────────────────────────
 
 function FilterSelect({
   value,
@@ -195,31 +217,8 @@ function FilterSelect({
     setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
   };
 
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      const t = e.target as Node;
-      if (
-        triggerRef.current &&
-        !triggerRef.current.contains(t) &&
-        menuRef.current &&
-        !menuRef.current.contains(t)
-      )
-        setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = () => setOpen(false);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismissPortal(open, close, [triggerRef, menuRef]);
 
   return (
     <>
@@ -230,8 +229,8 @@ function FilterSelect({
           if (!open) updateCoords();
           setOpen((p) => !p);
         }}
-        className={`admin-filter-trigger${open ? " is-open" : ""} w-full flex items-center justify-between px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-          open ? "ring-2 ring-primary/20" : ""
+        className={`admin-filter-trigger w-full flex items-center justify-between px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+          open ? " is-open ring-2 ring-primary/20" : ""
         }`}
       >
         <span className="flex items-center gap-2">
@@ -324,7 +323,7 @@ function FilterSelect({
   );
 }
 
-// ─── Custom dropdown (table cells) ───────────────────────────────────────────
+// ─── Custom dropdown (table cells: role / status) ─────────────────────────────
 
 interface DropdownOption {
   value: string;
@@ -338,10 +337,12 @@ function CustomDropdown({
   value,
   options,
   onChange,
+  disabled,
 }: {
   value: string;
   options: DropdownOption[];
   onChange: (v: string) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number }>({
@@ -350,9 +351,15 @@ function CustomDropdown({
   });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value) ?? options[0];
+  const fallbackSelected: DropdownOption = {
+    value: "",
+    label: "Loading…",
+    badgeClass: "bg-muted text-muted-foreground border-border",
+    itemClass: "text-muted-foreground",
+  };
+  const activeSelected = selected ?? fallbackSelected;
 
   const MENU_WIDTH = 140;
   const GAP = 6;
@@ -371,49 +378,30 @@ function CustomDropdown({
     setCoords({ top, left });
   };
 
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      const target = e.target as Node;
-      const outsideWrap = wrapRef.current && !wrapRef.current.contains(target);
-      const outsideMenu = menuRef.current && !menuRef.current.contains(target);
-      if (outsideWrap && outsideMenu) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = () => setOpen(false);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismissPortal(open, close, [triggerRef, menuRef]);
 
   const toggleOpen = () => {
+    if (disabled) return;
     if (!open) updateCoords();
     setOpen((p) => !p);
   };
 
   return (
     <>
-      <div ref={wrapRef} className="inline-block">
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={toggleOpen}
-          className={`badge badge-trigger inline-flex items-center gap-1.5 pl-2.5 pr-2 py-0.5 text-xs font-medium w-[96px] justify-between focus:outline-none focus:ring-2 focus:ring-primary/50 ${selected.badgeClass}`}
-        >
-          {selected.prefix}
-          {selected.label}
-          <ChevronDown
-            className={`w-3 h-3 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
-          />
-        </button>
-      </div>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggleOpen}
+        disabled={disabled}
+        className={`badge badge-trigger inline-flex items-center gap-1.5 pl-2.5 pr-2 py-0.5 text-xs font-medium w-[96px] justify-between focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-60 disabled:cursor-not-allowed ${activeSelected.badgeClass}`}
+      >
+        {activeSelected.prefix}
+        {activeSelected.label}
+        <ChevronDown
+          className={`w-3 h-3 transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
 
       {open &&
         typeof document !== "undefined" &&
@@ -462,12 +450,12 @@ function CustomDropdown({
 
 // ─── Dropdown option builders ─────────────────────────────────────────────────
 
-function buildRoleOptions(): DropdownOption[] {
-  return ROLE_OPTIONS.map((r) => {
-    const s = getRoleStyle(r.name);
+function buildRoleOptions(roles: Array<{ _id: string; roleName: string }>): DropdownOption[] {
+  return roles.map((r) => {
+    const s = getRoleStyle(r.roleName);
     return {
-      value: r.id,
-      label: r.name,
+      value: r._id,
+      label: r.roleName,
       badgeClass: s.badge,
       itemClass: s.item,
       prefix: <span className="flex-shrink-0">{s.icon}</span>,
@@ -493,7 +481,6 @@ function buildStatusOptions(): DropdownOption[] {
   });
 }
 
-const ROLE_DROPDOWN_OPTIONS = buildRoleOptions();
 const STATUS_DROPDOWN_OPTIONS = buildStatusOptions();
 
 // ─── Sortable table header ────────────────────────────────────────────────────
@@ -540,16 +527,61 @@ function SortableHeader({
   );
 }
 
+// ─── Stat card (dashboard header) ─────────────────────────────────────────────
+
+function StatCard({
+  icon,
+  label,
+  value,
+  bg,
+  border,
+  text,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  bg: string;
+  border: string;
+  text: string;
+}) {
+  return (
+    <div
+      className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+      style={{ background: bg, borderColor: border }}
+    >
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span
+          className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{ background: "var(--card)", color: text }}
+        >
+          {icon}
+        </span>
+        <span
+          className="text-[10px] font-medium uppercase tracking-wide"
+          style={{ color: text }}
+        >
+          {label}
+        </span>
+      </div>
+      <p className="text-lg font-bold" style={{ color: text }}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 // ─── Detail modal ─────────────────────────────────────────────────────────────
 
 function UserDetailModal({
   user,
+  roleNameMap,
   onClose,
 }: {
   user: ApiUser;
+  roleNameMap: Record<string, string>;
   onClose: () => void;
 }) {
-  const roleName = extractRoleName(user.roleId);
+  const roleName = extractRoleName(user.roleId, roleNameMap);
 
   const detailRows = [
     {
@@ -693,8 +725,8 @@ function DeleteUserModal({
         </div>
         <div className="admin-dialog-body">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">{user.fullName}</strong> will be
-            set to{" "}
+            <strong className="text-foreground">{user.fullName}</strong> will
+            be set to{" "}
             <span className="font-medium text-[var(--accent-red-text)]">
               INACTIVE
             </span>
@@ -778,7 +810,7 @@ function UpdateUserModal({
         className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="admin-dialog-header">
+        <div className="admin-dialog-header relative">
           <h3 className="text-base font-semibold">Update User</h3>
           <button
             onClick={onCancel}
@@ -967,10 +999,12 @@ function UpdateUserModal({
 
 function CreateUserModal({
   loading,
+  roles,
   onCancel,
   onConfirm,
 }: {
   loading: boolean;
+  roles: Array<{ _id: string; roleName: string; isActive: boolean }>;
   onCancel: () => void;
   onConfirm: (data: {
     username: string;
@@ -984,6 +1018,12 @@ function CreateUserModal({
     roleId: string;
   }) => void;
 }) {
+  // Filter out Admin roles for the create user dropdown (safety measure)
+  const availableRoles = roles.filter((r) => r.isActive);
+  const defaultRoleId = availableRoles.find(
+    (r) => r.roleName !== "Admin",
+  )?._id || availableRoles[0]?._id || "";
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -993,7 +1033,7 @@ function CreateUserModal({
     address: "",
     gender: "OTHER" as "MALE" | "FEMALE" | "OTHER",
     dateOfBirth: "",
-    roleId: "6a250549d5316cfeb83101c2", // Default to Customer
+    roleId: defaultRoleId,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1007,7 +1047,7 @@ function CreateUserModal({
         className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="admin-dialog-header">
+        <div className="admin-dialog-header relative">
           <h3 className="text-base font-semibold">Create New User</h3>
           <button
             onClick={onCancel}
@@ -1120,9 +1160,9 @@ function CreateUserModal({
                   }
                   className="input w-full"
                 >
-                  {ROLE_OPTIONS.filter((r) => r.name !== "Admin").map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
+                  {availableRoles.map((r) => (
+                    <option key={r._id} value={r._id}>
+                      {r.roleName}
                     </option>
                   ))}
                 </select>
@@ -1214,7 +1254,121 @@ function CreateUserModal({
   );
 }
 
+// ─── Table skeleton (loading state) ───────────────────────────────────────────
+
+function TableSkeletonRows({ rows = 6 }: { rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <tr key={i} className="border-b border-border animate-pulse">
+          <td className="px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-11 h-11 rounded-full flex-shrink-0"
+                style={{ background: "var(--muted)" }}
+              />
+              <div className="space-y-1.5">
+                <div
+                  className="h-3.5 w-28 rounded"
+                  style={{ background: "var(--muted)" }}
+                />
+                <div
+                  className="h-3 w-16 rounded"
+                  style={{ background: "var(--muted)" }}
+                />
+              </div>
+            </div>
+          </td>
+          {Array.from({ length: 4 }).map((_, j) => (
+            <td key={j} className="px-6 py-4">
+              <div
+                className="h-3.5 w-20 rounded"
+                style={{ background: "var(--muted)" }}
+              />
+            </td>
+          ))}
+          <td className="px-6 py-4" />
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// ─── Pagination bar ────────────────────────────────────────────────────────────
+
+function PaginationBar({
+  page,
+  pageSize,
+  totalItems,
+  onPageChange,
+}: {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const from = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, totalItems);
+
+  return (
+    <div
+      className="flex items-center justify-between gap-4 px-6 py-3 border-t flex-wrap"
+      style={{ borderColor: "var(--border)", background: "var(--card)" }}
+    >
+      <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+        Showing <strong style={{ color: "var(--foreground)" }}>{from}</strong>
+        –<strong style={{ color: "var(--foreground)" }}>{to}</strong> of{" "}
+        <strong style={{ color: "var(--foreground)" }}>{totalItems}</strong>
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="admin-action-btn disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-xs px-2" style={{ color: "var(--foreground)" }}>
+          Page {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="admin-action-btn disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Next page"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Helper: extract role name from user's roleId using dynamic map ────────────
+
+function extractRoleId(
+  roleId: { _id: string; roleName: string } | string | undefined,
+): string {
+  if (!roleId) return "";
+  return typeof roleId === "string" ? roleId : roleId._id;
+}
+
+function extractRoleName(
+  roleId: { _id: string; roleName: string } | string | undefined,
+  roleNameMap: Record<string, string>,
+): string {
+  if (!roleId) return "User";
+  if (typeof roleId === "string") return roleNameMap[roleId] || "User";
+  return roleId.roleName || "User";
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 20;
 
 export function AdminUsers() {
   const { logActivity } = useAdmin();
@@ -1223,8 +1377,14 @@ export function AdminUsers() {
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
   const [roleFilter, setRoleFilter] = useState("");
+  const [page, setPage] = useState(1);
+  // TODO API: backend cần trả về tổng số user khớp filter (vd: result.total)
+  // để phân trang chính xác. Hiện tại tạm suy ra từ độ dài mảng trả về —
+  // nếu trả đủ PAGE_SIZE thì coi như còn trang sau (ước lượng, không chính xác 100%).
+  const [totalUsersEstimate, setTotalUsersEstimate] = useState(0);
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<ApiUser | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -1233,28 +1393,90 @@ export function AdminUsers() {
   const [statsLoading, setStatsLoading] = useState(false);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  // ── Dynamic roles from API ──
+  const [apiRoles, setApiRoles] = useState<Role[]>([]);
+
+  // Fetch roles for dropdown options
+  const fetchRoles = useCallback(async () => {
+    try {
+      const { data: response } = await roleService.getAll({ limit: 100 });
+      const wrapper = response.data;
+      const data = wrapper?.data;
+      const rawRoles = data?.roles ?? [];
+      setApiRoles(normalizeRoles(rawRoles));
+    } catch {
+      // Silently fail — roles dropdown will just be empty
+      console.error("Failed to load roles for user admin");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
+
+  // Build role name map from API data: { [roleId]: roleName }
+  const roleNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of apiRoles) {
+      map[r._id] = r.roleName;
+    }
+    return map;
+  }, [apiRoles]);
+
+  // Build dropdown options from API roles
+  const roleDropdownOptions = useMemo(() => {
+    return buildRoleOptions(apiRoles);
+  }, [apiRoles]);
+
+  // Build role options for filter (only non-admin, active roles)
+  const roleFilterOptions = useMemo(() => {
+    return apiRoles
+      .filter((r) => r.isActive)
+      .map((r) => ({ value: r._id, label: r.roleName }));
+  }, [apiRoles]);
+
   // Update & Create modals
   const [userToUpdate, setUserToUpdate] = useState<ApiUser | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  const hasActiveFilters =
+    debouncedSearch !== "" || statusFilter !== "all" || roleFilter !== "";
+
+  // Reset to page 1 whenever a filter changes so results aren't confusing.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, roleFilter]);
+
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
+      // TODO API: userService.getAllUsers cần hỗ trợ thêm tham số `search`
+      // (tìm theo tên/username/email/phone) và `sortBy` / `sortOrder` để lọc
+      // và sắp xếp ngay tại server thay vì chỉ trong trang hiện tại.
       const { data: response } = await userService.getAllUsers({
-        page: 1,
-        limit: 20,
+        page,
+        limit: PAGE_SIZE,
         status: statusFilter === "all" ? undefined : statusFilter,
         roleId: roleFilter || undefined,
+        // @ts-expect-error — sẽ hợp lệ khi backend/service hỗ trợ tham số này
+        search: debouncedSearch || undefined,
       });
-      setUsers(response.data.result.users || []);
+      const fetchedUsers = response.data.result.users || [];
+      setUsers(fetchedUsers);
+      // Prefer a real total from the API if/when it's added; otherwise estimate.
+      const apiTotal = (response.data.result as { total?: number }).total;
+      setTotalUsersEstimate(
+        apiTotal ?? (page - 1) * PAGE_SIZE + fetchedUsers.length,
+      );
     } catch {
       // API unavailable — empty state
+      setUsers([]);
     } finally {
       setLoading(false);
     }
-  }, [roleFilter, statusFilter]);
+  }, [page, roleFilter, statusFilter, debouncedSearch]);
 
   useEffect(() => {
     loadUsers();
@@ -1280,16 +1502,21 @@ export function AdminUsers() {
     };
   }, []);
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.phone?.includes(searchTerm),
-  );
+  // Client-side search/sort only applies to the current page. Real cross-page
+  // filtering/sorting requires the API changes noted above.
+  const sortedUsers = useMemo(() => {
+    const filtered = debouncedSearch
+      ? users.filter(
+          (u) =>
+            u.fullName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            u.username?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            u.email?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            u.phone?.includes(debouncedSearch),
+        )
+      : users;
 
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    if (!sortField) return 0;
+    if (!sortField) return filtered;
+
     const getValue = (u: ApiUser) => {
       switch (sortField) {
         case "name":
@@ -1299,14 +1526,16 @@ export function AdminUsers() {
         case "phone":
           return u.phone ?? "";
         case "role":
-          return extractRoleName(u.roleId);
+          return extractRoleName(u.roleId, roleNameMap);
         case "status":
           return u.status ?? "ACTIVE";
       }
     };
-    const cmp = getValue(a).localeCompare(getValue(b));
-    return sortDirection === "asc" ? cmp : -cmp;
-  });
+    return [...filtered].sort((a, b) => {
+      const cmp = getValue(a).localeCompare(getValue(b));
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+  }, [users, debouncedSearch, sortField, sortDirection, roleNameMap]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -1315,6 +1544,12 @@ export function AdminUsers() {
       setSortField(field);
       setSortDirection("asc");
     }
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setRoleFilter("");
   };
 
   const handleViewUser = async (user: ApiUser) => {
@@ -1352,7 +1587,7 @@ export function AdminUsers() {
   const handleRoleChange = async (user: ApiUser, roleId: string) => {
     if (!isAdmin || !roleId) return;
     const currentRoleId = extractRoleId(user.roleId);
-    if (currentRoleId === roleId) return; // trùng role → bỏ qua, không lỗi
+    if (currentRoleId === roleId) return; // same role → no-op
     try {
       await userService.updateUserRole(user.userId, { roleId });
       setUsers((prev) =>
@@ -1362,7 +1597,7 @@ export function AdminUsers() {
                 ...u,
                 roleId: {
                   _id: roleId,
-                  roleName: ROLE_NAME_MAP[roleId] || "User",
+                  roleName: roleNameMap[roleId] || "User",
                 },
               }
             : u,
@@ -1372,7 +1607,7 @@ export function AdminUsers() {
         type: "user_created",
         userId: "admin",
         userName: "Admin",
-        description: `Changed role for ${user.fullName} to ${ROLE_NAME_MAP[roleId] || roleId}`,
+        description: `Changed role for ${user.fullName} to ${roleNameMap[roleId] || roleId}`,
       });
       toast.success("User role updated");
     } catch {
@@ -1481,14 +1716,6 @@ export function AdminUsers() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1507,7 +1734,7 @@ export function AdminUsers() {
             className="btn-create"
           >
             <Plus size={18} />
-            create
+            Create user
           </button>
         )}
       </div>
@@ -1531,155 +1758,58 @@ export function AdminUsers() {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="bg-muted/30 rounded-xl p-3 border border-border/50 space-y-2"
+                className="rounded-xl p-3 border space-y-2"
+                style={{ background: "var(--muted)", borderColor: "var(--border)" }}
               >
-                <div className="h-3 w-14 bg-muted rounded" />
-                <div className="h-6 w-8 bg-muted rounded" />
+                <div
+                  className="h-3 w-14 rounded"
+                  style={{ background: "var(--border)" }}
+                />
+                <div
+                  className="h-6 w-8 rounded"
+                  style={{ background: "var(--border)" }}
+                />
               </div>
             ))}
           </div>
         ) : stats ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Total */}
-              <div
-                className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{
-                  background: "var(--primary-light)",
-                  borderColor: "var(--primary-soft)",
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: "var(--primary-soft)",
-                        color: "var(--primary)",
-                      }}
-                    >
-                      <Users className="w-3 h-3" />
-                    </span>
-                    <span
-                      className="text-[10px] font-medium uppercase tracking-wide"
-                      style={{ color: "var(--primary)" }}
-                    >
-                      Total
-                    </span>
-                  </div>
-                  <p
-                    className="text-lg font-bold"
-                    style={{ color: "var(--foreground)" }}
-                  >
-                    {stats.totalUsers}
-                  </p>
-                </div>
-              </div>
-
-              {/* Active */}
-              <div
-                className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{
-                  background: "var(--accent-green)",
-                  borderColor: "var(--accent-green-text)",
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: "var(--card)",
-                        color: "var(--accent-green-text)",
-                      }}
-                    >
-                      <UserCheck className="w-3 h-3" />
-                    </span>
-                    <span
-                      className="text-[10px] font-medium uppercase tracking-wide"
-                      style={{ color: "var(--accent-green-text)" }}
-                    >
-                      Active
-                    </span>
-                  </div>
-                  <p
-                    className="text-lg font-bold"
-                    style={{ color: "var(--accent-green-text)" }}
-                  >
-                    {stats.activeUsers}
-                  </p>
-                </div>
-              </div>
-
-              {/* Inactive */}
-              <div
-                className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{
-                  background: "var(--accent-red)",
-                  borderColor: "var(--accent-red-text)",
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: "var(--card)",
-                        color: "var(--accent-red-text)",
-                      }}
-                    >
-                      <UserX className="w-3 h-3" />
-                    </span>
-                    <span
-                      className="text-[10px] font-medium uppercase tracking-wide"
-                      style={{ color: "var(--accent-red-text)" }}
-                    >
-                      Inactive
-                    </span>
-                  </div>
-                  <p
-                    className="text-lg font-bold"
-                    style={{ color: "var(--accent-red-text)" }}
-                  >
-                    {stats.inactiveUsers}
-                  </p>
-                </div>
-              </div>
-
-              {/* Locked */}
-              <div
-                className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:scale-[1.02]"
-                style={{
-                  background: "var(--accent-orange)",
-                  borderColor: "var(--accent-orange-text)",
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: "var(--card)",
-                        color: "var(--accent-orange-text)",
-                      }}
-                    >
-                      <Lock className="w-3 h-3" />
-                    </span>
-                    <span
-                      className="text-[10px] font-medium uppercase tracking-wide"
-                      style={{ color: "var(--accent-orange-text)" }}
-                    >
-                      Locked
-                    </span>
-                  </div>
-                  <p
-                    className="text-lg font-bold"
-                    style={{ color: "var(--accent-orange-text)" }}
-                  >
-                    {stats.lockedUsers}
-                  </p>
-                </div>
-              </div>
+              <StatCard
+                icon={<Users className="w-3 h-3" />}
+                label="Total"
+                value={stats.totalUsers}
+                bg="var(--primary-light)"
+                border="var(--primary-soft)"
+                text="var(--primary)"
+              />
+              <StatCard
+                icon={<UserCheck className="w-3 h-3" />}
+                label="Active"
+                value={stats.activeUsers}
+                bg="var(--accent-green)"
+                border="var(--accent-green-text)"
+                text="var(--accent-green-text)"
+              />
+              <StatCard
+                icon={<UserX className="w-3 h-3" />}
+                label="Inactive"
+                value={stats.inactiveUsers}
+                bg="var(--accent-red)"
+                border="var(--accent-red-text)"
+                text="var(--accent-red-text)"
+              />
+              {/* "Locked" reuses the warning tokens — --accent-orange /
+                  --accent-orange-text used to live here but are not defined
+                  anywhere in theme.css, so this card rendered unstyled. */}
+              <StatCard
+                icon={<Lock className="w-3 h-3" />}
+                label="Locked"
+                value={stats.lockedUsers}
+                bg="var(--warning-bg)"
+                border="var(--warning-text)"
+                text="var(--warning-text)"
+              />
             </div>
             {stats.usersByRole.length > 0 && (
               <div
@@ -1728,21 +1858,33 @@ export function AdminUsers() {
           className="p-6 border-b border-border space-y-3"
           style={{ background: "var(--surface)" }}
         >
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input w-full"
-              style={{
-                paddingLeft: "3rem",
-                paddingRight: "1rem",
-                paddingTop: "0.75rem",
-                paddingBottom: "0.75rem",
-              }}
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name, username, email, or phone…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input w-full"
+                style={{
+                  paddingLeft: "3rem",
+                  paddingRight: "1rem",
+                  paddingTop: "0.75rem",
+                  paddingBottom: "0.75rem",
+                }}
+              />
+            </div>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="admin-action-btn flex-shrink-0"
+                title="Clear filters"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <FilterSelect
@@ -1771,7 +1913,7 @@ export function AdminUsers() {
               value={roleFilter || "all"}
               options={[
                 { value: "all", label: "All roles" },
-                ...ROLE_OPTIONS.map((r) => ({ value: r.id, label: r.name })),
+                ...roleFilterOptions,
               ]}
               onChange={(v) => setRoleFilter(v === "all" ? "" : v)}
             />
@@ -1832,9 +1974,11 @@ export function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {sortedUsers.length > 0 ? (
+              {loading ? (
+                <TableSkeletonRows />
+              ) : sortedUsers.length > 0 ? (
                 sortedUsers.map((user) => {
-                  const roleName = extractRoleName(user.roleId);
+                  const roleName = extractRoleName(user.roleId, roleNameMap);
                   const currentStatus = user.status ?? "ACTIVE";
                   return (
                     <tr
@@ -1847,17 +1991,17 @@ export function AdminUsers() {
                             name={user.fullName || ""}
                             roleName={roleName}
                           />
-                          <div>
-                            <p className="font-medium text-sm">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">
                               {user.fullName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground truncate">
                               @{user.username}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-6 py-4 text-sm text-muted-foreground truncate">
                         {user.email}
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">
@@ -1867,7 +2011,7 @@ export function AdminUsers() {
                         {isAdmin ? (
                           <CustomDropdown
                             value={extractRoleId(user.roleId)}
-                            options={ROLE_DROPDOWN_OPTIONS}
+                            options={roleDropdownOptions}
                             onChange={(roleId) =>
                               handleRoleChange(user, roleId)
                             }
@@ -1925,22 +2069,58 @@ export function AdminUsers() {
                 })
               ) : (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="text-center py-12 text-muted-foreground"
-                  >
-                    No users found
+                  <td colSpan={6} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-2">
+                      <Users
+                        className="w-8 h-8"
+                        style={{ color: "var(--foreground-subtle)" }}
+                      />
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: "var(--foreground)" }}
+                      >
+                        No users found
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--foreground-muted)" }}
+                      >
+                        {hasActiveFilters
+                          ? "Try adjusting your search or filters."
+                          : "Users you create will show up here."}
+                      </p>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={handleResetFilters}
+                          className="text-xs font-medium mt-1"
+                          style={{ color: "var(--primary)" }}
+                        >
+                          Clear filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {!loading && (
+          <PaginationBar
+            page={page}
+            pageSize={PAGE_SIZE}
+            totalItems={totalUsersEstimate}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {selectedUser && (
         <UserDetailModal
           user={selectedUser}
+          roleNameMap={roleNameMap}
           onClose={() => setSelectedUser(null)}
         />
       )}
@@ -1966,6 +2146,7 @@ export function AdminUsers() {
       {showCreateModal && (
         <CreateUserModal
           loading={creating}
+          roles={apiRoles}
           onCancel={() => setShowCreateModal(false)}
           onConfirm={handleCreateUser}
         />
