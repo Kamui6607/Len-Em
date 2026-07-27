@@ -10,7 +10,6 @@ import {
   PlayCircle,
   Gauge,
   Tag,
-  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";

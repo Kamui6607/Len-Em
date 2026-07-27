@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router";
 import { motion } from "motion/react";
-import { cn } from "../../app/components/ui/utils";
 import { BookOpen, ShoppingBag, Palette, LogIn } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { UserMenu } from "../../app/components/UserMenu";
