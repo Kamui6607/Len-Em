@@ -266,7 +266,7 @@ export function KitsPage() {
                         <div className="p-5 space-y-3">
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Package size={14} />
-                            {(kit.productIds || []).length} products included
+                            {(kit.products || []).length} products included
                           </div>
                           <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
                             {kit.name}

@@ -238,22 +238,22 @@ export function Love() {
                         {kit.level}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {(kit.productIds || []).length} products included
-                    </p>
-                    {/* Add to cart button */}
-                    <button
-                      onClick={() => {
-                        const products = (kit.productIds || []).map((product) => {
-                          const variant = product.variants[0];
-                          return {
-                            productId: product._id,
-                            variantId: variant?._id || "",
-                            name: product.name,
-                            image: variant?.image || product.image,
-                            price: variant?.price || 0,
-                          };
-                        });
+                     <p className="text-xs text-muted-foreground">
+                       {(kit.products || []).length} products included
+                     </p>
+                     {/* Add to cart button */}
+                     <button
+                       onClick={() => {
+                         const products = (kit.products || []).map((product) => {
+                           const variant = product.productId.variants[0];
+                           return {
+                             productId: product.productId._id,
+                             variantId: product.variantId,
+                             name: product.productId.name,
+                             image: variant?.image || product.productId.image,
+                             price: variant?.price || 0,
+                           };
+                         });
                         addKitToCart({
                           kitId: kit._id,
                           name: kit.name,

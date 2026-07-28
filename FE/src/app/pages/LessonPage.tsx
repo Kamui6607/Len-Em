@@ -221,30 +221,38 @@ export function LessonPage() {
               thumbnail: c.thumbnail,
               level: c.level,
               price: c.price,
-              productIds: c.productIds.map((pid) => {
+              products: c.productIds.map((pid) => {
                 const product = products.find((p) => p.id === pid);
+                const firstVariant = product?.variants?.[0];
                 return {
-                  _id: pid,
-                  name: product?.name ?? pid,
-                  description: product?.description ?? "",
-                  category: product?.category ?? "",
-                  image: product?.image ?? "",
-                  tags: product?.tags ?? [],
-                  variants: product?.variants?.map((v) => ({
-                    _id: v.id,
-                    color: v.color,
-                    hexCode: v.hexCode,
-                    price: v.price,
-                    stock: v.stock,
-                    image: v.images?.[0] ?? "",
-                  })) ?? [{ _id: "default", color: "", hexCode: "#ccc", price: 0, stock: 0, image: "" }],
-                  isActive: true,
-                  createdAt: product?.createdAt ?? "",
-                  updatedAt: product?.createdAt ?? "",
-                  __v: 0,
+                  productId: {
+                    _id: pid,
+                    name: product?.name ?? pid,
+                    description: product?.description ?? "",
+                    category: product?.category ?? "",
+                    image: product?.image ?? "",
+                    tags: product?.tags ?? [],
+                    variants: product?.variants?.map((v) => ({
+                      _id: v.id,
+                      color: v.color,
+                      hexCode: v.hexCode,
+                      price: v.price,
+                      stock: v.stock,
+                      image: v.images?.[0] ?? "",
+                    })) ?? [],
+                    isActive: true,
+                    createdAt: product?.createdAt ?? "",
+                    updatedAt: product?.createdAt ?? "",
+                    __v: 0,
+                  },
+                  variantId: firstVariant?.id ?? "default",
+                  quantity: 1,
                 };
               }),
               isActive: true,
+              averageRating: 0,
+              totalRatings: 0,
+              ratings: [],
               createdAt: "",
               updatedAt: "",
               __v: 0,
@@ -355,13 +363,13 @@ export function LessonPage() {
   const addProductToCart = (item: MaterialItem) => {
     if (item.type === "kit" && item.kitData) {
       if (!isAuthenticated) { navigate("/auth/login"); return; }
-      const kitProducts = (item.kitData.productIds || []).map((product) => {
-        const variant = product.variants[0];
+      const kitProducts = (item.kitData.products || []).map((product) => {
+        const variant = product.productId.variants[0];
         return {
-          productId: product._id,
-          variantId: variant?._id || "",
-          name: product.name,
-          image: variant?.image || product.image,
+          productId: product.productId._id,
+          variantId: product.variantId,
+          name: product.productId.name,
+          image: variant?.image || product.productId.image,
           price: variant?.price || 0,
         };
       });
@@ -415,13 +423,13 @@ export function LessonPage() {
   const addAllToCart = () => {
     materials.forEach((item) => {
       if (item.type === "kit" && item.kitData) {
-        const kitProducts = (item.kitData.productIds || []).map((product) => {
-          const variant = product.variants[0];
+        const kitProducts = (item.kitData.products || []).map((product) => {
+          const variant = product.productId.variants[0];
           return {
-            productId: product._id,
-            variantId: variant?._id || "",
-            name: product.name,
-            image: variant?.image || product.image,
+            productId: product.productId._id,
+            variantId: product.variantId,
+            name: product.productId.name,
+            image: variant?.image || product.productId.image,
             price: variant?.price || 0,
           };
         });

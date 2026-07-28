@@ -13,7 +13,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { diyService } from "../../features/diy/services/diy.service";
-import { kitService, type KitProductDetail } from "../../api/kitService";
+import { kitService, type KitProduct } from "../../api/kitService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { userService } from "../../features/users/services/user.service";
@@ -102,13 +102,16 @@ export function DIYFeedPage() {
         name: kit.name,
         thumbnail: kit.thumbnail,
         price: kit.price,
-        products: (kit.productIds || []).map((product: KitProductDetail) => ({
-          productId: product._id,
-          variantId: product.variants[0]?._id || "default",
-          name: product.name,
-          image: product.variants[0]?.image || product.image,
-          price: product.variants[0]?.price || 0,
-        })),
+        products: (kit.products || []).map((product: KitProduct) => {
+          const firstVariant = product.productId.variants[0];
+          return {
+            productId: product.productId._id,
+            variantId: firstVariant?._id || "default",
+            name: product.productId.name,
+            image: firstVariant?.image || product.productId.image,
+            price: firstVariant?.price || 0,
+          };
+        }),
       });
       toast.success("Added kit to cart");
     } catch {

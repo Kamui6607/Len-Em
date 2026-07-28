@@ -222,37 +222,28 @@ export function CourseDetailPage() {
             setKits(fetchedKits);
           } catch {
             // Fallback to mock data
-            const mockKits = materialCombos
-              .filter((c) => allComboIds.includes(c.id))
-              .map((c) => ({
-                _id: c.id,
-                name: c.name,
-                description: c.description,
-                thumbnail: c.thumbnail,
-                level: c.level,
-                price: c.price,
-                products: [],
-                productIds: c.productIds.map((pid) => ({
-                  _id: pid,
-                  name: pid,
-                  description: "",
-                  category: "",
-                  image: "",
-                  tags: [],
-                  variants: [{ _id: "default", color: "", hexCode: "#ccc", price: 0, stock: 0, image: "" }],
+              const mockKits = materialCombos
+                .filter((c) => allComboIds.includes(c.id))
+                .map((c) => ({
+                  _id: c.id,
+                  name: c.name,
+                  description: c.description,
+                  thumbnail: c.thumbnail,
+                  level: c.level,
+                  price: c.price,
+                  products: c.productIds.map((pid) => ({
+                    productId: { _id: pid, name: pid, description: "", category: "", image: "", tags: [], variants: [], isActive: true, createdAt: "", updatedAt: "", __v: 0 },
+                    variantId: "default",
+                    quantity: 1,
+                  })),
                   isActive: true,
+                  averageRating: 0,
+                  totalRatings: 0,
+                  ratings: [],
                   createdAt: "",
                   updatedAt: "",
                   __v: 0,
-                })),
-                isActive: true,
-                averageRating: 0,
-                totalRatings: 0,
-                ratings: [],
-                createdAt: "",
-                updatedAt: "",
-                __v: 0,
-              }));
+                }));
             setKits(mockKits);
           }
         }
@@ -426,13 +417,13 @@ export function CourseDetailPage() {
       navigate("/auth/login");
       return;
     }
-    const kitProducts = (kit.productIds || []).map((product) => {
-      const variant = product.variants[0];
+    const kitProducts = (kit.products || []).map((product) => {
+      const variant = product.productId?.variants?.[0];
       return {
-        productId: product._id,
-        variantId: variant?._id || "",
-        name: product.name,
-        image: variant?.image || product.image,
+        productId: product.productId._id,
+        variantId: product.variantId,
+        name: product.productId.name,
+        image: variant?.image || product.productId.image,
         price: variant?.price || 0,
       };
     });
