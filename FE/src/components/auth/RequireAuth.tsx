@@ -16,11 +16,14 @@ export function RequireAuth({ children }: RequireAuthProps) {
   const { isAuthenticated, isLoading } = useAuthStore();
   const location = useLocation();
 
+  console.log("RequireAuth - Route:", location.pathname, "isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
+
   if (isLoading) {
     return <LoadingFallback fullPage />;
   }
 
   if (!isAuthenticated) {
+    console.warn("RequireAuth - Redirecting to login from:", location.pathname);
     // Save the attempted URL so we can redirect back after login
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }

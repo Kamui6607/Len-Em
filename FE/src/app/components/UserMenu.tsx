@@ -12,6 +12,7 @@ import {
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../../hooks/useAuth";
+import { useNotifications } from "../context/NotificationContext";
 
 interface UserMenuProps {
   position?: "top" | "bottom";
@@ -34,6 +35,7 @@ export function UserMenu({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { user, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -190,37 +192,49 @@ export function UserMenu({
            </div>
          </div>
 
-         {/* ── Notifications Link ── */}
-         <Link
-           to="/notifications"
-           onClick={() => setIsOpen(false)}
-           className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group no-underline"
-           style={{
-             color: "var(--foreground)",
-           }}
-           onMouseEnter={(e) => {
-             e.currentTarget.style.background = "var(--chip-hover-bg)";
-             e.currentTarget.style.transform = "translateX(2px)";
-           }}
-           onMouseLeave={(e) => {
-             e.currentTarget.style.background = "transparent";
-             e.currentTarget.style.transform = "translateX(0)";
-           }}
-         >
-           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{
-             background: "linear-gradient(135deg, var(--accent-blush), var(--accent-peach))",
-             border: "1px solid var(--border-subtle)",
-           }}>
-             <Bell className="w-4.5 h-4.5 text-[var(--primary)]" />
-           </div>
-           <div className="flex-1 min-w-0">
-             <span className="text-sm font-medium block">Notifications</span>
-             <span className="text-xs text-[var(--foreground-muted)] block">View all notifications</span>
-           </div>
-           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "var(--foreground-muted)", opacity: 0.5 }}>
-             <path d="M4.5 2.5L9.5 7L4.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-           </svg>
-         </Link>
+          {/* ── Notifications Link ── */}
+          <Link
+            to="/notifications"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group no-underline"
+            style={{
+              color: "var(--foreground)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--chip-hover-bg)";
+              e.currentTarget.style.transform = "translateX(2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.transform = "translateX(0)";
+            }}
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 relative" style={{
+              background: "linear-gradient(135deg, var(--accent-blush), var(--accent-peach))",
+              border: "1px solid var(--border-subtle)",
+            }}>
+              <Bell className="w-4.5 h-4.5 text-[var(--primary)]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white px-1 shadow-sm">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium block">
+                Notifications
+                {unreadCount > 0 && (
+                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                    ({unreadCount} unread)
+                  </span>
+                )}
+              </span>
+              <span className="text-xs text-[var(--foreground-muted)] block">View all notifications</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "var(--foreground-muted)", opacity: 0.5 }}>
+              <path d="M4.5 2.5L9.5 7L4.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </Link>
 
         {/* ── Menu items ── */}
         <div className="py-2 px-2" style={{
@@ -456,6 +470,11 @@ export function UserMenu({
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2" style={{
               borderColor: "var(--card)"
             }} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white px-1 shadow-sm ring-2 ring-[var(--card)] z-10">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </div>
         </button>
       )}

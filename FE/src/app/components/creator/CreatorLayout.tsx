@@ -36,6 +36,7 @@ export function CreatorLayout({ children }: CreatorLayoutProps) {
       <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl border border-[var(--color-warm-border)] bg-[var(--color-warm-bg)]/95 p-2 shadow-2xl shadow-[#8f4f3d]/15 backdrop-blur md:hidden">
         {mobileItems.map((item) => {
           const Icon = item.icon;
+          if (!item.path) return null;
           const active = isActive(item.path);
           return (
             <Link

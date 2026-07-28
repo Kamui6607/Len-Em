@@ -5,7 +5,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
-import { ArrowLeft, ShoppingCart, Package, Star, Truck, ShieldCheck, RotateCcw, Heart, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Package,
+  Star,
+  Truck,
+  ShieldCheck,
+  RotateCcw,
+  Heart,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit } from "../../api/kitService";
@@ -33,8 +43,8 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
               i < Math.floor(rating)
                 ? "fill-amber-400 text-amber-400"
                 : i < rating
-                ? "fill-amber-400/50 text-amber-400"
-                : "fill-muted-foreground/20 text-muted-foreground/30"
+                  ? "fill-amber-400/50 text-amber-400"
+                  : "fill-muted-foreground/20 text-muted-foreground/30",
             )}
           />
         ))}
@@ -61,12 +71,17 @@ export function KitDetail() {
   const handleToggleFavorite = () => {
     if (!kit) return;
     toggleFavoriteKit(kit._id);
-    toast.success(isKitFavorite ? "Đã xoá khỏi danh sách yêu thích" : "Đã thêm vào danh sách yêu thích");
+    toast.success(
+      isKitFavorite
+        ? "Đã xoá khỏi danh sách yêu thích"
+        : "Đã thêm vào danh sách yêu thích",
+    );
   };
 
   useEffect(() => {
     if (!id) return;
-    kitService.getById(id)
+    kitService
+      .getById(id)
       .then((res) => setKit(res.data.data?.kit ?? null))
       .catch(() => {
         toast.error("Không thể tải thông tin kit");
@@ -81,14 +96,17 @@ export function KitDetail() {
       return;
     }
 
-    const products = kit.productIds.map((product) => {
-      const variant = product.variants[0];
+    // Use kit.products which has the correct structure
+    const products = kit.products.map((kitProduct) => {
+      const product = kitProduct.productId;
+      const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
+
       return {
         productId: product._id,
-        variantId: variant?._id || "",
+        variantId: kitProduct.variantId,
         name: product.name,
-        image: variant?.image || product.image,
-        price: variant?.price || 0,
+        image: selectedVariant?.image || product.image,
+        price: selectedVariant?.price || 0,
       };
     });
 
@@ -117,7 +135,9 @@ export function KitDetail() {
         <div className="text-center max-w-md">
           <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-semibold mb-3">Không tìm thấy kit</h2>
-          <p className="text-muted-foreground mb-6">Kit không tồn tại hoặc đã bị xoá.</p>
+          <p className="text-muted-foreground mb-6">
+            Kit không tồn tại hoặc đã bị xoá.
+          </p>
           <Link
             to="/shop"
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full hover:bg-primary/90 transition-colors"
@@ -130,8 +150,8 @@ export function KitDetail() {
     );
   }
 
-  const displayedProducts = kit.productIds.slice(0, 3);
-  const remainingCount = kit.productIds.length - 3;
+  const displayedProducts = (kit.products || []).slice(0, 3);
+  const remainingCount = (kit.products || []).length - 3;
 
   return (
     <div className="min-h-screen bg-background py-8 px-4 sm:py-12 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
@@ -164,7 +184,9 @@ export function KitDetail() {
               {/* Favorite button overlay */}
               <button
                 type="button"
-                title={isKitFavorite ? "Remove from favorites" : "Add to favorites"}
+                title={
+                  isKitFavorite ? "Remove from favorites" : "Add to favorites"
+                }
                 onClick={handleToggleFavorite}
                 className="absolute top-4 right-4 w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
                 style={{
@@ -179,7 +201,7 @@ export function KitDetail() {
                     "w-5 h-5 transition-colors",
                     isKitFavorite
                       ? "fill-destructive text-destructive"
-                      : "text-muted-foreground hover:text-destructive"
+                      : "text-muted-foreground hover:text-destructive",
                   )}
                 />
               </button>
@@ -197,7 +219,7 @@ export function KitDetail() {
                     <span
                       className={cn(
                         "text-xs px-2.5 py-1 rounded-full capitalize",
-                        levelBadgeColors[kit.level]
+                        levelBadgeColors[kit.level],
                       )}
                     >
                       {kit.level}
@@ -206,7 +228,7 @@ export function KitDetail() {
                 </div>
               </div>
 
-              <StarRating rating={4.5} count={128} />
+              <StarRating rating={kit.averageRating} count={kit.totalRatings} />
 
               {/* Price */}
               <div className="mt-4 flex items-baseline gap-3">
@@ -214,7 +236,7 @@ export function KitDetail() {
                   {formatPrice(kit.price)}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  ({kit.productIds.length} products)
+                  ({(kit.products || []).length} products)
                 </span>
               </div>
             </div>
@@ -238,15 +260,19 @@ export function KitDetail() {
                 <span
                   className={cn(
                     "px-3 py-0.5 rounded-full text-xs font-medium capitalize",
-                    levelBadgeColors[kit.level]
+                    levelBadgeColors[kit.level],
                   )}
                 >
                   {kit.level}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Products included:</span>
-                <span className="font-medium">{kit.productIds.length} items</span>
+                <span className="text-muted-foreground">
+                  Products included:
+                </span>
+                <span className="font-medium">
+                  {(kit.products || []).length} items
+                </span>
               </div>
             </div>
 
@@ -254,21 +280,28 @@ export function KitDetail() {
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Package className="w-5 h-5 text-primary" />
-                Products in this kit
+                Products in this kit ({(kit.products || []).length} items)
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {displayedProducts.map((product, index) => {
+                {displayedProducts.map((kitProduct, index) => {
                   const isLastVisible = index === 2 && remainingCount > 0;
+                  // kitProduct.productId is the full product object
+                  const product = kitProduct.productId;
+                  const variantId = kitProduct.variantId;
+                  const quantity = kitProduct.quantity;
                   
+                  // Find the specific variant by variantId
+                  const selectedVariant = product?.variants?.find(v => v._id === variantId) || product?.variants?.[0];
+
                   return (
                     <div key={product._id} className="relative">
                       <Link
                         to={`/shop/product/${product._id}`}
                         className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all block"
                       >
-                        <div className="aspect-square overflow-hidden bg-muted">
+                        <div className="aspect-square overflow-hidden bg-muted relative">
                           <img
-                            src={product.image}
+                            src={selectedVariant?.image || product.image}
                             alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
@@ -279,17 +312,35 @@ export function KitDetail() {
                               }
                             }}
                           />
+                          {/* Variant color swatch */}
+                          {selectedVariant && (
+                            <div
+                              className="absolute top-2 right-2 w-6 h-6 rounded-full border-2 border-white shadow-md"
+                              style={{ backgroundColor: selectedVariant.hexCode }}
+                              title={selectedVariant.color}
+                            />
+                          )}
                         </div>
                         <div className="p-3">
                           <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
                             {product.name}
                           </h4>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {product.description}
-                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-muted-foreground">
+                              {selectedVariant?.color || "Default"} x{quantity}
+                            </span>
+                            <span className="text-sm font-semibold text-primary">
+                              {selectedVariant?.price ? formatPrice(selectedVariant.price * quantity) : ""}
+                            </span>
+                          </div>
+                          {product.variants && product.variants.length > 1 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              +{product.variants.length - 1} more variants
+                            </p>
+                          )}
                         </div>
                       </Link>
-                      
+
                       {/* +N Overlay */}
                       {isLastVisible && (
                         <button
@@ -300,7 +351,9 @@ export function KitDetail() {
                           className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/70 transition-colors"
                         >
                           <div className="text-center text-white">
-                            <div className="text-3xl font-bold">+{remainingCount}</div>
+                            <div className="text-3xl font-bold">
+                              +{remainingCount}
+                            </div>
                             <div className="text-xs mt-1">View all</div>
                           </div>
                         </button>
@@ -321,14 +374,16 @@ export function KitDetail() {
               }}
             >
               <ShoppingCart className="w-5 h-5" />
-              Add  to Cart
+              Add to Cart
             </button>
 
             {/* Trust badges */}
             <div className="pt-4 border-t border-border grid grid-cols-3 gap-4">
               <div className="text-center">
                 <Truck className="w-5 h-5 text-primary mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">Free shipping over $50</p>
+                <p className="text-xs text-muted-foreground">
+                  Free shipping over $50
+                </p>
               </div>
               <div className="text-center">
                 <RotateCcw className="w-5 h-5 text-primary mx-auto mb-1" />
@@ -365,7 +420,7 @@ export function KitDetail() {
                 <div>
                   <h2 className="text-2xl font-bold">All Products in Kit</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {kit.productIds.length} items total
+                    {(kit.products || []).length} items total
                   </p>
                 </div>
                 <button
@@ -379,37 +434,42 @@ export function KitDetail() {
               {/* Modal Content */}
               <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {kit.productIds.map((product) => (
-                    <Link
-                      key={product._id}
-                      to={`/shop/product/${product._id}`}
-                      onClick={() => setShowAllProducts(false)}
-                      className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                    >
-                      <div className="aspect-square overflow-hidden bg-muted">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (!target.dataset.fallback) {
-                              target.dataset.fallback = "true";
-                              target.src = `https://picsum.photos/seed/${product._id}/300/300`;
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="p-3">
-                        <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {product.description}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                  {(kit.products || []).map((kitProduct) => {
+                    const product = kitProduct.productId;
+                    const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
+                    
+                    return (
+                      <Link
+                        key={product._id}
+                        to={`/shop/product/${product._id}`}
+                        onClick={() => setShowAllProducts(false)}
+                        className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                      >
+                        <div className="aspect-square overflow-hidden bg-muted">
+                          <img
+                            src={selectedVariant?.image || product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (!target.dataset.fallback) {
+                                target.dataset.fallback = "true";
+                                target.src = `https://picsum.photos/seed/${product._id}/300/300`;
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="p-3">
+                          <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                            {product.name}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {selectedVariant?.color} x{kitProduct.quantity}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>

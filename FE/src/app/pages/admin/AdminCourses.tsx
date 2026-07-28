@@ -1,23 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
-import { Edit, Eye, Plus, Search, Trash2, BookOpen, ChevronUp, ChevronDown } from "lucide-react";
+import { Edit, Eye, Plus, Search, BookOpen, ChevronUp, ChevronDown } from "lucide-react";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../../components/ui/alert-dialog";
 import { courseService } from "../../../api/courseService";
 import type { Course, CourseLevel } from "../../../features/learn/types/learn.types";
+import { useLanguage } from "../../../context/LanguageContext";
 
 type SortField = "title" | "level" | "lessons" | "duration" | "status";
 type SortDirection = "asc" | "desc";
@@ -35,13 +26,12 @@ const levelStyles: Record<CourseLevel, string> = {
 };
 
 export function AdminCourses() {
+  const { t } = useLanguage();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -49,30 +39,15 @@ export function AdminCourses() {
       const res = await courseService.getAll({ limit: 100 });
       setCourses(res.data.data.courses);
     } catch {
-      toast.error("Failed to load courses");
+      toast.error(t("admin.courses.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchCourses();
   }, [fetchCourses]);
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    try {
-      setDeleting(true);
-      await courseService.delete(deleteId);
-      toast.success("Course deleted successfully");
-      setCourses((prev) => prev.filter((c) => c._id !== deleteId));
-    } catch {
-      toast.error("Failed to delete course");
-    } finally {
-      setDeleting(false);
-      setDeleteId(null);
-    }
-  };
 
   const filteredCourses = courses.filter((course) =>
     course.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -124,8 +99,8 @@ export function AdminCourses() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Course Management</h1>
-        <div className="flex items-center justify-center py-20 text-muted-foreground">Loading courses...</div>
+        <h1 className="text-2xl font-semibold">{t("admin.courses.title")}</h1>
+        <div className="flex items-center justify-center py-20 text-muted-foreground">{t("admin.courses.loading")}</div>
       </div>
     );
   }
@@ -135,12 +110,12 @@ export function AdminCourses() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="mb-2">Course Management</h1>
-          <p className="text-muted-foreground">Manage all courses in your store</p>
+          <h1 className="mb-2">{t("admin.courses.title")}</h1>
+          <p className="text-muted-foreground">{t("admin.courses.subtitle")}</p>
         </div>
         <Link to="/admin/courses/new" className="btn-create">
           <Plus size={18} />
-          create
+          {t("admin.courses.create")}
         </Link>
       </div>
 
@@ -153,7 +128,7 @@ export function AdminCourses() {
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search courses..."
+              placeholder={t("admin.courses.searchPlaceholder")}
               className="w-full pl-12 input"
               style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
             />
@@ -165,12 +140,12 @@ export function AdminCourses() {
           <table className="admin-table w-full">
             <thead className="bg-muted">
               <tr>
-                <SortableHeader label="Course" field="title" />
-                <SortableHeader label="Level" field="level" />
-                <SortableHeader label="Lessons" field="lessons" align="right" />
-                <SortableHeader label="Duration" field="duration" align="right" />
-                <SortableHeader label="Status" field="status" />
-                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[130px]">Actions</th>
+                <SortableHeader label={t("admin.courses.course")} field="title" />
+                <SortableHeader label={t("admin.courses.level")} field="level" />
+                <SortableHeader label={t("admin.courses.lessons")} field="lessons" align="right" />
+                <SortableHeader label={t("admin.courses.duration")} field="duration" align="right" />
+                <SortableHeader label={t("admin.courses.status")} field="status" />
+                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[130px]">{t("admin.courses.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -202,7 +177,7 @@ export function AdminCourses() {
                     <td className="px-6 py-4 text-sm text-muted-foreground">{course.totalDuration} min</td>
                     <td className="px-6 py-4">
                       <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
-                        {course.isPublished ? "Published" : "Draft"}
+                        {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -217,27 +192,18 @@ export function AdminCourses() {
                             <Edit className="size-4" />
                           </Link>
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="admin-action-btn delete" onClick={() => setDeleteId(course._id)}>
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="admin-dialog-content">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Course</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{course.title}"? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel onClick={() => setDeleteId(null)} className="btn-secondary">Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDelete} disabled={deleting} className="btn-destructive">
-                                {deleting ? "Deleting..." : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <HoldToDeleteButton
+                          onDelete={async () => {
+                            try {
+                              await courseService.delete(course._id);
+                              toast.success(t("admin.courses.deleteSuccess"));
+                              setCourses((prev) => prev.filter((c) => c._id !== course._id));
+                            } catch {
+                              toast.error(t("admin.courses.deleteError"));
+                            }
+                          }}
+                          title={t("admin.courses.holdToDelete")}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -245,7 +211,7 @@ export function AdminCourses() {
               ) : (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                    No courses found
+                    {t("admin.courses.noCourses")}
                   </td>
                 </tr>
               )}

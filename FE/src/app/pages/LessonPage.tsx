@@ -355,7 +355,7 @@ export function LessonPage() {
   const addProductToCart = (item: MaterialItem) => {
     if (item.type === "kit" && item.kitData) {
       if (!isAuthenticated) { navigate("/auth/login"); return; }
-      const kitProducts = item.kitData.productIds.map((product) => {
+      const kitProducts = (item.kitData.productIds || []).map((product) => {
         const variant = product.variants[0];
         return {
           productId: product._id,
@@ -415,7 +415,7 @@ export function LessonPage() {
   const addAllToCart = () => {
     materials.forEach((item) => {
       if (item.type === "kit" && item.kitData) {
-        const kitProducts = item.kitData.productIds.map((product) => {
+        const kitProducts = (item.kitData.productIds || []).map((product) => {
           const variant = product.variants[0];
           return {
             productId: product._id,

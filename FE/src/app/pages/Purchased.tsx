@@ -1,5 +1,13 @@
-import { useState, useEffect } from "react";
-import { Package, Calendar, Star, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import {
+  Package,
+  Calendar,
+  Star,
+  ShoppingCart,
+  ChevronLeft,
+  ChevronRight,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,8 +16,10 @@ import { useReviews } from "../context/ReviewContext";
 import { useNotifications } from "../context/NotificationContext";
 import { ReportButton } from "../components/ReportButton";
 import { Link, useNavigate } from "react-router";
-import { orderService } from "../../features/orders/services/order.service";
-import type { Order } from "../../features/orders/types/order.types";
+import { orderApi } from "../../api/orderService";
+import { productService } from "../../api/productService";
+import { kitService } from "../../api/kitService";
+import type { Order, OrderItem } from "../../features/orders/types/order.types";
 import { normalizeOrder } from "../../features/orders/types/order.types";
 import { getOrderStatusBadgeClass } from "../../constants/orderStatus";
 import { useLanguage } from "../../context/LanguageContext";
@@ -33,18 +43,58 @@ export function Purchased() {
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [cancelModal, setCancelModal] = useState<{
+    orderId: string;
+    reason: string;
+  } | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [kitNames, setKitNames] = useState<Record<string, string>>({});
+  const [kitNamesLoaded, setKitNamesLoaded] = useState(false);
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
     async function loadOrders() {
       try {
-        const { data: response } = await orderService.getMyOrders({ page, limit: PAGE_SIZE });
-        setOrders(response.orders.map(normalizeOrder));
+        const { data: response } = await orderApi.getMyOrders({
+          page,
+          limit: PAGE_SIZE,
+        });
+        const normalizedOrders = response.orders.map(normalizeOrder);
+        setOrders(normalizedOrders);
         setTotal(response.total ?? 0);
         setTotalPages(response.totalPages ?? 1);
+        setKitNamesLoaded(false);
+
+        // Fetch kit names for all unique kitIds
+        const uniqueKitIds = new Set<string>();
+        normalizedOrders.forEach((order) => {
+          order.items.forEach((item) => {
+            if (item.kitId) uniqueKitIds.add(item.kitId);
+          });
+        });
+
+        if (uniqueKitIds.size > 0) {
+          const kitPromises = Array.from(uniqueKitIds).map(async (kitId) => {
+            try {
+              const { data: kitData } = await kitService.getById(kitId);
+              return { kitId, name: kitData.data?.kit?.name };
+            } catch {
+              return { kitId, name: null };
+            }
+          });
+          const kitResults = await Promise.all(kitPromises);
+          const kitNameMap = kitResults.reduce((acc, { kitId, name }) => {
+            if (name) acc[kitId] = name;
+            return acc;
+          }, {} as Record<string, string>);
+          setKitNames(kitNameMap);
+        }
+        setKitNamesLoaded(true);
       } catch {
         // API unavailable — empty state (demo mode / offline)
+        setKitNamesLoaded(true);
       } finally {
         setLoading(false);
       }
@@ -53,25 +103,66 @@ export function Purchased() {
     else setLoading(false);
   }, [user, page]);
 
-  const handleSubmitReview = () => {
+  const handleSubmitReview = async () => {
     if (!reviewModal || !comment.trim()) {
       toast.error(t("purchased.toastReviewRequired"));
       return;
     }
-    addReview({
-      orderId: reviewModal.orderId,
-      productId: reviewModal.productId,
-      productName: reviewModal.productName,
-      userId: user?.email || "unknown",
-      userName: user?.fullName || "User",
-      rating,
-      comment: comment.trim(),
-    });
-    toast.success(t("purchased.toastReviewSuccess"));
-    setReviewModal(null);
-    setComment("");
-    setRating(5);
+    try {
+      // Find the order and item to check if it has a kitId
+      const order = orders.find((o) => o._id === reviewModal.orderId);
+      const item = order?.items.find(
+        (i) => i.productId === reviewModal.productId,
+      );
+
+      if (item?.kitId) {
+        // If item belongs to a kit, rate the kit instead
+        await kitService.rate(item.kitId, rating);
+      } else {
+        // Otherwise, rate the product
+        await productService.rateProduct(reviewModal.productId, rating);
+      }
+
+      addReview({
+        orderId: reviewModal.orderId,
+        productId: reviewModal.productId,
+        productName: reviewModal.productName,
+        userId: user?.email || "unknown",
+        userName: user?.fullName || "User",
+        rating,
+        comment: comment.trim(),
+      });
+      toast.success(t("purchased.toastReviewSuccess"));
+      setReviewModal(null);
+      setComment("");
+      setRating(5);
+    } catch {
+      toast.error(t("purchased.toastReviewError"));
+    }
   };
+
+  /** Group items by kitId — items without kitId stay as standalone items */
+  const groupItemsByKit = useMemo(() => {
+    return (orderItems: Order["items"]) => {
+      const kitGroups: { kitId: string; items: OrderItem[] }[] = [];
+      const standalone: OrderItem[] = [];
+
+      orderItems.forEach((item) => {
+        if (item.kitId) {
+          let group = kitGroups.find((g) => g.kitId === item.kitId);
+          if (!group) {
+            group = { kitId: item.kitId, items: [] };
+            kitGroups.push(group);
+          }
+          group.items.push(item);
+        } else {
+          standalone.push(item);
+        }
+      });
+
+      return { kitGroups, standalone };
+    };
+  }, []);
 
   const handleReorder = (order: Order) => {
     const items = order.items.filter(
@@ -96,12 +187,36 @@ export function Purchased() {
         item.quantity,
       );
     });
-    toast.success(t("purchased.toastReorderSuccess", undefined, { count: items.length }));
+    toast.success(
+      t("purchased.toastReorderSuccess", undefined, { count: items.length }),
+    );
     navigate("/cart");
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelModal || !cancelModal.reason.trim()) return;
+    setCancelling(true);
+    try {
+      await orderApi.cancelOrder(cancelModal.orderId, {
+        cancelReason: cancelModal.reason.trim(),
+      });
+      toast.success(t("purchased.cancelRequestSent"));
+      setCancelModal(null);
+      const { data: response } = await orderApi.getMyOrders({
+        page,
+        limit: PAGE_SIZE,
+      });
+      setOrders(response.orders.map(normalizeOrder));
+    } catch {
+      toast.error(t("purchased.cancelRequestError"));
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const markAsDone = async (orderId: string) => {
     try {
+      await orderApi.updateOrderStatus(orderId, { orderStatus: "DELIVERED" });
       setOrders((prev) =>
         prev.map((o) =>
           o._id === orderId ? { ...o, orderStatus: "DELIVERED" as const } : o,
@@ -113,7 +228,10 @@ export function Purchased() {
           addNotification({
             type: "review_request",
             title: t("purchased.notificationTitle"),
-            message: t("purchased.notificationMessage", { productName: item.productName, orderId }),
+            message: t("purchased.notificationMessage", {
+              productName: item.productName,
+              orderId,
+            }),
             targetId: orderId,
             targetPath: "/purchased",
           });
@@ -125,6 +243,26 @@ export function Purchased() {
     }
   };
 
+  /** Shared retry payment handler — works for VNPAY & MOMO */
+  const handleRetryPayment = async (order: Order) => {
+    setRetryingId(order._id);
+    try {
+      const { data } = await orderApi.retryPayment(order._id);
+      if (data.payUrl) {
+        const methodLabel = order.payment.method === "MOMO" ? "MoMo" : "VNPay";
+        toast.success(t("purchased.retryPaymentRedirect", { method: methodLabel }));
+        setTimeout(() => {
+          window.location.href = data.payUrl;
+        }, 500);
+      } else {
+        toast.error(t("purchased.retryPaymentError"));
+      }
+    } catch {
+      toast.error(t("purchased.retryPaymentInitError"));
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -156,12 +294,13 @@ export function Purchased() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="mb-2">{t("purchased.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("purchased.subtitle")}
-          </p>
+          <p className="text-muted-foreground">{t("purchased.subtitle")}</p>
           {total > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
-              {t("purchased.showingOrders", undefined, { count: orders.length, total })}
+              {t("purchased.showingOrders", undefined, {
+                count: orders.length,
+                total,
+              })}
             </p>
           )}
         </div>
@@ -198,11 +337,15 @@ export function Purchased() {
                       </span>
                       <div>
                         <h3 className="font-semibold">
-                          {t("purchased.orderNumber", undefined, { id: order._id.slice(-8).toUpperCase() })}
+                          {t("purchased.orderNumber", undefined, {
+                            id: order._id.slice(-8).toUpperCase(),
+                          })}
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="w-3 h-3" />
-                          {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                          {new Date(order.createdAt).toLocaleDateString(
+                            "vi-VN",
+                          )}
                         </div>
                       </div>
                     </div>
@@ -216,65 +359,223 @@ export function Purchased() {
                         {order.orderStatus}
                       </span>
                       {order.payment.status === "PAID" && (
-                        <p className="text-[10px] text-green-600 mt-1">{t("purchased.paid")}</p>
+                        <span className="badge badge-green text-[10px] mt-1">
+                          {t("purchased.paid")}
+                        </span>
                       )}
                     </div>
                   </div>
 
                   <div className="border-t border-border pt-4">
                     <div className="space-y-3">
-                      {order.items.map((item, idx) => {
-                        const reviewed = hasReviewed(order._id, item.productId);
-                        return (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {item.productName || `Product ${item.productId}`}
-                              </p>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>x{item.quantity}</span>
-                                {item.color && <span>{t("purchased.colorLabel", undefined, { color: item.color })}</span>}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                              {order.orderStatus === "DELIVERED" && !reviewed && (
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setReviewModal({
-                                      orderId: order._id,
-                                      productId: item.productId,
-                                      productName: item.productName || "Product",
-                                    });
-                                  }}
-                                  className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                                >
-                                  <Star className="w-3 h-3 inline mr-1" /> {t("purchased.reviewButton")}
-                                </button>
-                              )}
-                              {order.orderStatus === "DELIVERED" && reviewed && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
-                                  {t("purchased.reviewedLabel")}
-                                </span>
-                              )}
-                              <ReportButton
-                                targetType="purchased_order"
-                                targetId={order._id}
-                                targetTitle={`Order ${order._id}`}
-                              />
-                            </div>
-                          </div>
+                      {(() => {
+                        const { kitGroups, standalone } = groupItemsByKit(
+                          order.items,
                         );
-                      })}
+                        return (
+                          <>
+                            {/* Kit groups - only show after kit names are loaded */}
+                            {kitNamesLoaded &&
+                              kitGroups.map((group) => {
+                                const kitName = kitNames[group.kitId];
+                                if (!kitName) return null;
+                                return (
+                                  <div
+                                    key={group.kitId}
+                                    className="border border-primary/20 rounded-xl p-3 bg-primary/5"
+                                  >
+                                    <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
+                                      🎁 {kitName}
+                                    </p>
+                                    {group.items.map((item, idx) => {
+                                      const reviewed = hasReviewed(
+                                        order._id,
+                                        item.productId,
+                                      );
+                                      return (
+                                        <div
+                                          key={idx}
+                                          className="flex items-center justify-between py-1.5"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">
+                                              {item.productName ||
+                                                `Product ${item.productId}`}
+                                            </p>
+                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                              <span>x{item.quantity}</span>
+                                              {item.color && (
+                                                <span>
+                                                  {t(
+                                                    "purchased.colorLabel",
+                                                    undefined,
+                                                    { color: item.color },
+                                                  )}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                                            {order.orderStatus === "DELIVERED" &&
+                                              !reviewed && (
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setReviewModal({
+                                                      orderId: order._id,
+                                                      productId: item.productId,
+                                                      productName:
+                                                        item.productName ||
+                                                        "Product",
+                                                    });
+                                                  }}
+                                                  className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                                                >
+                                                  <Star className="w-3 h-3 inline mr-1" />{" "}
+                                                  {t("purchased.reviewButton")}
+                                                </button>
+                                              )}
+                                            {order.orderStatus === "DELIVERED" &&
+                                              reviewed && (
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
+                                                  {t("purchased.reviewedLabel")}
+                                                </span>
+                                              )}
+                                            <ReportButton
+                                              targetType="purchased_order"
+                                              targetId={order._id}
+                                              targetTitle={`Order ${order._id}`}
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            {/* Standalone items (no kitId) - show only variant info */}
+                            {standalone.map((item, idx) => {
+                              const reviewed = hasReviewed(
+                                order._id,
+                                item.productId,
+                              );
+                              return (
+                                <div
+                                  key={idx}
+                                  className="flex items-center justify-between"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">
+                                      {item.productName ||
+                                        `Product ${item.productId}`}
+                                    </p>
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                      <span>x{item.quantity}</span>
+                                      {item.color && (
+                                        <span className="flex items-center gap-1">
+                                          {item.hexCode && (
+                                            <span
+                                              className="inline-block w-3 h-3 rounded-full border border-border"
+                                              style={{
+                                                backgroundColor: item.hexCode,
+                                              }}
+                                            />
+                                          )}
+                                          {item.color}
+                                        </span>
+                                      )}
+                                      {item.price && (
+                                        <span>{formatPrice(item.price)}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                                    {order.orderStatus === "DELIVERED" &&
+                                      !reviewed && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setReviewModal({
+                                              orderId: order._id,
+                                              productId: item.productId,
+                                              productName:
+                                                item.productName || "Product",
+                                            });
+                                          }}
+                                          className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                                        >
+                                          <Star className="w-3 h-3 inline mr-1" />{" "}
+                                          {t("purchased.reviewButton")}
+                                        </button>
+                                      )}
+                                    {order.orderStatus === "DELIVERED" &&
+                                      reviewed && (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
+                                          {t("purchased.reviewedLabel")}
+                                        </span>
+                                      )}
+                                    <ReportButton
+                                      targetType="purchased_order"
+                                      targetId={order._id}
+                                      targetTitle={`Order ${order._id}`}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {order.orderStatus === "CONFIRMED" && (
+                      {/* ── Retry payment for PENDING + unpaid orders (VNPAY / MOMO) ── */}
+                      {order.orderStatus === "PENDING" &&
+                        order.payment.status === "PENDING" &&
+                        !order.isCancelRequested && (
+                          <button
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              await handleRetryPayment(order);
+                            }}
+                            disabled={retryingId === order._id}
+                            className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                          >
+                            {retryingId === order._id
+                              ? "..."
+                              : `💳 ${t("purchased.retryPayment")}`}
+                          </button>
+                        )}
+                      {/* ── Cancel button for PENDING orders (only if not unpaid VNPAY/MOMO) ── */}
+                      {order.orderStatus === "PENDING" &&
+                        !order.isCancelRequested &&
+                        order.payment.status !== "PENDING" && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCancelModal({
+                                orderId: order._id,
+                                reason: "",
+                              });
+                            }}
+                            className="text-xs bg-destructive/10 text-destructive px-4 py-2 rounded-full hover:bg-destructive/20 transition-colors"
+                          >
+                            <XCircle className="w-3 h-3 inline mr-1" /> {t("purchased.cancelOrder")}
+                          </button>
+                        )}
+                      {order.isCancelRequested &&
+                        order.orderStatus === "PENDING" && (
+                          <span className="badge badge-orange text-[10px] mt-1">
+                            ⏳ {t("purchased.cancelPending")}
+                          </span>
+                        )}
+                      {order.orderStatus === "SHIPPING" && (
                         <button
                           onClick={(e) => {
                             e.preventDefault();
@@ -286,24 +587,41 @@ export function Purchased() {
                           ✅ {t("purchased.markAsDone")}
                         </button>
                       )}
-                      {order.orderStatus !== "CANCELLED" && order.orderStatus !== "DELIVERED" && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleReorder(order);
-                          }}
-                          className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
-                        >
-                          <ShoppingCart className="w-3 h-3 inline mr-1" /> {t("purchased.reorderButton")}
-                        </button>
-                      )}
+                      {/* ── Retry payment for CANCELLED orders (VNPAY / MOMO) ── */}
+                      {order.orderStatus === "CANCELLED" &&
+                        (order.payment.method === "VNPAY" ||
+                          order.payment.method === "MOMO") &&
+                        order.payment.status !== "PAID" && (
+                          <button
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              await handleRetryPayment(order);
+                            }}
+                            disabled={retryingId === order._id}
+                            className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                          >
+                            {retryingId === order._id
+                              ? "..."
+                              : `💳 ${t("purchased.retryPayment")}`}
+                          </button>
+                        )}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleReorder(order);
+                        }}
+                        className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                      >
+                        <ShoppingCart className="w-3 h-3 inline mr-1" />{" "}
+                        {t("purchased.reorderButton")}
+                      </button>
                     </div>
                   </div>
                 </Link>
               ))}
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 pt-6 pb-4">
                   <button
@@ -332,6 +650,48 @@ export function Purchased() {
         </div>
       </div>
 
+      {/* Cancel Modal */}
+      {cancelModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setCancelModal(null)}
+        >
+          <div
+            className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-semibold mb-1">{t("purchased.cancelModalTitle")}</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              {t("purchased.cancelModalDesc")}
+            </p>
+            <textarea
+              value={cancelModal.reason}
+              onChange={(e) =>
+                setCancelModal({ ...cancelModal, reason: e.target.value })
+              }
+              placeholder={t("purchased.cancelModalPlaceholder")}
+              rows={3}
+              className="w-full px-3 py-2.5 bg-input-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setCancelModal(null)}
+                className="flex-1 py-2.5 rounded-full text-sm border border-border hover:bg-muted transition-colors"
+              >
+                {t("purchased.cancelModalBack")}
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={cancelling || !cancelModal.reason.trim()}
+                className="flex-1 py-2.5 rounded-full text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
+              >
+                {cancelling ? t("purchased.cancelModalSubmitting") : t("purchased.cancelModalSubmit")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Review Modal */}
       {reviewModal && (
         <div
@@ -342,7 +702,9 @@ export function Purchased() {
             className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-semibold mb-1">{t("purchased.reviewModalTitle")}</h3>
+            <h3 className="font-semibold mb-1">
+              {t("purchased.reviewModalTitle")}
+            </h3>
             <p className="text-xs text-muted-foreground mb-4">
               {reviewModal.productName}
             </p>

@@ -1416,7 +1416,7 @@ export function Shop() {
                         <div className="p-4 space-y-2">
                           <div className="kit-card-meta">
                             <Boxes size={12} />
-                            {kit.productIds.length} products included
+                            {(kit.productIds || []).length} products included
                           </div>
                           <h3 className="font-semibold group-hover:text-primary">
                             {kit.name}

@@ -32,6 +32,9 @@ export interface BackendProduct {
   tags: string[];
   variants: BackendProductVariant[];
   isActive: boolean;
+  averageRating?: number;
+  totalRatings?: number;
+  ratings?: { userId: string; score: number; _id: string; id?: string }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -119,15 +122,15 @@ export function adaptBackendProduct(bp: BackendProduct): FrontendProduct {
     image: resolveImageUrl(bp.image),
     createdAt: bp.createdAt,
     isActive: bp.isActive,
-    // Backend doesn't provide these, so we supply defaults
     difficulty: undefined,
     materials: undefined,
     material: undefined,
     weight: undefined,
     yardage: undefined,
     estimatedTime: undefined,
-    rating: 0,
-    reviewCount: 0,
+    // Use real backend rating data if available
+    rating: bp.averageRating ?? 0,
+    reviewCount: bp.totalRatings ?? 0,
     popularity: 0,
     linkedComboIds: undefined,
     variants: (bp.variants ?? []).map((v) => ({

@@ -4,7 +4,6 @@ import {
   Users,
   Package,
   ShoppingCart,
-  DollarSign,
   Activity,
   Flag,
   Shield,
@@ -13,6 +12,7 @@ import {
   BookOpen,
   Video,
   RotateCcw,
+  Hand,
 } from "lucide-react";
 import { DashboardShell } from "../dashboard/DashboardShell";
 import type { NavItem } from "../dashboard/Sidebar";
@@ -23,18 +23,54 @@ interface AdminLayoutProps {
 
 const navItems: NavItem[] = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/admin/users", label: "Users", icon: Users },
-  { path: "/admin/products", label: "Products", icon: Package },
+  {
+    label: "Management",
+    icon: Package,
+    highlighted: true,
+    children: [
+      { path: "/admin/products", label: "Products", icon: Package },
+      { path: "/admin/kits", label: "Kits", icon: Package },
+      { path: "/admin/diy-posts", label: "DIY Management", icon: Scissors },
+    ],
+  },
+  {
+    label: "User & Access",
+    icon: Users,
+    highlighted: true,
+    children: [
+      { path: "/admin/users", label: "Users", icon: Users },
+      { path: "/admin/roles", label: "Roles", icon: ShieldCheck },
+      { path: "/admin/permissions", label: "Permissions", icon: Shield },
+    ],
+  },
+  {
+    label: "Learning",
+    icon: BookOpen,
+    highlighted: true,
+    children: [
+      { path: "/admin/courses", label: "Courses", icon: BookOpen },
+      { path: "/admin/lessons", label: "Lessons", icon: Video },
+    ],
+  },
   { path: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { path: "/admin/courses", label: "Courses", icon: BookOpen },
-  { path: "/admin/lessons", label: "Lessons", icon: Video },
-  { path: "/admin/diy-posts", label: "DIY Management", icon: Scissors },
-  { path: "/admin/reports", label: "Report Management", icon: Flag },
-  { path: "/admin/refunds", label: "Refunds", icon: RotateCcw },
-  { path: "/admin/payments", label: "Payments", icon: DollarSign },
-  { path: "/admin/roles", label: "Roles", icon: ShieldCheck },
-  { path: "/admin/permissions", label: "Permissions", icon: Shield },
-  { path: "/admin/activity", label: "Activity Logs", icon: Activity },
+  {
+    label: "Support",
+    icon: Hand,
+    highlighted: true,
+    children: [
+      { path: "/admin/refunds", label: "Refunds", icon: RotateCcw },
+      { path: "/admin/support-diy", label: "Support DIY", icon: Hand },
+    ],
+  },
+  {
+    label: "Monitoring",
+    icon: Flag,
+    highlighted: true,
+    children: [
+      { path: "/admin/reports", label: "Reports", icon: Flag },
+      { path: "/admin/activity", label: "Activity Logs", icon: Activity },
+    ],
+  },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {

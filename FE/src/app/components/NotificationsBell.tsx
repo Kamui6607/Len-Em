@@ -58,7 +58,7 @@ export function NotificationsBell() {
             ) : (
               notifications.slice(0, 20).map((notif) => (
                 <div
-                  key={notif.id}
+                  key={notif._id}
                   className={cn(
                     "flex items-start gap-3 p-4 border-b border-border last:border-0 transition-colors",
                     !notif.read && "bg-primary/5"
@@ -68,7 +68,7 @@ export function NotificationsBell() {
                     {notif.targetPath ? (
                       <Link
                         to={notif.targetPath}
-                        onClick={() => { markAsRead(notif.id); setOpen(false); }}
+                        onClick={() => { markAsRead(notif._id); setOpen(false); }}
                         className="block"
                       >
                         <p className="text-sm font-medium text-foreground">{notif.title}</p>
@@ -87,14 +87,14 @@ export function NotificationsBell() {
                   <div className="flex flex-col gap-1 shrink-0">
                     {!notif.read && (
                       <button
-                        onClick={() => markAsRead(notif.id)}
+                        onClick={() => markAsRead(notif._id)}
                         className="text-[10px] text-primary hover:underline"
                       >
                         Read
                       </button>
                     )}
                     <button
-                      onClick={() => clearNotification(notif.id)}
+                      onClick={() => clearNotification(notif._id)}
                       className="text-[10px] text-muted-foreground hover:text-destructive"
                     >
                       Dismiss

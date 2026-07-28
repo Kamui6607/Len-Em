@@ -1,4 +1,4 @@
-export type ReportTargetType = "diy_post" | "purchased_order";
+export type ReportTargetType = "diy_post" | "purchased_order" | "support_diy";
 export type ReportStatus = "pending" | "assigned" | "resolved" | "cannot_resolve";
 
 export interface Report {

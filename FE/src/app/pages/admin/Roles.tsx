@@ -3,13 +3,13 @@ import {
   Search,
   Plus,
   Edit3,
-  Trash2,
   X,
   Shield,
   Eye,
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../../hooks/useAuth";
@@ -34,58 +34,6 @@ function formatDate(dateStr: string): string {
     return dateStr;
   }
 }
-
-// ─── Confirm Dialog ──────────────────────────────────────
-
-interface ConfirmDialogProps {
-  open: boolean;
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-  function ConfirmDialog({
-    open,
-    title,
-    message,
-    onConfirm,
-    onCancel,
-  }: ConfirmDialogProps) {
-    if (!open) return null;
-    return (
-      <div className="admin-dialog-overlay" onClick={onCancel}>
-        <div
-          className="admin-dialog-content max-w-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="admin-dialog-header">
-            <h3 className="text-base font-semibold">{title}</h3>
-          </div>
-          <div className="admin-dialog-body">
-            <p className="text-sm text-muted-foreground">{message}</p>
-          </div>
-          <div className="admin-dialog-footer">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="btn-modal-cancel"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="btn-modal-destructive"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
 // ─── Role Modal ──────────────────────────────────────────
 
@@ -115,127 +63,127 @@ interface RoleModalProps {
   onClose: () => void;
 }
 
-  function RoleModal({
-    open,
-    editingId,
-    form,
-    allPermissions,
-    saving,
-    fieldErrors,
-    onChange,
-    onSave,
-    onClose,
-  }: RoleModalProps) {
-    if (!open) return null;
+function RoleModal({
+  open,
+  editingId,
+  form,
+  allPermissions,
+  saving,
+  fieldErrors,
+  onChange,
+  onSave,
+  onClose,
+}: RoleModalProps) {
+  if (!open) return null;
 
-    return (
-      <div className="admin-dialog-overlay" onClick={onClose}>
-        <div
-          className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="admin-dialog-header">
-            <h3 className="text-base font-semibold">
-              {editingId ? "Edit Role" : "Create Role"}
-            </h3>
+  return (
+    <div className="admin-dialog-overlay" onClick={onClose}>
+      <div
+        className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="admin-dialog-header">
+          <h3 className="text-base font-semibold">
+            {editingId ? "Edit Role" : "Create Role"}
+          </h3>
+          <button
+            onClick={onClose}
+            style={{ color: "var(--foreground-muted)" }}
+            className="admin-action-btn absolute top-4 right-4"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
+          <div className="admin-dialog-body space-y-4">
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                Role Name <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={form.name}
+                onChange={(e) => onChange({ ...form, name: e.target.value })}
+                className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
+                placeholder="e.g. Manager"
+              />
+              {fieldErrors.name && (
+                <p className="text-xs text-destructive mt-1">
+                  {fieldErrors.name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                Description
+              </label>
+              <textarea
+                value={form.description}
+                onChange={(e) =>
+                  onChange({ ...form, description: e.target.value })
+                }
+                rows={3}
+                className="input w-full resize-none"
+                placeholder="Optional description..."
+              />
+            </div>
+
+            {/* isActive */}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) =>
+                  onChange({ ...form, isActive: e.target.checked })
+                }
+                className="rounded border-border"
+              />
+              <div>
+                <span className="text-sm font-medium">Active</span>
+                <p className="text-xs text-muted-foreground">
+                  Inactive roles cannot be assigned to users
+                </p>
+              </div>
+            </label>
+
+            {/* Permissions */}
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
+                Permissions
+              </label>
+              <PermissionPicker
+                permissions={allPermissions}
+                selected={form.permissions}
+                onChange={(perms) => onChange({ ...form, permissions: perms })}
+                maxHeightClassName="max-h-56"
+              />
+            </div>
+          </div>
+          <div className="admin-dialog-footer">
             <button
+              type="button"
               onClick={onClose}
-              style={{ color: "var(--foreground-muted)" }}
-              className="admin-action-btn absolute top-4 right-4"
-              aria-label="Close"
+              disabled={saving}
+              className="btn-modal-cancel"
             >
-              <X className="w-4 h-4" />
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-modal-primary"
+            >
+              {saving ? "Saving…" : editingId ? "Update Role" : "Create Role"}
             </button>
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
-            <div className="admin-dialog-body space-y-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  Role Name <span className="text-destructive">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => onChange({ ...form, name: e.target.value })}
-                  className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
-                  placeholder="e.g. Manager"
-                />
-                {fieldErrors.name && (
-                  <p className="text-xs text-destructive mt-1">
-                    {fieldErrors.name}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  Description
-                </label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) =>
-                    onChange({ ...form, description: e.target.value })
-                  }
-                  rows={3}
-                  className="input w-full resize-none"
-                  placeholder="Optional description..."
-                />
-              </div>
-
-              {/* isActive */}
-              <label className="flex items-center gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) =>
-                    onChange({ ...form, isActive: e.target.checked })
-                  }
-                  className="rounded border-border"
-                />
-                <div>
-                  <span className="text-sm font-medium">Active</span>
-                  <p className="text-xs text-muted-foreground">
-                    Inactive roles cannot be assigned to users
-                  </p>
-                </div>
-              </label>
-
-              {/* Permissions */}
-              <div>
-                <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
-                  Permissions
-                </label>
-                <PermissionPicker
-                  permissions={allPermissions}
-                  selected={form.permissions}
-                  onChange={(perms) => onChange({ ...form, permissions: perms })}
-                  maxHeightClassName="max-h-56"
-                />
-              </div>
-            </div>
-            <div className="admin-dialog-footer">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="btn-modal-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="btn-modal-primary"
-              >
-                {saving ? "Saving…" : editingId ? "Update Role" : "Create Role"}
-              </button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
 // ─── Main Component ──────────────────────────────────────
 
@@ -266,15 +214,11 @@ export function Roles() {
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // ── Delete confirm ──
-  const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
-
   // ── Fetch permissions once ──
   useEffect(() => {
     permissionService
       .getAll({ limit: 100 })
       .then((res) => {
-        // BE: { status, data: { data: Permission[], total, page, limit, totalPages } }
         const perms = res.data.data?.data ?? [];
         setAllPermissions(perms);
       })
@@ -287,7 +231,6 @@ export function Roles() {
   const fetchRoles = useCallback(async () => {
     setLoading(true);
     try {
-      // Only send params that are strictly needed
       const params: Record<string, string | number> = {};
       if (page > 1) params.page = page;
       if (limit !== 20) params.limit = limit;
@@ -296,7 +239,6 @@ export function Roles() {
         params.isActive = filterActive ? "true" : "false";
 
       const { data: response } = await roleService.getAll(params);
-      // BE: { status, data: { message, data: { roles, total, page, limit, totalPages } } }
       const wrapper = response.data;
       const data = wrapper?.data;
       const rawRoles = data?.roles ?? [];
@@ -400,27 +342,6 @@ export function Roles() {
       }
     } finally {
       setSaving(false);
-    }
-  };
-
-  // ── Delete ──
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await roleService.delete(deleteTarget._id);
-      toast.success(`Role "${deleteTarget.name}" deleted`);
-      setDeleteTarget(null);
-      fetchRoles();
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number } };
-      if (axiosErr.response?.status === 409) {
-        toast.error("Cannot delete: role is currently assigned to users.");
-      } else if (axiosErr.response?.status === 403) {
-        toast.error("You don't have permission to perform this action.");
-      } else {
-        toast.error("Failed to delete role");
-      }
-      setDeleteTarget(null);
     }
   };
 
@@ -601,13 +522,25 @@ export function Roles() {
                             >
                               <Edit3 size={16} />
                             </button>
-                            <button
-                              onClick={() => setDeleteTarget(role)}
-                              className="admin-action-btn delete"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <HoldToDeleteButton
+                              onDelete={async () => {
+                                try {
+                                  await roleService.delete(role._id);
+                                  toast.success(`Role "${role.name}" deleted`);
+                                  fetchRoles();
+                                } catch (err: unknown) {
+                                  const axiosErr = err as { response?: { status?: number } };
+                                  if (axiosErr.response?.status === 409) {
+                                    toast.error("Cannot delete: role is currently assigned to users.");
+                                  } else if (axiosErr.response?.status === 403) {
+                                    toast.error("You don't have permission to perform this action.");
+                                  } else {
+                                    toast.error("Failed to delete role");
+                                  }
+                                }
+                              }}
+                              title="Hold 2s to delete"
+                            />
                           </>
                         )}
                       </div>
@@ -654,19 +587,6 @@ export function Roles() {
         onChange={setForm}
         onSave={handleSave}
         onClose={closeModal}
-      />
-
-      {/* Delete Confirm Dialog */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Delete Role"
-        message={
-          deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.name}"? This will soft-delete the role.`
-            : ""
-        }
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

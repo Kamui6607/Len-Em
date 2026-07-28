@@ -1,74 +1,38 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit3, Trash2, X, Shield, Eye } from "lucide-react";
-import { toast } from "sonner";
-import { useAuth } from "../../../hooks/useAuth";
 import {
-  permissionService,
-  type Permission,
-  type PermissionResource,
-} from "../../../api/permissionService";
+  Search,
+  Plus,
+  Edit3,
+  X,
+  Shield,
+  Eye,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { toast } from "sonner";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../../hooks/useAuth";
+import { permissionService } from "../../../api/permissionService";
+import type { Permission } from "../../../types/permission";
 import { AdminSelect } from "../../components/admin/AdminSelect";
+
+type SortField = "name" | "resource" | "created";
+type SortDirection = "asc" | "desc";
+
 // ─── Helpers ─────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
   try {
     const d = new Date(dateStr);
     const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   } catch {
     return dateStr;
   }
 }
 
-// ─── Confirm Dialog ──────────────────────────────────────
-
-interface ConfirmDialogProps {
-  open: boolean;
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-function ConfirmDialog({
-  open,
-  title,
-  message,
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  if (!open) return null;
-  return (
-    <div className="admin-dialog-overlay" onClick={onCancel}>
-      <div
-        className="admin-dialog-content max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="admin-dialog-header">
-          <h3 className="text-base font-semibold">{title}</h3>
-        </div>
-        <div className="admin-dialog-body">
-          <p className="text-sm text-muted-foreground">{message}</p>
-        </div>
-        <div className="admin-dialog-footer">
-          <button type="button" onClick={onCancel} className="btn-modal-cancel">
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="btn-modal-destructive"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Permission Form Data ────────────────────────────────
+// ─── Permission Modal ────────────────────────────────────
 
 interface PermissionFormData {
   name: string;
@@ -80,17 +44,14 @@ interface PermissionFormData {
 const emptyForm: PermissionFormData = {
   name: "",
   resource: "",
-  action: "",
+  action: "read",
   description: "",
 };
-
-// ─── Permission Modal ────────────────────────────────────
 
 interface PermissionModalProps {
   open: boolean;
   editingId: string | null;
   form: PermissionFormData;
-  resources: PermissionResource[];
   saving: boolean;
   fieldErrors: Record<string, string>;
   onChange: (form: PermissionFormData) => void;
@@ -102,7 +63,6 @@ function PermissionModal({
   open,
   editingId,
   form,
-  resources,
   saving,
   fieldErrors,
   onChange,
@@ -111,13 +71,10 @@ function PermissionModal({
 }: PermissionModalProps) {
   if (!open) return null;
 
-  const filteredActions =
-    resources.find((r) => r.resource === form.resource)?.actions ?? [];
-
   return (
     <div className="admin-dialog-overlay" onClick={onClose}>
       <div
-        className="admin-dialog-content max-w-lg max-h-[90vh] overflow-y-auto"
+        className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="admin-dialog-header">
@@ -133,18 +90,10 @@ function PermissionModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSave();
-          }}
-        >
+        <form onSubmit={(e) => { e.preventDefault(); onSave(); }}>
           <div className="admin-dialog-body space-y-4">
             <div>
-              <label
-                className="block text-xs font-medium mb-1.5"
-                style={{ color: "var(--foreground-muted)" }}
-              >
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
                 Permission Name <span className="text-destructive">*</span>
               </label>
               <input
@@ -153,7 +102,7 @@ function PermissionModal({
                 value={form.name}
                 onChange={(e) => onChange({ ...form, name: e.target.value })}
                 className={`input w-full ${fieldErrors.name ? "border-destructive" : ""}`}
-                placeholder="e.g. create_product"
+                placeholder="e.g. users:read"
               />
               {fieldErrors.name && (
                 <p className="text-xs text-destructive mt-1">
@@ -162,64 +111,40 @@ function PermissionModal({
               )}
             </div>
 
-            <div>
-              <label
-                className="block text-xs font-medium mb-1.5"
-                style={{ color: "var(--foreground-muted)" }}
-              >
-                Resource <span className="text-destructive">*</span>
-              </label>
-              <AdminSelect
-                value={form.resource}
-                placeholder="Select resource"
-                options={resources.map((r) => ({
-                  value: r.resource,
-                  label: r.resource,
-                }))}
-                onChange={(value) =>
-                  onChange({ ...form, resource: value, action: "" })
-                }
-                buttonClassName={
-                  fieldErrors.resource ? "border-destructive" : ""
-                }
-              />
-              {fieldErrors.resource && (
-                <p className="text-xs text-destructive mt-1">
-                  {fieldErrors.resource}
-                </p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Resource <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.resource}
+                  onChange={(e) => onChange({ ...form, resource: e.target.value })}
+                  className="input w-full"
+                  placeholder="e.g. users, roles, products"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  Action <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={form.action}
+                  onChange={(e) => onChange({ ...form, action: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="create">Create</option>
+                  <option value="read">Read</option>
+                  <option value="update">Update</option>
+                  <option value="delete">Delete</option>
+                  <option value="manage">Manage</option>
+                </select>
+              </div>
             </div>
 
             <div>
-              <label
-                className="block text-xs font-medium mb-1.5"
-                style={{ color: "var(--foreground-muted)" }}
-              >
-                Action <span className="text-destructive">*</span>
-              </label>
-              <AdminSelect
-                value={form.action}
-                placeholder="Select action"
-                disabled={!form.resource}
-                options={filteredActions.map((action) => ({
-                  value: action,
-                  label: action,
-                }))}
-                onChange={(value) => onChange({ ...form, action: value })}
-                buttonClassName={fieldErrors.action ? "border-destructive" : ""}
-              />
-              {fieldErrors.action && (
-                <p className="text-xs text-destructive mt-1">
-                  {fieldErrors.action}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                className="block text-xs font-medium mb-1.5"
-                style={{ color: "var(--foreground-muted)" }}
-              >
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
                 Description
               </label>
               <textarea
@@ -247,11 +172,7 @@ function PermissionModal({
               disabled={saving}
               className="btn-modal-primary"
             >
-              {saving
-                ? "Saving…"
-                : editingId
-                  ? "Update Permission"
-                  : "Create Permission"}
+              {saving ? "Saving…" : editingId ? "Update Permission" : "Create Permission"}
             </button>
           </div>
         </form>
@@ -263,12 +184,12 @@ function PermissionModal({
 // ─── Main Component ──────────────────────────────────────
 
 export function Permissions() {
+  const navigate = useNavigate();
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
 
   // ── Data state ──
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [resources, setResources] = useState<PermissionResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -278,7 +199,8 @@ export function Permissions() {
   // ── Filter state ──
   const [searchName, setSearchName] = useState("");
   const [filterResource, setFilterResource] = useState("");
-  const [filterAction, setFilterAction] = useState("");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   // ── Modal state ──
   const [showModal, setShowModal] = useState(false);
@@ -287,54 +209,28 @@ export function Permissions() {
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // ── Delete confirm ──
-  const [deleteTarget, setDeleteTarget] = useState<Permission | null>(null);
-
-  // ── Derived actions for resource drop-down ──
-  const resourceActions =
-    resources.find((r) => r.resource === filterResource)?.actions ?? [];
-
-  // ── Fetch resources once ──
-  useEffect(() => {
-    permissionService
-      .getResources()
-      .then((res) => {
-        // BE returns { resources: string[], actions: string[] }
-        const data = res.data.data;
-        const mapped: PermissionResource[] = (data?.resources ?? []).map(
-          (r: string) => ({
-            resource: r,
-            actions: data?.actions ?? [],
-          }),
-        );
-        setResources(mapped);
-      })
-      .catch(() => {
-        // Silently fail
-      });
-  }, []);
-
   // ── Fetch permissions ──
   const fetchPermissions = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string | number> = { page, limit };
+      const params: Record<string, string | number> = {};
+      if (page > 1) params.page = page;
+      if (limit !== 20) params.limit = limit;
       if (searchName.trim()) params.name = searchName.trim();
       if (filterResource) params.resource = filterResource;
-      if (filterAction) params.action = filterAction;
 
-      const { data: response } = await permissionService.getAll(params);
-      const data = response.data;
-      // BE returns { data: Permission[], total, page, limit, totalPages }
-      setPermissions(data.data ?? []);
-      setTotal(data.total ?? 0);
-      setTotalPages(data.totalPages ?? 1);
+      const response = await permissionService.getAll(params);
+      const listData = response.data?.data;
+      const rawPermissions = listData?.data ?? [];
+      setPermissions(rawPermissions);
+      setTotal(listData?.total ?? 0);
+      setTotalPages(listData?.totalPages ?? 1);
     } catch {
       toast.error("Failed to load permissions");
     } finally {
       setLoading(false);
     }
-  }, [page, searchName, filterResource, filterAction]);
+  }, [page, searchName, filterResource]);
 
   useEffect(() => {
     fetchPermissions();
@@ -343,14 +239,14 @@ export function Permissions() {
   // ── Reset page when filters change ──
   useEffect(() => {
     setPage(1);
-  }, [searchName, filterResource, filterAction]);
+  }, [searchName, filterResource]);
 
-  // ── Validate form ──
+  // ── Validate ──
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
     if (!form.name.trim()) errors.name = "Permission name is required";
-    if (!form.resource) errors.resource = "Resource is required";
-    if (!form.action) errors.action = "Action is required";
+    if (!form.resource.trim()) errors.resource = "Resource is required";
+    if (!form.action.trim()) errors.action = "Action is required";
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -364,13 +260,13 @@ export function Permissions() {
   };
 
   // ── Open edit modal ──
-  const openEdit = (perm: Permission) => {
-    setEditingId(perm._id);
+  const openEdit = (permission: Permission) => {
+    setEditingId(permission._id);
     setForm({
-      name: perm.name,
-      resource: perm.resource,
-      action: perm.action,
-      description: perm.description ?? "",
+      name: permission.name,
+      resource: permission.resource,
+      action: permission.action,
+      description: permission.description ?? "",
     });
     setFieldErrors({});
     setShowModal(true);
@@ -393,16 +289,16 @@ export function Permissions() {
       if (editingId) {
         await permissionService.update(editingId, {
           name: form.name.trim(),
-          resource: form.resource,
-          action: form.action,
+          resource: form.resource.trim(),
+          action: form.action.trim(),
           description: form.description.trim() || undefined,
         });
         toast.success("Permission updated successfully");
       } else {
         await permissionService.create({
           name: form.name.trim(),
-          resource: form.resource,
-          action: form.action,
+          resource: form.resource.trim(),
+          action: form.action.trim(),
           description: form.description.trim() || undefined,
         });
         toast.success("Permission created successfully");
@@ -414,21 +310,18 @@ export function Permissions() {
         response?: { status?: number; data?: { message?: string } };
         message?: string;
       };
-
       if (axiosErr.response?.status === 400) {
         const msg = axiosErr.response.data?.message ?? "";
         if (
           msg.toLowerCase().includes("name") ||
           msg.toLowerCase().includes("duplicate")
         ) {
-          setFieldErrors({ name: msg || "This name already exists" });
+          setFieldErrors({ name: msg });
         } else {
-          toast.error(msg || "Invalid input. Please check your data.");
+          toast.error(msg || "Invalid input");
         }
       } else if (axiosErr.response?.status === 403) {
         toast.error("You don't have permission to perform this action.");
-      } else if (axiosErr.response?.status === 404) {
-        toast.error("Permission not found.");
       } else {
         toast.error(axiosErr.message || "Failed to save permission");
       }
@@ -437,32 +330,55 @@ export function Permissions() {
     }
   };
 
-  // ── Delete ──
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await permissionService.delete(deleteTarget._id);
-      toast.success(`Permission "${deleteTarget.name}" deleted`);
-      setDeleteTarget(null);
-      fetchPermissions();
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number } };
-      if (axiosErr.response?.status === 403) {
-        toast.error("You don't have permission to perform this action.");
-      } else if (axiosErr.response?.status === 404) {
-        toast.error("Permission not found.");
-      } else {
-        toast.error("Failed to delete permission");
-      }
-      setDeleteTarget(null);
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
     }
   };
+
+  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
+    const active = sortField === field;
+    return (
+      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+        <button
+          type="button"
+          onClick={() => handleSort(field)}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+        >
+          {label}
+          <span className="flex flex-col items-center justify-center -space-y-[3px]">
+            <ChevronUp className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+            <ChevronDown className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+          </span>
+        </button>
+      </th>
+    );
+  }
+
+  const sortedPermissions = [...permissions].sort((a, b) => {
+    if (!sortField) return 0;
+    const getValue = (permission: Permission) => {
+      switch (sortField) {
+        case "name": return permission.name;
+        case "resource": return permission.resource;
+        case "created": return new Date(permission.createdAt).getTime();
+      }
+    };
+    const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
+    return sortDirection === "asc" ? cmp : -cmp;
+  });
+
+  // Get unique resources for filter
+  const uniqueResources = Array.from(new Set(permissions.map(p => p.resource)));
 
   // ── Render ──
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="mb-2">Permission Management</h1>
           <p className="text-muted-foreground">
@@ -475,20 +391,20 @@ export function Permissions() {
           </p>
         </div>
         {isAdmin && (
-          <button onClick={openCreate} className="btn-create">
-            <Plus size={18} />
+           <button
+             onClick={openCreate}
+             className="btn-create"
+           >
+            <Plus size={16} />
             create
-          </button>
-        )}
+           </button>
+         )}
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
+      <div className="admin-panel-glow rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
         {/* Filters */}
-        <div
-          className="p-6 border-b border-border"
-          style={{ background: "var(--surface)" }}
-        >
+        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -498,12 +414,7 @@ export function Permissions() {
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
                 className="input w-full"
-                style={{
-                  paddingLeft: "3rem",
-                  paddingRight: "1rem",
-                  paddingTop: "0.75rem",
-                  paddingBottom: "0.75rem",
-                }}
+                style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
               />
             </div>
 
@@ -511,29 +422,9 @@ export function Permissions() {
               value={filterResource}
               options={[
                 { value: "", label: "All resources" },
-                ...resources.map((resource) => ({
-                  value: resource.resource,
-                  label: resource.resource,
-                })),
+                ...uniqueResources.map(r => ({ value: r, label: r }))
               ]}
-              onChange={(value) => {
-                setFilterResource(value);
-                setFilterAction("");
-              }}
-              className="min-w-[170px]"
-            />
-
-            <AdminSelect
-              value={filterAction}
-              disabled={!filterResource}
-              options={[
-                { value: "", label: "All actions" },
-                ...resourceActions.map((action) => ({
-                  value: action,
-                  label: action,
-                })),
-              ]}
-              onChange={setFilterAction}
+              onChange={(val) => setFilterResource(val)}
               className="min-w-[160px]"
             />
           </div>
@@ -541,100 +432,94 @@ export function Permissions() {
 
         {/* Table Body */}
         {loading ? (
-          <div
-            className="p-8 text-center text-muted-foreground"
-            style={{ background: "var(--card)" }}
-          >
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             Loading...
           </div>
         ) : permissions.length === 0 ? (
-          <div
-            className="p-8 text-center text-muted-foreground"
-            style={{ background: "var(--card)" }}
-          >
+          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Shield size={40} className="mx-auto mb-3 opacity-40" />
             <p>No permissions found</p>
           </div>
         ) : (
-          <div
-            className="overflow-x-auto"
-            style={{ background: "var(--card)" }}
-          >
+          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
             <table className="admin-table w-full">
               <thead className="bg-muted">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Name
+                  <SortableHeader label="Permission Name" field="name" />
+                  <SortableHeader label="Resource" field="resource" />
+                  <SortableHeader label="Action" field="name" />
+                  <SortableHeader label="Created" field="created" />
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">
+                    Actions
                   </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Resource
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Action
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Description
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Created
-                  </th>
-                  {isAdmin && (
-                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[100px]">
-                      Actions
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
-                {permissions.map((perm) => (
+                {sortedPermissions.map((permission) => (
                   <tr
-                    key={perm._id}
+                    key={permission._id}
                     className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <span className="font-medium text-sm">{perm.name}</span>
+                      <span className="font-medium text-sm">{permission.name}</span>
+                      {permission.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[250px]">
+                          {permission.description}
+                        </p>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="capitalize text-sm bg-muted px-2.5 py-1 rounded-full">
-                        {perm.resource}
+                      <span className="text-sm">{permission.resource}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="badge badge-blue">
+                        {permission.action}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="capitalize text-sm">{perm.action}</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground max-w-[200px] truncate">
-                      {perm.description || "—"}
-                    </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDate(perm.createdAt)}
+                      {formatDate(permission.createdAt)}
                     </td>
-                    {isAdmin && (
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => {}}
-                            className="admin-action-btn view"
-                            title="View Detail"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button
-                            onClick={() => openEdit(perm)}
-                            className="admin-action-btn edit"
-                            title="Edit"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(perm)}
-                            className="admin-action-btn delete"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => navigate(`/admin/permissions/${permission._id}`)}
+                          className="admin-action-btn view"
+                          title="View details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => openEdit(permission)}
+                              className="admin-action-btn edit"
+                              title="Edit"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <HoldToDeleteButton
+                              onDelete={async () => {
+                                try {
+                                  await permissionService.delete(permission._id);
+                                  toast.success(`Permission "${permission.name}" deleted`);
+                                  fetchPermissions();
+                                } catch (err: unknown) {
+                                  const axiosErr = err as { response?: { status?: number } };
+                                  if (axiosErr.response?.status === 409) {
+                                    toast.error("Cannot delete: permission is currently assigned to roles.");
+                                  } else if (axiosErr.response?.status === 403) {
+                                    toast.error("You don't have permission to perform this action.");
+                                  } else {
+                                    toast.error("Failed to delete permission");
+                                  }
+                                }
+                              }}
+                              title="Hold 2s to delete"
+                            />
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -671,25 +556,11 @@ export function Permissions() {
         open={showModal}
         editingId={editingId}
         form={form}
-        resources={resources}
         saving={saving}
         fieldErrors={fieldErrors}
         onChange={setForm}
         onSave={handleSave}
         onClose={closeModal}
-      />
-
-      {/* Delete Confirm Dialog */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Delete Permission"
-        message={
-          deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
-            : ""
-        }
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

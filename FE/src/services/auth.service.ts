@@ -45,7 +45,11 @@ export const authService = {
   forgotPassword: (data: ForgotPasswordResetRequest) =>
     axiosClient.patch<ApiResponse<MessageResponseData>>(`${AUTH_BASE}/forgot-password`, data),
 
-  /** POST /mail/forgot-password → Send forgot password email with reset link */
+  /** POST /mail/forgot-password/send → Send forgot password email with reset link */
   sendForgotPasswordEmail: (email: string) =>
-    axiosClient.post<ApiResponse<MessageResponseData>>(`/mail/forgot-password`, { email }),
+    axiosClient.post<ApiResponse<MessageResponseData>>(`/mail/forgot-password/send`, { email }),
+
+  /** POST /mail/forgot-password/verify → Verify password reset link UUID */
+  verifyForgotPasswordLink: (uuid: string) =>
+    axiosClient.post<ApiResponse<{ isValid: string }>>(`/mail/forgot-password/verify?uuid=${uuid}`),
 };

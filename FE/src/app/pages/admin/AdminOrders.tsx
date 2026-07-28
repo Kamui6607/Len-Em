@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronUp, ChevronDown, Check, Package, Truck } from "lucide-react";
+import {
+  Search,
+  ChevronUp,
+  ChevronDown,
+  Check,
+  Package,
+  Truck,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
 import { useAdmin } from "../../context/AdminContext";
@@ -18,7 +25,6 @@ const ORDER_STATUSES: OrderStatus[] = [
   "PREPARING",
   "SHIPPING",
   "DELIVERED",
-  "CANCELLED",
 ];
 
 type SortField = "order" | "customer" | "date" | "total" | "status";
@@ -258,141 +264,167 @@ export function AdminOrders() {
                 <SortableHeader label="Date" field="date" />
                 <SortableHeader label="Total" field="total" align="right" />
                 <SortableHeader label="Status" field="status" />
-                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground">
-                  Actions
-                </th>
+                {sortedOrders.some((order) => {
+                  const isPendingPaid =
+                    order.orderStatus === "PENDING" &&
+                    order.payment.status !== "PENDING";
+                  const isConfirmed = order.orderStatus === "CONFIRMED";
+                  const isPreparing = order.orderStatus === "PREPARING";
+                  const isShipping = order.orderStatus === "SHIPPING";
+                  return (
+                    isPendingPaid || isConfirmed || isPreparing || isShipping
+                  );
+                }) && (
+                  <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {sortedOrders.length > 0 ? (
-                sortedOrders.map((order) => (
-                  <tr
-                    key={order._id}
-                    onClick={() => handleViewDetail(order._id)}
-                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer"
-                  >
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-sm">
-                          #{order._id.slice(-8).toUpperCase()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.payment.method}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm">
-                          {order.shippingAddress?.fullName || "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.shippingAddress?.phone || "N/A"}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {new Date(order.createdAt).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td
-                      className="px-6 py-4 text-sm font-semibold"
-                      style={{ color: "var(--primary)" }}
+                sortedOrders.map((order) => {
+                  const hasActions =
+                    (order.orderStatus === "PENDING" && order.payment.status !== "PENDING") ||
+                    order.orderStatus === "CONFIRMED" ||
+                    order.orderStatus === "PREPARING" ||
+                    order.orderStatus === "SHIPPING";
+
+                  return (
+                    <tr
+                      key={order._id}
+                      onClick={() => handleViewDetail(order._id)}
+                      className={`border-b transition-colors cursor-pointer ${
+                        filter === "all" && !hasActions
+                          ? "border-border hover:bg-[var(--surface-secondary)] border-l-4 border-l-muted-foreground/30"
+                          : "border-border hover:bg-[var(--surface-secondary)]"
+                      }`}
                     >
-                      {formatPrice(order.totalPrice)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`badge ${
-                          order.orderStatus === "DELIVERED"
-                            ? "badge-green"
-                            : ["CONFIRMED", "PREPARING", "SHIPPING"].includes(
-                                  order.orderStatus,
-                                )
-                              ? "badge-blue"
-                              : order.orderStatus === "PENDING"
-                                ? "badge-orange"
-                                : order.orderStatus === "CANCELLED"
-                                  ? "badge-red"
-                                  : "bg-muted text-muted-foreground"
-                        }`}
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-medium text-sm">
+                            #{order._id.slice(-8).toUpperCase()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.payment.method}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm">
+                            {order.shippingAddress?.fullName || "N/A"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.shippingAddress?.phone || "N/A"}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                      </td>
+                      <td
+                        className="px-6 py-4 text-sm font-semibold"
+                        style={{ color: "var(--primary)" }}
                       >
-                        {order.orderStatus}
-                      </span>
-                    </td>
-                     <td className="px-6 py-4 text-left">
-                      <div className="flex items-center justify-start gap-1.5">
-                          {order.orderStatus === "PENDING" && (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleConfirmPayment(order._id);
-                              }}
-                              className="btn-modal-primary p-1.5"
-                              title="Confirm payment"
-                              type="button"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        {order.orderStatus === "CONFIRMED" && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleStatusUpdate(order._id, "PREPARING");
-                            }}
-                            className="btn-modal-primary p-1.5"
-                            title="Start preparing"
-                            type="button"
-                          >
-                            <Package className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {order.orderStatus === "PREPARING" && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleStatusUpdate(order._id, "SHIPPING");
-                            }}
-                            className="p-1.5 rounded-lg font-medium transition-all duration-200 hover:shadow-md"
-                            style={{
-                              background: "var(--accent-glow-2)",
-                              color: "var(--primary)",
-                            }}
-                            title="Ship order"
-                            type="button"
-                          >
-                            <Truck className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {order.orderStatus === "SHIPPING" && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleStatusUpdate(order._id, "DELIVERED");
-                            }}
-                            className="p-1.5 rounded-lg font-medium transition-all duration-200 hover:shadow-md"
-                            style={{
-                              background: "var(--accent-green)",
-                              color: "var(--accent-green-text)",
-                            }}
-                            title="Mark as delivered"
-                            type="button"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        {formatPrice(order.totalPrice)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`badge ${
+                            order.orderStatus === "DELIVERED"
+                              ? "badge-green"
+                              : ["CONFIRMED", "PREPARING", "SHIPPING"].includes(
+                                    order.orderStatus,
+                                  )
+                                ? "badge-blue"
+                                : order.orderStatus === "PENDING"
+                                  ? "badge-orange"
+                                  : order.orderStatus === "CANCELLED"
+                                    ? "badge-red"
+                                    : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {order.orderStatus}
+                        </span>
+                      </td>
+                      {hasActions ? (
+                        <td className="px-6 py-4 text-left">
+                          <div className="flex items-center justify-start gap-1.5">
+                            {order.orderStatus === "PENDING" && order.payment.status !== "PENDING" && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleConfirmPayment(order._id);
+                                }}
+                                className="btn-modal-primary p-1.5"
+                                title="Confirm payment"
+                                type="button"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {order.orderStatus === "CONFIRMED" && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleStatusUpdate(order._id, "PREPARING");
+                                }}
+                                className="btn-modal-primary p-1.5"
+                                title="Start preparing"
+                                type="button"
+                              >
+                                <Package className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {order.orderStatus === "PREPARING" && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleStatusUpdate(order._id, "SHIPPING");
+                                }}
+                                className="p-1.5 rounded-lg font-medium transition-all duration-200 hover:shadow-md"
+                                style={{
+                                  background: "var(--accent-glow-2)",
+                                  color: "var(--primary)",
+                                }}
+                                title="Ship order"
+                                type="button"
+                              >
+                                <Truck className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {order.orderStatus === "SHIPPING" && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleStatusUpdate(order._id, "DELIVERED");
+                                }}
+                                className="p-1.5 rounded-lg font-medium transition-all duration-200 hover:shadow-md"
+                                style={{
+                                  background: "var(--accent-green)",
+                                  color: "var(--accent-green-text)",
+                                }}
+                                title="Mark as delivered"
+                                type="button"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      ) : null}
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
                     No orders found
@@ -406,7 +438,10 @@ export function AdminOrders() {
 
       {/* Order Detail Dialog */}
       {selectedOrder && (
-        <div className="admin-dialog-overlay" onClick={() => setSelectedOrder(null)}>
+        <div
+          className="admin-dialog-overlay"
+          onClick={() => setSelectedOrder(null)}
+        >
           <div
             className="admin-dialog-content max-w-3xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -424,30 +459,39 @@ export function AdminOrders() {
                   {/* Order Info */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Order ID</p>
-                      <p className="text-sm font-medium">#{selectedOrder._id.slice(-8).toUpperCase()}</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Order ID
+                      </p>
+                      <p className="text-sm font-medium">
+                        #{selectedOrder._id.slice(-8).toUpperCase()}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Date</p>
                       <p className="text-sm font-medium">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {new Date(selectedOrder.createdAt).toLocaleDateString(
+                          "vi-VN",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Status</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Status
+                      </p>
                       <span
                         className={`badge ${
                           selectedOrder.orderStatus === "DELIVERED"
                             ? "badge-green"
                             : ["CONFIRMED", "PREPARING", "SHIPPING"].includes(
-                                selectedOrder.orderStatus,
-                              )
+                                  selectedOrder.orderStatus,
+                                )
                               ? "badge-blue"
                               : selectedOrder.orderStatus === "PENDING"
                                 ? "badge-orange"
@@ -460,35 +504,55 @@ export function AdminOrders() {
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Payment Method</p>
-                      <p className="text-sm font-medium">{selectedOrder.payment.method || "N/A"}</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Payment Method
+                      </p>
+                      <p className="text-sm font-medium">
+                        {selectedOrder.payment.method || "N/A"}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Payment Status</p>
-                      <span className={`badge ${selectedOrder.payment.status === "PAID" ? "badge-green" : "badge-orange"}`}>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Payment Status
+                      </p>
+                      <span
+                        className={`badge ${selectedOrder.payment.status === "PAID" ? "badge-green" : "badge-orange"}`}
+                      >
                         {selectedOrder.payment.status}
                       </span>
                     </div>
                     {selectedOrder.payment.transactionNo && (
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Transaction No.</p>
-                        <p className="text-sm font-medium">{selectedOrder.payment.transactionNo}</p>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Transaction No.
+                        </p>
+                        <p className="text-sm font-medium">
+                          {selectedOrder.payment.transactionNo}
+                        </p>
                       </div>
                     )}
                   </div>
 
                   {/* Shipping Address */}
                   <div className="border-t border-border pt-4">
-                    <h4 className="text-sm font-semibold mb-3">Shipping Address</h4>
+                    <h4 className="text-sm font-semibold mb-3">
+                      Shipping Address
+                    </h4>
                     <div className="bg-muted/50 rounded-lg p-4 space-y-1">
-                      <p className="text-sm font-medium">{selectedOrder.shippingAddress.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{selectedOrder.shippingAddress.phone}</p>
+                      <p className="text-sm font-medium">
+                        {selectedOrder.shippingAddress.fullName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.shippingAddress.phone}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {selectedOrder.shippingAddress.address}
                       </p>
                       {selectedOrder.shippingAddress.ward && (
                         <p className="text-sm text-muted-foreground">
-                          {selectedOrder.shippingAddress.ward}, {selectedOrder.shippingAddress.district}, {selectedOrder.shippingAddress.city}
+                          {selectedOrder.shippingAddress.ward},{" "}
+                          {selectedOrder.shippingAddress.district},{" "}
+                          {selectedOrder.shippingAddress.city}
                         </p>
                       )}
                     </div>
@@ -518,14 +582,17 @@ export function AdminOrders() {
                             />
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{item.productName || item.name || "Product"}</p>
+                            <p className="text-sm font-medium">
+                              {item.productName || item.name || "Product"}
+                            </p>
                             {item.color && (
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 Color: {item.color}
                               </p>
                             )}
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Qty: {item.quantity} x {formatPrice(item.price || 0)}
+                              Qty: {item.quantity} x{" "}
+                              {formatPrice(item.price || 0)}
                             </p>
                           </div>
                           <p className="text-sm font-semibold flex-shrink-0">
@@ -538,7 +605,9 @@ export function AdminOrders() {
 
                   {/* Order Summary */}
                   <div className="border-t border-border pt-4">
-                    <h4 className="text-sm font-semibold mb-3">Order Summary</h4>
+                    <h4 className="text-sm font-semibold mb-3">
+                      Order Summary
+                    </h4>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Subtotal</span>
@@ -562,7 +631,9 @@ export function AdminOrders() {
                       )}
                       <div className="flex justify-between font-semibold text-base pt-2 border-t border-border">
                         <span>Total</span>
-                        <span className="text-primary">{formatPrice(selectedOrder.totalPrice)}</span>
+                        <span className="text-primary">
+                          {formatPrice(selectedOrder.totalPrice)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -571,13 +642,19 @@ export function AdminOrders() {
                   {selectedOrder.note && (
                     <div className="border-t border-border pt-4">
                       <h4 className="text-sm font-semibold mb-2">Note</h4>
-                      <p className="text-sm text-muted-foreground">{selectedOrder.note}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.note}
+                      </p>
                     </div>
                   )}
                   {selectedOrder.cancelReason && (
                     <div className="border-t border-border pt-4">
-                      <h4 className="text-sm font-semibold mb-2 text-destructive">Cancel Reason</h4>
-                      <p className="text-sm text-muted-foreground">{selectedOrder.cancelReason}</p>
+                      <h4 className="text-sm font-semibold mb-2 text-destructive">
+                        Cancel Reason
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.cancelReason}
+                      </p>
                     </div>
                   )}
                 </div>

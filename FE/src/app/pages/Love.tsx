@@ -239,12 +239,12 @@ export function Love() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {kit.productIds.length} products included
+                      {(kit.productIds || []).length} products included
                     </p>
                     {/* Add to cart button */}
                     <button
                       onClick={() => {
-                        const products = kit.productIds.map((product) => {
+                        const products = (kit.productIds || []).map((product) => {
                           const variant = product.variants[0];
                           return {
                             productId: product._id,

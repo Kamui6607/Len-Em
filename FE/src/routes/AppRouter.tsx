@@ -30,6 +30,9 @@ const DIYDetailPage = lazy(() =>
 const DIYCreatePage = lazy(() =>
   import("../app/pages/DIYCreatePage").then((m) => ({ default: m.DIYCreatePage })),
 );
+const SupportDIYCreatePage = lazy(() =>
+  import("../app/pages/supportDIY/SupportDIYCreatePage").then((m) => ({ default: m.SupportDIYCreatePage })),
+);
 const Learn = lazy(() =>
   import("../app/pages/LearnPage").then((m) => ({ default: m.LearnPage })),
 );
@@ -76,6 +79,10 @@ const ForgotPasswordPage = lazy(() =>
   import("../pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })),
 );
 
+const ResetPasswordPage = lazy(() =>
+  import("../pages/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })),
+);
+
 // ── NEW: Shop cart page (uses CartContext) ──
 const ShopCart = lazy(() =>
   import("../app/pages/shop/CartPage").then((m) => ({ default: m.CartPage })),
@@ -96,6 +103,11 @@ const OrderDetail = lazy(() =>
   import("../app/pages/shop/OrderDetail").then((m) => ({ default: m.OrderDetail })),
 );
 
+// ── NEW: Addresses Management (route /addresses) ──
+const Addresses = lazy(() =>
+  import("../app/pages/Addresses").then((m) => ({ default: m.Addresses })),
+);
+
 // ── NEW: Manage Orders (Admin/Staff) ──
 const ManageOrders = lazy(() =>
   import("../app/pages/manage/Orders").then((m) => ({ default: m.ManageOrders })),
@@ -104,11 +116,17 @@ const ManageOrders = lazy(() =>
 const KitDetail = lazy(() =>
   import("../app/pages/KitDetail").then((m) => ({ default: m.KitDetail })),
 );
+const KitsPage = lazy(() =>
+  import("../app/pages/KitsPage").then((m) => ({ default: m.KitsPage })),
+);
 const MyReportsPage = lazy(() =>
   import("../app/pages/MyReportsPage").then((m) => ({ default: m.MyReportsPage })),
 );
 const NotificationsPage = lazy(() =>
   import("../app/pages/Notifications").then((m) => ({ default: m.NotificationsPage })),
+);
+const MessagesPage = lazy(() =>
+  import("../app/pages/Messages").then((m) => ({ default: m.Messages })),
 );
 
 function StoreOutlet() {
@@ -150,6 +168,7 @@ export function AppRouter() {
         {/* ===== SHOP routes ===== */}
         <Route path="shop" element={<Shop />} />
         <Route path="shop/product/:id" element={<ProductDetail />} />
+        <Route path="kits" element={<KitsPage />} />
         <Route path="kits/:id" element={<KitDetail />} />
 
         {/* ===== DIY routes ===== */}
@@ -162,7 +181,15 @@ export function AppRouter() {
             </RequireAuth>
           }
         />
-        <Route path="diy/:postId" element={<DIYDetailPage />} />
+          <Route path="diy/:postId" element={<DIYDetailPage />} />
+          <Route
+            path="support-diy/new"
+            element={
+              <RequireAuth>
+                <SupportDIYCreatePage />
+              </RequireAuth>
+            }
+          />
 
         {/* ===== Customer routes ===== */}
         <Route
@@ -259,6 +286,15 @@ export function AppRouter() {
             </RequireAuth>
           }
         />
+        {/* [NEW] Addresses Management */}
+        <Route
+          path="addresses"
+          element={
+            <RequireAuth>
+              <Addresses />
+            </RequireAuth>
+          }
+        />
         <Route
           path="notifications"
           element={
@@ -275,13 +311,19 @@ export function AppRouter() {
             </RequireAuth>
           }
         />
+        <Route
+          path="messages"
+          element={
+            <RequireAuth>
+              <MessagesPage />
+            </RequireAuth>
+          }
+        />
 
         {/* [DEPRECATED - v1] /home was the standalone v1 home route. */}
         <Route path="home" element={<Home />} />
         {/* [DEPRECATED - v1] /community is now /diy. */}
         <Route path="community" element={<Navigate to="/diy" replace />} />
-        {/* [DEPRECATED - v1] /kits is now covered by /shop combo filters. */}
-        <Route path="kits" element={<Navigate to="/shop?category=combo" replace />} />
         {/* [DEPRECATED - v1] /product/:id moved under /shop/product/:id. */}
         <Route path="product/:id" element={<Navigate to="/shop" replace />} />
       </Route>
@@ -309,6 +351,14 @@ export function AppRouter() {
         element={
           <Suspense fallback={<LoadingFallback />}>
             <ForgotPasswordPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="auth/reset-password"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ResetPasswordPage />
           </Suspense>
         }
       />

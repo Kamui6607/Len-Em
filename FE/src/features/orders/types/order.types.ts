@@ -2,17 +2,13 @@
 // Order Types — matches backend API contracts
 // ============================================================
 
-export type OrderStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "PREPARING"
-  | "SHIPPING"
-  | "DELIVERED"
-  | "CANCELLED";
+import type { OrderStatus } from "../../../constants/orderStatus";
+
+export type { OrderStatus };
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type PaymentMethod = "VNPAY";
+export type PaymentMethod = "VNPAY" | "MOMO";
 
 export interface OrderUser {
   _id: string;
@@ -45,6 +41,8 @@ export interface OrderItem {
   productName?: string;
   price?: number;
   image?: string;
+  /** If this item came from a kit, store the kitId so FE can group display */
+  kitId?: string;
 }
 
 export interface PaymentInfo {
@@ -67,6 +65,7 @@ export interface Order {
   totalPrice: number;
   payment: PaymentInfo;
   orderStatus: OrderStatus;
+  isCancelRequested?: boolean;
   discount?: number;
   coinUsed?: number;
   cancelReason?: string;
@@ -82,6 +81,11 @@ export interface CreateOrderRequest {
     color?: string;
     hexCode?: string;
   }[];
+  /** Kits to order — server will expand each kit into product items */
+  kits?: {
+    kitId: string;
+    quantity: number;
+  }[];
   shippingAddress: ShippingAddress;
   paymentMethod: PaymentMethod;
   shippingFee: number;
@@ -91,6 +95,10 @@ export interface CreateOrderRequest {
 
 export interface CancelOrderRequest {
   cancelReason: string;
+}
+
+export interface CancelRequestDecision {
+  decision: "APPROVED" | "REJECTED";
 }
 
 export interface UpdateOrderStatusRequest {
@@ -138,6 +146,7 @@ export function normalizeOrder(order: Order): Order {
     itemsPrice: order.itemsPrice ?? 0,
     shippingFee: order.shippingFee ?? 0,
     totalPrice: order.totalPrice ?? 0,
+    isCancelRequested: order.isCancelRequested ?? false,
     payment: {
       ...order.payment,
       status: order.payment.status,
@@ -147,6 +156,7 @@ export function normalizeOrder(order: Order): Order {
       productId: item.productId || item.product?._id || item._id || "",
       productName: item.productName || item.name || item.product?.name || "Product",
       image: item.image || item.product?.image,
+      kitId: item.kitId,
     })),
   };
 }

@@ -13,10 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
-import {
-  refundService,
-  type RefundInvoice,
-} from "../../../api/refundService";
+import { refundService, type RefundInvoice } from "../../../api/refundService";
 import { useAuth } from "../../../hooks/useAuth";
 import { AdminSelect } from "../../components/admin/AdminSelect";
 
@@ -80,7 +77,10 @@ function RefundDetailModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="admin-dialog-content max-w-md w-full mx-4"
         onClick={(e) => e.stopPropagation()}
@@ -120,32 +120,47 @@ function RefundDetailModal({
           </div>
 
           {/* Amount */}
-          <div className="flex items-center justify-between py-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div
+            className="flex items-center justify-between py-2 border-t"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
             <span className="text-sm font-medium flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-muted-foreground" />
               Amount
             </span>
-            <span className="text-lg font-bold text-primary">{formatPrice(invoice.amount)}</span>
+            <span className="text-lg font-bold text-primary">
+              {formatPrice(invoice.amount)}
+            </span>
           </div>
 
           {/* Order info */}
-          <div className="py-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div
+            className="py-2 border-t"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
             <span className="text-sm font-medium flex items-center gap-2 mb-2">
               <Package className="w-4 h-4 text-muted-foreground" />
               Order
             </span>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Order ID</span>
-              <span className="font-mono text-xs">{getOrderId(invoice).slice(-8).toUpperCase()}</span>
+              <span className="font-mono text-xs">
+                {getOrderId(invoice).slice(-8).toUpperCase()}
+              </span>
             </div>
             <div className="flex items-center justify-between text-sm mt-1">
               <span className="text-muted-foreground">Total</span>
-              <span className="font-medium">{formatPrice(getOrderTotal(invoice))}</span>
+              <span className="font-medium">
+                {formatPrice(getOrderTotal(invoice))}
+              </span>
             </div>
           </div>
 
           {/* Customer info */}
-          <div className="py-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div
+            className="py-2 border-t"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
             <span className="text-sm font-medium flex items-center gap-2 mb-2">
               <User className="w-4 h-4 text-muted-foreground" />
               Customer
@@ -160,21 +175,31 @@ function RefundDetailModal({
             </div>
             <div className="flex items-center justify-between text-sm mt-1">
               <span className="text-muted-foreground">User ID</span>
-              <span className="font-mono text-xs">{getUserId(invoice).slice(-8).toUpperCase()}</span>
+              <span className="font-mono text-xs">
+                {getUserId(invoice).slice(-8).toUpperCase()}
+              </span>
             </div>
           </div>
 
           {/* Reason */}
-          <div className="py-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div
+            className="py-2 border-t"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
             <span className="text-sm font-medium flex items-center gap-2 mb-1">
               <FileText className="w-4 h-4 text-muted-foreground" />
               Cancel Reason
             </span>
-            <p className="text-sm text-muted-foreground">{invoice.reason || "—"}</p>
+            <p className="text-sm text-muted-foreground">
+              {invoice.reason || "—"}
+            </p>
           </div>
 
           {/* Timestamps */}
-          <div className="py-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div
+            className="py-2 border-t"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
             <span className="text-sm font-medium flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               Timeline
@@ -192,7 +217,10 @@ function RefundDetailModal({
           </div>
         </div>
         <div className="admin-dialog-footer !justify-stretch">
-          <button onClick={onClose} className="w-full py-2.5 rounded-lg btn-glass-destructive">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-lg btn-glass-destructive"
+          >
             Close
           </button>
         </div>
@@ -255,11 +283,7 @@ function ProcessConfirmDialog({
             disabled={loading}
             className={isProcess ? "btn-modal-primary" : "btn-modal-destructive"}
           >
-            {loading
-              ? "Processing…"
-              : isProcess
-                ? "Process Refund"
-                : "Reject"}
+            {loading ? "Processing…" : isProcess ? "Process Refund" : "Reject"}
           </button>
         </div>
       </div>
@@ -524,7 +548,10 @@ export function AdminRefunds() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setProcessTarget({ invoice: inv, action: "PROCESSED" });
+                                  setProcessTarget({
+                                    invoice: inv,
+                                    action: "PROCESSED",
+                                  });
                                 }}
                                 className="admin-action-btn edit"
                                 title="Process refund"
@@ -534,7 +561,10 @@ export function AdminRefunds() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setProcessTarget({ invoice: inv, action: "REJECTED" });
+                                  setProcessTarget({
+                                    invoice: inv,
+                                    action: "REJECTED",
+                                  });
                                 }}
                                 className="admin-action-btn delete"
                                 title="Reject refund"

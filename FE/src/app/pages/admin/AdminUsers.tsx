@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Users, UserCheck, UserX, Lock, BarChart3 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
 import {
   Search,
-  Trash2,
   Eye,
   ShieldCheck,
   BadgeCheck,
@@ -31,6 +31,7 @@ import {
 } from "../../../features/users/services/user.service";
 import { useAdmin } from "../../context/AdminContext";
 import { useAuth } from "../../../hooks/useAuth";
+import { useLanguage } from "../../../context/LanguageContext";
 import { toast } from "sonner";
 import type { UserStatistics } from "../../../features/users/services/user.service";
 import { authService } from "../../../services/auth.service";
@@ -38,10 +39,6 @@ import { roleService, normalizeRoles } from "../../../api/roleService";
 import type { Role } from "../../../types/role";
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
-// NOTE: only tokens that actually exist in theme.css are used here.
-// "Customer" previously pointed at --accent-orange / badge-orange, neither of
-// which is defined anywhere in theme.css or globals.css, so that badge was
-// silently unstyled. Swapped to the existing --badge-warm-* pair instead.
 
 const ROLE_STYLE: Record<
   string,
@@ -109,9 +106,8 @@ function getStatusStyle(status: string) {
   return STATUS_STYLE[status] ?? STATUS_STYLE.ACTIVE;
 }
 
-// ─── Small hooks (shared by both dropdown components below) ──────────────────
+// ─── Small hooks ──────────────────────────────────────────────────────────────
 
-/** Closes an open portal menu on outside click, scroll, or resize. */
 function useDismissPortal(
   open: boolean,
   onDismiss: () => void,
@@ -125,7 +121,6 @@ function useDismissPortal(
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refs, onDismiss]);
 
   useEffect(() => {
@@ -136,11 +131,9 @@ function useDismissPortal(
       window.removeEventListener("scroll", onDismiss, true);
       window.removeEventListener("resize", onDismiss);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, onDismiss]);
 }
 
-/** Debounces a fast-changing value (used for the search input). */
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -193,7 +186,7 @@ function UserAvatar({ name, roleName }: { name: string; roleName: string }) {
   );
 }
 
-// ─── Filter Select (toolbar dropdowns) ────────────────────────────────────────
+// ─── Filter Select ────────────────────────────────────────────────────────────
 
 function FilterSelect({
   value,
@@ -293,8 +286,7 @@ function FilterSelect({
                   fontWeight: opt.value === value ? 500 : 400,
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "var(--dropdown-hover-bg)")
+                  (e.currentTarget.style.background = "var(--dropdown-hover-bg)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")
@@ -323,7 +315,7 @@ function FilterSelect({
   );
 }
 
-// ─── Custom dropdown (table cells: role / status) ─────────────────────────────
+// ─── Custom dropdown ──────────────────────────────────────────────────────────
 
 interface DropdownOption {
   value: string;
@@ -426,8 +418,7 @@ function CustomDropdown({
                   setOpen(false);
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "var(--dropdown-hover-bg)")
+                  (e.currentTarget.style.background = "var(--dropdown-hover-bg)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")
@@ -450,7 +441,9 @@ function CustomDropdown({
 
 // ─── Dropdown option builders ─────────────────────────────────────────────────
 
-function buildRoleOptions(roles: Array<{ _id: string; roleName: string }>): DropdownOption[] {
+function buildRoleOptions(
+  roles: Array<{ _id: string; roleName: string }>,
+): DropdownOption[] {
   return roles.map((r) => {
     const s = getRoleStyle(r.roleName);
     return {
@@ -527,7 +520,7 @@ function SortableHeader({
   );
 }
 
-// ─── Stat card (dashboard header) ─────────────────────────────────────────────
+// ─── Stat card ────────────────────────────────────────────────────────────────
 
 function StatCard({
   icon,
@@ -694,68 +687,6 @@ function UserDetailModal({
             className="w-full py-2.5 rounded-lg btn-glass-destructive"
           >
             Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Delete confirmation modal ────────────────────────────────────────────────
-
-function DeleteUserModal({
-  user,
-  loading,
-  onCancel,
-  onConfirm,
-}: {
-  user: ApiUser;
-  loading: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="admin-dialog-overlay" onClick={onCancel}>
-      <div
-        className="admin-dialog-content max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="admin-dialog-header">
-          <h3 className="text-base font-semibold">Soft delete user?</h3>
-        </div>
-        <div className="admin-dialog-body">
-          <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">{user.fullName}</strong> will
-            be set to{" "}
-            <span className="font-medium text-[var(--accent-red-text)]">
-              INACTIVE
-            </span>
-            . They can be reactivated later from this page.
-          </p>
-        </div>
-        <div className="admin-dialog-footer">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="btn-modal-cancel"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className="btn-modal-destructive"
-          >
-            {loading ? (
-              "Deleting…"
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </>
-            )}
           </button>
         </div>
       </div>
@@ -1018,11 +949,11 @@ function CreateUserModal({
     roleId: string;
   }) => void;
 }) {
-  // Filter out Admin roles for the create user dropdown (safety measure)
   const availableRoles = roles.filter((r) => r.isActive);
-  const defaultRoleId = availableRoles.find(
-    (r) => r.roleName !== "Admin",
-  )?._id || availableRoles[0]?._id || "";
+  const defaultRoleId =
+    availableRoles.find((r) => r.roleName !== "Admin")?._id ||
+    availableRoles[0]?._id ||
+    "";
 
   const [formData, setFormData] = useState({
     username: "",
@@ -1254,7 +1185,7 @@ function CreateUserModal({
   );
 }
 
-// ─── Table skeleton (loading state) ───────────────────────────────────────────
+// ─── Table skeleton ───────────────────────────────────────────────────────────
 
 function TableSkeletonRows({ rows = 6 }: { rows?: number }) {
   return (
@@ -1294,7 +1225,7 @@ function TableSkeletonRows({ rows = 6 }: { rows?: number }) {
   );
 }
 
-// ─── Pagination bar ────────────────────────────────────────────────────────────
+// ─── Pagination bar ───────────────────────────────────────────────────────────
 
 function PaginationBar({
   page,
@@ -1317,8 +1248,8 @@ function PaginationBar({
       style={{ borderColor: "var(--border)", background: "var(--card)" }}
     >
       <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
-        Showing <strong style={{ color: "var(--foreground)" }}>{from}</strong>
-        –<strong style={{ color: "var(--foreground)" }}>{to}</strong> of{" "}
+        Showing <strong style={{ color: "var(--foreground)" }}>{from}</strong>–
+        <strong style={{ color: "var(--foreground)" }}>{to}</strong> of{" "}
         <strong style={{ color: "var(--foreground)" }}>{totalItems}</strong>
       </p>
       <div className="flex items-center gap-2">
@@ -1348,7 +1279,7 @@ function PaginationBar({
   );
 }
 
-// ─── Helper: extract role name from user's roleId using dynamic map ────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function extractRoleId(
   roleId: { _id: string; roleName: string } | string | undefined,
@@ -1371,6 +1302,7 @@ function extractRoleName(
 const PAGE_SIZE = 20;
 
 export function AdminUsers() {
+  const { t } = useLanguage();
   const { logActivity } = useAdmin();
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
@@ -1381,22 +1313,15 @@ export function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
   const [roleFilter, setRoleFilter] = useState("");
   const [page, setPage] = useState(1);
-  // TODO API: backend cần trả về tổng số user khớp filter (vd: result.total)
-  // để phân trang chính xác. Hiện tại tạm suy ra từ độ dài mảng trả về —
-  // nếu trả đủ PAGE_SIZE thì coi như còn trang sau (ước lượng, không chính xác 100%).
   const [totalUsersEstimate, setTotalUsersEstimate] = useState(0);
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
-  const [userToDelete, setUserToDelete] = useState<ApiUser | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [stats, setStats] = useState<UserStatistics | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // ── Dynamic roles from API ──
   const [apiRoles, setApiRoles] = useState<Role[]>([]);
 
-  // Fetch roles for dropdown options
   const fetchRoles = useCallback(async () => {
     try {
       const { data: response } = await roleService.getAll({ limit: 100 });
@@ -1405,7 +1330,6 @@ export function AdminUsers() {
       const rawRoles = data?.roles ?? [];
       setApiRoles(normalizeRoles(rawRoles));
     } catch {
-      // Silently fail — roles dropdown will just be empty
       console.error("Failed to load roles for user admin");
     }
   }, []);
@@ -1414,7 +1338,6 @@ export function AdminUsers() {
     fetchRoles();
   }, [fetchRoles]);
 
-  // Build role name map from API data: { [roleId]: roleName }
   const roleNameMap = useMemo(() => {
     const map: Record<string, string> = {};
     for (const r of apiRoles) {
@@ -1423,19 +1346,16 @@ export function AdminUsers() {
     return map;
   }, [apiRoles]);
 
-  // Build dropdown options from API roles
   const roleDropdownOptions = useMemo(() => {
     return buildRoleOptions(apiRoles);
   }, [apiRoles]);
 
-  // Build role options for filter (only non-admin, active roles)
   const roleFilterOptions = useMemo(() => {
     return apiRoles
       .filter((r) => r.isActive)
       .map((r) => ({ value: r._id, label: r.roleName }));
   }, [apiRoles]);
 
-  // Update & Create modals
   const [userToUpdate, setUserToUpdate] = useState<ApiUser | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1444,7 +1364,6 @@ export function AdminUsers() {
   const hasActiveFilters =
     debouncedSearch !== "" || statusFilter !== "all" || roleFilter !== "";
 
-  // Reset to page 1 whenever a filter changes so results aren't confusing.
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, statusFilter, roleFilter]);
@@ -1452,26 +1371,21 @@ export function AdminUsers() {
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      // TODO API: userService.getAllUsers cần hỗ trợ thêm tham số `search`
-      // (tìm theo tên/username/email/phone) và `sortBy` / `sortOrder` để lọc
-      // và sắp xếp ngay tại server thay vì chỉ trong trang hiện tại.
       const { data: response } = await userService.getAllUsers({
         page,
         limit: PAGE_SIZE,
         status: statusFilter === "all" ? undefined : statusFilter,
         roleId: roleFilter || undefined,
-        // @ts-expect-error — sẽ hợp lệ khi backend/service hỗ trợ tham số này
+        // @ts-expect-error — search param will be supported when backend adds it
         search: debouncedSearch || undefined,
       });
       const fetchedUsers = response.data.result.users || [];
       setUsers(fetchedUsers);
-      // Prefer a real total from the API if/when it's added; otherwise estimate.
       const apiTotal = (response.data.result as { total?: number }).total;
       setTotalUsersEstimate(
         apiTotal ?? (page - 1) * PAGE_SIZE + fetchedUsers.length,
       );
     } catch {
-      // API unavailable — empty state
       setUsers([]);
     } finally {
       setLoading(false);
@@ -1482,7 +1396,6 @@ export function AdminUsers() {
     loadUsers();
   }, [loadUsers]);
 
-  // ── Fetch user statistics (admin & staff) ──
   useEffect(() => {
     let cancelled = false;
     setStatsLoading(true);
@@ -1492,7 +1405,7 @@ export function AdminUsers() {
         if (!cancelled) setStats(res.data.data);
       })
       .catch(() => {
-        if (!cancelled) toast.error("Failed to load user statistics");
+        if (!cancelled) toast.error(t("admin.users.failedToLoadStatistics"));
       })
       .finally(() => {
         if (!cancelled) setStatsLoading(false);
@@ -1502,8 +1415,6 @@ export function AdminUsers() {
     };
   }, []);
 
-  // Client-side search/sort only applies to the current page. Real cross-page
-  // filtering/sorting requires the API changes noted above.
   const sortedUsers = useMemo(() => {
     const filtered = debouncedSearch
       ? users.filter(
@@ -1558,7 +1469,7 @@ export function AdminUsers() {
       const { data: response } = await userService.getUserById(user.userId);
       setSelectedUser(response.data.result);
     } catch {
-      toast.error("Failed to load user detail");
+      toast.error(t("admin.users.loadError"));
     }
   };
 
@@ -1578,16 +1489,16 @@ export function AdminUsers() {
         userName: "Admin",
         description: `Updated status for ${user.fullName} to ${status}`,
       });
-      toast.success("User status updated");
+      toast.success(t("admin.users.statusUpdateSuccess"));
     } catch {
-      toast.error("Failed to update status");
+      toast.error(t("admin.users.statusUpdateError"));
     }
   };
 
   const handleRoleChange = async (user: ApiUser, roleId: string) => {
     if (!isAdmin || !roleId) return;
     const currentRoleId = extractRoleId(user.roleId);
-    if (currentRoleId === roleId) return; // same role → no-op
+    if (currentRoleId === roleId) return;
     try {
       await userService.updateUserRole(user.userId, { roleId });
       setUsers((prev) =>
@@ -1609,22 +1520,14 @@ export function AdminUsers() {
         userName: "Admin",
         description: `Changed role for ${user.fullName} to ${roleNameMap[roleId] || roleId}`,
       });
-      toast.success("User role updated");
+      toast.success(t("admin.users.roleUpdateSuccess"));
     } catch {
-      toast.error("Failed to update role");
+      toast.error(t("admin.users.roleUpdateError"));
     }
   };
 
-  const requestDeleteUser = (user: ApiUser) => {
-    if (!isAdmin) return;
-    setUserToDelete(user);
-  };
-
-  const confirmDeleteUser = async () => {
-    if (!userToDelete) return;
-    const user = userToDelete;
+  const confirmDeleteUser = async (user: ApiUser) => {
     try {
-      setDeleting(true);
       await userService.deleteUser(user.userId);
       setUsers((prev) =>
         prev.map((u) =>
@@ -1637,12 +1540,9 @@ export function AdminUsers() {
         userName: "Admin",
         description: `Soft deleted user: ${user.fullName}`,
       });
-      toast.success("User set to inactive");
-      setUserToDelete(null);
+      toast.success(t("admin.users.deleteSuccess"));
     } catch {
-      toast.error("Failed to delete user");
-    } finally {
-      setDeleting(false);
+      toast.error(t("admin.users.deleteError"));
     }
   };
 
@@ -1676,10 +1576,10 @@ export function AdminUsers() {
         userName: "Admin",
         description: `Updated user: ${updatedUser.fullName || userId}`,
       });
-      toast.success("User updated successfully");
+      toast.success(t("admin.users.updateSuccess"));
       setUserToUpdate(null);
     } catch {
-      toast.error("Failed to update user");
+      toast.error(t("admin.users.updateError"));
     } finally {
       setUpdating(false);
     }
@@ -1706,11 +1606,11 @@ export function AdminUsers() {
         userName: "Admin",
         description: `Created new user: ${data.fullName} (${data.username})`,
       });
-      toast.success("User created successfully");
+      toast.success(t("admin.users.createSuccess"));
       setShowCreateModal(false);
       loadUsers();
     } catch {
-      toast.error("Failed to create user");
+      toast.error(t("admin.users.createError"));
     } finally {
       setCreating(false);
     }
@@ -1721,11 +1621,11 @@ export function AdminUsers() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="mb-2">User Management</h1>
+          <h1 className="mb-2">{t("admin.users.title")}</h1>
           <p className="text-muted-foreground">
             {isAdmin
-              ? "Manage users, statuses, and roles"
-              : "View registered users"}
+              ? t("admin.users.manageUsers")
+              : t("admin.users.viewRegisteredUsers")}
           </p>
         </div>
         {isAdmin && (
@@ -1734,7 +1634,7 @@ export function AdminUsers() {
             className="btn-create"
           >
             <Plus size={18} />
-            Create user
+            {t("admin.users.createUser")}
           </button>
         )}
       </div>
@@ -1750,7 +1650,7 @@ export function AdminUsers() {
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            User Statistics
+            {t("admin.users.statistics")}
           </h3>
         </div>
         {statsLoading ? (
@@ -1759,7 +1659,10 @@ export function AdminUsers() {
               <div
                 key={i}
                 className="rounded-xl p-3 border space-y-2"
-                style={{ background: "var(--muted)", borderColor: "var(--border)" }}
+                style={{
+                  background: "var(--muted)",
+                  borderColor: "var(--border)",
+                }}
               >
                 <div
                   className="h-3 w-14 rounded"
@@ -1777,7 +1680,7 @@ export function AdminUsers() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
                 icon={<Users className="w-3 h-3" />}
-                label="Total"
+                label={t("admin.users.totalUsers")}
                 value={stats.totalUsers}
                 bg="var(--primary-light)"
                 border="var(--primary-soft)"
@@ -1785,7 +1688,7 @@ export function AdminUsers() {
               />
               <StatCard
                 icon={<UserCheck className="w-3 h-3" />}
-                label="Active"
+                label={t("admin.users.activeUsers")}
                 value={stats.activeUsers}
                 bg="var(--accent-green)"
                 border="var(--accent-green-text)"
@@ -1793,18 +1696,15 @@ export function AdminUsers() {
               />
               <StatCard
                 icon={<UserX className="w-3 h-3" />}
-                label="Inactive"
+                label={t("admin.users.inactiveUsers")}
                 value={stats.inactiveUsers}
                 bg="var(--accent-red)"
                 border="var(--accent-red-text)"
                 text="var(--accent-red-text)"
               />
-              {/* "Locked" reuses the warning tokens — --accent-orange /
-                  --accent-orange-text used to live here but are not defined
-                  anywhere in theme.css, so this card rendered unstyled. */}
               <StatCard
                 icon={<Lock className="w-3 h-3" />}
-                label="Locked"
+                label={t("admin.users.lockedUsers")}
                 value={stats.lockedUsers}
                 bg="var(--warning-bg)"
                 border="var(--warning-text)"
@@ -1820,7 +1720,7 @@ export function AdminUsers() {
                   className="text-[10px] font-medium uppercase tracking-wider"
                   style={{ color: "var(--foreground-muted)" }}
                 >
-                  By Role:
+                  {t("admin.users.byRole")}
                 </span>
                 {stats.usersByRole.map((r) => (
                   <span
@@ -1843,7 +1743,7 @@ export function AdminUsers() {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground text-center py-4">
-            Failed to load statistics
+            {t("admin.users.failedToLoadStatistics")}
           </p>
         )}
       </div>
@@ -1863,7 +1763,7 @@ export function AdminUsers() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search by name, username, email, or phone…"
+                placeholder={t("admin.users.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input w-full"
@@ -1880,7 +1780,7 @@ export function AdminUsers() {
                 type="button"
                 onClick={handleResetFilters}
                 className="admin-action-btn flex-shrink-0"
-                title="Clear filters"
+                title={t("admin.users.clearFilters")}
               >
                 <SlidersHorizontal className="w-4 h-4" />
               </button>
@@ -1890,20 +1790,20 @@ export function AdminUsers() {
             <FilterSelect
               value={statusFilter}
               options={[
-                { value: "all", label: "All statuses" },
+                { value: "all", label: t("admin.users.allStatuses") },
                 {
                   value: "ACTIVE",
-                  label: "ACTIVE",
+                  label: t("admin.users.active"),
                   dotColor: "var(--accent-green-text)",
                 },
                 {
                   value: "INACTIVE",
-                  label: "INACTIVE",
+                  label: t("admin.users.inactive"),
                   dotColor: "var(--accent-red-text)",
                 },
                 {
                   value: "LOCKED",
-                  label: "LOCKED",
+                  label: t("admin.users.locked"),
                   dotColor: "var(--accent-gray-text)",
                 },
               ]}
@@ -1912,7 +1812,7 @@ export function AdminUsers() {
             <FilterSelect
               value={roleFilter || "all"}
               options={[
-                { value: "all", label: "All roles" },
+                { value: "all", label: t("admin.users.allRoles") },
                 ...roleFilterOptions,
               ]}
               onChange={(v) => setRoleFilter(v === "all" ? "" : v)}
@@ -1934,42 +1834,42 @@ export function AdminUsers() {
             <thead className="bg-muted">
               <tr>
                 <SortableHeader
-                  label="User"
+                  label={t("admin.users.userName")}
                   field="name"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
                 <SortableHeader
-                  label="Email"
+                  label={t("admin.users.emailLabel")}
                   field="email"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
                 <SortableHeader
-                  label="Phone"
+                  label={t("admin.users.phoneLabel")}
                   field="phone"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
                 <SortableHeader
-                  label="Role"
+                  label={t("admin.users.role")}
                   field="role"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
                 <SortableHeader
-                  label="Status"
+                  label={t("admin.users.status")}
                   field="status"
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
                 <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground normal-case">
-                  Actions
+                  {t("admin.users.actions")}
                 </th>
               </tr>
             </thead>
@@ -2039,28 +1939,25 @@ export function AdminUsers() {
                             <button
                               onClick={() => handleViewUser(user)}
                               className="admin-action-btn view"
-                              title="View detail"
+                              title={t("admin.users.viewDetail")}
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setUserToUpdate(user)}
                               className="admin-action-btn edit"
-                              title="Update user"
+                              title={t("admin.users.update")}
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => requestDeleteUser(user)}
-                              className="admin-action-btn delete"
-                              title="Soft delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <HoldToDeleteButton
+                              onDelete={() => confirmDeleteUser(user)}
+                              title={t("admin.users.holdToDelete")}
+                            />
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            View only
+                            {t("admin.users.viewOnly")}
                           </span>
                         )}
                       </td>
@@ -2079,15 +1976,15 @@ export function AdminUsers() {
                         className="text-sm font-medium"
                         style={{ color: "var(--foreground)" }}
                       >
-                        No users found
+                        {t("admin.users.noUsersFound")}
                       </p>
                       <p
                         className="text-xs"
                         style={{ color: "var(--foreground-muted)" }}
                       >
                         {hasActiveFilters
-                          ? "Try adjusting your search or filters."
-                          : "Users you create will show up here."}
+                          ? t("admin.users.tryAdjustingFilters")
+                          : t("admin.users.usersWillShowUp")}
                       </p>
                       {hasActiveFilters && (
                         <button
@@ -2096,7 +1993,7 @@ export function AdminUsers() {
                           className="text-xs font-medium mt-1"
                           style={{ color: "var(--primary)" }}
                         >
-                          Clear filters
+                          {t("admin.users.clearFilters")}
                         </button>
                       )}
                     </div>
@@ -2122,15 +2019,6 @@ export function AdminUsers() {
           user={selectedUser}
           roleNameMap={roleNameMap}
           onClose={() => setSelectedUser(null)}
-        />
-      )}
-
-      {userToDelete && (
-        <DeleteUserModal
-          user={userToDelete}
-          loading={deleting}
-          onCancel={() => setUserToDelete(null)}
-          onConfirm={confirmDeleteUser}
         />
       )}
 

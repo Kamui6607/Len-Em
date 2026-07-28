@@ -16,6 +16,8 @@ import { AdminLessons } from "./AdminLessons";
 import { LessonFormPage } from "./LessonFormPage";
 import { AdminDIYPosts } from "./AdminDIYPosts";
 import { DIYFormPage } from "./DIYFormPage";
+import { AdminSupportDIYPosts } from "./AdminSupportDIYPosts";
+import { AdminKits } from "./AdminKits";
 
 export function AdminPage() {
   return (
@@ -28,9 +30,9 @@ export function AdminPage() {
         <Route path="orders" element={<AdminOrders />} />
         <Route path="reports" element={<AdminReports />} />
         <Route path="refunds" element={<AdminRefunds />} />
-        <Route path="payments" element={<AdminRefunds />} />
         <Route path="diy-posts" element={<AdminDIYPosts />} />
         <Route path="diy-posts/new" element={<DIYFormPage />} />
+        <Route path="support-diy" element={<AdminSupportDIYPosts />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="roles" element={<Roles />} />
         <Route path="roles/:roleId" element={<RoleDetail />} />
@@ -43,6 +45,8 @@ export function AdminPage() {
         <Route path="lessons" element={<AdminLessons />} />
         <Route path="lessons/new" element={<LessonFormPage />} />
         <Route path="lessons/:lessonId" element={<LessonFormPage />} />
+        {/* Kit Management */}
+        <Route path="kits" element={<AdminKits />} />
       </Routes>
     </AdminLayout>
   );

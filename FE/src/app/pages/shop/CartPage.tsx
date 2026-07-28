@@ -648,6 +648,7 @@ interface CartKitRowProps {
     name: string;
     level?: "beginner" | "pro" | "promax";
     price: number;
+    quantity: number;
     originalIndividualTotal?: number;
     thumbnail: string;
     productCount: number;
@@ -659,12 +660,14 @@ interface CartKitRowProps {
       price: number;
     }[];
   };
+  onQtyChange: (kitId: string, quantity: number) => void;
   onRemove: (kitId: string) => void;
   defaultExpanded?: boolean;
 }
 
 export function CartKitRow({
   item,
+  onQtyChange,
   onRemove,
   defaultExpanded = false,
 }: CartKitRowProps) {
@@ -821,6 +824,12 @@ export function CartKitRow({
           </button>
         </div>
 
+        {/* Stepper */}
+        <InlineStepper
+          value={item.quantity}
+          onChange={(n) => onQtyChange(item.kitId, n)}
+        />
+
         {/* Price */}
         <div
           style={{
@@ -834,7 +843,7 @@ export function CartKitRow({
             flexShrink: 0,
           }}
         >
-          {formatPrice(item.price)}
+          {formatPrice(item.price * item.quantity)}
           {item.originalIndividualTotal && (
             <div
               style={{
@@ -845,9 +854,9 @@ export function CartKitRow({
                 textDecoration: "line-through",
                 textDecorationColor: "var(--accent-pink)",
               }}
-                >
-                  {t("cart.bundle")}
-                </div>
+            >
+              {t("cart.bundle")}
+            </div>
           )}
         </div>
 
@@ -1347,6 +1356,7 @@ export function CartPage() {
     cartKits,
     removeFromCart,
     updateQuantity,
+    updateKitQuantity,
     removeKitFromCart,
     clearCart,
     totalItems,
@@ -1354,6 +1364,9 @@ export function CartPage() {
 
   const updateQty = (productId: string, variantId: string, qty: number) =>
     updateQuantity(productId, variantId, qty);
+
+  const updateKitQty = (kitId: string, qty: number) =>
+    updateKitQuantity(kitId, qty);
 
   const removeItem = (productId: string, variantId: string) =>
     removeFromCart(productId, variantId);
@@ -1536,6 +1549,7 @@ export function CartPage() {
                           <CartKitRow
                             key={kit.kitId}
                             item={kit}
+                            onQtyChange={updateKitQty}
                             onRemove={removeKit}
                           />
                         ))}

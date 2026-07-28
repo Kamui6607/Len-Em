@@ -231,6 +231,7 @@ export function CourseDetailPage() {
                 thumbnail: c.thumbnail,
                 level: c.level,
                 price: c.price,
+                products: [],
                 productIds: c.productIds.map((pid) => ({
                   _id: pid,
                   name: pid,
@@ -245,10 +246,13 @@ export function CourseDetailPage() {
                   __v: 0,
                 })),
                 isActive: true,
+                averageRating: 0,
+                totalRatings: 0,
+                ratings: [],
                 createdAt: "",
                 updatedAt: "",
                 __v: 0,
-              } as Kit));
+              }));
             setKits(mockKits);
           }
         }
@@ -422,7 +426,7 @@ export function CourseDetailPage() {
       navigate("/auth/login");
       return;
     }
-    const kitProducts = kit.productIds.map((product) => {
+    const kitProducts = (kit.productIds || []).map((product) => {
       const variant = product.variants[0];
       return {
         productId: product._id,

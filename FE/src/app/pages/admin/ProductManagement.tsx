@@ -3,13 +3,13 @@ import {
   Search,
   Plus,
   Edit3,
-  Trash2,
   X,
   RotateCcw,
   Package,
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
 import { useNavigate } from "react-router";
 import { formatPrice } from "../../../lib/formatPrice";
 import { productService, type Product } from "../../../api/productService";
@@ -20,6 +20,7 @@ import {
   hasVariantErrors,
 } from "../../components/admin/VariantEditor";
 import { useAuth } from "../../../hooks/useAuth";
+import { useLanguage } from "../../../context/LanguageContext";
 import { AdminSelect } from "../../components/admin/AdminSelect";
 
 // ─── Types ───────────────────────────────────────────────
@@ -52,57 +53,12 @@ const CATEGORY_OPTIONS = ["yarn", "hook", "needle", "accessory", "kit"];
 
 // ─── Confirm Dialog ──────────────────────────────────────
 
-function ConfirmDialog({
-  open,
-  title,
-  message,
-  onConfirm,
-  onCancel,
-}: {
-  open: boolean;
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  if (!open) return null;
-  return (
-    <div className="admin-dialog-overlay" onClick={onCancel}>
-      <div
-        className="admin-dialog-content max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="admin-dialog-header">
-          <h3 className="text-base font-semibold">{title}</h3>
-        </div>
-        <div className="admin-dialog-body">
-          <p className="text-sm text-muted-foreground">{message}</p>
-        </div>
-        <div className="admin-dialog-footer">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-modal-cancel"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="btn-modal-destructive"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Removed — replaced by HoldToDeleteButton
 
 // ─── Main Component ──────────────────────────────────────
 
 export function ProductManagement() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const isAdminOrStaff = hasRole("admin") || hasRole("staff");
@@ -115,7 +71,6 @@ export function ProductManagement() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductFormData>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -131,17 +86,16 @@ export function ProductManagement() {
       if (showInactive) params.includeInactive = true;
 
       const { data: response } = await productService.getAll(params);
-      // response = ApiResponse<ProductsListResponse> = { status, data: ProductsListResponse }
       const apiData = response.data;
       setProducts(apiData?.products ?? []);
       setTotal(apiData?.total ?? 0);
       setTotalPages(apiData?.totalPages ?? 1);
     } catch {
-      toast.error("Failed to load products");
+      toast.error(t("admin.products.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, showInactive]);
+  }, [page, searchTerm, showInactive, t]);
 
   useEffect(() => {
     fetchProducts();
@@ -198,24 +152,24 @@ export function ProductManagement() {
 
   const validate = (): boolean => {
     if (!form.name.trim()) {
-      toast.error("Product name is required");
+      toast.error(t("admin.products.nameRequired"));
       return false;
     }
     if (!form.category) {
-      toast.error("Category is required");
+      toast.error(t("admin.products.categoryRequired"));
       return false;
     }
     if (!editingId && !form.imageFile) {
-      toast.error("Main product image is required");
+      toast.error(t("admin.products.imageRequired"));
       return false;
     }
     if (form.variants.length === 0) {
-      toast.error("At least one variant is required");
+      toast.error(t("admin.products.variantRequired"));
       return false;
     }
     const vErrors = validateVariants(form.variants);
     if (hasVariantErrors(vErrors)) {
-      toast.error("Please fix variant errors");
+      toast.error(t("admin.products.fixVariantErrors"));
       return false;
     }
     return true;
@@ -260,10 +214,10 @@ export function ProductManagement() {
             return rest;
           }),
         });
-        toast.success("Product updated successfully");
+        toast.success(t("admin.products.updateSuccess"));
       } else {
         await productService.create(payload);
-        toast.success("Product created successfully");
+        toast.success(t("admin.products.createSuccess"));
       }
       closeModal();
       fetchProducts();
@@ -275,12 +229,12 @@ export function ProductManagement() {
       if (axiosErr.response?.status === 400) {
         toast.error(
           axiosErr.response.data?.message ||
-            "Invalid input. Please check your data.",
+            t("admin.products.invalidInput"),
         );
       } else if (axiosErr.response?.status === 403) {
-        toast.error("You don't have permission.");
+        toast.error(t("admin.products.noPermission"));
       } else {
-        toast.error(axiosErr.message || "Failed to save product");
+        toast.error(axiosErr.message || t("admin.products.saveError"));
       }
     } finally {
       setSaving(false);
@@ -289,31 +243,13 @@ export function ProductManagement() {
 
   // ─── Delete / Restore ─────────────────────────────────
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await productService.delete(deleteTarget._id);
-      toast.success("Product deleted");
-      setDeleteTarget(null);
-      fetchProducts();
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number } };
-      if (axiosErr.response?.status === 403) {
-        toast.error("You don't have permission.");
-      } else {
-        toast.error("Failed to delete product");
-      }
-      setDeleteTarget(null);
-    }
-  };
-
   const handleRestore = async (id: string) => {
     try {
       await productService.restore(id);
-      toast.success("Product restored");
+      toast.success(t("admin.products.restoreSuccess"));
       fetchProducts();
     } catch {
-      toast.error("Failed to restore product");
+      toast.error(t("admin.products.restoreError"));
     }
   };
 
@@ -329,18 +265,20 @@ export function ProductManagement() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="mb-2">Product Management</h1>
-          <p className="text-muted-foreground">{total} products total</p>
+          <h1 className="mb-2">{t("admin.products.title")}</h1>
+          <p className="text-muted-foreground">
+            {t("admin.products.totalCount", { count: total })}
+          </p>
         </div>
-{isAdminOrStaff && (
-           <button
-             onClick={openCreate}
-             className="btn-create"
-           >
-             <Plus size={18} />
-             create
-           </button>
-         )}
+        {isAdminOrStaff && (
+          <button
+            onClick={openCreate}
+            className="btn-create"
+          >
+            <Plus size={18} />
+            {t("admin.products.create")}
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -351,7 +289,7 @@ export function ProductManagement() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder={t("admin.products.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input w-full"
@@ -369,7 +307,7 @@ export function ProductManagement() {
                 }}
                 className="rounded border-border"
               />
-              Show inactive
+              {t("admin.products.showInactive")}
             </label>
           </div>
         </div>
@@ -377,12 +315,12 @@ export function ProductManagement() {
         {/* Table Body */}
         {loading ? (
           <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
-            Loading...
+            {t("admin.products.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Package size={40} className="mx-auto mb-3 opacity-40" />
-            <p>No products found</p>
+            <p>{t("admin.products.noProducts")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
@@ -390,19 +328,19 @@ export function ProductManagement() {
               <thead className="bg-muted">
                 <tr>
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">
-                    Product
+                    {t("admin.products.product")}
                   </th>
                   <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Price
+                    {t("admin.products.price")}
                   </th>
                   <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Total stock
+                    {t("admin.products.totalStock")}
                   </th>
                   <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Status
+                    {t("admin.products.status")}
                   </th>
                   <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[120px]">
-                    Actions
+                    {t("admin.products.actions")}
                   </th>
                 </tr>
               </thead>
@@ -462,7 +400,7 @@ export function ProductManagement() {
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
                           />
-                          {product.isActive ? "Đang bán" : "Đã ẩn"}
+                          {product.isActive ? t("admin.products.active") : t("admin.products.inactive")}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -472,30 +410,40 @@ export function ProductManagement() {
                               navigate(`/admin/products/${product._id}`)
                             }
                             className="admin-action-btn view"
-                            title="View details"
+                            title={t("admin.products.viewDetails")}
                           >
                             <Eye size={16} />
                           </button>
                           <button
                             onClick={() => openEdit(product)}
                             className="admin-action-btn edit"
-                            title="Edit"
+                            title={t("admin.products.edit")}
                           >
                             <Edit3 size={16} />
                           </button>
                           {product.isActive ? (
-                            <button
-                              onClick={() => setDeleteTarget(product)}
-                              className="admin-action-btn delete"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <HoldToDeleteButton
+                              onDelete={async () => {
+                                try {
+                                  await productService.delete(product._id);
+                                  toast.success(t("admin.products.deleteSuccess"));
+                                  fetchProducts();
+                                } catch (err: unknown) {
+                                  const axiosErr = err as { response?: { status?: number } };
+                                  if (axiosErr.response?.status === 403) {
+                                    toast.error(t("admin.products.noPermission"));
+                                  } else {
+                                    toast.error(t("admin.products.deleteError"));
+                                  }
+                                }
+                              }}
+                              title={t("admin.products.holdToDelete")}
+                            />
                           ) : (
                             <button
                               onClick={() => handleRestore(product._id)}
                               className="admin-action-btn edit"
-                              title="Restore"
+                              title={t("admin.products.restore")}
                             >
                               <RotateCcw size={16} />
                             </button>
@@ -519,22 +467,22 @@ export function ProductManagement() {
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Previous
+            {t("admin.products.previous")}
           </button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+          <span className="text-sm">
+            {t("admin.products.page", { page, total: totalPages })}
           </span>
           <button
             className="btn-secondary"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           >
-            Next
+            {t("admin.products.next")}
           </button>
         </div>
       )}
 
-      {/* ─── Create / Edit Modal ───────────────────────────── */}
+      {/* Modal */}
       {showModal && (
         <div className="admin-dialog-overlay" onClick={closeModal}>
           <div
@@ -543,7 +491,7 @@ export function ProductManagement() {
           >
             <div className="admin-dialog-header">
               <h3 className="text-base font-semibold">
-                {editingId ? "Edit Product" : "Create Product"}
+                {editingId ? t("admin.products.editProduct") : t("admin.products.createProduct")}
               </h3>
               <button
                 onClick={closeModal}
@@ -559,7 +507,7 @@ export function ProductManagement() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Name *
+                      {t("admin.products.name")} *
                     </label>
                     <input
                       type="text"
@@ -567,25 +515,25 @@ export function ProductManagement() {
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       className="input w-full"
-                      placeholder="Product name"
+                      placeholder={t("admin.products.namePlaceholder")}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Category *
+                      {t("admin.products.category")} *
                     </label>
                     <AdminSelect
                       value={form.category}
                       options={CATEGORY_OPTIONS.map((category) => ({
                         value: category,
-                        label: category,
+                        label: t(`admin.products.categories.${category}`),
                       }))}
                       onChange={(value) => setForm({ ...form, category: value })}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Price *
+                      {t("admin.products.price")} *
                     </label>
                     <input
                       type="number"
@@ -600,13 +548,13 @@ export function ProductManagement() {
                         });
                       }}
                       className="input w-full"
-                      placeholder="Product price"
+                      placeholder={t("admin.products.pricePlaceholder")}
                       min={0}
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Description
+                      {t("admin.products.description")}
                     </label>
                     <textarea
                       value={form.description}
@@ -615,12 +563,12 @@ export function ProductManagement() {
                       }
                       rows={3}
                       className="input w-full resize-none"
-                      placeholder="Product description"
+                      placeholder={t("admin.products.descriptionPlaceholder")}
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Main image {!editingId && <span className="text-destructive">*</span>}
+                      {t("admin.products.mainImage")} {!editingId && <span className="text-destructive">*</span>}
                     </label>
                     <input
                       type="file"
@@ -639,29 +587,29 @@ export function ProductManagement() {
                       </p>
                     ) : form.image ? (
                       <p className="text-xs text-muted-foreground mt-1 truncate">
-                        Current: {form.image}
+                        {t("admin.products.currentImage")}: {form.image}
                       </p>
                     ) : null}
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Tags (comma separated)
+                      {t("admin.products.tags")}
                     </label>
                     <input
                       type="text"
                       value={form.tags}
                       onChange={(e) => setForm({ ...form, tags: e.target.value })}
                       className="input w-full"
-                      placeholder="acrylic, bền, tươi sáng"
+                      placeholder={t("admin.products.tagsPlaceholder")}
                     />
                   </div>
                 </div>
 
-                {/* Variants (stock & colors only - price is set at product level) */}
+                {/* Variants */}
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
-                      Colors / Stock *
+                      {t("admin.products.colorsStock")} *
                     </label>
                   </div>
                   <VariantEditor
@@ -682,9 +630,9 @@ export function ProductManagement() {
                     className="rounded border-border"
                   />
                   <div>
-                    <span className="text-sm font-medium">Active</span>
+                    <span className="text-sm font-medium">{t("admin.products.active")}</span>
                     <p className="text-xs text-muted-foreground">
-                      Inactive products are hidden from the public shop
+                      {t("admin.products.inactiveDescription")}
                     </p>
                   </div>
                 </label>
@@ -696,14 +644,14 @@ export function ProductManagement() {
                   disabled={saving}
                   className="btn-modal-cancel"
                 >
-                  Cancel
+                  {t("admin.products.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="btn-modal-primary"
                 >
-                  {saving ? "Saving…" : editingId ? "Update Product" : "Create Product"}
+                  {saving ? t("admin.products.saving") : editingId ? t("admin.products.updateProduct") : t("admin.products.createProduct")}
                 </button>
               </div>
             </form>
@@ -711,18 +659,6 @@ export function ProductManagement() {
         </div>
       )}
 
-      {/* Delete Confirm Dialog */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Delete Product"
-        message={
-          deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.name}"?`
-            : ""
-        }
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </div>
   );
 }

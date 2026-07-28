@@ -5,7 +5,7 @@ import { Navigation } from "../Navigation";
 import { Footer } from "../Footer";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { useSwipeBack } from "../../../hooks/useSwipeBack";
-import { BackToTop } from "../../../components/motion/BackToTop";
+import { ArchiveFloatingMenu } from "../../../components/motion/ArchiveFloatingMenu";
 import { useCart } from "../../../context/CartContext";
 
 interface StoreLayoutProps {
@@ -55,7 +55,7 @@ export function StoreLayout({
           )}
         </div>
 
-        <BackToTop />
+        <ArchiveFloatingMenu />
         {!hideNav && location.pathname !== "/" && <Footer />}
       </div>
     </motion.div>

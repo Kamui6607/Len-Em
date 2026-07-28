@@ -11,6 +11,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { ReviewProvider } from "./context/ReviewContext";
 import { CartProvider } from "../context/CartContext";
 import { LanguageProvider } from "../context/LanguageContext";
+import { NotificationInit } from "./components/NotificationInit";
 import { AppRouter } from "../routes/AppRouter";
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
         <AdminProvider>
           <ReportProvider>
             <NotificationProvider>
+              <NotificationInit />
               <ReviewProvider>
                 <FavoritesProvider>
                   <CartProvider>

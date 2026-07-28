@@ -3,6 +3,7 @@ import { ArrowLeft, Check, CheckCheck, Inbox, Bell, Trash2 } from "lucide-react"
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "../context/NotificationContext";
+import { useHoldToDelete } from "../../hooks/useHoldToDelete";
 
 function getDateGroup(date: Date): "Today" | "Yesterday" | "This week" | "Earlier" {
   const now = new Date();
@@ -34,6 +35,65 @@ function formatRelativeTime(dateStr: string): string {
 
 const GROUP_ORDER = ["Today", "Yesterday", "This week", "Earlier"] as const;
 
+function DeleteButton({
+  notificationId,
+  onDelete,
+}: {
+  notificationId: string;
+  onDelete: (id: string) => void;
+}) {
+  const { isHolding, holdProgress, startHold, cancelHold, cancelHoldOnLeave } = useHoldToDelete({
+    onDelete: () => onDelete(notificationId),
+  });
+
+  return (
+    <button
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        startHold();
+      }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        cancelHold();
+      }}
+      onPointerLeave={() => {
+        cancelHoldOnLeave();
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+      className={`admin-action-btn delete relative ${
+        isHolding ? "bg-destructive/20 text-destructive" : ""
+      }`}
+      style={{ width: 28, height: 28 }}
+      aria-label="Hold to dismiss"
+      title="Hold 2s to dismiss"
+    >
+      <Trash2 className="size-3.5" />
+      {/* Circular progress ring */}
+      {isHolding && (
+        <svg
+          className="absolute inset-0 -rotate-90"
+          width="28"
+          height="28"
+          viewBox="0 0 28 28"
+        >
+          <circle
+            cx="14"
+            cy="14"
+            r="12"
+            fill="none"
+            stroke="var(--destructive)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeDasharray={`${holdProgress * 75.4} 75.4`}
+            opacity="0.6"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export function NotificationsPage() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotification } = useNotifications();
@@ -56,15 +116,14 @@ export function NotificationsPage() {
     if (targetPath) navigate(targetPath);
   };
 
-  const handleDelete = (e: React.MouseEvent, notificationId: string) => {
-    e.stopPropagation();
-    clearNotification(notificationId);
-    toast.success("Notification dismissed");
-  };
-
   const handleMarkAllRead = () => {
     markAllAsRead();
     toast.success("All notifications marked as read");
+  };
+
+  const handleDelete = (notificationId: string) => {
+    clearNotification(notificationId);
+    toast.success("Notification dismissed");
   };
 
   let cardIndex = 0;
@@ -156,8 +215,8 @@ export function NotificationsPage() {
                     const delay = cardIndex++ * 40;
                     return (
                       <div
-                        key={notification.id}
-                        onClick={() => handleNotificationClick(notification.id, notification.targetPath)}
+                        key={notification._id}
+                        onClick={() => handleNotificationClick(notification._id, notification.targetPath)}
                         className={`group relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors animate-fade-in ${
                           !notification.read ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted"
                         }`}
@@ -190,7 +249,7 @@ export function NotificationsPage() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    markAsRead(notification.id);
+                                    markAsRead(notification._id);
                                   }}
                                   className="admin-action-btn view"
                                   style={{ width: 28, height: 28 }}
@@ -200,15 +259,10 @@ export function NotificationsPage() {
                                   <Check className="size-3.5" />
                                 </button>
                               )}
-                              <button
-                                onClick={(e) => handleDelete(e, notification.id)}
-                                className="admin-action-btn delete"
-                                style={{ width: 28, height: 28 }}
-                                aria-label="Dismiss"
-                                title="Dismiss"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
+                              <DeleteButton
+                                notificationId={notification._id}
+                                onDelete={handleDelete}
+                              />
                             </div>
                           </div>
                         </div>

@@ -137,4 +137,11 @@ export const productService = {
     axiosClient.delete<ApiResponse<{ deletedProduct: { _id: string; name: string } }>>(
       `${PRODUCTS_BASE}/${productId}`
     ),
+
+  /** POST /products/{productId}/rate — Rate a product with a score 1–5 */
+  rateProduct: (productId: string, score: number) =>
+    axiosClient.post<ApiResponse<{ product: Product }>>(
+      `${PRODUCTS_BASE}/${productId}/rate`,
+      { score }
+    ),
 };

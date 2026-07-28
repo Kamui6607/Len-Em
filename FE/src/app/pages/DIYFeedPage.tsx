@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Heart, Search, ShoppingBag, Bookmark, PackageOpen } from "lucide-react";
+import { Heart, Search, ShoppingBag, Bookmark, PackageOpen, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
@@ -13,9 +13,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { diyService } from "../../features/diy/services/diy.service";
-import { kitService } from "../../api/kitService";
+import { kitService, type KitProductDetail } from "../../api/kitService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
-import type { KitProduct } from "../../api/kitService";
 import { formatPrice } from "../../lib/formatPrice";
 import { userService } from "../../features/users/services/user.service";
 
@@ -103,12 +102,12 @@ export function DIYFeedPage() {
         name: kit.name,
         thumbnail: kit.thumbnail,
         price: kit.price,
-        products: kit.productIds.map((product: KitProduct) => ({
+        products: (kit.productIds || []).map((product: KitProductDetail) => ({
           productId: product._id,
-          variantId: "default",
+          variantId: product.variants[0]?._id || "default",
           name: product.name,
-          image: product.variants[0]?.image ?? product.image,
-          price: 0,
+          image: product.variants[0]?.image || product.image,
+          price: product.variants[0]?.price || 0,
         })),
       });
       toast.success("Added kit to cart");
@@ -238,6 +237,13 @@ export function DIYFeedPage() {
             </TabsList>
           </Tabs>
 
+          <Link
+            to="/support-diy/new"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Hand className="w-4 h-4" />
+            Support
+          </Link>
           <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

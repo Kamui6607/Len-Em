@@ -2,15 +2,14 @@
 // OrderDetailCard — shared component for both customer & admin views
 // Props:
 //   - order: Order object
-//   - isAdminView: bool — if true, shows status dropdown; if false, shows cancel button
+//   - isAdminView: bool — if false, shows cancel button
 //   - onStatusChange?: callback when admin changes status
 //   - onCancel?: callback when customer cancels
 // ============================================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Package, MapPin, CreditCard, Calendar, AlertCircle } from "lucide-react";
 import { formatPrice } from "../../../lib/formatPrice";
-import { ColorSwatch } from "../ui/ColorSwatch";
 import {
   ORDER_STATUS_LABELS,
   getOrderStatusBadgeClass,
@@ -22,6 +21,7 @@ import {
 import type { Order, OrderStatus } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { ReportButton } from "../ReportButton";
+import { kitService } from "../../../api/kitService";
 
 interface OrderDetailCardProps {
   order: Order;
@@ -29,6 +29,28 @@ interface OrderDetailCardProps {
   onStatusChange?: (orderId: string, newStatus: OrderStatus) => Promise<void>;
   onCancel?: (orderId: string, reason: string) => Promise<void>;
   onReport?: (orderId: string) => void;
+  onRetryPayment?: (orderId: string) => Promise<void>;
+}
+
+/** Group items by kitId — items without kitId stay as standalone items */
+function groupItemsByKit(orderItems: Order["items"]) {
+  const kitGroups: { kitId: string; items: typeof orderItems }[] = [];
+  const standalone: typeof orderItems = [];
+
+  orderItems.forEach((item) => {
+    if (item.kitId) {
+      let group = kitGroups.find((g) => g.kitId === item.kitId);
+      if (!group) {
+        group = { kitId: item.kitId, items: [] };
+        kitGroups.push(group);
+      }
+      group.items.push(item);
+    } else {
+      standalone.push(item);
+    }
+  });
+
+  return { kitGroups, standalone };
 }
 
 export function OrderDetailCard({
@@ -36,16 +58,56 @@ export function OrderDetailCard({
   isAdminView = false,
   onStatusChange,
   onCancel,
+  onRetryPayment,
 }: OrderDetailCardProps) {
   const normalized = normalizeOrder(order);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [kitNames, setKitNames] = useState<Record<string, string>>({});
+  const [kitNamesLoaded, setKitNamesLoaded] = useState(false);
+  
+  // Fetch kit names for all unique kitIds in the order
+  useEffect(() => {
+    async function loadKitNames() {
+      const uniqueKitIds = new Set<string>();
+      normalized.items.forEach((item) => {
+        if (item.kitId) uniqueKitIds.add(item.kitId);
+      });
+      
+      if (uniqueKitIds.size > 0) {
+        const kitPromises = Array.from(uniqueKitIds).map(async (kitId) => {
+          try {
+            const { data: kitData } = await kitService.getById(kitId);
+            return { kitId, name: kitData.data?.kit?.name };
+          } catch {
+            return { kitId, name: null };
+          }
+        });
+        const kitResults = await Promise.all(kitPromises);
+        const kitNameMap = kitResults.reduce((acc, { kitId, name }) => {
+          if (name) acc[kitId] = name;
+          return acc;
+        }, {} as Record<string, string>);
+        setKitNames(kitNameMap);
+      }
+      setKitNamesLoaded(true);
+    }
+    loadKitNames();
+  }, [normalized.items]);
 
   const canChangeStatus = isAdminView && VALID_TRANSITIONS[normalized.orderStatus]?.length > 0;
   const availableTransitions = VALID_TRANSITIONS[normalized.orderStatus] ?? [];
-  const canCancel = !isAdminView && normalized.orderStatus === "PENDING";
+  /** PENDING + unpaid (VNPAY/MOMO) → show retry payment button */
+  const isUnpaid = !isAdminView && normalized.orderStatus === "PENDING" && (normalized.payment.method === "VNPAY" || normalized.payment.method === "MOMO") && normalized.payment.status === "PENDING";
+  /** PENDING + not unpaid → show cancel (only if no refund invoice exists) */
+  const canCancel = !isAdminView && normalized.orderStatus === "PENDING" && !normalized.isCancelRequested && normalized.payment.status !== "PENDING";
+  /** Order is PENDING and has been cancelled (has refund invoice) */
+  const isCancelRequested = normalized.isCancelRequested && normalized.orderStatus === "PENDING";
+  /** CANCELLED + VNPAY/MOMO + not PAID → show retry payment button */
+  const canRetryPayment = !isAdminView && normalized.orderStatus === "CANCELLED" && (normalized.payment.method === "VNPAY" || normalized.payment.method === "MOMO") && normalized.payment.status !== "PAID";
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     if (!onStatusChange) return;
@@ -97,6 +159,45 @@ export function OrderDetailCard({
             >
               {ORDER_STATUS_LABELS[normalized.orderStatus]}
             </span>
+            {isUnpaid && (
+              <button
+                onClick={async () => {
+                  if (!onRetryPayment) return;
+                  setRetrying(true);
+                  try {
+                    await onRetryPayment(normalized._id);
+                  } finally {
+                    setRetrying(false);
+                  }
+                }}
+                disabled={retrying}
+                className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors font-medium"
+              >
+                {retrying ? "..." : "💳 Thanh toán lại"}
+              </button>
+            )}
+            {isCancelRequested && (
+              <span className="text-sm bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-4 py-1.5 rounded-full font-medium">
+                ⏳ Đang chờ duyệt huỷ
+              </span>
+            )}
+            {canRetryPayment && (
+              <button
+                onClick={async () => {
+                  if (!onRetryPayment) return;
+                  setRetrying(true);
+                  try {
+                    await onRetryPayment(normalized._id);
+                  } finally {
+                    setRetrying(false);
+                  }
+                }}
+                disabled={retrying}
+                className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors font-medium"
+              >
+                {retrying ? "..." : "💳 Thanh toán lại"}
+              </button>
+            )}
             {canCancel && !isAdminView && (
               <button
                 onClick={() => setShowCancelModal(true)}
@@ -146,51 +247,87 @@ export function OrderDetailCard({
           <h3 className="font-semibold">Sản phẩm</h3>
         </div>
         <div className="space-y-3">
-          {normalized.items.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex items-start gap-3 py-3 border-b border-border last:border-0"
-            >
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.productName || "Sản phẩm"}
-                  className="w-16 h-16 rounded-lg object-cover bg-muted flex-shrink-0"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (!target.dataset.fallback) {
-                      target.dataset.fallback = "true";
-                      target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
-                    }
-                  }}
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                  <Package className="w-6 h-6 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">{item.productName || "Sản phẩm"}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {item.hexCode && (
-                    <ColorSwatch hexCode={item.hexCode} colorName={item.color} size="sm" />
-                  )}
-                  {item.color && (
-                    <span className="text-xs text-muted-foreground">{item.color}</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  SL: {item.quantity}
-                  {item.price != null && ` x ${formatPrice(item.price)}`}
-                </p>
-              </div>
-              {item.price != null && (
-                <p className="font-medium text-sm flex-shrink-0">
-                  {formatPrice(item.price * item.quantity)}
-                </p>
-              )}
-            </div>
-          ))}
+          {(() => {
+            const { kitGroups, standalone } = groupItemsByKit(normalized.items);
+            return (
+              <>
+                {/* Kit groups - only show after kit names are loaded */}
+                {kitNamesLoaded && kitGroups.map((group) => {
+                  const kitName = kitNames[group.kitId];
+                  if (!kitName) return null;
+                  return (
+                    <div key={group.kitId} className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2">
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                        🎁 {kitName}
+                      </p>
+                      {group.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between py-1.5"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {item.productName || `Product ${item.productId}`}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>x{item.quantity}</span>
+                              {item.color && <span>{item.color}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+                {/* Standalone items */}
+                {standalone.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 py-3 border-b border-border last:border-0"
+                  >
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.productName || "Sản phẩm"}
+                        className="w-16 h-16 rounded-lg object-cover bg-muted flex-shrink-0"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallback) {
+                            target.dataset.fallback = "true";
+                            target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Package className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{item.productName || "Sản phẩm"}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {item.hexCode && (
+                          <span className="inline-block w-3 h-3 rounded-full border border-border" style={{ backgroundColor: item.hexCode }} />
+                        )}
+                        {item.color && (
+                          <span className="text-xs text-muted-foreground">{item.color}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        SL: {item.quantity}
+                        {item.price != null && ` x ${formatPrice(item.price)}`}
+                      </p>
+                    </div>
+                    {item.price != null && (
+                      <p className="font-medium text-sm flex-shrink-0">
+                        {formatPrice(item.price * item.quantity)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </>
+            );
+          })()}
         </div>
       </div>
 

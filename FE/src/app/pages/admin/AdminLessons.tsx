@@ -4,39 +4,28 @@ import {
   Edit,
   Plus,
   Search,
-  Trash2,
   Video,
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../../components/ui/alert-dialog";
 import { lessonService } from "../../../api/lessonService";
 import type { Lesson } from "../../../features/learn/types/learn.types";
+import { useLanguage } from "../../../context/LanguageContext";
 
 type SortField = "title" | "order" | "duration" | "products" | "preview";
 type SortDirection = "asc" | "desc";
 
 export function AdminLessons() {
+  const { t } = useLanguage();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const fetchLessons = useCallback(async () => {
     try {
@@ -44,30 +33,15 @@ export function AdminLessons() {
       const res = await lessonService.getAll();
       setLessons(res.data.data.lessons);
     } catch {
-      toast.error("Failed to load lessons");
+      toast.error(t("admin.lessons.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchLessons();
   }, [fetchLessons]);
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    try {
-      setDeleting(true);
-      await lessonService.delete(deleteId);
-      toast.success("Lesson deleted successfully");
-      setLessons((prev) => prev.filter((l) => l._id !== deleteId));
-    } catch {
-      toast.error("Failed to delete lesson");
-    } finally {
-      setDeleting(false);
-      setDeleteId(null);
-    }
-  };
 
   const filteredLessons = lessons.filter((lesson) =>
     lesson.title.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -138,9 +112,9 @@ export function AdminLessons() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Lesson Management</h1>
+        <h1 className="text-2xl font-semibold">{t("admin.lessons.title")}</h1>
         <div className="flex items-center justify-center py-20 text-muted-foreground">
-          Loading lessons...
+          {t("admin.lessons.loading")}
         </div>
       </div>
     );
@@ -151,12 +125,12 @@ export function AdminLessons() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="mb-2">Lesson Management</h1>
-          <p className="text-muted-foreground">Manage all standalone lessons</p>
+          <h1 className="mb-2">{t("admin.lessons.title")}</h1>
+          <p className="text-muted-foreground">{t("admin.lessons.subtitle")}</p>
         </div>
         <Link to="/admin/lessons/new" className="btn-create">
           <Plus size={18} />
-          create
+          {t("admin.lessons.create")}
         </Link>
       </div>
 
@@ -175,7 +149,7 @@ export function AdminLessons() {
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search lessons..."
+              placeholder={t("admin.lessons.searchPlaceholder")}
               className="w-full pl-12 input"
               style={{
                 paddingLeft: "3rem",
@@ -192,21 +166,21 @@ export function AdminLessons() {
           <table className="admin-table w-full">
             <thead className="bg-muted">
               <tr>
-                <SortableHeader label="Lesson" field="title" />
-                <SortableHeader label="Order" field="order" align="right" />
+                <SortableHeader label={t("admin.lessons.lesson")} field="title" />
+                <SortableHeader label={t("admin.lessons.order")} field="order" align="right" />
                 <SortableHeader
-                  label="Duration"
+                  label={t("admin.lessons.duration")}
                   field="duration"
                   align="right"
                 />
                 <SortableHeader
-                  label="Products"
+                  label={t("admin.lessons.products")}
                   field="products"
                   align="right"
                 />
-                <SortableHeader label="Preview" field="preview" />
+                <SortableHeader label={t("admin.lessons.preview")} field="preview" />
                 <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[120px]">
-                  Actions
+                  {t("admin.lessons.actions")}
                 </th>
               </tr>
             </thead>
@@ -245,7 +219,7 @@ export function AdminLessons() {
                       <span
                         className={`badge ${lesson.isPreview ? "badge-green" : "badge-red"}`}
                       >
-                        {lesson.isPreview ? "Preview" : "Locked"}
+                        {lesson.isPreview ? t("admin.lessons.preview") : t("admin.lessons.locked")}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -260,42 +234,18 @@ export function AdminLessons() {
                             <Edit className="size-4" />
                           </Link>
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="admin-action-btn delete"
-                              onClick={() => setDeleteId(lesson._id)}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="admin-dialog-content">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Lesson</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{lesson.title}
-                                "? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel
-                                onClick={() => setDeleteId(null)}
-                                className="btn-secondary"
-                              >
-                                Cancel
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={handleDelete}
-                                disabled={deleting}
-                                className="btn-destructive"
-                              >
-                                {deleting ? "Deleting..." : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <HoldToDeleteButton
+                          onDelete={async () => {
+                            try {
+                              await lessonService.delete(lesson._id);
+                              toast.success(t("admin.lessons.deleteSuccess"));
+                              setLessons((prev) => prev.filter((l) => l._id !== lesson._id));
+                            } catch {
+                              toast.error(t("admin.lessons.deleteError"));
+                            }
+                          }}
+                          title={t("admin.lessons.holdToDelete")}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -306,7 +256,7 @@ export function AdminLessons() {
                     colSpan={6}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    No lessons found
+                    {t("admin.lessons.noLessons")}
                   </td>
                 </tr>
               )}

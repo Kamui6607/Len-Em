@@ -45,6 +45,25 @@ export function OrderDetail() {
     }
   };
 
+  const handleRetryPayment = async (orderId: string) => {
+    try {
+      const { data } = await orderApi.retryPayment(orderId);
+      setOrder(data.order ?? null);
+      // Redirect to VNPay payment URL
+      if (data.payUrl) {
+        // Use setTimeout to avoid toast blocking the redirect
+        toast.success("Đang chuyển đến cổng thanh toán VNPay...");
+        setTimeout(() => {
+          window.location.href = data.payUrl;
+        }, 500);
+      } else {
+        toast.error("Không thể tạo link thanh toán. Vui lòng thử lại sau.");
+      }
+    } catch {
+      toast.error("Không thể khởi tạo thanh toán lại. Vui lòng thử lại sau.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -88,6 +107,7 @@ export function OrderDetail() {
           order={order}
           isAdminView={false}
           onCancel={handleCancel}
+          onRetryPayment={handleRetryPayment}
         />
       </div>
     </div>

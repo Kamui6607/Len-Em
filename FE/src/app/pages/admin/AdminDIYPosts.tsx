@@ -6,7 +6,6 @@ import type { DIYPost } from "../../../features/diy/types/diy.types";
 import {
   CheckCircle,
   Eye,
-  Trash2,
   ChevronUp,
   ChevronDown,
   Check,
@@ -15,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { ReportButton } from "../../components/ReportButton";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
 
 const STATUS_OPTIONS = ["", "Pending", "Done"];
 
@@ -33,8 +33,6 @@ export function AdminDIYPosts() {
   const [selectedPost, setSelectedPost] = useState<DIYPost | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [postToDelete, setPostToDelete] = useState<DIYPost | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   // Edit modal state
   const [editModal, setEditModal] = useState<DIYPost | null>(null);
@@ -106,18 +104,13 @@ export function AdminDIYPosts() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!postToDelete) return;
-    setDeleting(true);
+  const handleDelete = async (post: DIYPost) => {
     try {
-      await diyService.deletePost(postToDelete._id);
+      await diyService.deletePost(post._id);
       toast.success("Post deleted");
-      setPostToDelete(null);
       fetchPosts();
     } catch {
       toast.error("Failed to delete post");
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -370,13 +363,10 @@ export function AdminDIYPosts() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => setPostToDelete(post)}
-                            className="admin-action-btn delete"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <HoldToDeleteButton
+                            onDelete={() => handleDelete(post)}
+                            title="Hold 2s to delete"
+                          />
                         </div>
                       </td>
                     </tr>
@@ -440,50 +430,6 @@ export function AdminDIYPosts() {
           </>
         )}
       </div>
-
-      {/* Delete Confirm Dialog */}
-      {postToDelete && (
-        <div
-          className="admin-dialog-overlay"
-          onClick={() => setPostToDelete(null)}
-        >
-          <div
-            className="admin-dialog-content max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">Delete DIY Post?</h3>
-            </div>
-            <div className="admin-dialog-body">
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to delete post{" "}
-                <strong className="text-foreground">
-                  "{postToDelete.title}"
-                </strong>
-                ? This action cannot be undone.
-              </p>
-            </div>
-            <div className="admin-dialog-footer">
-              <button
-                type="button"
-                onClick={() => setPostToDelete(null)}
-                disabled={deleting}
-                className="btn-modal-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="btn-modal-destructive"
-              >
-                {deleting ? "Deleting…" : <><Trash2 className="w-4 h-4" /> Delete Post</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* View Detail Modal */}
       {selectedPost && (

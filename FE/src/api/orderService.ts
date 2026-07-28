@@ -6,6 +6,7 @@ import axiosClient from "../lib/axiosClient";
 import type {
   CreateOrderRequest,
   CancelOrderRequest,
+  CancelRequestDecision,
   UpdateOrderStatusRequest,
   AdminOrdersResponse,
   MyOrdersResponse,
@@ -38,11 +39,29 @@ export const orderApi = {
     axiosClient.get<GetOrderResponse>(`${ORDERS_BASE}/${orderId}`),
 
   /**
-   * POST /orders/:id/cancel — customer cancels their own PENDING order
-   * Backend returns: { message, order }
+   * POST /orders/:id/cancel — customer requests cancel on their PENDING order
+   * Sets isCancelRequested = true, admin must approve via cancel-request
    */
   cancelOrder: (orderId: string, data: CancelOrderRequest) =>
     axiosClient.post<GetOrderResponse>(`${ORDERS_BASE}/${orderId}/cancel`, data),
+
+  /**
+   * PATCH /orders/:id/cancel-request — admin approves/rejects cancel request
+   * Body: { decision: "APPROVED" | "REJECTED" }
+   * APPROVED → order becomes CANCELLED + auto-creates RefundInvoice
+   * REJECTED → order stays PENDING, removes isCancelRequested flag
+   */
+  cancelRequest: (orderId: string, data: CancelRequestDecision) =>
+    axiosClient.patch<GetOrderResponse>(`${ORDERS_BASE}/${orderId}/cancel-request`, data),
+
+  /**
+   * POST /orders/:id/retry-payment — retry payment for cancelled/unpaid order
+   * Returns payUrl for VNPAY
+   */
+  retryPayment: (orderId: string) =>
+    axiosClient.post<{ message: string; order: import("../features/orders/types/order.types").Order; payUrl: string }>(
+      `${ORDERS_BASE}/${orderId}/retry-payment`,
+    ),
 
   /**
    * GET /orders — admin/staff get all orders with filters + pagination

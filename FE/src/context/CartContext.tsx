@@ -30,6 +30,7 @@ export interface CartKitItem {
   name: string;
   thumbnail: string;
   price: number;
+  quantity: number;
   productCount: number;
   products: {
     productId: string;
@@ -57,6 +58,7 @@ interface AddKitToCartPayload {
   name: string;
   thumbnail: string;
   price: number;
+  quantity?: number;
   products: {
     productId: string;
     variantId: string;
@@ -74,6 +76,7 @@ interface CartContextType {
   removeFromCart: (productId: string, variantId: string) => void;
   removeKitFromCart: (kitId: string) => void;
   updateQuantity: (productId: string, variantId: string, quantity: number) => void;
+  updateKitQuantity: (kitId: string, quantity: number) => void;
   clearCart: () => void;
   isInCart: (productId: string, variantId: string) => boolean;
   isKitInCart: (kitId: string) => boolean;
@@ -197,7 +200,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const totalItems = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.quantity, 0) + cartKits.length,
+    () => cartItems.reduce((sum, item) => sum + item.quantity, 0) + cartKits.reduce((sum, kit) => sum + kit.quantity, 0),
     [cartItems, cartKits]
   );
 
@@ -210,16 +213,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartKits((prev) => {
       const existing = prev.find((item) => item.kitId === kit.kitId);
       if (existing) {
+        const newQuantity = existing.quantity + (kit.quantity || 1);
         return prev.map((item) =>
-          item.kitId === kit.kitId ? { ...kit, productCount: kit.products.length } : item
+          item.kitId === kit.kitId 
+            ? { ...kit, quantity: newQuantity, productCount: kit.products.length } 
+            : item
         );
       }
-      return [...prev, { ...kit, productCount: kit.products.length }];
+      return [...prev, { ...kit, quantity: kit.quantity || 1, productCount: kit.products.length }];
     });
   }, []);
 
   const removeKitFromCart = useCallback((kitId: string) => {
     setCartKits((prev) => prev.filter((item) => item.kitId !== kitId));
+  }, []);
+
+  const updateKitQuantity = useCallback((kitId: string, quantity: number) => {
+    setCartKits((prev) =>
+      prev.map((item) =>
+        item.kitId === kitId ? { ...item, quantity: Math.max(1, quantity) } : item
+      )
+    );
   }, []);
 
   const isKitInCart = useCallback(
@@ -239,6 +253,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeFromCart,
         removeKitFromCart,
         updateQuantity,
+        updateKitQuantity,
         clearCart,
         isInCart,
         isKitInCart,

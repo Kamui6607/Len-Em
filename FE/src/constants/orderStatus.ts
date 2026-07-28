@@ -8,7 +8,9 @@ export type OrderStatus =
   | "PREPARING"
   | "SHIPPING"
   | "DELIVERED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "REJECTED"
+  | "PROCESSED";
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
@@ -19,6 +21,8 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   SHIPPING: "Đang giao hàng",
   DELIVERED: "Đã giao hàng",
   CANCELLED: "Đã hủy",
+  REJECTED: "Bị từ chối",
+  PROCESSED: "Đã xử lý",
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -35,6 +39,8 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   SHIPPING: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
   DELIVERED: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  REJECTED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  PROCESSED: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
 };
 
 export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
@@ -69,13 +75,16 @@ export function getPaymentStatusBadgeClass(status: string): string {
 export function getOrderStatusBadgeClass(status: string): string {
   switch (status) {
     case "DELIVERED":
+    case "PROCESSED":
+      return "badge-green";
     case "CONFIRMED":
     case "PREPARING":
     case "SHIPPING":
-      return "badge-green";
+      return "badge-blue";
     case "PENDING":
       return "badge-orange";
     case "CANCELLED":
+    case "REJECTED":
       return "badge-red";
     default:
       return "badge-blue";
@@ -87,16 +96,19 @@ export function getOrderStatusBadgeClass(status: string): string {
  * Keys are current status, values are allowed next statuses.
  */
 export const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ["CONFIRMED", "CANCELLED"],
+  PENDING: ["CONFIRMED", "CANCELLED", "REJECTED"],
   CONFIRMED: ["PREPARING", "CANCELLED"],
   PREPARING: ["SHIPPING", "CANCELLED"],
   SHIPPING: ["DELIVERED"],
   DELIVERED: [],
   CANCELLED: [],
+  REJECTED: [],
+  PROCESSED: [],
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   VNPAY: "VNPAY",
+  MOMO: "MoMo",
   CASH: "Tiền mặt (COD)",
   BANK: "Chuyển khoản",
 };

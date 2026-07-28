@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Eye, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
 import { userService } from "../../../features/users/services/user.service";
@@ -251,16 +252,18 @@ export function AdminReports() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {isAdmin && (
-                        <button
-                          onClick={() => {
-                            setSelectedReport(null);
-                            setDeleteTargetId(report._id);
+                        <HoldToDeleteButton
+                          onDelete={async () => {
+                            try {
+                              await orderReportService.delete(report._id);
+                              toast.success("Report deleted successfully");
+                              fetchReports();
+                            } catch {
+                              toast.error("Failed to delete report");
+                            }
                           }}
-                          className="admin-action-btn delete text-xs ml-1"
-                          title="Delete report"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          title="Hold 2s to delete report"
+                        />
                       )}
                     </td>
                   </tr>

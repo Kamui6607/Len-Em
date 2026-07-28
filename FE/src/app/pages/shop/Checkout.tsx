@@ -1,6 +1,7 @@
 // ============================================================
 // Checkout Page — route /order
 // Form nhập shippingAddress + chọn paymentMethod + tóm tắt giỏ hàng
+// With GHN integration for address dropdowns and shipping fee calculation
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -9,15 +10,17 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { toast } from "sonner";
-import { Check, QrCode, ArrowLeft } from "lucide-react";
+import { Check, QrCode, ArrowLeft, ChevronDown } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import { useAuthStore } from "../../../store/auth.store";
 import { orderApi } from "../../../api/orderService";
+import { ghnApi } from "../../../api/ghnService";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../../components/ui/ColorSwatch";
 import { CoinUsage } from "../../components/membership/CoinUsage";
 import type { CreateOrderRequest } from "../../../features/orders/types/order.types";
+import type { GHNProvince, GHNDistrict, GHNWard } from "../../../types/ghn.types";
 
 // ── Validation schema ──
 const shippingSchema = yup.object({
@@ -26,7 +29,7 @@ const shippingSchema = yup.object({
     .string()
     .required("Vui lòng nhập số điện thoại")
     .matches(/^(0|\+84)[3-9][0-9]{8}$/, "Số điện thoại không hợp lệ"),
-  address: yup.string().required("Vui lòng nhập địa chỉ"),
+  address: yup.string().required("Vui lòng nhập địa chỉ chi tiết"),
 });
 
 type ShippingFormData = yup.InferType<typeof shippingSchema>;
@@ -39,6 +42,12 @@ const PAYMENT_METHODS = [
     icon: QrCode,
     description: "Thanh toán qua VNPAY",
   },
+  {
+    value: "MOMO" as const,
+    label: "MoMo",
+    icon: QrCode,
+    description: "Thanh toán qua MoMo",
+  },
 ];
 
 export function Checkout() {
@@ -46,13 +55,21 @@ export function Checkout() {
   const navigate = useNavigate();
   const { cartItems, cartKits, totalItems, totalPrice, clearCart } = useCart();
   const user = useAuthStore((s) => s.user);
-  const [paymentMethod, setPaymentMethod] = useState<"VNPAY">("VNPAY");
+  const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "MOMO">("VNPAY");
   const [submitting, setSubmitting] = useState(false);
   const [coinDiscount, setCoinDiscount] = useState(0);
+  const [calculatingFee, setCalculatingFee] = useState(false);
 
-  const DELIVERY_FEE_PERCENT = 15;
+  // GHN address data
+  const [provinces, setProvinces] = useState<GHNProvince[]>([]);
+  const [districts, setDistricts] = useState<GHNDistrict[]>([]);
+  const [wards, setWards] = useState<GHNWard[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState<GHNProvince | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState<GHNDistrict | null>(null);
+  const [selectedWard, setSelectedWard] = useState<GHNWard | null>(null);
+
   const subtotal = totalPrice;
-  const deliveryFee = (subtotal * DELIVERY_FEE_PERCENT) / 100;
+  const [deliveryFee, setDeliveryFee] = useState(0);
   const grandTotal = Math.max(0, subtotal + deliveryFee - coinDiscount);
 
   const {
@@ -80,6 +97,95 @@ export function Checkout() {
     }
   }, [user, reset]);
 
+  // Load provinces on mount
+  useEffect(() => {
+    loadProvinces();
+  }, []);
+
+  const loadProvinces = async () => {
+    try {
+      const response = await ghnApi.getProvinces();
+      setProvinces(response.data.data.provinces);
+    } catch {
+      toast.error("Không thể tải danh sách tỉnh/thành phố");
+    }
+  };
+
+  // When province changes, load districts
+  useEffect(() => {
+    if (selectedProvince) {
+      loadDistricts(selectedProvince.provinceId);
+      setSelectedDistrict(null);
+      setSelectedWard(null);
+      setWards([]);
+      setDeliveryFee(0); // Reset delivery fee when province changes
+    }
+  }, [selectedProvince]);
+
+  const loadDistricts = async (provinceId: number) => {
+    try {
+      const response = await ghnApi.getDistricts(provinceId);
+      setDistricts(response.data.data.districts);
+    } catch {
+      toast.error("Không thể tải danh sách quận/huyện");
+    }
+  };
+
+  // When district changes, load wards
+  useEffect(() => {
+    if (selectedDistrict) {
+      loadWards(selectedDistrict.districtId);
+      setSelectedWard(null);
+      setDeliveryFee(0); // Reset delivery fee when district changes
+    }
+  }, [selectedDistrict]);
+
+  const loadWards = async (districtId: number) => {
+    try {
+      const response = await ghnApi.getWards(districtId);
+      setWards(response.data.data.wards);
+    } catch {
+      toast.error("Không thể tải danh sách phường/xã");
+    }
+  };
+
+  // Calculate shipping fee when ward is selected
+  useEffect(() => {
+    if (selectedWard && cartItems.length > 0) {
+      calculateShippingFee();
+    }
+  }, [selectedWard, cartItems]);
+
+  const calculateShippingFee = async () => {
+    if (!selectedProvince || !selectedDistrict || !selectedWard || cartItems.length === 0) {
+      return;
+    }
+
+    setCalculatingFee(true);
+    try {
+      const payload = {
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+        provinceId: selectedProvince.provinceId,
+        districtId: selectedDistrict.districtId,
+        wardCode: selectedWard.wardCode,
+      };
+
+      const response = await ghnApi.calculateShippingFee(payload);
+      if (response.data?.shipping_fee) {
+        setDeliveryFee(response.data.shipping_fee);
+      }
+    } catch (error) {
+      // Silently fail - will use default fee
+      console.error("Failed to calculate shipping fee:", error);
+    } finally {
+      setCalculatingFee(false);
+    }
+  };
+
   const onSubmit = async (data: ShippingFormData) => {
     if (cartItems.length === 0 && cartKits.length === 0) {
       toast.error(t("checkout.cartEmpty"));
@@ -87,43 +193,41 @@ export function Checkout() {
       return;
     }
 
+    if (!selectedProvince || !selectedDistrict || !selectedWard) {
+      toast.error("Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload: CreateOrderRequest = {
-        items: [
-          ...cartItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            color: item.color,
-            hexCode: item.hexCode,
-          })),
-          ...cartKits.flatMap((kit) =>
-            kit.products.map((p) => ({
-              productId: p.productId,
-              quantity: 1,
-              color: "",
-              hexCode: "",
-            })),
-          ),
-        ],
-          shippingAddress: {
-            fullName: data.fullName,
-            phone: data.phone,
-            address: data.address,
-            ward: "",
-            district: "",
-            city: "",
-          },
-          paymentMethod,
-          shippingFee: deliveryFee,
-          ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
-        };
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          color: item.color,
+          hexCode: item.hexCode,
+        })),
+        kits: cartKits.map((kit) => ({
+          kitId: kit.kitId,
+          quantity: 1,
+        })),
+        shippingAddress: {
+          fullName: data.fullName,
+          phone: data.phone,
+          address: data.address,
+          ward: selectedWard.wardName,
+          district: selectedDistrict.districtName,
+          city: selectedProvince.provinceName,
+        },
+        paymentMethod,
+        shippingFee: deliveryFee,
+        ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
+      };
 
       const response = await orderApi.createOrder(payload);
       const result = response.data;
 
       // Clear cart immediately after order is successfully created
-      // This ensures cart is cleared whether using VNPAY or other payment methods
       clearCart();
 
       if (result.payUrl) {
@@ -246,19 +350,112 @@ export function Checkout() {
                     )}
                   </div>
 
+                  {/* Province Dropdown */}
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      Địa chỉ <span className="text-destructive">*</span>
+                      Tỉnh/Thành phố <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedProvince?.provinceId || ""}
+                        onChange={(e) => {
+                          const province = provinces.find(
+                            (p) => p.provinceId === Number(e.target.value)
+                          );
+                          setSelectedProvince(province || null);
+                        }}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none"
+                      >
+                        <option value="">Chọn tỉnh/thành phố</option>
+                        {provinces.map((province) => (
+                          <option
+                            key={province.provinceId}
+                            value={province.provinceId}
+                          >
+                            {province.provinceName}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* District Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Quận/Huyện <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedDistrict?.districtId || ""}
+                        onChange={(e) => {
+                          const district = districts.find(
+                            (d) => d.districtId === Number(e.target.value)
+                          );
+                          setSelectedDistrict(district || null);
+                        }}
+                        disabled={!selectedProvince}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Chọn quận/huyện</option>
+                        {districts.map((district) => (
+                          <option
+                            key={district.districtId}
+                            value={district.districtId}
+                          >
+                            {district.districtName}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Ward Dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Phường/Xã <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedWard?.wardCode || ""}
+                        onChange={(e) => {
+                          const ward = wards.find(
+                            (w) => w.wardCode === e.target.value
+                          );
+                          setSelectedWard(ward || null);
+                        }}
+                        disabled={!selectedDistrict}
+                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Chọn phường/xã</option>
+                        {wards.map((ward) => (
+                          <option key={ward.wardCode} value={ward.wardCode}>
+                            {ward.wardName}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Detailed Address */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Địa chỉ chi tiết <span className="text-destructive">*</span>
                     </label>
                     <input
                       {...register("address")}
-                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, thành phố"
+                      placeholder="Ví dụ: 123 Nguyễn Văn Linh, P. Tân Phong, Q.7"
                       className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
                         errors.address
                           ? "border-destructive"
                           : "border-border/70 hover:border-primary/40"
                       }`}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Nhập số nhà, tên đường, tòa nhà (không cần nhập lại phường/xã, quận/huyện, tỉnh/thành)
+                    </p>
                     {errors.address && (
                       <p className="text-destructive text-xs mt-1">
                         {errors.address.message}
@@ -401,8 +598,18 @@ export function Checkout() {
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground text-sm">
-                    <span>Phí vận chuyển ({DELIVERY_FEE_PERCENT}%)</span>
-                    <span>{formatPrice(deliveryFee)}</span>
+                    <span>
+                      {calculatingFee
+                        ? "Đang tính phí vận chuyển..."
+                        : "Phí vận chuyển"}
+                    </span>
+                    <span>
+                      {deliveryFee > 0
+                        ? formatPrice(deliveryFee)
+                        : calculatingFee
+                        ? "..."
+                        : "Chưa tính"}
+                    </span>
                   </div>
                   {coinDiscount > 0 && (
                     <div className="flex justify-between text-sm text-primary">
@@ -421,10 +628,14 @@ export function Checkout() {
                 {/* Submit button */}
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || calculatingFee}
                   className="w-full mt-6 bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  {submitting ? "Đang xử lý..." : "Đặt hàng"}
+                  {submitting
+                    ? "Đang xử lý..."
+                    : calculatingFee
+                    ? "Đang tính phí vận chuyển..."
+                    : "Đặt hàng"}
                 </button>
               </div>
             </div>
