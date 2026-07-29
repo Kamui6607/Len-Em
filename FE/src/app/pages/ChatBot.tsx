@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Sparkles, RotateCcw, ChevronRight, ChevronDown, Send, Check, ArrowLeft } from "lucide-react";
+import { Sparkles, RotateCcw, ChevronRight, ChevronDown, Send, ArrowLeft } from "lucide-react";
 import {
   getChatbotMenu,
   getChatbotHealth,
@@ -497,9 +497,6 @@ export function ChatBot() {
               msg.timestamp - prevMsg.timestamp < GROUP_WINDOW_MS &&
               !prevMsg.options &&
               !prevMsg.flow;
-            const isLastUserMsg =
-              msg.role === "user" && !messages.slice(idx + 1).some((m) => m.role === "user");
-
             return (
               <div
                 key={msg.id}
