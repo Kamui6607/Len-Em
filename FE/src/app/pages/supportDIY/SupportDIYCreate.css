@@ -1,0 +1,419 @@
+/* ============================================================
+   SUPPORT DIY — polish layer cho form yêu cầu hỗ trợ
+   Dùng lại token sẵn có (--surface, --border, --primary, ...)
+
+   Cấu trúc mới:
+   - Bên trái: lưới 2x2 gồm 4 field-card (Bạn cần giúp gì?, Hình ảnh,
+     Gắn thẻ, Ngân sách) — gọn theo 2 hàng thay vì xếp dọc 4 tầng.
+   - Bên phải: 1 card duy nhất (Sản phẩm liên quan), cao bằng đúng
+     chiều cao khối 2x2 bên trái (nhờ CSS Grid align-items: stretch
+     mặc định ở outer grid), nhìn "to" ngang bằng bên trái.
+   ============================================================ */
+
+@keyframes diy-fade-in {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.diy-fade-in {
+  animation: diy-fade-in 0.25s ease-out both;
+}
+
+/* ── Khung panel chính ── */
+.diy-panel {
+  background: var(--surface);
+  border-color: var(--border);
+  transition: box-shadow 0.2s ease-out;
+}
+
+/* ── Pill tiến độ cạnh tiêu đề ── */
+.diy-progress-pill {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  letter-spacing: 0.02em;
+}
+
+/* ── Nút quay lại: rõ ràng ngay cả lúc nghỉ, không "chìm" vào nền ── */
+.diy-btn-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
+  background: var(--card, var(--surface)) !important;
+  color: var(--foreground) !important;
+  transition: background 0.15s ease-out, transform 0.1s ease-out, border-color 0.15s ease-out;
+}
+.diy-btn-icon:hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--card, var(--surface))) !important;
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--border)) !important;
+}
+.diy-btn-icon:active {
+  transform: scale(0.92);
+}
+
+/* ============================================================
+   FIELD CARDS — 4 ô bên trái, xếp lưới 2x2 (2 hàng x 2 cột)
+   ============================================================ */
+.diy-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+@media (min-width: 640px) {
+  .diy-fields-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.diy-field-card {
+  position: relative;
+  height: 100%;
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--card, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 10%);
+  transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.12s ease-out;
+}
+.diy-field-card:focus-within {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.diy-field-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.diy-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+  transition: background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
+}
+.diy-field-card:focus-within .diy-card-icon,
+.diy-field-card:hover .diy-card-icon {
+  transform: scale(1.08);
+}
+.diy-field-card:focus-within .diy-card-icon {
+  background: var(--primary);
+  color: var(--surface, #fff);
+}
+
+/* Card "Bạn cần giúp gì?" chứa nhiều nội dung nên chiếm cả hàng đầu
+   trên màn hình rất hẹp là hợp lý, nhưng ở >=sm nó chỉ chiếm 1 ô như
+   các card khác để giữ đúng lưới 2x2. */
+.diy-field-card--info {
+  grid-column: 1 / -1;
+}
+@media (min-width: 640px) {
+  .diy-field-card--info {
+    grid-column: auto;
+  }
+}
+
+/* ============================================================
+   INPUT / TEXTAREA — border + nền tương phản rõ ngay lúc nghỉ
+   ============================================================ */
+.diy-input {
+  display: block;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--surface) 88%, var(--foreground) 6%) !important;
+  border: 1.5px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background 0.15s ease-out;
+}
+.diy-input::placeholder {
+  color: color-mix(in srgb, var(--foreground-muted) 85%, transparent);
+}
+.diy-input:hover {
+  border-color: color-mix(in srgb, var(--border) 30%, var(--foreground) 30%) !important;
+}
+.diy-input:focus {
+  outline: none;
+  background: var(--surface) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.diy-input.pl-9 {
+  padding-left: 36px;
+}
+
+/* ── Khối gợi ý nhẹ nhàng (helper note) ── */
+.diy-helper-note {
+  border-left: 3px solid var(--primary);
+  background: var(--surface-secondary, var(--card));
+}
+
+/* ── Upload tile ── */
+.diy-upload-tile {
+  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
+  background: var(--card);
+  transition: border-color 0.18s ease-out, background 0.18s ease-out;
+}
+.diy-upload-tile:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+.diy-upload-tile:hover .diy-upload-icon {
+  transform: translateY(-2px);
+  color: var(--primary) !important;
+}
+.diy-upload-icon {
+  transition: transform 0.18s ease-out, color 0.18s ease-out;
+}
+.diy-upload-tile:active {
+  transform: scale(0.96);
+}
+
+/* ── Ảnh preview ── */
+.diy-image-thumb {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
+}
+.diy-image-thumb img {
+  transition: transform 0.25s ease-out;
+}
+.diy-image-thumb:hover img {
+  transform: scale(1.08);
+}
+.diy-image-thumb .diy-image-remove {
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+.diy-image-thumb:hover .diy-image-remove,
+.diy-image-thumb:focus-within .diy-image-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+.diy-image-remove:active {
+  transform: scale(0.85);
+}
+
+/* ── Tag chip ── */
+.diy-tag-chip {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.diy-tag-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.diy-tag-chip:active {
+  transform: scale(0.94);
+}
+
+.diy-btn-secondary {
+  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
+  background: var(--card, var(--surface)) !important;
+  color: var(--foreground) !important;
+  transition: transform 0.12s ease-out, background 0.15s ease-out, border-color 0.15s ease-out;
+}
+.diy-btn-secondary:hover {
+  background: color-mix(in srgb, var(--primary) 10%, var(--card, var(--surface))) !important;
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border)) !important;
+}
+.diy-btn-secondary:active {
+  transform: scale(0.92);
+}
+
+/* ============================================================
+   CỘT PHẢI — 1 card lớn duy nhất, cao bằng khối 2x2 bên trái
+   ============================================================ */
+.diy-side-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--card, var(--surface)));
+  border: 1px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 10%);
+}
+
+.diy-side-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.diy-static-icon {
+  transition: transform 0.18s ease-out;
+}
+.diy-side-card:hover .diy-static-icon {
+  transform: rotate(-4deg) scale(1.05);
+}
+
+/* Khu vực nội dung phía dưới header, chiếm hết chiều cao còn lại
+   để card luôn nhìn "đầy" và cân đối với bên trái */
+.diy-side-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  min-height: 0;
+}
+
+/* Wrapper giữ dropdown làm overlay, không đẩy layout bên dưới xuống */
+.diy-search-wrapper {
+  position: relative;
+}
+
+.diy-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--card);
+  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.22);
+}
+.diy-result-row {
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  transition: background 0.15s ease-out, padding-left 0.15s ease-out;
+}
+.diy-result-row:last-child {
+  border-bottom: none;
+}
+.diy-result-row:hover:not(:disabled) {
+  background: var(--surface-secondary, color-mix(in srgb, var(--primary) 6%, transparent));
+  padding-left: 18px;
+}
+.diy-result-row:hover:not(:disabled) .diy-result-plus {
+  color: var(--primary) !important;
+  transform: scale(1.15);
+}
+.diy-result-row:active:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.diy-result-plus {
+  transition: transform 0.15s ease-out, color 0.15s ease-out;
+}
+
+.diy-combo-list {
+  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Giới hạn chiều cao danh sách đã chọn — cuộn riêng thay vì kéo dài cả trang.
+   Trong card cao hơn, danh sách được phép giãn để lấp đầy không gian. */
+.diy-combo-scroll {
+  flex: 1;
+  min-height: 80px;
+  max-height: none;
+  overflow-y: auto;
+}
+.diy-combo-row {
+  transition: transform 0.12s ease-out;
+}
+.diy-remove-link {
+  transition: opacity 0.15s ease-out;
+  opacity: 0.75;
+}
+.diy-remove-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Trạng thái rỗng của cột phải: căn giữa để card không nhìn trống trải */
+.diy-side-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1.5px dashed color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
+  border-radius: 14px;
+  padding: 24px 16px;
+}
+
+/* ============================================================
+   NÚT HÀNH ĐỘNG CUỐI FORM — rõ ràng, nổi bật, dễ bấm
+   ============================================================ */
+.diy-btn-cancel,
+.diy-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.12s ease-out, box-shadow 0.15s ease-out, filter 0.15s ease-out, background 0.15s ease-out;
+}
+
+.diy-btn-cancel {
+  background: transparent !important;
+  color: var(--foreground-muted) !important;
+  border: 1.5px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
+}
+.diy-btn-cancel:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
+  border-color: color-mix(in srgb, var(--foreground) 35%, var(--border)) !important;
+}
+
+.diy-btn-primary {
+  background: var(--primary) !important;
+  color: var(--primary-foreground, #fff) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.diy-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 38%, transparent);
+}
+.diy-btn-cancel:active:not(:disabled),
+.diy-btn-primary:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+.diy-btn-primary:disabled,
+.diy-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diy-fade-in,
+  .diy-image-remove,
+  .diy-card-icon,
+  .diy-upload-icon,
+  .diy-image-thumb img,
+  .diy-tag-chip,
+  .diy-result-row,
+  .diy-btn-primary,
+  .diy-btn-cancel,
+  .diy-static-icon {
+    animation: none !important;
+    transition: none !important;
+  }
+}

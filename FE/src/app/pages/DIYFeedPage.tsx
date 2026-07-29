@@ -47,21 +47,25 @@ export function DIYFeedPage() {
       const creatorIds = [...new Set(data.data.posts.map((p) => p.creatorId))];
       const creatorMap: Record<string, CreatorInfo> = {};
 
-      for (const creatorId of creatorIds) {
-        try {
+      // Fetch all creators in parallel instead of sequential for loop
+      const results = await Promise.allSettled(
+        creatorIds.map(async (creatorId) => {
           const { data: userData } = await userService.getUserById(creatorId);
-          if (userData?.data?.result) {
-            creatorMap[creatorId] = {
-              userId: userData.data.result.userId,
-              fullName: userData.data.result.fullName,
-              avatar:
-                typeof userData.data.result.avatar === "object"
-                  ? userData.data.result.avatar?.url
-                  : userData.data.result.avatar,
-            };
-          }
-        } catch {
-          // Keep default if fetch fails
+          return { creatorId, userData };
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value.userData?.data?.result) {
+          const { creatorId, userData } = result.value;
+          creatorMap[creatorId] = {
+            userId: userData.data.result.userId,
+            fullName: userData.data.result.fullName,
+            avatar:
+              typeof userData.data.result.avatar === "object"
+                ? userData.data.result.avatar?.url
+                : userData.data.result.avatar,
+          };
         }
       }
       setCreators(creatorMap);
@@ -242,10 +246,10 @@ export function DIYFeedPage() {
 
           <Link
             to="/support-diy/new"
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+            className="relative flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white dark:text-white text-sm font-semibold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 active:scale-95 before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-r before:from-white/0 before:to-white/20 before:opacity-0 hover:before:opacity-100 before:transition-opacity"
           >
-            <Hand className="w-4 h-4" />
-            Support
+            <Hand className="w-5 h-5" />
+            <span>Hỗ trợ DIY</span>
           </Link>
           <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
             <div className="relative flex-1">

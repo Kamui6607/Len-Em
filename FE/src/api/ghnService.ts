@@ -9,6 +9,8 @@ import type {
   GHNWardsResponse,
   ShippingFeeRequest,
   ShippingFeeResponse,
+  MapAddressRequest,
+  MapAddressResponse,
 } from "../types/ghn.types";
 
 const GHN_BASE = "/ghn";
@@ -38,6 +40,14 @@ export const ghnApi = {
     axiosClient.get<GHNWardsResponse>(`${GHN_BASE}/wards`, {
       params: { districtId },
     }),
+
+  /**
+   * POST /ghn/map-address
+   * Map string address to GHN IDs (provinceId, districtId, wardCode)
+   * Takes provinceName, districtName, wardName from reverse geocode result
+   */
+  mapAddress: (data: MapAddressRequest) =>
+    axiosClient.post<MapAddressResponse>(`${GHN_BASE}/map-address`, data),
 
   /**
    * POST /orders/shipping-fee

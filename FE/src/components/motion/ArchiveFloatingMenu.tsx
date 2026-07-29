@@ -22,6 +22,16 @@ export function ArchiveFloatingMenu() {
     setIsOpen(false);
   };
 
+  const handleChatbotClick = () => {
+    navigate("/chatbot");
+    setIsOpen(false);
+  };
+
+  const handleHomeClick = () => {
+    navigate("/");
+    setIsOpen(false);
+  };
+
   const handleDemoClick = (demoName: string) => {
     toast.info(`${demoName} clicked! (Demo only)`);
     setIsOpen(false);
@@ -37,9 +47,9 @@ export function ArchiveFloatingMenu() {
   const arcButtons = [
     { id: "back-to-top", icon: "back-to-top", onClick: scrollToTop, label: "Về đầu trang" },
     { id: "messages", icon: "messages", onClick: handleMessagesClick, label: "Tin nhắn" },
-    { id: "demo1", icon: "demo1", onClick: () => handleDemoClick("Demo Button 1"), label: "Demo 1" },
+    { id: "chatbot", icon: "chatbot", onClick: handleChatbotClick, label: "Chatbot" },
     { id: "demo2", icon: "demo2", onClick: () => handleDemoClick("Demo Button 2"), label: "Demo 2" },
-    { id: "demo3", icon: "demo3", onClick: () => handleDemoClick("Demo Button 3"), label: "Demo 3" },
+    { id: "home", icon: "home", onClick: handleHomeClick, label: "Về trang chủ" },
   ];
 
   // ── Kích thước responsive: chật hơn trên mobile, thoáng hơn trên desktop ──
@@ -72,10 +82,13 @@ export function ArchiveFloatingMenu() {
             <path d="M3 4C3 3.44772 3.44772 3 4 3H16C16.5523 3 17 3.44772 17 4V14C17 14.5523 16.5523 15 16 15H8L4 18V15H4C3.44772 15 3 14.5523 3 14V4Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
-      case "demo1":
+      case "chatbot":
         return (
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="10" r="3" fill="white" />
+            <path d="M3 4C3 3.44772 3.44772 3 4 3H16C16.5523 3 17 3.44772 17 4V14C17 14.5523 16.5523 15 16 15H8L4 18V15H4C3.44772 15 3 14.5523 3 14V4Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <circle cx="7" cy="9" r="1" fill="white"/>
+            <circle cx="10" cy="9" r="1" fill="white"/>
+            <circle cx="13" cy="9" r="1" fill="white"/>
           </svg>
         );
       case "demo2":
@@ -84,10 +97,10 @@ export function ArchiveFloatingMenu() {
             <rect x="6" y="6" width="8" height="8" rx="2" fill="white" />
           </svg>
         );
-      case "demo3":
+      case "home":
         return (
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <path d="M10 4L13 9H17L14 13L15 18L10 15L5 18L6 13L3 9H7L10 4Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 9L10 3L17 9V17C17 17.5523 16.5523 18 16 18H12V13H8V18H4C3.44772 18 3 17.5523 3 17V9Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
           </svg>
         );
       default:

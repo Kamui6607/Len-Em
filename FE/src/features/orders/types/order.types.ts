@@ -8,7 +8,7 @@ export type { OrderStatus };
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type PaymentMethod = "VNPAY" | "MOMO";
+export type PaymentMethod = "VNPAY" | "MOMO" | "COD";
 
 export interface OrderUser {
   _id: string;
@@ -24,6 +24,10 @@ export interface ShippingAddress {
   ward: string;
   district: string;
   city: string;
+  /** Latitude from map pin */
+  lat?: number;
+  /** Longitude from map pin */
+  lng?: number;
 }
 
 export interface OrderItem {

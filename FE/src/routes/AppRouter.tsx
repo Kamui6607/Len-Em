@@ -128,6 +128,9 @@ const NotificationsPage = lazy(() =>
 const MessagesPage = lazy(() =>
   import("../app/pages/Messages").then((m) => ({ default: m.Messages })),
 );
+const ChatBotPage = lazy(() =>
+  import("../app/pages/ChatBot").then((m) => ({ default: m.ChatBot })),
+);
 
 function StoreOutlet() {
   return (
@@ -316,6 +319,14 @@ export function AppRouter() {
           element={
             <RequireAuth>
               <MessagesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="chatbot"
+          element={
+            <RequireAuth>
+              <ChatBotPage />
             </RequireAuth>
           }
         />

@@ -205,7 +205,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const totalPrice = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + cartKits.reduce((sum, kit) => sum + kit.price, 0),
+    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + cartKits.reduce((sum, kit) => sum + kit.price * kit.quantity, 0),
     [cartItems, cartKits]
   );
 

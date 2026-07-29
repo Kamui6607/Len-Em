@@ -67,7 +67,7 @@ export function Purchased() {
         setTotalPages(response.totalPages ?? 1);
         setKitNamesLoaded(false);
 
-        // Fetch kit names for all unique kitIds
+        // Fetch kit names for all unique kitIds in parallel
         const uniqueKitIds = new Set<string>();
         normalizedOrders.forEach((order) => {
           order.items.forEach((item) => {
@@ -76,15 +76,16 @@ export function Purchased() {
         });
 
         if (uniqueKitIds.size > 0) {
-          const kitPromises = Array.from(uniqueKitIds).map(async (kitId) => {
-            try {
-              const { data: kitData } = await kitService.getById(kitId);
-              return { kitId, name: kitData.data?.kit?.name };
-            } catch {
-              return { kitId, name: null };
-            }
-          });
-          const kitResults = await Promise.all(kitPromises);
+          const kitResults = await Promise.all(
+            Array.from(uniqueKitIds).map(async (kitId) => {
+              try {
+                const res = await kitService.getById(kitId);
+                return { kitId, name: res.data.data?.kit?.name || "Kit" };
+              } catch {
+                return { kitId, name: "Kit" };
+              }
+            })
+          );
           const kitNameMap = kitResults.reduce((acc, { kitId, name }) => {
             if (name) acc[kitId] = name;
             return acc;
@@ -548,7 +549,7 @@ export function Purchased() {
                           >
                             {retryingId === order._id
                               ? "..."
-                              : `💳 ${t("purchased.retryPayment")}`}
+                              : `${t("purchased.retryPayment")}`}
                           </button>
                         )}
                       {/* ── Cancel button for PENDING orders (only if not unpaid VNPAY/MOMO) ── */}
@@ -603,7 +604,7 @@ export function Purchased() {
                           >
                             {retryingId === order._id
                               ? "..."
-                              : `💳 ${t("purchased.retryPayment")}`}
+                              : `${t("purchased.retryPayment")}`}
                           </button>
                         )}
                       <button

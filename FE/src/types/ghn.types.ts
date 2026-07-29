@@ -40,23 +40,49 @@ export interface GHNWardsResponse {
   };
 }
 
+export interface MapAddressRequest {
+  provinceName: string;
+  districtName: string;
+  wardName: string;
+}
+
+export interface MapAddressMatch {
+  success: boolean;
+  message?: string;
+  provinceId?: number;
+  districtId?: number;
+  wardCode?: string;
+}
+
+export interface MapAddressResponse {
+  status: string;
+  data: {
+    match: MapAddressMatch;
+  };
+}
+
 export interface ShippingFeeRequest {
   items: {
     productId: string;
+    variantId?: string;
     quantity: number;
     color?: string;
     hexCode?: string;
   }[];
   addressId?: string;
+  provinceId: number;
   districtId: number;
   wardCode: string;
 }
 
 export interface ShippingFeeResponse {
-  shipping_fee: number;
-  service_id: number | null;
-  address: {
-    district: string;
-    ward: string;
+  status: string;
+  data: {
+    shipping_fee: number;
+    service_id: number | null;
+    address: {
+      district: string;
+      ward: string;
+    };
   };
 }

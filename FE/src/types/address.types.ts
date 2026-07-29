@@ -15,6 +15,10 @@ export interface Address {
   provinceId: number;
   provinceName: string;
   isDefault: boolean;
+  /** Latitude from map pin */
+  lat?: number;
+  /** Longitude from map pin */
+  lng?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +34,10 @@ export interface CreateAddressRequest {
   provinceId: number;
   provinceName: string;
   isDefault?: boolean;
+  /** Latitude from map pin */
+  lat?: number;
+  /** Longitude from map pin */
+  lng?: number;
 }
 
 export interface UpdateAddressRequest {
@@ -43,6 +51,10 @@ export interface UpdateAddressRequest {
   provinceId?: number;
   provinceName?: string;
   isDefault?: boolean;
+  /** Latitude from map pin */
+  lat?: number;
+  /** Longitude from map pin */
+  lng?: number;
 }
 
 export interface AddressesListResponse {
@@ -54,4 +66,24 @@ export interface AddressApiResponse<T> {
   status?: "success" | "error";
   data?: T;
   message?: string;
+}
+
+// ============================================================
+// Reverse Geocode — result from Mapbox/Google Maps client-side
+// ============================================================
+
+export interface ReverseGeocodeResult {
+  /** Full formatted address string from map API */
+  fullAddress: string;
+  /** Street address, house number, building */
+  street: string;
+  wardName: string;
+  districtName: string;
+  provinceName: string;
+  /** ISO country code */
+  countryCode: string;
+  /** Latitude from map pin */
+  lat: number;
+  /** Longitude from map pin */
+  lng: number;
 }

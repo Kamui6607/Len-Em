@@ -26,43 +26,35 @@ export function Love() {
   useEffect(() => {
     async function resolveFavorites() {
       setLoading(true);
-      const productResults: Product[] = [];
-      for (const favId of favorites) {
-        // Try mock data first
-        const mock = mockProducts.find((p) => p.id === favId);
-        if (mock) {
-          productResults.push(mock);
-          continue;
-        }
-        // Fallback to API
-        try {
-          const apiProduct = await fetchProductById(favId);
-          if (apiProduct) {
-            productResults.push(apiProduct);
+      
+      // Fetch all products in parallel
+      const productResults = await Promise.all(
+        favorites.map(async (favId) => {
+          // Try mock data first
+          const mock = mockProducts.find((p) => p.id === favId);
+          if (mock) return mock;
+          // Fallback to API
+          try {
+            return await fetchProductById(favId);
+          } catch {
+            return null;
           }
-        } catch {
-          // Skip products that can't be loaded
-        }
-      }
-      setResolvedProducts(productResults);
+        })
+      );
+      setResolvedProducts(productResults.filter((p): p is Product => p !== null));
 
-      // Fetch favorite kits
-      const kitResults: Kit[] = [];
-      console.log("Favorite kits IDs:", favoriteKits);
-      for (const kitId of favoriteKits) {
-        try {
-          const res = await kitService.getById(kitId);
-          console.log("Kit response for", kitId, ":", res.data);
-          if (res.data.data?.kit) {
-            kitResults.push(res.data.data.kit);
+      // Fetch all kits in parallel
+      const kitResults = await Promise.all(
+        favoriteKits.map(async (kitId) => {
+          try {
+            const res = await kitService.getById(kitId);
+            return res.data.data?.kit ?? null;
+          } catch {
+            return null;
           }
-        } catch (error) {
-          console.error("Error fetching kit", kitId, ":", error);
-          // Skip kits that can't be loaded
-        }
-      }
-      console.log("Resolved kits:", kitResults);
-      setResolvedKits(kitResults);
+        })
+      );
+      setResolvedKits(kitResults.filter((k): k is Kit => k !== null));
       setLoading(false);
     }
     resolveFavorites();

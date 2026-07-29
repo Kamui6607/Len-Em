@@ -3,15 +3,16 @@
 // Displays all available kits with filtering and pagination
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-import { Package, Heart, SlidersHorizontal, X } from "lucide-react";
+import { Package, Heart, Search, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { kitService, type Kit } from "../../api/kitService";
 import { useFavorites } from "../context/FavoritesContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { cn } from "../components/ui/utils";
+import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All Levels", emoji: "🎁" },
@@ -28,6 +29,18 @@ export function KitsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [level, setLevel] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const { inputValue, debouncedValue, setInputValue } = useDebouncedSearch({ delay: 400, minChars: 1 });
+
+  // Client-side search filter with debounce
+  const searchedKits = useMemo(() => {
+    if (!debouncedValue.trim()) return kits;
+    const q = debouncedValue.toLowerCase().trim();
+    return kits.filter(
+      (kit) =>
+        kit.name.toLowerCase().includes(q) ||
+        kit.description.toLowerCase().includes(q)
+    );
+  }, [kits, debouncedValue]);
 
   const fetchKits = async (page: number, levelFilter: string) => {
     setLoading(true);
@@ -95,18 +108,30 @@ export function KitsPage() {
           </p>
         </div>
 
-        {/* Mobile Filter Toggle */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {!loading && `${kits.length} kits available`}
+        {/* Search + Mobile Filter Toggle */}
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Search kits by name or description..."
+              className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition-colors"
+            />
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="lg:hidden flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card hover:border-primary transition-colors"
-          >
-            <SlidersHorizontal size={16} />
-            Filters
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="text-sm text-muted-foreground whitespace-nowrap">
+              {!loading && `${searchedKits.length} kits available`}
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="lg:hidden flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card hover:border-primary transition-colors"
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+            </button>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-[240px_1fr] gap-8">
@@ -199,7 +224,7 @@ export function KitsPage() {
                   </div>
                 ))}
               </div>
-            ) : kits.length === 0 ? (
+            ) : searchedKits.length === 0 ? (
               <div className="text-center py-16">
                 <Package
                   size={64}
@@ -213,7 +238,7 @@ export function KitsPage() {
             ) : (
               <>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {kits.map((kit) => {
+                  {searchedKits.map((kit) => {
                     const isFavorite = isFavoriteKit(kit._id);
 
                     return (

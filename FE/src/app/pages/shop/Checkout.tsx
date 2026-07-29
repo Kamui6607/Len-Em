@@ -10,17 +10,20 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { toast } from "sonner";
-import { Check, QrCode, ArrowLeft, ChevronDown } from "lucide-react";
+import { Check, QrCode, ArrowLeft, ChevronDown, List, Map as MapIcon } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import { useAuthStore } from "../../../store/auth.store";
 import { orderApi } from "../../../api/orderService";
 import { ghnApi } from "../../../api/ghnService";
+import { MapPicker } from "../../../components/map/MapPicker";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../../components/ui/ColorSwatch";
 import { CoinUsage } from "../../components/membership/CoinUsage";
 import type { CreateOrderRequest } from "../../../features/orders/types/order.types";
 import type { GHNProvince, GHNDistrict, GHNWard } from "../../../types/ghn.types";
+import type { ReverseGeocodeResult } from "../../../types/address.types";
+import "./Checkout.css";
 
 // ── Validation schema ──
 const shippingSchema = yup.object({
@@ -36,6 +39,12 @@ type ShippingFormData = yup.InferType<typeof shippingSchema>;
 
 // ── Payment method config ──
 const PAYMENT_METHODS = [
+  {
+    value: "COD" as const,
+    label: "COD",
+    icon: Check,
+    description: "Thanh toán khi nhận hàng (COD)",
+  },
   {
     value: "VNPAY" as const,
     label: "VNPAY",
@@ -55,7 +64,7 @@ export function Checkout() {
   const navigate = useNavigate();
   const { cartItems, cartKits, totalItems, totalPrice, clearCart } = useCart();
   const user = useAuthStore((s) => s.user);
-  const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "MOMO">("VNPAY");
+  const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "MOMO" | "COD">("VNPAY");
   const [submitting, setSubmitting] = useState(false);
   const [coinDiscount, setCoinDiscount] = useState(0);
   const [calculatingFee, setCalculatingFee] = useState(false);
@@ -67,6 +76,13 @@ export function Checkout() {
   const [selectedProvince, setSelectedProvince] = useState<GHNProvince | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<GHNDistrict | null>(null);
   const [selectedWard, setSelectedWard] = useState<GHNWard | null>(null);
+
+  // Address mode: "dropdown" (GHN API dropdowns) or "map" (map picker + map-address API)
+  const [addressMode, setAddressMode] = useState<"dropdown" | "map">("dropdown");
+
+  // Map state
+  const [mapLat, setMapLat] = useState<number | undefined>(undefined);
+  const [mapLng, setMapLng] = useState<number | undefined>(undefined);
 
   const subtotal = totalPrice;
   const [deliveryFee, setDeliveryFee] = useState(0);
@@ -149,6 +165,74 @@ export function Checkout() {
     }
   };
 
+  // Handle map location selection
+  const handleLocationSelect = async (result: ReverseGeocodeResult) => {
+    setMapLat(result.lat);
+    setMapLng(result.lng);
+
+    // Only call /ghn/map-address if we have at least province name
+    const province = result.provinceName?.trim();
+    const district = result.districtName?.trim();
+    const ward = result.wardName?.trim();
+
+    if (province || district || ward) {
+      try {
+        const mapRes = await ghnApi.mapAddress({
+          provinceName: province || "",
+          districtName: district || "",
+          wardName: ward || "",
+        });
+        const match = mapRes.data.data.match;
+        if (match.success && match.provinceId) {
+          // Auto-fill province
+          const matchedProvince = provinces.find(
+            (p) => p.provinceId === match.provinceId
+          );
+          if (matchedProvince) {
+            setSelectedProvince(matchedProvince);
+
+            // Auto-fill district
+            if (match.districtId) {
+              const distRes = await ghnApi.getDistricts(match.provinceId);
+              setDistricts(distRes.data.data.districts);
+              const matchedDistrict = distRes.data.data.districts.find(
+                (d) => d.districtId === match.districtId
+              );
+              if (matchedDistrict) {
+                setSelectedDistrict(matchedDistrict);
+
+                // Auto-fill ward
+                if (match.wardCode) {
+                  const wardRes = await ghnApi.getWards(match.districtId);
+                  setWards(wardRes.data.data.wards);
+                  const matchedWard = wardRes.data.data.wards.find(
+                    (w) => w.wardCode === match.wardCode
+                  );
+                  if (matchedWard) {
+                    setSelectedWard(matchedWard);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Map address mapping failed:", error);
+        // Fallback: try fuzzy match on province name
+        if (result.provinceName) {
+          const matchedProvince = provinces.find(
+            (p) =>
+              p.provinceName.toLowerCase().includes(result.provinceName.toLowerCase()) ||
+              result.provinceName.toLowerCase().includes(p.provinceName.toLowerCase())
+          );
+          if (matchedProvince) {
+            setSelectedProvince(matchedProvince);
+          }
+        }
+      }
+    }
+  };
+
   // Calculate shipping fee when ward is selected
   useEffect(() => {
     if (selectedWard && cartItems.length > 0) {
@@ -175,8 +259,12 @@ export function Checkout() {
       };
 
       const response = await ghnApi.calculateShippingFee(payload);
-      if (response.data?.shipping_fee) {
-        setDeliveryFee(response.data.shipping_fee);
+      // Try both response shapes: { status, data: { shipping_fee } } and flat { shipping_fee }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const resData: any = response.data;
+      const shippingFee: number | undefined = resData?.data?.shipping_fee ?? resData?.shipping_fee;
+      if (shippingFee && shippingFee > 0) {
+        setDeliveryFee(shippingFee);
       }
     } catch (error) {
       // Silently fail - will use default fee
@@ -218,6 +306,10 @@ export function Checkout() {
           ward: selectedWard.wardName,
           district: selectedDistrict.districtName,
           city: selectedProvince.provinceName,
+          // Include lat/lng from map if available
+          ...(mapLat !== undefined && mapLng !== undefined
+            ? { lat: mapLat, lng: mapLng }
+            : {}),
         },
         paymentMethod,
         shippingFee: deliveryFee,
@@ -298,150 +390,242 @@ export function Checkout() {
           Quay lại giỏ hàng
         </Link>
 
-        <h1 className="text-3xl font-semibold mb-8">Đặt hàng</h1>
+        <h1 className="text-3xl font-semibold mb-6">Đặt hàng</h1>
+
+        {/* ── Thread rail: tiến trình đặt hàng ── */}
+        <div className="checkout-rail mb-8">
+          <div className="checkout-rail-step">
+            <div className="checkout-rail-dot is-done">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+            <span className="hidden sm:inline text-xs font-medium text-foreground">
+              Giỏ hàng
+            </span>
+          </div>
+          <div className="checkout-rail-thread is-done" />
+          <div className="checkout-rail-step">
+            <div className="checkout-rail-dot is-current">2</div>
+            <span className="hidden sm:inline text-xs font-semibold text-primary">
+              Giao hàng & thanh toán
+            </span>
+          </div>
+          <div className="checkout-rail-thread" />
+          <div className="checkout-rail-step">
+            <div className="checkout-rail-dot is-upcoming">3</div>
+            <span className="hidden sm:inline text-xs font-medium text-muted-foreground">
+              Hoàn tất
+            </span>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid lg:grid-cols-5 gap-8">
             {/* ── Left: Shipping Form + Payment ── */}
             <div className="lg:col-span-3 space-y-6">
               {/* Shipping Address */}
-              <div className="bg-card rounded-2xl border border-border p-6">
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
                 <h2 className="text-lg font-semibold mb-4">
                   Thông tin giao hàng
                 </h2>
+
+                {/* ── Address mode toggle: segmented pill ── */}
+                <div className="checkout-segment flex rounded-xl border border-border bg-muted/40 p-1 mb-5">
+                  <div
+                    className={`checkout-segment-pill ${addressMode === "map" ? "is-right" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAddressMode("dropdown")}
+                    className={`checkout-segment-btn flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                      addressMode === "dropdown"
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <List className="w-4 h-4" />
+                    Chọn địa chỉ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddressMode("map")}
+                    className={`checkout-segment-btn flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                      addressMode === "map"
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <MapIcon className="w-4 h-4" />
+                    Chọn từ bản đồ
+                  </button>
+                </div>
+
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Họ tên <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      {...register("fullName")}
-                      placeholder="Nguyễn Văn A"
-                      className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
-                        errors.fullName
-                          ? "border-destructive"
-                          : "border-border/70 hover:border-primary/40"
-                      }`}
-                    />
-                    {errors.fullName && (
-                      <p className="text-destructive text-xs mt-1">
-                        {errors.fullName.message}
-                      </p>
-                    )}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">
+                        Họ tên <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        {...register("fullName")}
+                        placeholder="Nguyễn Văn A"
+                        className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
+                          errors.fullName
+                            ? "border-destructive"
+                            : "border-border/70 hover:border-primary/40"
+                        }`}
+                      />
+                      {errors.fullName && (
+                        <p className="text-destructive text-xs mt-1">
+                          {errors.fullName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">
+                        Số điện thoại <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        {...register("phone")}
+                        placeholder="0901234567"
+                        className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
+                          errors.phone
+                            ? "border-destructive"
+                            : "border-border/70 hover:border-primary/40"
+                        }`}
+                      />
+                      {errors.phone && (
+                        <p className="text-destructive text-xs mt-1">
+                          {errors.phone.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Số điện thoại <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      {...register("phone")}
-                      placeholder="0901234567"
-                      className={`w-full px-4 py-3 bg-card border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base shadow-sm ${
-                        errors.phone
-                          ? "border-destructive"
-                          : "border-border/70 hover:border-primary/40"
-                      }`}
-                    />
-                    {errors.phone && (
-                      <p className="text-destructive text-xs mt-1">
-                        {errors.phone.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Province Dropdown */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Tỉnh/Thành phố <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedProvince?.provinceId || ""}
-                        onChange={(e) => {
-                          const province = provinces.find(
-                            (p) => p.provinceId === Number(e.target.value)
-                          );
-                          setSelectedProvince(province || null);
-                        }}
-                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none"
-                      >
-                        <option value="">Chọn tỉnh/thành phố</option>
-                        {provinces.map((province) => (
-                          <option
-                            key={province.provinceId}
-                            value={province.provinceId}
+                  {/* ── Mode 1: Dropdown (GHN API) — 3 cột trên desktop ── */}
+                  {addressMode === "dropdown" && (
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      {/* Province Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          Tỉnh/Thành phố <span className="text-destructive">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={selectedProvince?.provinceId || ""}
+                            onChange={(e) => {
+                              const province = provinces.find(
+                                (p) => p.provinceId === Number(e.target.value)
+                              );
+                              setSelectedProvince(province || null);
+                            }}
+                            className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none"
                           >
-                            {province.provinceName}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-                    </div>
-                  </div>
+                            <option value="">Chọn tỉnh/thành phố</option>
+                            {provinces.map((province) => (
+                              <option
+                                key={province.provinceId}
+                                value={province.provinceId}
+                              >
+                                {province.provinceName}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
 
-                  {/* District Dropdown */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Quận/Huyện <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedDistrict?.districtId || ""}
-                        onChange={(e) => {
-                          const district = districts.find(
-                            (d) => d.districtId === Number(e.target.value)
-                          );
-                          setSelectedDistrict(district || null);
-                        }}
-                        disabled={!selectedProvince}
-                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Chọn quận/huyện</option>
-                        {districts.map((district) => (
-                          <option
-                            key={district.districtId}
-                            value={district.districtId}
+                      {/* District Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          Quận/Huyện <span className="text-destructive">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={selectedDistrict?.districtId || ""}
+                            onChange={(e) => {
+                              const district = districts.find(
+                                (d) => d.districtId === Number(e.target.value)
+                              );
+                              setSelectedDistrict(district || null);
+                            }}
+                            disabled={!selectedProvince}
+                            className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {district.districtName}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-                    </div>
-                  </div>
+                            <option value="">Chọn quận/huyện</option>
+                            {districts.map((district) => (
+                              <option
+                                key={district.districtId}
+                                value={district.districtId}
+                              >
+                                {district.districtName}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
 
-                  {/* Ward Dropdown */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Phường/Xã <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedWard?.wardCode || ""}
-                        onChange={(e) => {
-                          const ward = wards.find(
-                            (w) => w.wardCode === e.target.value
-                          );
-                          setSelectedWard(ward || null);
-                        }}
-                        disabled={!selectedDistrict}
-                        className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">Chọn phường/xã</option>
-                        {wards.map((ward) => (
-                          <option key={ward.wardCode} value={ward.wardCode}>
-                            {ward.wardName}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                      {/* Ward Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          Phường/Xã <span className="text-destructive">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={selectedWard?.wardCode || ""}
+                            onChange={(e) => {
+                              const ward = wards.find(
+                                (w) => w.wardCode === e.target.value
+                              );
+                              setSelectedWard(ward || null);
+                            }}
+                            disabled={!selectedDistrict}
+                            className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="">Chọn phường/xã</option>
+                            {wards.map((ward) => (
+                              <option key={ward.wardCode} value={ward.wardCode}>
+                                {ward.wardName}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* ── Mode 2: Map picker + /ghn/map-address ── */}
+                  {addressMode === "map" && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Click vào bản đồ để chọn vị trí giao hàng. Hệ thống sẽ tự động xác định tỉnh/thành, quận/huyện, phường/xã.
+                      </p>
+                      <MapPicker
+                        initialLat={mapLat}
+                        initialLng={mapLng}
+                        onLocationSelect={handleLocationSelect}
+                      />
+                      {selectedProvince && selectedDistrict && selectedWard && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-1">
+                          <p className="text-sm font-medium text-primary">Địa chỉ đã chọn:</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedWard.wardName}, {selectedDistrict.districtName}, {selectedProvince.provinceName}
+                          </p>
+                          {mapLat !== undefined && mapLng !== undefined && (
+                            <p className="text-xs text-muted-foreground">
+                              Tọa độ: {mapLat.toFixed(6)}, {mapLng.toFixed(6)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Detailed Address */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1.5">
                       Địa chỉ chi tiết <span className="text-destructive">*</span>
                     </label>
                     <input
@@ -466,11 +650,11 @@ export function Checkout() {
               </div>
 
               {/* Payment Method */}
-              <div className="bg-card rounded-2xl border border-border p-6">
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
                 <h2 className="text-lg font-semibold mb-4">
                   Phương thức thanh toán
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {PAYMENT_METHODS.map((method) => {
                     const Icon = method.icon;
                     const selected = paymentMethod === method.value;
@@ -479,18 +663,24 @@ export function Checkout() {
                         key={method.value}
                         type="button"
                         onClick={() => setPaymentMethod(method.value)}
-                        className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${
+                        className={`relative flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 transition-all ${
                           selected
-                            ? "border-primary bg-primary/5"
+                            ? "border-primary bg-primary/5 shadow-sm"
                             : "border-border hover:border-primary/40"
                         }`}
                       >
                         {selected && (
-                          <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center">
+                          <span className="checkout-payment-check absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center">
                             <Check className="w-3 h-3" />
                           </span>
                         )}
-                        <Icon className="w-7 h-7 text-primary" />
+                        <div
+                          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+                            selected ? "bg-primary/15" : "bg-muted"
+                          }`}
+                        >
+                          <Icon className={`w-5 h-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                        </div>
                         <span className="text-xs font-semibold text-center">
                           {method.label}
                         </span>
@@ -501,7 +691,7 @@ export function Checkout() {
               </div>
 
               {/* Coin Usage */}
-              <div className="mb-6">
+              <div>
                 <CoinUsage
                   orderTotal={subtotal}
                   onCoinApplied={setCoinDiscount}
@@ -512,16 +702,16 @@ export function Checkout() {
 
             {/* ── Right: Order Summary ── */}
             <div className="lg:col-span-2">
-              <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm sticky top-24">
                 <h3 className="text-lg font-semibold mb-4">Tóm tắt đơn hàng</h3>
 
                 {/* Cart items (read-only) */}
-                <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-1">
                   {/* Kits */}
                   {cartKits.map((kit) => (
                     <div
                       key={kit.kitId}
-                      className="flex items-start gap-3 py-2 border-b border-border"
+                      className="flex items-start gap-3 py-2 border-b border-border/70"
                     >
                       <img
                         src={kit.thumbnail}
@@ -552,7 +742,7 @@ export function Checkout() {
                   {cartItems.map((item) => (
                     <div
                       key={`${item.productId}-${item.color}`}
-                      className="flex items-start gap-3 py-2 border-b border-border last:border-0"
+                      className="flex items-start gap-3 py-2 border-b border-border/70 last:border-0"
                     >
                       <img
                         src={item.image}
@@ -591,8 +781,11 @@ export function Checkout() {
                   ))}
                 </div>
 
+                {/* ── Đường chỉ khâu ngăn cách ── */}
+                <div className="checkout-stitch-divider mb-3" />
+
                 {/* Totals */}
-                <div className="space-y-2 pt-3 border-t border-border">
+                <div className="space-y-2">
                   <div className="flex justify-between text-muted-foreground text-sm">
                     <span>Tạm tính ({totalItems} sản phẩm)</span>
                     <span>{formatPrice(subtotal)}</span>
@@ -617,7 +810,7 @@ export function Checkout() {
                       <span>-{formatPrice(coinDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border">
+                  <div className="flex justify-between font-semibold text-lg pt-3 mt-1 border-t border-border">
                     <span>Tổng cộng</span>
                     <span className="text-primary">
                       {formatPrice(grandTotal)}
@@ -630,6 +823,7 @@ export function Checkout() {
                   type="submit"
                   disabled={submitting || calculatingFee}
                   className="w-full mt-6 bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  style={{ background: "var(--cta-gradient)", boxShadow: "var(--cta-shadow)" }}
                 >
                   {submitting
                     ? "Đang xử lý..."

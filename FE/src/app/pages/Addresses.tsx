@@ -1,6 +1,7 @@
 // ============================================================
 // Address Management Page — route /addresses
 // Manage shipping addresses with GHN cascading dropdowns
+// With map pin integration for lat/lng
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -9,7 +10,8 @@ import { toast } from "sonner";
 import { Plus, MapPin, Trash2, Check, ChevronDown } from "lucide-react";
 import { addressApi } from "../../api/addressService";
 import { ghnApi } from "../../api/ghnService";
-import type { Address, CreateAddressRequest } from "../../types/address.types";
+import { MapPicker } from "../../components/map/MapPicker";
+import type { Address, CreateAddressRequest, ReverseGeocodeResult } from "../../types/address.types";
 import type { GHNProvince, GHNDistrict, GHNWard } from "../../types/ghn.types";
 
 type AddressFormData = {
@@ -36,6 +38,11 @@ export function Addresses() {
   const [selectedProvince, setSelectedProvince] = useState<GHNProvince | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<GHNDistrict | null>(null);
   const [selectedWard, setSelectedWard] = useState<GHNWard | null>(null);
+
+  // Map state
+  const [showMap, setShowMap] = useState(false);
+  const [mapLat, setMapLat] = useState<number | undefined>(undefined);
+  const [mapLng, setMapLng] = useState<number | undefined>(undefined);
 
   const {
     register,
@@ -118,6 +125,75 @@ export function Addresses() {
     }
   };
 
+  // Handle map location selection
+  const handleLocationSelect = async (result: ReverseGeocodeResult) => {
+    setMapLat(result.lat);
+    setMapLng(result.lng);
+
+    // Only call /ghn/map-address if we have at least province name
+    const province = result.provinceName?.trim();
+    const district = result.districtName?.trim();
+    const ward = result.wardName?.trim();
+
+    if (province || district || ward) {
+      try {
+        const mapRes = await ghnApi.mapAddress({
+          provinceName: province || "",
+          districtName: district || "",
+          wardName: ward || "",
+        });
+        const match = mapRes.data.data.match;
+        if (match.success && match.provinceId) {
+          // Auto-fill province
+          const matchedProvince = provinces.find(
+            (p) => p.provinceId === match.provinceId
+          );
+          if (matchedProvince) {
+            setSelectedProvince(matchedProvince);
+
+            // Auto-fill district
+            if (match.districtId) {
+              // Load districts first, then find and select
+              const distRes = await ghnApi.getDistricts(match.provinceId);
+              setDistricts(distRes.data.data.districts);
+              const matchedDistrict = distRes.data.data.districts.find(
+                (d) => d.districtId === match.districtId
+              );
+              if (matchedDistrict) {
+                setSelectedDistrict(matchedDistrict);
+
+                // Auto-fill ward
+                if (match.wardCode) {
+                  const wardRes = await ghnApi.getWards(match.districtId);
+                  setWards(wardRes.data.data.wards);
+                  const matchedWard = wardRes.data.data.wards.find(
+                    (w) => w.wardCode === match.wardCode
+                  );
+                  if (matchedWard) {
+                    setSelectedWard(matchedWard);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Map address mapping failed:", error);
+        // Fallback: try fuzzy match on province name
+        if (result.provinceName) {
+          const matchedProvince = provinces.find(
+            (p) =>
+              p.provinceName.toLowerCase().includes(result.provinceName.toLowerCase()) ||
+              result.provinceName.toLowerCase().includes(p.provinceName.toLowerCase())
+          );
+          if (matchedProvince) {
+            setSelectedProvince(matchedProvince);
+          }
+        }
+      }
+    }
+  };
+
   const onSubmit = async (data: AddressFormData) => {
     if (!selectedProvince || !selectedDistrict || !selectedWard) {
       toast.error("Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã");
@@ -137,6 +213,10 @@ export function Addresses() {
         provinceId: selectedProvince.provinceId,
         provinceName: selectedProvince.provinceName,
         isDefault: data.isDefault,
+        // Include lat/lng from map if available
+        ...(mapLat !== undefined && mapLng !== undefined
+          ? { lat: mapLat, lng: mapLng }
+          : {}),
       };
 
       if (editingId) {
@@ -171,6 +251,12 @@ export function Addresses() {
     // Find and set ward
     const ward = wards.find((w) => w.wardCode === address.wardCode);
     if (ward) setSelectedWard(ward);
+
+    // Set map coordinates if available
+    if (address.lat && address.lng) {
+      setMapLat(address.lat);
+      setMapLng(address.lng);
+    }
 
     reset({
       fullName: address.fullName,
@@ -214,6 +300,9 @@ export function Addresses() {
     setSelectedWard(null);
     setDistricts([]);
     setWards([]);
+    setShowMap(false);
+    setMapLat(undefined);
+    setMapLng(undefined);
   };
 
   if (loading) {
@@ -378,6 +467,33 @@ export function Addresses() {
                 )}
               </div>
 
+              {/* Map Picker Toggle */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowMap(!showMap)}
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  <MapPin className="w-4 h-4" />
+                  {showMap ? "Ẩn bản đồ" : "Chọn vị trí trên bản đồ"}
+                  {mapLat !== undefined && mapLng !== undefined && (
+                    <span className="text-xs text-muted-foreground">
+                      ({mapLat.toFixed(4)}, {mapLng.toFixed(4)})
+                    </span>
+                  )}
+                </button>
+
+                {showMap && (
+                  <div className="mt-3">
+                    <MapPicker
+                      initialLat={mapLat}
+                      initialLng={mapLng}
+                      onLocationSelect={handleLocationSelect}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -451,6 +567,11 @@ export function Addresses() {
                     <p className="text-sm text-muted-foreground">
                       {address.wardName}, {address.districtName}, {address.provinceName}
                     </p>
+                    {address.lat && address.lng && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Tọa độ: {address.lat.toFixed(4)}, {address.lng.toFixed(4)}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {!address.isDefault && (

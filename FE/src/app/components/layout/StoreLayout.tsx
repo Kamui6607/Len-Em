@@ -13,7 +13,7 @@ interface StoreLayoutProps {
 }
 
 // Routes that should NOT render Navigation or Footer
-const NO_NAV_ROUTES = ["/order/success"];
+const NO_NAV_ROUTES = ["/order/success", "/chatbot"];
 
 export function StoreLayout({
   children,
