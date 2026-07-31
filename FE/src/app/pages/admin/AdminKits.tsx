@@ -337,7 +337,8 @@ function KitFormModal({
     price: kit?.price || 0,
     isActive: kit?.isActive ?? true,
     products: kit?.products.map(p => ({
-      productId: p.productId._id,
+      productId: p.product._id,
+      variantId: p.variantId,
       quantity: p.quantity,
     })) || [],
   });
@@ -387,7 +388,7 @@ function KitFormModal({
     if (!exists) {
       setFormData({
         ...formData,
-        products: [...formData.products, { productId: product._id, quantity: 1 }],
+        products: [...formData.products, { productId: product._id, variantId: product.variants[0]?._idVariants || '', quantity: 1 }],
       });
       toast.success(`Added ${product.name} to kit`);
     } else {
@@ -417,17 +418,11 @@ function KitFormModal({
     setLoading(true);
 
     try {
-      // Transform KitProduct[] to KitProductInput[] for API
-      const productsInput = formData.products.map(p => ({
-        productId: p.productId,
-        quantity: p.quantity,
-      }));
-
       if (kit) {
-        await kitService.update(kit._id, { ...formData, products: productsInput }, thumbnail || undefined);
+        await kitService.update(kit._id, { ...formData, products: formData.products }, thumbnail || undefined);
         toast.success("Kit updated successfully");
       } else {
-        await kitService.create({ ...formData, products: productsInput }, thumbnail || undefined);
+        await kitService.create({ ...formData, products: formData.products }, thumbnail || undefined);
         toast.success("Kit created successfully");
       }
       onSuccess();
