@@ -16,6 +16,9 @@ import { useLanguage } from "../../../context/LanguageContext";
 import { useAuthStore } from "../../../store/auth.store";
 import { orderApi } from "../../../api/orderService";
 import { ghnApi } from "../../../api/ghnService";
+import type {
+  ShippingFeePreviewRequest,
+} from "../../../features/orders/types/order.types";
 import { MapPicker } from "../../../components/map/MapPicker";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../../components/ui/ColorSwatch";
@@ -85,8 +88,8 @@ export function Checkout() {
   const [mapLng, setMapLng] = useState<number | undefined>(undefined);
 
   const subtotal = totalPrice;
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const grandTotal = Math.max(0, subtotal + deliveryFee - coinDiscount);
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const grandTotal = Math.max(0, subtotal + (deliveryFee ?? 0) - coinDiscount);
 
   const {
     register,
@@ -134,7 +137,7 @@ export function Checkout() {
       setSelectedDistrict(null);
       setSelectedWard(null);
       setWards([]);
-      setDeliveryFee(0); // Reset delivery fee when province changes
+      setDeliveryFee(null); // Reset delivery fee when province changes
     }
   }, [selectedProvince]);
 
@@ -152,7 +155,7 @@ export function Checkout() {
     if (selectedDistrict) {
       loadWards(selectedDistrict.districtId);
       setSelectedWard(null);
-      setDeliveryFee(0); // Reset delivery fee when district changes
+      setDeliveryFee(null); // Reset delivery fee when district changes
     }
   }, [selectedDistrict]);
 
@@ -233,46 +236,65 @@ export function Checkout() {
     }
   };
 
-  // Calculate shipping fee when ward is selected
+  // Calculate shipping fee when ward or cart items change
   useEffect(() => {
-    if (selectedWard && cartItems.length > 0) {
-      calculateShippingFee();
-    }
-  }, [selectedWard, cartItems]);
+    if (!selectedWard) return;
+    if (cartItems.length === 0 && cartKits.length === 0) return;
 
-  const calculateShippingFee = async () => {
-    if (!selectedProvince || !selectedDistrict || !selectedWard || cartItems.length === 0) {
-      return;
-    }
+    let cancelled = false;
 
-    setCalculatingFee(true);
-    try {
-      const payload = {
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
-        provinceId: selectedProvince.provinceId,
-        districtId: selectedDistrict.districtId,
-        wardCode: selectedWard.wardCode,
-      };
-
-      const response = await ghnApi.calculateShippingFee(payload);
-      // Try both response shapes: { status, data: { shipping_fee } } and flat { shipping_fee }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const resData: any = response.data;
-      const shippingFee: number | undefined = resData?.data?.shipping_fee ?? resData?.shipping_fee;
-      if (shippingFee && shippingFee > 0) {
-        setDeliveryFee(shippingFee);
+    const fetchShippingFee = async () => {
+      if (!selectedProvince || !selectedDistrict || !selectedWard) {
+        return;
       }
-    } catch (error) {
-      // Silently fail - will use default fee
-      console.error("Failed to calculate shipping fee:", error);
-    } finally {
-      setCalculatingFee(false);
-    }
-  };
+      // If no items in cart, we cannot calculate shipping fee (API doesn't accept kits)
+      if (cartItems.length === 0) {
+        setDeliveryFee(null);
+        return;
+      }
+
+      setCalculatingFee(true);
+      try {
+        const payload: ShippingFeePreviewRequest = {
+          items: cartItems.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+          })),
+          provinceName: selectedProvince.provinceName,
+          districtName: selectedDistrict.districtName,
+          wardName: selectedWard.wardName,
+        };
+
+        console.log("[Checkout] Calculating shipping fee with payload:", payload);
+        const response = await orderApi.previewShippingFee(payload);
+        const data = response.data;
+        // Backend returns { subtotal, shippingFee, total }
+        console.log("[Checkout] Shipping fee response:", data);
+        if (!cancelled) {
+          setDeliveryFee(data.shippingFee ?? 0);
+        }
+      } catch (error) {
+        console.error("[Checkout] Failed to calculate shipping fee:", error);
+        // Show a toast with the error so the user knows what happened
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        const errMsg = axiosError?.response?.data?.message;
+        if (!cancelled) {
+          toast.error(errMsg || "Không thể tính phí vận chuyển. Vui lòng thử lại sau.");
+        }
+      } finally {
+        if (!cancelled) {
+          setCalculatingFee(false);
+        }
+      }
+    };
+
+    fetchShippingFee();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWard, selectedProvince, selectedDistrict, cartItems, cartKits]);
 
   const onSubmit = async (data: ShippingFormData) => {
     if (cartItems.length === 0 && cartKits.length === 0) {
@@ -291,28 +313,28 @@ export function Checkout() {
       const payload: CreateOrderRequest = {
         items: cartItems.map((item) => ({
           productId: item.productId,
+          variantId: item.variantId,
           quantity: item.quantity,
-          color: item.color,
-          hexCode: item.hexCode,
         })),
-        kits: cartKits.map((kit) => ({
-          kitId: kit.kitId,
-          quantity: 1,
-        })),
+        ...(cartKits.length > 0 ? {
+          kits: cartKits.map((kit) => ({
+            kitId: kit.kitId,
+            quantity: kit.quantity,
+          })),
+        } : {}),
         shippingAddress: {
           fullName: data.fullName,
           phone: data.phone,
           address: data.address,
-          ward: selectedWard.wardName,
-          district: selectedDistrict.districtName,
-          city: selectedProvince.provinceName,
+          wardName: selectedWard.wardName,
+          districtName: selectedDistrict.districtName,
+          provinceName: selectedProvince.provinceName,
           // Include lat/lng from map if available
           ...(mapLat !== undefined && mapLng !== undefined
             ? { lat: mapLat, lng: mapLng }
             : {}),
         },
         paymentMethod,
-        shippingFee: deliveryFee,
         ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
       };
 
@@ -797,8 +819,10 @@ export function Checkout() {
                         : "Phí vận chuyển"}
                     </span>
                     <span>
-                      {deliveryFee > 0
-                        ? formatPrice(deliveryFee)
+                      {deliveryFee !== null
+                        ? deliveryFee > 0
+                          ? formatPrice(deliveryFee)
+                          : "Miễn phí"
                         : calculatingFee
                         ? "..."
                         : "Chưa tính"}
@@ -821,7 +845,7 @@ export function Checkout() {
                 {/* Submit button */}
                 <button
                   type="submit"
-                  disabled={submitting || calculatingFee}
+                  disabled={submitting || calculatingFee || deliveryFee === null}
                   className="w-full mt-6 bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   style={{ background: "var(--cta-gradient)", boxShadow: "var(--cta-shadow)" }}
                 >

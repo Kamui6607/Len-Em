@@ -98,7 +98,7 @@ export function KitDetail() {
 
     // Use kit.products which has the correct structure
     const products = kit.products.map((kitProduct) => {
-      const product = kitProduct.productId;
+      const product = kitProduct.product;
       const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
 
       return {
@@ -285,8 +285,8 @@ export function KitDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {displayedProducts.map((kitProduct, index) => {
                   const isLastVisible = index === 2 && remainingCount > 0;
-                  // kitProduct.productId is the full product object
-                  const product = kitProduct.productId;
+                  // kitProduct.product is the full product object (populated)
+                  const product = kitProduct.product;
                   const variantId = kitProduct.variantId;
                   const quantity = kitProduct.quantity;
                   
@@ -294,7 +294,7 @@ export function KitDetail() {
                   const selectedVariant = product?.variants?.find(v => v._id === variantId) || product?.variants?.[0];
 
                   return (
-                    <div key={product._id} className="relative">
+                    <div key={`${product._id}-${variantId}`} className="relative">
                       <Link
                         to={`/shop/product/${product._id}`}
                         className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all block"
@@ -435,12 +435,12 @@ export function KitDetail() {
               <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {(kit.products || []).map((kitProduct) => {
-                    const product = kitProduct.productId;
+                    const product = kitProduct.product;
                     const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
                     
                     return (
                       <Link
-                        key={product._id}
+                        key={`${product._id}-${kitProduct.variantId}`}
                         to={`/shop/product/${product._id}`}
                         onClick={() => setShowAllProducts(false)}
                         className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all"

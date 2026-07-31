@@ -236,13 +236,14 @@ export function Love() {
                      {/* Add to cart button */}
                      <button
                        onClick={() => {
-                         const products = (kit.products || []).map((product) => {
-                           const variant = product.productId.variants[0];
+                         const products = (kit.products || []).map((kitProduct) => {
+                          const product = kitProduct.product;
+                          const variant = product?.variants?.[0];
                            return {
-                             productId: product.productId._id,
-                             variantId: product.variantId,
-                             name: product.productId.name,
-                             image: variant?.image || product.productId.image,
+                             productId: product._id,
+                             variantId: kitProduct.variantId,
+                             name: product.name,
+                             image: variant?.image || product.image,
                              price: variant?.price || 0,
                            };
                          });

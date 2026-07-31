@@ -112,7 +112,7 @@ export function Navigation({ cartCount }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { favorites, favoriteKits } = useFavorites();
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, isLoading, signOut } = useAuth();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -135,7 +135,8 @@ export function Navigation({ cartCount }: NavigationProps) {
   const displayedNavLinks = (isHomePage || isAboutPage) ? homeNavLinks : navLinks;
 
   const showFullActions = isAuthenticated && !isHomePage && !isAboutPage;
-  const showAuthButtons = !isAuthenticated;
+  const showAuthButtons = !isAuthenticated && !isLoading;
+  const showAuthPlaceholder = isLoading;
 
   // Navbar bo tròn khi scroll (ngược với behavior cũ)
   const isFloating = scrolled;
@@ -545,6 +546,13 @@ export function Navigation({ cartCount }: NavigationProps) {
               <ThemeToggle />
             </motion.div>
 
+            {showAuthPlaceholder && (
+              <div className="ml-1 flex items-center gap-1.5">
+                {/* Skeleton placeholder while checking auth state */}
+                <div className="h-[38px] w-[100px] rounded-full bg-[var(--chip-bg)] animate-pulse" />
+                <div className="h-[38px] w-[120px] rounded-full bg-[var(--chip-bg)] animate-pulse" />
+              </div>
+            )}
             {showAuthButtons && (
               <div className="ml-1 flex items-center gap-1.5">
                 <motion.button
@@ -730,6 +738,12 @@ export function Navigation({ cartCount }: NavigationProps) {
                     );
                   })}
 
+                  {showAuthPlaceholder && (
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <div className="h-[44px] rounded-2xl bg-[var(--chip-bg)] animate-pulse" />
+                      <div className="h-[44px] rounded-2xl bg-[var(--chip-bg)] animate-pulse" />
+                    </div>
+                  )}
                   {showAuthButtons && (
                     <div className="grid grid-cols-2 gap-2 pt-2">
                       <motion.button

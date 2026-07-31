@@ -106,13 +106,14 @@ export function DIYFeedPage() {
         name: kit.name,
         thumbnail: kit.thumbnail,
         price: kit.price,
-        products: (kit.products || []).map((product: KitProduct) => {
-          const firstVariant = product.productId.variants[0];
+        products: (kit.products || []).map((kitProduct: KitProduct) => {
+          const product = kitProduct.product;
+          const firstVariant = product?.variants?.[0];
           return {
-            productId: product.productId._id,
-            variantId: firstVariant?._id || "default",
-            name: product.productId.name,
-            image: firstVariant?.image || product.productId.image,
+            productId: product._id,
+            variantId: kitProduct.variantId,
+            name: product.name,
+            image: firstVariant?.image || product.image,
             price: firstVariant?.price || 0,
           };
         }),

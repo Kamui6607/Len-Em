@@ -7,8 +7,6 @@ import type {
   GHNProvincesResponse,
   GHNDistrictsResponse,
   GHNWardsResponse,
-  ShippingFeeRequest,
-  ShippingFeeResponse,
   MapAddressRequest,
   MapAddressResponse,
 } from "../types/ghn.types";
@@ -48,11 +46,4 @@ export const ghnApi = {
    */
   mapAddress: (data: MapAddressRequest) =>
     axiosClient.post<MapAddressResponse>(`${GHN_BASE}/map-address`, data),
-
-  /**
-   * POST /orders/shipping-fee
-   * Calculate shipping fee for order items using GHN API
-   */
-  calculateShippingFee: (data: ShippingFeeRequest) =>
-    axiosClient.post<ShippingFeeResponse>("/orders/shipping-fee", data),
 };

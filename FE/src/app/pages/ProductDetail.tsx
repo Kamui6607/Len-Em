@@ -6,6 +6,7 @@ import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
 import { cn } from "../components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 import { fetchProductById } from "../../features/shop/services/product.service";
@@ -119,6 +120,7 @@ export function ProductDetail() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToCart, cartItems } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -294,7 +296,16 @@ export function ProductDetail() {
               />
               <button
                 type="button"
-                title="Toggle favorite"
+                onClick={() => {
+                  if (!product) return;
+                  toggleFavorite(product.id);
+                  toast.success(
+                    isFavorite(product.id)
+                      ? "Removed from favorites"
+                      : "Added to favorites"
+                  );
+                }}
+                title={isFavorite(product?.id || "") ? "Remove from favorites" : "Add to favorites"}
                 className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors"
                 style={{
                   background: "var(--card-glass)",
@@ -306,7 +317,14 @@ export function ProductDetail() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Heart className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
+                <Heart
+                  className={cn(
+                    "w-5 h-5 transition-colors",
+                    isFavorite(product?.id || "")
+                      ? "fill-destructive text-destructive"
+                      : "text-muted-foreground hover:text-destructive"
+                  )}
+                />
               </button>
               {currentColor && selectedVariant?.hexCode && (
                 <div

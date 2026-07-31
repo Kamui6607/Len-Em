@@ -365,7 +365,9 @@
     "selectFullAddress": "Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã",
     "cannotLoadProvinces": "Không thể tải danh sách tỉnh/thành phố",
     "cannotLoadDistricts": "Không thể tải danh sách quận/huyện",
-    "cannotLoadWards": "Không thể tải danh sách phường/xã"
+    "cannotLoadWards": "Không thể tải danh sách phường/xã",
+    "selectedAddress": "Địa chỉ đã chọn:",
+    "coordinates": "Tọa độ:"
   },
   "productCard": {
     "addToCart": "Thêm vào giỏ",
@@ -1325,6 +1327,37 @@
     "cancelRequestSent": "Yêu cầu huỷ đã được gửi, chờ admin duyệt",
     "cancelRequestError": "Không thể gửi yêu cầu huỷ",
     "approveCancelPending": "⏳ Đang chờ duyệt huỷ"
+  },
+  "productDetail": {
+    "backToShop": "Quay lại cửa hàng",
+    "productNotFound": "Không tìm thấy sản phẩm",
+    "productNotFoundDesc": "Sản phẩm bạn đang tìm không tồn tại hoặc đã bị xóa.",
+    "stock": "Tồn kho",
+    "outOfStock": "Hết hàng",
+    "inStock": "{count} sản phẩm",
+    "totalStock": "{count} sản phẩm trên tất cả màu",
+    "highStock": "Còn nhiều hàng",
+    "mediumStock": "Số lượng có hạn",
+    "lowStock": "Sắp hết hàng",
+    "addToCart": "Thêm vào giỏ",
+    "soldOut": "Hết hàng",
+    "quantity": "Số lượng",
+    "price": "Giá:",
+    "freeShipping": "Miễn phí vận chuyển cho đơn trên $50",
+    "returns30Day": "Đổi trả trong 30 ngày",
+    "secureCheckout": "Thanh toán an toàn",
+    "youMightAlsoLike": "Có thể bạn cũng thích",
+    "addedToCart": "Đã thêm {count} sản phẩm vào giỏ hàng",
+    "yarnSpecifications": "Thông số sợi len",
+    "material": "Chất liệu",
+    "weight": "Trọng lượng",
+    "yardage": "Chiều dài",
+    "skillLevel": "Trình độ",
+    "kitDetails": "Chi tiết Combo",
+    "difficulty": "Độ khó:",
+    "estimatedTime": "Thời gian dự kiến:",
+    "whatsIncluded": "Bao gồm:",
+    "reviews": "đánh giá"
   },
   "common": {
     "loading": "Đang tải...",

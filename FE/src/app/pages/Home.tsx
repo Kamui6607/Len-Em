@@ -7,7 +7,6 @@ import { DIYSection } from "../../components/DIYSection";
 import { ClosingCTA, LenEmFooter } from "../../components/ClosingCTA";
 import { Reveal } from "../../components/motion/Reveal";
 import { ScrollProgress } from "../../components/motion/ScrollProgress";
-import { BackToTop } from "../../components/motion/BackToTop";
 import { SectionDivider } from "../../components/motion/SectionDivider";
 import { AnimatedBackground } from "../../components/motion/AnimatedBackground";
 
@@ -25,12 +24,12 @@ export function Home() {
         transition={{ duration: 0.4 }}
       >
         {/* ── Hero: nền sáng nhất (AnimatedBackground tự xử lý) ── */}
-        <div id="section-hero">
+        <div id="section-hero" style={{ scrollMarginTop: "0px" }}>
           <HeroSection stackMode="collapsed" />
         </div>
 
         {/* ── How It Works: bg-surface — tối hơn 1 bậc ── */}
-        <div id="section-how-it-works" className="bg-surface">
+        <div id="section-how-it-works" className="bg-surface" style={{ scrollMarginTop: "0px" }}>
           <SectionDivider accent="var(--accent-pink)" />
           <Reveal>
             <HowItWorksSection />
@@ -38,7 +37,7 @@ export function Home() {
         </div>
 
         {/* ── Learn: bg-background (ấm hơn 1 chút) ── */}
-        <div id="section-learn" className="bg-background">
+        <div id="section-learn" className="bg-background" style={{ scrollMarginTop: "0px" }}>
           <SectionDivider accent="var(--accent-yellow)" />
           <Reveal delay={0.05} y={36}>
             <LearnSection />
@@ -46,7 +45,7 @@ export function Home() {
         </div>
 
         {/* ── Shop: bg-surface (tối hơn nữa) ── */}
-        <div id="section-shop" className="bg-surface">
+        <div id="section-shop" className="bg-surface" style={{ scrollMarginTop: "0px" }}>
           <SectionDivider accent="var(--primary)" />
           <Reveal delay={0.05} y={40}>
             <ShopSection />
@@ -54,7 +53,7 @@ export function Home() {
         </div>
 
         {/* ── DIY: bg-muted — tối nhất trước khi vào CTA ── */}
-        <div id="section-diy" className="bg-muted">
+        <div id="section-diy" className="bg-muted" style={{ scrollMarginTop: "0px" }}>
           <SectionDivider accent="var(--accent-pink)" />
           <Reveal delay={0.05} y={24}>
             <DIYSection />
@@ -67,9 +66,6 @@ export function Home() {
         </Reveal>
         {/* ── LenEmFooter: bg-card ── */}
         <LenEmFooter />
-
-        {/* Yarn-ball scroll-to-top button */}
-        <BackToTop />
       </motion.div>
     </>
   );

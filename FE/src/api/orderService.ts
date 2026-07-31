@@ -12,11 +12,21 @@ import type {
   MyOrdersResponse,
   CreateOrderResponse,
   GetOrderResponse,
+  ShippingFeePreviewRequest,
+  ShippingFeePreviewResponse,
 } from "../features/orders/types/order.types";
 
 const ORDERS_BASE = "/orders";
 
 export const orderApi = {
+  /**
+   * POST /orders/shipping-fee — preview shipping fee & totals
+   * Frontend sends item IDs + address text names (NO prices, NO GHN IDs).
+   * Backend looks up prices from DB, queries GHN, returns subtotal/shippingFee/total.
+   */
+  previewShippingFee: (data: ShippingFeePreviewRequest) =>
+    axiosClient.post<ShippingFeePreviewResponse>(`${ORDERS_BASE}/shipping-fee`, data),
+
   /**
    * POST /orders — create a new order (customer)
    * Sends cart items + shipping address + payment method.

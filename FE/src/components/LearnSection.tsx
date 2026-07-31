@@ -661,7 +661,7 @@ export function LearnSection() {
         {/* ── 2-col → 1-col trên mobile ── */}
         <div
           className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16"
-          style={{ alignItems: "start", marginBottom: "5rem" }}
+          style={{ alignItems: "start", marginBottom: "3rem", marginTop: "1.5rem" }}
         >
           {/* ── LEFT: text column ── */}
           <motion.div
@@ -766,27 +766,6 @@ export function LearnSection() {
                 <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </motion.a>
-
-            {/* Micro stat row */}
-            <motion.div
-              variants={leftColItem}
-              style={{ display: "flex", gap: "24px", marginTop: "22px" }}
-            >
-                {[
-                  { n: "48+", label: t("learn.stat1") },
-                  { n: "4.9",  label: t("learn.stat2") },
-                  { n: "12k",  label: t("learn.stat3") },
-                ].map(({ n, label }) => (
-                <div key={label}>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "var(--primary)", letterSpacing: "-0.02em", lineHeight: 1 }}>
-                    {n}
-                  </div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.68rem", color: "var(--foreground-muted)", marginTop: "2px" }}>
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </motion.div>
           </motion.div>
 
           {/* ── RIGHT: image + testimonial ── */}
@@ -924,12 +903,12 @@ export function LearnSection() {
             style={{
               height: "1px",
               background: "linear-gradient(90deg, transparent, var(--border), transparent)",
-              marginBottom: "36px",
+              marginBottom: "15px",
             }}
           />
 
           {/* Section label */}
-          <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <div style={{ textAlign: "center", marginBottom: "15px" }}>
             <span
               style={{
                 fontFamily: "'Caveat', cursive",

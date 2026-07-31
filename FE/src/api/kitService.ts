@@ -21,8 +21,9 @@ export interface KitRating {
 }
 
 // For reading kit data (GET responses)
+// BE returns: products[].product (populated), products[].variantId, products[].quantity
 export interface KitProduct {
-  productId: {
+  product: {
     _id: string;
     name: string;
     description: string;
@@ -50,6 +51,7 @@ export interface KitProduct {
 // For creating/updating kits (POST/PUT requests)
 export interface KitProductInput {
   productId: string;
+  variantId: string;
   quantity: number;
 }
 
@@ -60,6 +62,7 @@ export interface Kit {
   thumbnail: string;
   level: "beginner" | "intermediate" | "advanced";
   price: number;
+  stock: number;
   products: KitProduct[];
   isActive: boolean;
   averageRating: number;
@@ -102,6 +105,7 @@ export const kitService = {
     description: string;
     level: "beginner" | "intermediate" | "advanced";
     price?: number;
+    stock?: number;
     products: KitProductInput[];
     isActive?: boolean;
   }, thumbnail?: File) => {
@@ -121,6 +125,7 @@ export const kitService = {
     description?: string;
     level?: "beginner" | "intermediate" | "advanced";
     price?: number;
+    stock?: number;
     products?: KitProductInput[];
     isActive?: boolean;
   }, thumbnail?: File) => {

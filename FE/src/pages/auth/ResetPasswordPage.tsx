@@ -64,7 +64,7 @@ export function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      await authService.forgotPassword({ uuid, newPassword: password });
+      await authService.forgotPassword({ uuid, newPassword: password, confirmPassword });
       setResetSuccess(true);
       toast.success("Password reset successfully!");
     } catch {

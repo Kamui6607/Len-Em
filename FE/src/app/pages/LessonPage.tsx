@@ -221,11 +221,11 @@ export function LessonPage() {
               thumbnail: c.thumbnail,
               level: c.level,
               price: c.price,
-              products: c.productIds.map((pid) => {
+                products: c.productIds.map((pid) => {
                 const product = products.find((p) => p.id === pid);
                 const firstVariant = product?.variants?.[0];
                 return {
-                  productId: {
+                  product: {
                     _id: pid,
                     name: product?.name ?? pid,
                     description: product?.description ?? "",
@@ -249,6 +249,7 @@ export function LessonPage() {
                   quantity: 1,
                 };
               }),
+              stock: 0,
               isActive: true,
               averageRating: 0,
               totalRatings: 0,
@@ -363,13 +364,14 @@ export function LessonPage() {
   const addProductToCart = (item: MaterialItem) => {
     if (item.type === "kit" && item.kitData) {
       if (!isAuthenticated) { navigate("/auth/login"); return; }
-      const kitProducts = (item.kitData.products || []).map((product) => {
-        const variant = product.productId.variants[0];
+      const kitProducts = (item.kitData.products || []).map((kitProduct) => {
+        const product = kitProduct.product;
+        const variant = product?.variants?.[0];
         return {
-          productId: product.productId._id,
-          variantId: product.variantId,
-          name: product.productId.name,
-          image: variant?.image || product.productId.image,
+          productId: product._id,
+          variantId: kitProduct.variantId,
+          name: product.name,
+          image: variant?.image || product.image,
           price: variant?.price || 0,
         };
       });
@@ -423,13 +425,14 @@ export function LessonPage() {
   const addAllToCart = () => {
     materials.forEach((item) => {
       if (item.type === "kit" && item.kitData) {
-        const kitProducts = (item.kitData.products || []).map((product) => {
-          const variant = product.productId.variants[0];
+      const kitProducts = (item.kitData.products || []).map((kitProduct) => {
+          const product = kitProduct.product;
+          const variant = product?.variants?.[0];
           return {
-            productId: product.productId._id,
-            variantId: product.variantId,
-            name: product.productId.name,
-            image: variant?.image || product.productId.image,
+            productId: product._id,
+            variantId: kitProduct.variantId,
+            name: product.name,
+            image: variant?.image || product.image,
             price: variant?.price || 0,
           };
         });

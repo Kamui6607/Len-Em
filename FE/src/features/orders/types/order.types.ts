@@ -17,6 +17,7 @@ export interface OrderUser {
   fullName: string;
 }
 
+/** Shipping address as stored in Order (backward-compatible with existing orders) */
 export interface ShippingAddress {
   fullName: string;
   phone: string;
@@ -24,6 +25,20 @@ export interface ShippingAddress {
   ward: string;
   district: string;
   city: string;
+  /** Latitude from map pin */
+  lat?: number;
+  /** Longitude from map pin */
+  lng?: number;
+}
+
+/** Shipping address input for CREATE order — uses text names, NOT GHN IDs */
+export interface ShippingAddressInput {
+  fullName: string;
+  phone: string;
+  address: string;
+  provinceName: string;
+  districtName: string;
+  wardName: string;
   /** Latitude from map pin */
   lat?: number;
   /** Longitude from map pin */
@@ -81,18 +96,16 @@ export interface Order {
 export interface CreateOrderRequest {
   items: {
     productId: string;
+    variantId: string;
     quantity: number;
-    color?: string;
-    hexCode?: string;
   }[];
   /** Kits to order — server will expand each kit into product items */
   kits?: {
     kitId: string;
     quantity: number;
   }[];
-  shippingAddress: ShippingAddress;
+  shippingAddress: ShippingAddressInput;
   paymentMethod: PaymentMethod;
-  shippingFee: number;
   note?: string;
   coinUsed?: number;
 }
@@ -130,6 +143,27 @@ export interface CreateOrderResponse {
   message: string;
   order: Order;
   payUrl?: string;
+}
+
+// ── Shipping fee preview (Step 1) ──
+
+export interface ShippingFeePreviewItem {
+  productId: string;
+  variantId: string;
+  quantity: number;
+}
+
+export interface ShippingFeePreviewRequest {
+  items: ShippingFeePreviewItem[];
+  provinceName: string;
+  districtName: string;
+  wardName: string;
+}
+
+export interface ShippingFeePreviewResponse {
+  subtotal: number;
+  shippingFee: number;
+  total: number;
 }
 
 export interface OrderApiResponse<T> {

@@ -365,7 +365,9 @@
     "selectFullAddress": "Please select complete Province/City, District, Ward",
     "cannotLoadProvinces": "Unable to load provinces list",
     "cannotLoadDistricts": "Unable to load districts list",
-    "cannotLoadWards": "Unable to load wards list"
+    "cannotLoadWards": "Unable to load wards list",
+    "selectedAddress": "Selected address:",
+    "coordinates": "Coordinates:"
   },
   "productCard": {
     "addToCart": "Add to Cart",
@@ -1279,6 +1281,37 @@
     "cancelRequestSent": "Cancellation request sent, waiting for admin approval",
     "cancelRequestError": "Unable to send cancellation request",
     "approveCancelPending": "⏳ Waiting for cancellation approval"
+  },
+  "productDetail": {
+    "backToShop": "Back to Shop",
+    "productNotFound": "Product Not Found",
+    "productNotFoundDesc": "The product you're looking for doesn't exist or has been removed.",
+    "stock": "Stock",
+    "outOfStock": "Out of Stock",
+    "inStock": "{count} in stock",
+    "totalStock": "{count} items across all colors",
+    "highStock": "Well stocked",
+    "mediumStock": "Limited stock",
+    "lowStock": "Almost gone",
+    "addToCart": "Add to Cart",
+    "soldOut": "Sold Out",
+    "quantity": "Quantity",
+    "price": "Price:",
+    "freeShipping": "Free shipping over $50",
+    "returns30Day": "30-day returns",
+    "secureCheckout": "Secure checkout",
+    "youMightAlsoLike": "You Might Also Like",
+    "addedToCart": "Added {count} item(s) to cart",
+    "yarnSpecifications": "Yarn Specifications",
+    "material": "Material",
+    "weight": "Weight",
+    "yardage": "Yardage",
+    "skillLevel": "Skill Level",
+    "kitDetails": "Kit Details",
+    "difficulty": "Difficulty:",
+    "estimatedTime": "Estimated time:",
+    "whatsIncluded": "What's included:",
+    "reviews": "reviews"
   },
   "common": {
     "loading": "Loading...",

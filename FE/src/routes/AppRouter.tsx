@@ -83,10 +83,6 @@ const ResetPasswordPage = lazy(() =>
   import("../pages/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })),
 );
 
-const ResetNewPasswordPage = lazy(() =>
-  import("../pages/auth/ResetNewPasswordPage").then((m) => ({ default: m.ResetNewPasswordPage })),
-);
-
 // ── NEW: Shop cart page (uses CartContext) ──
 const ShopCart = lazy(() =>
   import("../app/pages/shop/CartPage").then((m) => ({ default: m.CartPage })),
@@ -361,6 +357,15 @@ export function AppRouter() {
         }
       />
 
+      {/* Redirect from /reset-password (backend link format) to /auth/reset-password */}
+      <Route
+        path="reset-password"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ResetPasswordPage />
+          </Suspense>
+        }
+      />
       <Route
         path="auth/forgot-password"
         element={
@@ -374,14 +379,6 @@ export function AppRouter() {
         element={
           <Suspense fallback={<LoadingFallback />}>
             <ResetPasswordPage />
-          </Suspense>
-        }
-      />
-      <Route
-        path="auth/reset-new-pass"
-        element={
-          <Suspense fallback={<LoadingFallback />}>
-            <ResetNewPasswordPage />
           </Suspense>
         }
       />

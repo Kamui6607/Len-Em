@@ -62,6 +62,7 @@ export interface ChangePasswordRequest {
 export interface ForgotPasswordResetRequest {
   uuid: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 export interface MessageResponseData {

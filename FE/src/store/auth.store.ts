@@ -26,12 +26,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       if (!hasValidToken()) {
+        // Ensure minimum loading duration for smooth transition
+        await new Promise((r) => setTimeout(r, 300));
         set({ isLoading: false, isAuthenticated: false, user: null });
         return;
       }
 
-      const { data } = await authService.getCurrentUser();
-      const user = normalizeApiUserProfile(data.data.userProfile);
+      const [response] = await Promise.all([
+        authService.getCurrentUser(),
+        // Ensure minimum loading duration for smooth transition
+        new Promise((r) => setTimeout(r, 300)),
+      ]);
+      const user = normalizeApiUserProfile(response.data.data.userProfile);
 
       set({
         user,
@@ -42,6 +48,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
     } catch {
       tokenStorage.clear();
+      // Ensure minimum loading duration for smooth transition
+      await new Promise((r) => setTimeout(r, 300));
       set({
         user: null,
         accessToken: null,

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { motion } from "motion/react";
-import { BookOpen, ShoppingBag, Palette, LogIn } from "lucide-react";
+import { BookOpen, ShoppingBag, Palette, LogIn, User } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { UserMenu } from "../../app/components/UserMenu";
 
@@ -12,10 +12,10 @@ const navItems = [
 
 export function BottomNav() {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const items = [...navItems];
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isLoading) {
     items.push({ href: "/auth/login", icon: LogIn, label: "Login" });
   }
 
@@ -69,7 +69,15 @@ export function BottomNav() {
             </Link>
           );
         })}
-        {isAuthenticated && (
+        {isLoading && (
+          <div className="relative flex flex-1 items-center justify-center">
+            <div className="flex flex-col items-center gap-1 opacity-50">
+              <User className="size-5 text-[var(--foreground-muted)]" />
+              <span className="text-[10px] font-bold tracking-wide text-[var(--foreground-muted)]">...</span>
+            </div>
+          </div>
+        )}
+        {!isLoading && isAuthenticated && (
           <div className="relative flex flex-1 items-center justify-center">
             <UserMenu position="bottom" />
           </div>

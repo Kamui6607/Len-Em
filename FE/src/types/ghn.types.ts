@@ -61,28 +61,3 @@ export interface MapAddressResponse {
   };
 }
 
-export interface ShippingFeeRequest {
-  items: {
-    productId: string;
-    variantId?: string;
-    quantity: number;
-    color?: string;
-    hexCode?: string;
-  }[];
-  addressId?: string;
-  provinceId: number;
-  districtId: number;
-  wardCode: string;
-}
-
-export interface ShippingFeeResponse {
-  status: string;
-  data: {
-    shipping_fee: number;
-    service_id: number | null;
-    address: {
-      district: string;
-      ward: string;
-    };
-  };
-}

@@ -1,8 +1,21 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
-import { BookOpen, Clock, Play, Star, Users, ShoppingCart, PackageSearch } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  Play,
+  Star,
+  Users,
+  ShoppingCart,
+  PackageSearch,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../components/ui/accordion";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { courseService } from "../../api/courseService";
@@ -12,7 +25,11 @@ import { productService, type Product } from "../../api/productService";
 import { materialCombos } from "../../features/learn/data/learn.mock";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
-import type { Course, CourseLevel, Lesson } from "../../features/learn/types/learn.types";
+import type {
+  Course,
+  CourseLevel,
+  Lesson,
+} from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 
@@ -23,9 +40,12 @@ const levelLabels: Record<CourseLevel, string> = {
 };
 
 const levelStyles: Record<CourseLevel, string> = {
-  beginner: "border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
-  intermediate: "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  advanced: "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
+  beginner:
+    "border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
+  intermediate:
+    "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
+  advanced:
+    "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
 };
 
 // Shared page styles — rendered once, on the real content. (Previously this
@@ -99,22 +119,22 @@ const PAGE_STYLES = `
  */
 function extractId(ref: unknown): string | null {
   if (!ref) return null;
-  
+
   // String ID
   if (typeof ref === "string") {
     return ref;
   }
-  
+
   // Object reference
   if (typeof ref === "object") {
     const obj = ref as Record<string, unknown>;
-    
+
     // Check for common ID field names
     const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
     if (typeof id === "string" && id.length > 0) {
       return id;
     }
-    
+
     // If object has _id or id but no specific field, it might be a populated object
     // Return the object's _id or id as the reference ID
     if (obj._id && typeof obj._id === "string") {
@@ -124,7 +144,7 @@ function extractId(ref: unknown): string | null {
       return obj.id;
     }
   }
-  
+
   return null;
 }
 
@@ -189,26 +209,37 @@ export function CourseDetailPage() {
         // Fetch any remaining lesson IDs
         if (lessonIdsToFetch.length > 0) {
           const lessonPromises = lessonIdsToFetch.map((id) =>
-            lessonService.getById(id).then((res) => res.data.data.lesson).catch(() => null)
+            lessonService
+              .getById(id)
+              .then((res) => res.data.data.lesson)
+              .catch(() => null),
           );
-          const fetchedLessons = (await Promise.all(lessonPromises)).filter((l): l is Lesson => l !== null);
+          const fetchedLessons = (await Promise.all(lessonPromises)).filter(
+            (l): l is Lesson => l !== null,
+          );
           populatedLessons.push(...fetchedLessons);
         }
 
-        const courseLessons = populatedLessons.sort((a, b) => a.order - b.order);
+        const courseLessons = populatedLessons.sort(
+          (a, b) => a.order - b.order,
+        );
         setLessons(courseLessons);
 
         // Fetch linked combos from API using kitService.getById for each comboId
         const comboRefs = courseData.linkedCombo || [];
-        const comboIds: string[] = comboRefs.map((ref) => extractId(ref)).filter((id): id is string => id !== null);
+        const comboIds: string[] = comboRefs
+          .map((ref) => extractId(ref))
+          .filter((id): id is string => id !== null);
         // Also check for kitId field in case API uses different naming
-        const kitIdsFromRefs: string[] = comboRefs.map((ref) => {
-          if (typeof ref === "object" && ref !== null) {
-            const obj = ref as Record<string, unknown>;
-            if (typeof obj.kitId === "string") return obj.kitId;
-          }
-          return null;
-        }).filter((id): id is string => id !== null);
+        const kitIdsFromRefs: string[] = comboRefs
+          .map((ref) => {
+            if (typeof ref === "object" && ref !== null) {
+              const obj = ref as Record<string, unknown>;
+              if (typeof obj.kitId === "string") return obj.kitId;
+            }
+            return null;
+          })
+          .filter((id): id is string => id !== null);
         // Merge comboIds and kitIds, removing duplicates
         const allComboIds = [...new Set([...comboIds, ...kitIdsFromRefs])];
 
@@ -216,34 +247,52 @@ export function CourseDetailPage() {
         if (allComboIds.length > 0) {
           try {
             const kitPromises = allComboIds.map((id) =>
-              kitService.getById(id).then((res) => res.data.data?.kit).catch(() => null)
+              kitService
+                .getById(id)
+                .then((res) => res.data.data?.kit)
+                .catch(() => null),
             );
-            const fetchedKits = (await Promise.all(kitPromises)).filter((k): k is Kit => k !== null);
+            const fetchedKits = (await Promise.all(kitPromises)).filter(
+              (k): k is Kit => k !== null,
+            );
             setKits(fetchedKits);
           } catch {
             // Fallback to mock data
-              const mockKits = materialCombos
-                .filter((c) => allComboIds.includes(c.id))
-                .map((c) => ({
-                  _id: c.id,
-                  name: c.name,
-                  description: c.description,
-                  thumbnail: c.thumbnail,
-                  level: c.level,
-                  price: c.price,
-                  products: c.productIds.map((pid) => ({
-                    productId: { _id: pid, name: pid, description: "", category: "", image: "", tags: [], variants: [], isActive: true, createdAt: "", updatedAt: "", __v: 0 },
-                    variantId: "default",
-                    quantity: 1,
-                  })),
-                  isActive: true,
-                  averageRating: 0,
-                  totalRatings: 0,
-                  ratings: [],
-                  createdAt: "",
-                  updatedAt: "",
-                  __v: 0,
-                }));
+            const mockKits = materialCombos
+              .filter((c) => allComboIds.includes(c.id))
+              .map((c) => ({
+                _id: c.id,
+                name: c.name,
+                description: c.description,
+                thumbnail: c.thumbnail,
+                level: c.level,
+                price: c.price,
+                products: c.productIds.map((pid) => ({
+                  product: {
+                    _id: pid,
+                    name: pid,
+                    description: "",
+                    category: "",
+                    image: "",
+                    tags: [],
+                    variants: [],
+                    isActive: true,
+                    createdAt: "",
+                    updatedAt: "",
+                    __v: 0,
+                  },
+                  variantId: "default",
+                  quantity: 1,
+                })),
+                stock: 0,
+                isActive: true,
+                averageRating: 0,
+                totalRatings: 0,
+                ratings: [],
+                createdAt: "",
+                updatedAt: "",
+                __v: 0,
+              }));
             setKits(mockKits);
           }
         }
@@ -263,10 +312,16 @@ export function CourseDetailPage() {
 
         if (productIdsFromLessons.size > 0) {
           try {
-            const productPromises = Array.from(productIdsFromLessons).map((id) =>
-              productService.getById(id).then((res) => res.data.data?.product).catch(() => null)
+            const productPromises = Array.from(productIdsFromLessons).map(
+              (id) =>
+                productService
+                  .getById(id)
+                  .then((res) => res.data.data?.product)
+                  .catch(() => null),
             );
-            const fetchedProducts = (await Promise.all(productPromises)).filter((p): p is Product => p !== null);
+            const fetchedProducts = (await Promise.all(productPromises)).filter(
+              (p): p is Product => p !== null,
+            );
             setProducts(fetchedProducts);
           } catch {
             // Silently fail - products are optional
@@ -294,62 +349,75 @@ export function CourseDetailPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleEnrollAndStart = useCallback(async (event: React.MouseEvent) => {
-    if (!isAuthenticated) {
-      event.preventDefault();
-      navigate("/auth/login");
-      return;
-    }
-
-    if (isEnrolled || !courseId) {
-      // Already enrolled — just navigate to first lesson
-      const fl = lessons[0];
-      if (fl) {
-        navigate(`/learn/${courseId}/lesson/${fl._id}`);
-      }
-      return;
-    }
-
-    event.preventDefault();
-    try {
-      setEnrolling(true);
-      const res = await courseService.enroll(courseId);
-      const { enrolledCount } = res.data.data;
-
-      // Update course enrolledCount
-      if (course) {
-        setCourse({ ...course, enrolledCount });
+  const handleEnrollAndStart = useCallback(
+    async (event: React.MouseEvent) => {
+      if (!isAuthenticated) {
+        event.preventDefault();
+        navigate("/auth/login");
+        return;
       }
 
-      // Update user's enrolled array in auth store
-      if (user) {
-        setUser({
-          ...user,
-          enrolled: [...enrolledCourses, courseId],
-        });
-      }
-
-      toast.success("Enrolled successfully!");
-      const fl = lessons[0];
-      if (fl) {
-        navigate(`/learn/${courseId}/lesson/${fl._id}`);
-      }
-    } catch (error) {
-      // Check if already enrolled from error response
-      const err = error as { response?: { data?: { message?: string } } };
-      if (err?.response?.data?.message === "Already enrolled") {
-        // Still navigate to course to sync with backend
+      if (isEnrolled || !courseId) {
+        // Already enrolled — just navigate to first lesson
         const fl = lessons[0];
         if (fl) {
           navigate(`/learn/${courseId}/lesson/${fl._id}`);
         }
-      } else {
-        toast.error("Failed to enroll");
+        return;
       }
-    } finally {
-      setEnrolling(false);
-    }
-  }, [isAuthenticated, isEnrolled, courseId, navigate, lessons, course, user, enrolledCourses, setUser]);
+
+      event.preventDefault();
+      try {
+        setEnrolling(true);
+        const res = await courseService.enroll(courseId);
+        const { enrolledCount } = res.data.data;
+
+        // Update course enrolledCount
+        if (course) {
+          setCourse({ ...course, enrolledCount });
+        }
+
+        // Update user's enrolled array in auth store
+        if (user) {
+          setUser({
+            ...user,
+            enrolled: [...enrolledCourses, courseId],
+          });
+        }
+
+        toast.success("Enrolled successfully!");
+        const fl = lessons[0];
+        if (fl) {
+          navigate(`/learn/${courseId}/lesson/${fl._id}`);
+        }
+      } catch (error) {
+        // Check if already enrolled from error response
+        const err = error as { response?: { data?: { message?: string } } };
+        if (err?.response?.data?.message === "Already enrolled") {
+          // Still navigate to course to sync with backend
+          const fl = lessons[0];
+          if (fl) {
+            navigate(`/learn/${courseId}/lesson/${fl._id}`);
+          }
+        } else {
+          toast.error("Failed to enroll");
+        }
+      } finally {
+        setEnrolling(false);
+      }
+    },
+    [
+      isAuthenticated,
+      isEnrolled,
+      courseId,
+      navigate,
+      lessons,
+      course,
+      user,
+      enrolledCourses,
+      setUser,
+    ],
+  );
 
   // Get unique products from lessons (for display)
   const uniqueProducts = useMemo(() => {
@@ -371,14 +439,20 @@ export function CourseDetailPage() {
                 <div className="relative aspect-[16/9] md:h-96 bg-muted/60" />
                 <div className="space-y-6 p-6 md:p-8">
                   <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
-                    {[1,2,3,4].map((i) => (
-                      <div key={i} className="h-4 w-24 rounded bg-muted/60 animate-pulse" />
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className="h-4 w-24 rounded bg-muted/60 animate-pulse"
+                      />
                     ))}
                   </div>
                   <div className="h-16 w-full rounded-lg bg-muted/60 animate-pulse" />
                   <div className="flex flex-wrap gap-2">
-                    {[1,2,3].map((i) => (
-                      <div key={i} className="h-6 w-16 rounded-full bg-muted/60 animate-pulse" />
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="h-6 w-16 rounded-full bg-muted/60 animate-pulse"
+                      />
                     ))}
                   </div>
                   <div className="h-12 w-36 rounded-full bg-muted/60 animate-pulse" />
@@ -386,8 +460,11 @@ export function CourseDetailPage() {
               </section>
               <section className="rounded-2xl border bg-card p-6">
                 <div className="h-6 w-24 rounded bg-muted/60 animate-pulse mb-4" />
-                {[1,2,3].map((i) => (
-                  <div key={i} className="h-12 w-full rounded-lg bg-muted/60 animate-pulse mb-3" />
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-12 w-full rounded-lg bg-muted/60 animate-pulse mb-3"
+                  />
                 ))}
               </section>
             </main>
@@ -417,13 +494,14 @@ export function CourseDetailPage() {
       navigate("/auth/login");
       return;
     }
-    const kitProducts = (kit.products || []).map((product) => {
-      const variant = product.productId?.variants?.[0];
+    const kitProducts = (kit.products || []).map((kitProduct) => {
+      const product = kitProduct.product;
+      const variant = product?.variants?.[0];
       return {
-        productId: product.productId._id,
-        variantId: product.variantId,
-        name: product.productId.name,
-        image: variant?.image || product.productId.image,
+        productId: product._id,
+        variantId: kitProduct.variantId,
+        name: product.name,
+        image: variant?.image || product.image,
         price: variant?.price || 0,
       };
     });
@@ -474,23 +552,43 @@ export function CourseDetailPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
-                  <Badge className={cn("mb-4 border", levelStyles[course.level])}>{levelLabels[course.level]}</Badge>
-                  <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-5xl">{course.title}</h1>
+                  <Badge
+                    className={cn("mb-4 border", levelStyles[course.level])}
+                  >
+                    {levelLabels[course.level]}
+                  </Badge>
+                  <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-5xl">
+                    {course.title}
+                  </h1>
                 </div>
               </div>
               <div className="space-y-6 p-6 md:p-8">
                 <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
-                  <Stat icon={Users} label={`${course.enrolledCount.toLocaleString()} enrolled`} />
-                  <Stat icon={Star} label={`${course.rating} rating`} className="text-yellow-500" />
+                  <Stat
+                    icon={Users}
+                    label={`${course.enrolledCount.toLocaleString()} enrolled`}
+                  />
+                  <Stat
+                    icon={Star}
+                    label={`${course.rating} rating`}
+                    className="text-yellow-500"
+                  />
                   <Stat icon={Clock} label={`${course.totalDuration} min`} />
-                  <Stat icon={BookOpen} label={`${course.totalLessons} lessons`} />
+                  <Stat
+                    icon={BookOpen}
+                    label={`${course.totalLessons} lessons`}
+                  />
                 </div>
 
-                <p className="text-muted-foreground md:text-lg">{course.description}</p>
+                <p className="text-muted-foreground md:text-lg">
+                  {course.description}
+                </p>
 
                 <div className="flex flex-wrap gap-2">
                   {course.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">#{tag}</Badge>
+                    <Badge key={tag} variant="outline">
+                      #{tag}
+                    </Badge>
                   ))}
                 </div>
 
@@ -502,7 +600,11 @@ export function CourseDetailPage() {
                     className="learn-start-btn inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold transition-all"
                   >
                     <Play className="size-4" />
-                    {enrolling ? "Enrolling..." : isEnrolled ? "Start" : "Bắt đầu học"}
+                    {enrolling
+                      ? "Enrolling..."
+                      : isEnrolled
+                        ? "Start"
+                        : "Bắt đầu học"}
                   </button>
                 )}
               </div>
@@ -516,20 +618,36 @@ export function CourseDetailPage() {
                   {course.totalDuration} min · {course.totalLessons} lessons
                 </span>
               </div>
-              <Accordion type="single" collapsible defaultValue={lessons[0]?._id}>
+              <Accordion
+                type="single"
+                collapsible
+                defaultValue={lessons[0]?._id}
+              >
                 {lessons.map((lesson) => (
                   <AccordionItem key={lesson._id} value={lesson._id}>
                     <AccordionTrigger>
                       <div className="flex flex-1 items-center justify-between pr-4">
-                        <span>{lesson.order}. {lesson.title}</span>
-                        <span className="text-sm text-muted-foreground">{lesson.duration} min</span>
+                        <span>
+                          {lesson.order}. {lesson.title}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {lesson.duration} min
+                        </span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground">
-                        <span>{lesson.linkedProduct?.length ?? 0} tagged material suggestions in this lesson.</span>
+                        <span>
+                          {lesson.linkedProduct?.length ?? 0} tagged material
+                          suggestions in this lesson.
+                        </span>
                         <Button asChild variant="outline" size="sm">
-                          <Link to={`/learn/${course._id}/lesson/${lesson._id}`} onClick={handleStartLearning}>Watch lesson</Link>
+                          <Link
+                            to={`/learn/${course._id}/lesson/${lesson._id}`}
+                            onClick={handleStartLearning}
+                          >
+                            Watch lesson
+                          </Link>
                         </Button>
                       </div>
                     </AccordionContent>
@@ -592,11 +710,23 @@ export function CourseDetailPage() {
                     }}
                   >
                     <Link to={`/kits/${kit._id}`} style={{ display: "block" }}>
-                      <div style={{ position: "relative", aspectRatio: "16 / 9", overflow: "hidden", background: "var(--background)" }}>
+                      <div
+                        style={{
+                          position: "relative",
+                          aspectRatio: "16 / 9",
+                          overflow: "hidden",
+                          background: "var(--background)",
+                        }}
+                      >
                         <img
                           src={kit.thumbnail}
                           alt={kit.name}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
                         />
                         <div
                           style={{
@@ -622,7 +752,10 @@ export function CourseDetailPage() {
                     </Link>
 
                     <div style={{ padding: "18px 20px 20px" }}>
-                      <Link to={`/kits/${kit._id}`} style={{ textDecoration: "none" }}>
+                      <Link
+                        to={`/kits/${kit._id}`}
+                        style={{ textDecoration: "none" }}
+                      >
                         <h3
                           style={{
                             fontFamily: "'Playfair Display', serif",
@@ -739,7 +872,8 @@ export function CourseDetailPage() {
                       color: "var(--primary)",
                     }}
                   >
-                    {uniqueProducts.length} item{uniqueProducts.length > 1 ? "s" : ""}
+                    {uniqueProducts.length} item
+                    {uniqueProducts.length > 1 ? "s" : ""}
                   </span>
                 </div>
 
@@ -757,7 +891,10 @@ export function CourseDetailPage() {
                         background: "var(--surface)",
                       }}
                     >
-                      <Link to={`/shop/product/${product._id}`} style={{ flexShrink: 0 }}>
+                      <Link
+                        to={`/shop/product/${product._id}`}
+                        style={{ flexShrink: 0 }}
+                      >
                         <img
                           src={product.image || product.variants[0]?.image}
                           alt={product.name}
@@ -772,7 +909,10 @@ export function CourseDetailPage() {
                         />
                       </Link>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <Link to={`/shop/product/${product._id}`} style={{ textDecoration: "none" }}>
+                        <Link
+                          to={`/shop/product/${product._id}`}
+                          style={{ textDecoration: "none" }}
+                        >
                           <h3
                             style={{
                               fontFamily: "'Playfair Display', serif",
@@ -857,16 +997,26 @@ export function CourseDetailPage() {
         <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-muted-foreground">{course.totalLessons} lessons</p>
+              <p className="text-xs text-muted-foreground">
+                {course.totalLessons} lessons
+              </p>
               <p className="text-lg font-bold text-primary">{course.level}</p>
             </div>
             {firstLesson && (
               <Link
-                to={isEnrolled ? `/learn/${course._id}/lesson/${firstLesson._id}` : "#"}
+                to={
+                  isEnrolled
+                    ? `/learn/${course._id}/lesson/${firstLesson._id}`
+                    : "#"
+                }
                 onClick={handleEnrollAndStart}
                 className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm text-center"
               >
-                {enrolling ? "Enrolling..." : isEnrolled ? "Start →" : "Bắt đầu học →"}
+                {enrolling
+                  ? "Enrolling..."
+                  : isEnrolled
+                    ? "Start →"
+                    : "Bắt đầu học →"}
               </Link>
             )}
           </div>
@@ -876,7 +1026,15 @@ export function CourseDetailPage() {
   );
 }
 
-function Stat({ icon: Icon, label, className }: { icon: React.ElementType; label: string; className?: string }) {
+function Stat({
+  icon: Icon,
+  label,
+  className,
+}: {
+  icon: React.ElementType;
+  label: string;
+  className?: string;
+}) {
   return (
     <span className="flex items-center gap-2 text-sm text-muted-foreground">
       <Icon className={cn("size-4", className)} /> {label}

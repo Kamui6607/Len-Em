@@ -606,8 +606,8 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
       style={{
-        paddingTop: "var(--section-py-sm)",
-        paddingBottom: "var(--section-py-sm)",
+        paddingTop: "clamp(5rem, 9vw, 7rem)",
+        paddingBottom: "clamp(5rem, 9vw, 7rem)",
       }}
     >
       <div

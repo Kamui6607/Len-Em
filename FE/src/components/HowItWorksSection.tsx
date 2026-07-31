@@ -1456,7 +1456,7 @@ export function HowItWorksSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.5 }}
-          style={{ textAlign: "center", marginBottom: "3.5rem" }}
+          style={{ textAlign: "center", marginBottom: "2rem", paddingTop: "1.5rem" }}
         >
           <span
             style={{
