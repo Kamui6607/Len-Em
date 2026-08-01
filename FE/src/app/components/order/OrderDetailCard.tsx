@@ -8,7 +8,15 @@
 // ============================================================
 
 import { useState, useEffect } from "react";
-import { Package, MapPin, CreditCard, Calendar, AlertCircle } from "lucide-react";
+import {
+  Package,
+  MapPin,
+  CreditCard,
+  Calendar,
+  AlertCircle,
+  Star,
+} from "lucide-react";
+import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
 import {
   ORDER_STATUS_LABELS,
@@ -22,6 +30,8 @@ import type { Order, OrderStatus } from "../../../features/orders/types/order.ty
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { ReportButton } from "../ReportButton";
 import { kitService } from "../../../api/kitService";
+import { productService } from "../../../api/productService";
+import { useReviews } from "../../../app/context/ReviewContext";
 
 interface OrderDetailCardProps {
   order: Order;
@@ -61,6 +71,7 @@ export function OrderDetailCard({
   onRetryPayment,
 }: OrderDetailCardProps) {
   const normalized = normalizeOrder(order);
+  const { addReview, hasReviewed } = useReviews();
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -68,7 +79,14 @@ export function OrderDetailCard({
   const [retrying, setRetrying] = useState(false);
   const [kitNames, setKitNames] = useState<Record<string, string>>({});
   const [kitNamesLoaded, setKitNamesLoaded] = useState(false);
-  
+  const [ratingModal, setRatingModal] = useState<{
+    itemId: string;
+    itemName: string;
+    kitId?: string;
+  } | null>(null);
+  const [rating, setRating] = useState(5);
+  const [submittingRating, setSubmittingRating] = useState(false);
+
   // Fetch kit names for all unique kitIds in the order
   useEffect(() => {
     async function loadKitNames() {
@@ -76,7 +94,7 @@ export function OrderDetailCard({
       normalized.items.forEach((item) => {
         if (item.kitId) uniqueKitIds.add(item.kitId);
       });
-      
+
       if (uniqueKitIds.size > 0) {
         const kitPromises = Array.from(uniqueKitIds).map(async (kitId) => {
           try {
@@ -87,10 +105,13 @@ export function OrderDetailCard({
           }
         });
         const kitResults = await Promise.all(kitPromises);
-        const kitNameMap = kitResults.reduce((acc, { kitId, name }) => {
-          if (name) acc[kitId] = name;
-          return acc;
-        }, {} as Record<string, string>);
+        const kitNameMap = kitResults.reduce(
+          (acc, { kitId, name }) => {
+            if (name) acc[kitId] = name;
+            return acc;
+          },
+          {} as Record<string, string>,
+        );
         setKitNames(kitNameMap);
       }
       setKitNamesLoaded(true);
@@ -98,16 +119,34 @@ export function OrderDetailCard({
     loadKitNames();
   }, [normalized.items]);
 
-  const canChangeStatus = isAdminView && VALID_TRANSITIONS[normalized.orderStatus]?.length > 0;
+  const canChangeStatus =
+    isAdminView && VALID_TRANSITIONS[normalized.orderStatus]?.length > 0;
   const availableTransitions = VALID_TRANSITIONS[normalized.orderStatus] ?? [];
   /** PENDING + unpaid (VNPAY/MOMO) → show retry payment button */
-  const isUnpaid = !isAdminView && normalized.orderStatus === "PENDING" && (normalized.payment.method === "VNPAY" || normalized.payment.method === "MOMO") && normalized.payment.status === "PENDING";
+  const isUnpaid =
+    !isAdminView &&
+    normalized.orderStatus === "PENDING" &&
+    (normalized.payment.method === "VNPAY" ||
+      normalized.payment.method === "MOMO") &&
+    normalized.payment.status === "PENDING";
   /** PENDING + not unpaid → show cancel (only if no refund invoice exists) */
-  const canCancel = !isAdminView && normalized.orderStatus === "PENDING" && !normalized.isCancelRequested && normalized.payment.status !== "PENDING";
+  const canCancel =
+    !isAdminView &&
+    normalized.orderStatus === "PENDING" &&
+    !normalized.isCancelRequested &&
+    normalized.payment.status !== "PENDING";
   /** Order is PENDING and has been cancelled (has refund invoice) */
-  const isCancelRequested = normalized.isCancelRequested && normalized.orderStatus === "PENDING";
+  const isCancelRequested =
+    normalized.isCancelRequested && normalized.orderStatus === "PENDING";
   /** CANCELLED + VNPAY/MOMO + not PAID → show retry payment button */
-  const canRetryPayment = !isAdminView && normalized.orderStatus === "CANCELLED" && (normalized.payment.method === "VNPAY" || normalized.payment.method === "MOMO") && normalized.payment.status !== "PAID";
+  const canRetryPayment =
+    !isAdminView &&
+    normalized.orderStatus === "CANCELLED" &&
+    (normalized.payment.method === "VNPAY" ||
+      normalized.payment.method === "MOMO") &&
+    normalized.payment.status !== "PAID";
+  /** Order can be rated if it's not PENDING or CANCELLED */
+  const canRate = !isAdminView && !["PENDING", "CANCELLED"].includes(normalized.orderStatus);
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     if (!onStatusChange) return;
@@ -127,6 +166,39 @@ export function OrderDetailCard({
       setShowCancelModal(false);
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleSubmitRating = async () => {
+    if (!ratingModal) return;
+    setSubmittingRating(true);
+    try {
+      if (ratingModal.kitId) {
+        // Rate the kit
+        await kitService.rate(ratingModal.kitId, rating);
+      } else {
+        // Rate the product
+        await productService.rateProduct(ratingModal.itemId, rating);
+      }
+
+      // Add to review context
+      addReview({
+        orderId: normalized._id,
+        productId: ratingModal.itemId,
+        productName: ratingModal.itemName,
+        userId: "current-user",
+        userName: "User",
+        rating,
+        comment: "",
+      });
+
+      toast.success("Đánh giá thành công!");
+      setRatingModal(null);
+      setRating(5);
+    } catch {
+      toast.error("Không thể gửi đánh giá. Vui lòng thử lại.");
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
@@ -219,7 +291,9 @@ export function OrderDetailCard({
         {/* Admin status changer */}
         {canChangeStatus && (
           <div className="flex items-center gap-3 pt-4 border-t border-border">
-            <span className="text-sm font-medium text-muted-foreground">Cập nhật trạng thái:</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Cập nhật trạng thái:
+            </span>
             <div className="flex flex-wrap gap-2">
               {availableTransitions.map((status) => (
                 <button
@@ -252,79 +326,129 @@ export function OrderDetailCard({
             return (
               <>
                 {/* Kit groups - only show after kit names are loaded */}
-                {kitNamesLoaded && kitGroups.map((group) => {
-                  const kitName = kitNames[group.kitId];
-                  if (!kitName) return null;
-                  return (
-                    <div key={group.kitId} className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2">
-                      <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                        🎁 {kitName}
-                      </p>
-                      {group.items.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between py-1.5"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {item.productName || `Product ${item.productId}`}
-                            </p>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span>x{item.quantity}</span>
-                              {item.color && <span>{item.color}</span>}
+                {kitNamesLoaded &&
+                  kitGroups.map((group) => {
+                    const kitName = kitNames[group.kitId];
+                    if (!kitName) return null;
+                    return (
+                      <div
+                        key={group.kitId}
+                        className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2"
+                      >
+                        <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                          🎁 {kitName}
+                        </p>
+                        {group.items.map((item, idx) => {
+                          const reviewed = hasReviewed(normalized._id, item.productId);
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between py-1.5"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {item.productName ||
+                                    `Product ${item.productId}`}
+                                </p>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span>x{item.quantity}</span>
+                                  {item.color && <span>{item.color}</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                                {canRate && !reviewed && (
+                                  <button
+                                    onClick={() => setRatingModal({
+                                      itemId: item.productId,
+                                      itemName: item.productName || "Sản phẩm",
+                                      kitId: group.kitId,
+                                    })}
+                                    className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                                  >
+                                    <Star className="w-3 h-3 inline mr-1" />
+                                    Đánh giá
+                                  </button>
+                                )}
+                                {canRate && reviewed && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                    Đã đánh giá
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                {/* Standalone items */}
+                {standalone.map((item, idx) => {
+                  const reviewed = hasReviewed(normalized._id, item.productId);
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 py-3 border-b border-border last:border-0"
+                    >
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.productName || "Sản phẩm"}
+                          className="w-16 h-16 rounded-lg object-cover bg-muted flex-shrink-0"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallback) {
+                              target.dataset.fallback = "true";
+                              target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <Package className="w-6 h-6 text-muted-foreground" />
                         </div>
-                      ))}
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{item.productName || "Sản phẩm"}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {item.hexCode && (
+                            <span
+                              className="inline-block w-3 h-3 rounded-full border border-border"
+                              style={{ backgroundColor: item.hexCode }}
+                            />
+                          )}
+                          {item.color && (
+                            <span className="text-xs text-muted-foreground">{item.color}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          SL: {item.quantity}
+                          {item.price != null && ` x ${formatPrice(item.price)}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {canRate && !reviewed && (
+                          <button
+                            onClick={() => setRatingModal({
+                              itemId: item.productId,
+                              itemName: item.productName || "Sản phẩm",
+                            })}
+                            className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                          >
+                            <Star className="w-3 h-3 inline mr-1" />
+                            Đánh giá
+                          </button>
+                        )}
+                        {canRate && reviewed && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            Đã đánh giá
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-                {/* Standalone items */}
-                {standalone.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3 py-3 border-b border-border last:border-0"
-                  >
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.productName || "Sản phẩm"}
-                        className="w-16 h-16 rounded-lg object-cover bg-muted flex-shrink-0"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (!target.dataset.fallback) {
-                            target.dataset.fallback = "true";
-                            target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <Package className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{item.productName || "Sản phẩm"}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {item.hexCode && (
-                          <span className="inline-block w-3 h-3 rounded-full border border-border" style={{ backgroundColor: item.hexCode }} />
-                        )}
-                        {item.color && (
-                          <span className="text-xs text-muted-foreground">{item.color}</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        SL: {item.quantity}
-                        {item.price != null && ` x ${formatPrice(item.price)}`}
-                      </p>
-                    </div>
-                    {item.price != null && (
-                      <p className="font-medium text-sm flex-shrink-0">
-                        {formatPrice(item.price * item.quantity)}
-                      </p>
-                    )}
-                  </div>
-                ))}
               </>
             );
           })()}
@@ -454,6 +578,52 @@ export function OrderDetailCard({
                 className="flex-1 py-3 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors text-sm font-medium disabled:opacity-50"
               >
                 {cancelling ? "Đang huỷ..." : "Xác nhận huỷ"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Rating Modal ── */}
+      {ratingModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setRatingModal(null)}
+        >
+          <div
+            className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-semibold mb-1">Đánh giá sản phẩm</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              {ratingModal.itemName}
+            </p>
+            <div className="flex items-center gap-2 mb-4">
+              {Array.from({ length: 5 }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setRating(i + 1)}
+                  className="p-1 transition-transform hover:scale-110"
+                >
+                  <Star
+                    className={`w-8 h-8 ${i < rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                  />
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setRatingModal(null)}
+                className="flex-1 py-2.5 rounded-full text-sm border border-border hover:bg-muted transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmitRating}
+                disabled={submittingRating}
+                className="flex-1 py-2.5 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {submittingRating ? "Đang gửi..." : "Gửi đánh giá"}
               </button>
             </div>
           </div>

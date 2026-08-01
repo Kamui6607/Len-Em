@@ -46,10 +46,15 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const isEmail = email.includes("@");
+    const id = email.trim();
+    const isEmail = id.includes("@");
+    const rememberMe =
+      (e.currentTarget.querySelector(
+        'input[type="checkbox"]',
+      ) as HTMLInputElement | null)?.checked ?? true;
     const credentials = isEmail
-      ? { email, password }
-      : { username: email, password };
+      ? { email: id, password, rememberMe }
+      : { username: id, password, rememberMe };
     try {
       await login(credentials);
       const { user } = useAuthStore.getState();

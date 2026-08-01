@@ -12,11 +12,13 @@ import { lessonService } from "../../../api/lessonService";
 import { productService, type Product } from "../../../api/productService";
 import { kitService, type Kit } from "../../../api/kitService";
 import type { LessonFormData } from "../../../features/learn/types/learn.types";
+import { useLanguage } from "../../../context/LanguageContext";
 
 export function LessonFormPage() {
   const navigate = useNavigate();
   const { lessonId } = useParams();
   const isEditing = Boolean(lessonId);
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -77,11 +79,11 @@ export function LessonFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
-      toast.error("Title is required");
+      toast.error(t("admin.lessons.form.titleRequired"));
       return;
     }
     if (!form.videoUrl.trim()) {
-      toast.error("Video URL is required");
+      toast.error(t("admin.lessons.form.videoUrlRequired"));
       return;
     }
 
@@ -97,7 +99,7 @@ export function LessonFormPage() {
           linkedCombo: form.linkedCombo,
           isPreview: form.isPreview,
         });
-        toast.success("Lesson updated successfully");
+        toast.success(t("admin.lessons.form.updatedSuccess"));
       } else {
         await lessonService.create({
           title: form.title,
@@ -108,11 +110,11 @@ export function LessonFormPage() {
           linkedCombo: form.linkedCombo,
           isPreview: form.isPreview,
         });
-        toast.success("Lesson created successfully");
+        toast.success(t("admin.lessons.form.createdSuccess"));
       }
       navigate("/admin/lessons");
     } catch {
-      toast.error(isEditing ? "Failed to update lesson" : "Failed to create lesson");
+      toast.error(isEditing ? t("admin.lessons.form.failedUpdate") : t("admin.lessons.form.failedCreate"));
     } finally {
       setSaving(false);
     }
@@ -139,7 +141,7 @@ export function LessonFormPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-center py-20 text-muted-foreground">Loading lesson...</div>
+        <div className="flex items-center justify-center py-20 text-muted-foreground">{t("admin.lessons.form.loading")}</div>
       </div>
     );
   }
@@ -155,12 +157,12 @@ export function LessonFormPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/admin/lessons")}>
-          <ArrowLeft className="size-4" /> Back
+          <ArrowLeft className="size-4" /> {t("admin.lessons.form.back")}
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold">{isEditing ? "Edit Lesson" : "New Lesson"}</h1>
+          <h1 className="text-2xl font-semibold">{isEditing ? t("admin.lessons.editLesson") : t("admin.lessons.newLesson")}</h1>
           <p className="text-muted-foreground">
-            {isEditing ? "Update lesson details" : "Create a new standalone lesson"}
+            {isEditing ? t("admin.lessons.form.updateLessonDetails") : t("admin.lessons.form.createNewLesson")}
           </p>
         </div>
       </div>
@@ -170,19 +172,19 @@ export function LessonFormPage() {
           <Card>
             <CardContent className="space-y-5 p-6">
               <div>
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title">{t("admin.lessons.form.title")}</Label>
                 <Input
                   id="title"
                   value={form.title}
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Bài 1: Hướng dẫn tạo vòng tròn ma thuật"
+                  placeholder={t("admin.lessons.form.placeholder.title")}
                   required
                 />
               </div>
 
               <div className="grid gap-5 sm:grid-cols-3">
                 <div>
-                  <Label htmlFor="order">Order</Label>
+                <Label htmlFor="order">{t("admin.lessons.form.order")}</Label>
                   <Input
                     id="order"
                     type="number"
@@ -192,7 +194,7 @@ export function LessonFormPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="duration">Duration (minutes)</Label>
+                <Label htmlFor="duration">{t("admin.lessons.form.duration")}</Label>
                   <Input
                     id="duration"
                     type="number"
@@ -203,7 +205,7 @@ export function LessonFormPage() {
                 </div>
                 <div className="flex items-end pb-2">
                   <div className="flex items-center gap-3">
-                    <Label htmlFor="isPreview">Preview (free)</Label>
+                    <Label htmlFor="isPreview">{t("admin.lessons.form.preview")}</Label>
                     <Switch
                       id="isPreview"
                       checked={form.isPreview}
@@ -214,22 +216,22 @@ export function LessonFormPage() {
               </div>
 
               <div>
-                <Label htmlFor="videoUrl">Video URL *</Label>
+                <Label htmlFor="videoUrl">{t("admin.lessons.form.videoUrl")}</Label>
                 <Input
                   id="videoUrl"
                   value={form.videoUrl}
                   onChange={(e) => setForm((prev) => ({ ...prev, videoUrl: e.target.value }))}
-                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholder={t("admin.lessons.form.placeholder.videoUrl")}
                   required
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  YouTube, Vimeo, or direct video URL. Videos will be embedded in the lesson player.
+                  {t("admin.lessons.form.hint")}
                 </p>
               </div>
 
               <button type="submit" className="btn-modal-primary" disabled={saving}>
                 <Save className="size-4" />
-                {saving ? "Saving..." : isEditing ? "Update Lesson" : "Create Lesson"}
+                {saving ? t("admin.lessons.form.saving") : isEditing ? t("admin.lessons.form.updateLesson") : t("admin.lessons.form.createLesson")}
               </button>
             </CardContent>
           </Card>
@@ -240,7 +242,7 @@ export function LessonFormPage() {
           <Card>
             <CardContent className="space-y-4 p-6">
               <div className="flex items-center justify-between">
-                <Label>Linked Products</Label>
+                <Label>{t("admin.lessons.linkedProducts")}</Label>
                 <Badge variant="outline">{form.linkedProduct.length}</Badge>
               </div>
               <div className="relative w-full">
@@ -251,17 +253,17 @@ export function LessonFormPage() {
                   type="text"
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Search products..."
+                  placeholder={t("admin.lessons.searchProducts")}
                   className="input w-full !rounded-xl !pl-10 !py-2.5 text-sm"
                   style={{ background: "var(--input-bg)", borderColor: "var(--border)" }}
                 />
               </div>
               <div className="max-h-[220px] overflow-y-auto space-y-1">
                 {productsLoading ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Loading products...</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("admin.lessons.form.loading")}</p>
                 ) : filteredProducts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    {productSearch ? "No products match" : "No products available"}
+                    {productSearch ? t("admin.lessons.noProductsMatch") : t("admin.lessons.noProductsAvailable")}
                   </p>
                 ) : (
                   filteredProducts.map((product) => {
@@ -296,7 +298,7 @@ export function LessonFormPage() {
           <Card>
             <CardContent className="space-y-4 p-6">
               <div className="flex items-center justify-between">
-                <Label>Linked Combos</Label>
+                <Label>{t("admin.lessons.linkedCombos")}</Label>
                 <Badge variant="outline">{form.linkedCombo.length}</Badge>
               </div>
               <div className="relative w-full">
@@ -307,17 +309,17 @@ export function LessonFormPage() {
                   type="text"
                   value={kitSearch}
                   onChange={(e) => setKitSearch(e.target.value)}
-                  placeholder="Search combos..."
+                  placeholder={t("admin.lessons.searchCombos")}
                   className="input w-full !rounded-xl !pl-10 !py-2.5 text-sm"
                   style={{ background: "var(--input-bg)", borderColor: "var(--border)" }}
                 />
               </div>
               <div className="max-h-[220px] overflow-y-auto space-y-1">
                 {kitsLoading ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Loading combos...</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t("admin.lessons.form.loading")}</p>
                 ) : filteredKits.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    {kitSearch ? "No combos match" : "No combos available"}
+                    {kitSearch ? t("admin.lessons.noCombosMatch") : t("admin.lessons.noCombosAvailable")}
                   </p>
                 ) : (
                   filteredKits.map((kit) => {

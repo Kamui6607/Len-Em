@@ -63,9 +63,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true });
     try {
-      const { data } = await authService.login(credentials);
+      // Security: rememberMe is a frontend-only flag — strip it from the API payload
+      const { rememberMe, ...loginPayload } = credentials;
+      const { data } = await authService.login(loginPayload);
       const { accessToken, refreshToken } = data.data;
 
+      tokenStorage.setRememberMe(rememberMe ?? true);
       tokenStorage.setAccess(accessToken);
       tokenStorage.setRefresh(refreshToken);
 

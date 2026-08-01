@@ -427,6 +427,71 @@
     "terms": "Terms of Service",
     "cookies": "Cookie Policy"
   },
+  "creator": {
+    "courses": {
+      "title": "Course Management",
+      "subtitle": "Build skill paths and publish lessons with linked material combos.",
+      "createNew": "Create new course",
+      "createDialogTitle": "Create new course",
+      "createDialogDesc": "Mock form for a new Len&Em tutorial course.",
+      "courseName": "Course name",
+      "level": "Level",
+      "saveDraft": "Save draft",
+      "tableHeaders": {
+        "courseName": "Course name",
+        "level": "Level",
+        "lessons": "Lessons",
+        "students": "Students",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "edit": "Edit",
+      "preview": "Preview",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "delete": "Delete",
+      "placeholder": {
+        "courseName": "Cozy flower bouquet",
+        "level": "Beginner / Intermediate / Advanced"
+      }
+    },
+    "lessons": {
+      "title": "Lesson Management",
+      "subtitle": "Reorder lessons with arrows, edit content, and link shop products directly inside videos.",
+      "tableHeaders": {
+        "order": "Order",
+        "lessonName": "Lesson name",
+        "duration": "Duration",
+        "linkedProducts": "Linked products",
+        "views": "Views",
+        "actions": "Actions"
+      },
+      "editContent": "Edit content",
+      "linkProducts": "Link products",
+      "delete": "Delete"
+    },
+    "products": {
+      "title": "Products linked in videos",
+      "subtitle": "Manage material combo links and measure add-to-cart intent from lessons.",
+      "addProductLink": "Add product link",
+      "linkDialogTitle": "Link product to lesson",
+      "linkDialogDesc": "Mock relationship for product ↔ lesson conversion tracking.",
+      "addLink": "Add link",
+      "tableHeaders": {
+        "productName": "Product name",
+        "linkedLesson": "Linked lesson",
+        "clicks": "Add-to-cart clicks",
+        "revenue": "Estimated revenue",
+        "actions": "Actions"
+      },
+      "changeLink": "Change link",
+      "remove": "Remove",
+      "placeholder": {
+        "product": "Beginner / Pro / Promax combo",
+        "lesson": "Magic ring without stress"
+      }
+    }
+  },
   "about": {
     "welcomeTitle": "Welcome to ",
     "welcomeSubtitle": "An all-in-one crochet platform built for anyone who loves making things by hand.",
@@ -495,7 +560,14 @@
     "retryPaymentInitError": "Unable to initialize payment retry.",
     "cancelRequestSent": "Cancellation request sent, waiting for admin approval",
     "cancelRequestError": "Unable to send cancellation request",
-    "approveCancelPending": "⏳ Waiting for cancellation approval"
+    "cancelOrder": "Cancel Order",
+    "cancelPending": "Waiting for cancellation approval",
+    "cancelModalTitle": "Cancel Order",
+    "cancelModalDesc": "Please let us know why you want to cancel this order. The request will be reviewed by admin.",
+    "cancelModalPlaceholder": "Enter cancellation reason...",
+    "cancelModalBack": "Back",
+    "cancelModalSubmit": "Confirm Cancel",
+    "cancelModalSubmitting": "Cancelling..."
   },
   "orderDetail": {
     "loadError": "Unable to load order details.",
@@ -600,10 +672,25 @@
     "dashboard": {
       "title": "Dashboard",
       "subtitle": "System overview",
+      "welcomeBack": "Welcome back! Here's what's happening with your store today.",
       "recentActivity": "Recent Activity",
       "orderStatistics": "Order Statistics",
       "totalRevenue": "Total Revenue",
-      "revenueValue": "₫{value}"
+      "revenueValue": "₫{value}",
+      "stats": {
+        "totalUsers": "Total Users",
+        "totalProducts": "Total Products",
+        "totalOrders": "Total Orders",
+        "paidOrders": "{count} paid order{suffix}",
+        "noPendingOrders": "No pending orders",
+        "pendingOrders": "{count} pending"
+      },
+      "orderBreakdown": {
+        "delivered": "Delivered",
+        "pending": "Pending",
+        "cancelled": "Cancelled"
+      },
+      "noRecentActivity": "No recent activity yet"
     },
     "orders": {
       "title": "Order Management",
@@ -767,6 +854,7 @@
       "searchPlaceholder": "Search courses...",
       "createCourse": "Create Course",
       "editCourse": "Edit Course",
+      "newCourse": "New Course",
       "courseName": "Course Name",
       "courseNamePlaceholder": "e.g. Complete Crochet Course for Beginners",
       "description": "Description",
@@ -801,7 +889,28 @@
       "course": "Course",
       "lessonsCount": "Lessons count",
       "durationMin": "{duration} min",
-      "loading": "Loading courses..."
+      "loading": "Loading courses...",
+      "form": {
+        "back": "Back",
+        "title": "Title *",
+        "description": "Description",
+        "thumbnailUrl": "Thumbnail URL",
+        "level": "Level",
+        "tags": "Tags",
+        "published": "Published",
+        "saving": "Saving...",
+        "updateCourse": "Update Course",
+        "createCourse": "Create Course",
+        "linkedLessons": "Linked Lessons",
+        "searchLessonsPlaceholder": "Search lessons...",
+        "noLessonsMatch": "No lessons match",
+        "noLessonsAvailable": "No lessons available",
+        "failedToLoad": "Failed to load course",
+        "failedUpdate": "Failed to update course",
+        "failedCreate": "Failed to create course",
+        "updatedSuccess": "Course updated successfully",
+        "createdSuccess": "Course created successfully"
+      }
     },
     "lessons": {
       "title": "Lesson Management",
@@ -809,6 +918,7 @@
       "searchPlaceholder": "Search lessons...",
       "createLesson": "Create Lesson",
       "editLesson": "Edit Lesson",
+      "newLesson": "New Lesson",
       "lessonTitle": "Lesson Title",
       "lessonTitlePlaceholder": "e.g. Lesson 1: Magic Circle Tutorial",
       "videoUrl": "Video URL",
@@ -817,6 +927,7 @@
       "order": "Order",
       "preview": "Preview",
       "linkedProducts": "Linked Products",
+      "linkedCombos": "Linked Combos",
       "searchProducts": "Search products...",
       "searchCombos": "Search combos...",
       "noLessonsFound": "No lessons found",
@@ -834,7 +945,28 @@
       "productsLabel": "Products",
       "previewLabel": "Preview",
       "actions": "Actions",
-      "loading": "Loading lessons..."
+      "loading": "Loading lessons...",
+      "form": {
+        "back": "Back",
+        "title": "Title *",
+        "order": "Order",
+        "duration": "Duration (minutes)",
+        "preview": "Preview (free)",
+        "videoUrl": "Video URL *",
+        "saving": "Saving...",
+        "updateLesson": "Update Lesson",
+        "createLesson": "Create Lesson",
+        "failedToLoad": "Failed to load lesson",
+        "failedUpdate": "Failed to update lesson",
+        "failedCreate": "Failed to create lesson",
+        "updatedSuccess": "Lesson updated successfully",
+        "createdSuccess": "Lesson created successfully",
+        "placeholder": {
+          "title": "e.g. Lesson 1: Magic Circle Tutorial",
+          "videoUrl": "https://www.youtube.com/watch?v=..."
+        },
+        "hint": "YouTube, Vimeo, or direct video URL. Videos will be embedded in the lesson player."
+      }
     },
     "users": {
       "title": "User Management",

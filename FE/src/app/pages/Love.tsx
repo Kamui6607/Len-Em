@@ -67,8 +67,11 @@ export function Love() {
       const clientHeight = window.innerHeight;
       setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    // Use a ref to store the handler to ensure proper cleanup
+    const scrollHandler = handleScroll;
+    window.addEventListener("scroll", scrollHandler, { passive: true });
+    return () => window.removeEventListener("scroll", scrollHandler);
   }, []);
 
   const addAllToCart = () => {
@@ -234,28 +237,28 @@ export function Love() {
                        {(kit.products || []).length} products included
                      </p>
                      {/* Add to cart button */}
-                     <button
-                       onClick={() => {
-                         const products = (kit.products || []).map((kitProduct) => {
-                          const product = kitProduct.product;
-                          const variant = product?.variants?.[0];
-                           return {
-                             productId: product._id,
-                             variantId: kitProduct.variantId,
-                             name: product.name,
-                             image: variant?.image || product.image,
-                             price: variant?.price || 0,
-                           };
+                      <button
+                        onClick={() => {
+                          const products = (kit.products || []).map((kitProduct) => {
+                           const product = kitProduct.productId;
+                           const variant = product?.variants?.[0];
+                            return {
+                              productId: product._id,
+                              variantId: kitProduct.variantId,
+                              name: product.name,
+                              image: variant?.image || product.image,
+                              price: variant?.price || 0,
+                            };
+                          });
+                         addKitToCart({
+                           kitId: kit._id,
+                           name: kit.name,
+                           thumbnail: kit.thumbnail,
+                           price: kit.price,
+                           products,
                          });
-                        addKitToCart({
-                          kitId: kit._id,
-                          name: kit.name,
-                          thumbnail: kit.thumbnail,
-                          price: kit.price,
-                          products,
-                        });
-                        toast.success(t("love.addedComboToCart", { name: kit.name }));
-                      }}
+                         toast.success(t("love.addedComboToCart", { name: kit.name }));
+                       }}
                       className="add-to-cart-btn mt-3"
                     >
                       <div className="btn-text">

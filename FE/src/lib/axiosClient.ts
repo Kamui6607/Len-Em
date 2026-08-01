@@ -7,14 +7,26 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 
+// ─── API Base URL ────────────────────────────────────────
+// VITE_API_BASE_URL (from .env) is NOT committed to git, so on Vercel/many
+// production hosts the env var may be missing at build time. Use an absolute
+// production fallback so requests never hit the static host (which would
+// return 405 Method Not Allowed for POST/PATCH/DELETE).
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "/api/v1";
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD
+    ? "https://yarn-shop-be.onrender.com/api/v1"
+    : "/api/v1");
 
-// ---- Token storage (localStorage wrappers) ----
+// ---- Token storage ----
+// Security: if the user does NOT tick "Remember me", tokens are stored in
+// sessionStorage (cleared when the tab closes) instead of localStorage.
+// This prevents tokens persisting on shared/public machines.
 
 const TOKEN_KEY = "lenEm_accessToken";
 const REFRESH_KEY = "lenEm_refreshToken";
 const VOLUNTARY_LOGOUT_KEY = "lenEm_voluntaryLogout";
+const PERSIST_KEY = "lenEm_rememberMe";
 
 export function markVoluntaryLogout(): void {
   sessionStorage.setItem(VOLUNTARY_LOGOUT_KEY, "true");
@@ -25,14 +37,33 @@ function isVoluntaryLogout(): boolean {
   return sessionStorage.getItem(VOLUNTARY_LOGOUT_KEY) === "true";
 }
 
+/** Whether the user chose "Remember me" (persist sessions across browser restarts). */
+function shouldPersist(): boolean {
+  return localStorage.getItem(PERSIST_KEY) === "true";
+}
+
+function storage(): Storage {
+  return shouldPersist() ? localStorage : sessionStorage;
+}
+
 export const tokenStorage = {
-  getAccess: (): string | null => localStorage.getItem(TOKEN_KEY),
-  setAccess: (token: string): void => localStorage.setItem(TOKEN_KEY, token),
-  getRefresh: (): string | null => localStorage.getItem(REFRESH_KEY),
-  setRefresh: (token: string): void => localStorage.setItem(REFRESH_KEY, token),
+  getAccess: (): string | null => storage().getItem(TOKEN_KEY),
+  setAccess: (token: string): void => storage().setItem(TOKEN_KEY, token),
+  getRefresh: (): string | null => storage().getItem(REFRESH_KEY),
+  setRefresh: (token: string): void => storage().setItem(REFRESH_KEY, token),
+  setRememberMe: (remember: boolean): void => {
+    if (remember) {
+      localStorage.setItem(PERSIST_KEY, "true");
+    } else {
+      localStorage.removeItem(PERSIST_KEY);
+    }
+  },
   clear: (): void => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(PERSIST_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_KEY);
   },
 };
 
@@ -109,7 +140,7 @@ axiosClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-            try {
+    try {
       const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
         oldRefreshToken: refreshToken,
       });
@@ -171,10 +202,6 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     };
     toast.error(mapped[status] ?? message);
   }
-
-  // if (!status) {
-  //   toast.error("Network error. Check your connection.");
-  // }
 
   return Promise.reject(error);
 }

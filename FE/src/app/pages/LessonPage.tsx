@@ -225,7 +225,7 @@ export function LessonPage() {
                 const product = products.find((p) => p.id === pid);
                 const firstVariant = product?.variants?.[0];
                 return {
-                  product: {
+                  productId: {
                     _id: pid,
                     name: product?.name ?? pid,
                     description: product?.description ?? "",
@@ -365,7 +365,7 @@ export function LessonPage() {
     if (item.type === "kit" && item.kitData) {
       if (!isAuthenticated) { navigate("/auth/login"); return; }
       const kitProducts = (item.kitData.products || []).map((kitProduct) => {
-        const product = kitProduct.product;
+        const product = kitProduct.productId;
         const variant = product?.variants?.[0];
         return {
           productId: product._id,
@@ -426,7 +426,7 @@ export function LessonPage() {
     materials.forEach((item) => {
       if (item.type === "kit" && item.kitData) {
       const kitProducts = (item.kitData.products || []).map((kitProduct) => {
-          const product = kitProduct.product;
+          const product = kitProduct.productId;
           const variant = product?.variants?.[0];
           return {
             productId: product._id,

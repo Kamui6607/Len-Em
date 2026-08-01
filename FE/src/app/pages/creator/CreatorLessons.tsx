@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { ChevronDown, ChevronUp, Link2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { useLanguage } from "../../../context/LanguageContext";
 import { creatorCourses, creatorLessons } from "../../../features/creator/data/creator.mock";
 
 export function CreatorLessons() {
@@ -10,6 +11,7 @@ export function CreatorLessons() {
   const course = creatorCourses.find((item) => item.id === courseId) ?? creatorCourses[0];
   const initialLessons = useMemo(() => creatorLessons.filter((lesson) => lesson.courseId === course.id), [course.id]);
   const [lessons, setLessons] = useState(initialLessons);
+  const { t } = useLanguage();
 
   const moveLesson = (index: number, direction: -1 | 1) => {
     const nextIndex = index + direction;
@@ -22,14 +24,23 @@ export function CreatorLessons() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--color-warm-accent)]">Lesson Management</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--color-warm-accent)]">{t("creator.lessons.title")}</p>
         <h1 className="text-3xl font-bold text-[var(--color-warm-text)]">{course.name}</h1>
-        <p className="text-muted-foreground">Reorder lessons with arrows, edit content, and link shop products directly inside videos.</p>
+        <p className="text-muted-foreground">{t("creator.lessons.subtitle")}</p>
       </div>
 
       <div className="rounded-3xl border border-[var(--color-warm-border)] bg-card p-4 shadow-sm">
         <Table>
-          <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Lesson name</TableHead><TableHead>Duration</TableHead><TableHead>Linked products</TableHead><TableHead>Views</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("creator.lessons.tableHeaders.order")}</TableHead>
+              <TableHead>{t("creator.lessons.tableHeaders.lessonName")}</TableHead>
+              <TableHead>{t("creator.lessons.tableHeaders.duration")}</TableHead>
+              <TableHead>{t("creator.lessons.tableHeaders.linkedProducts")}</TableHead>
+              <TableHead>{t("creator.lessons.tableHeaders.views")}</TableHead>
+              <TableHead className="text-right">{t("creator.lessons.tableHeaders.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {lessons.map((lesson, index) => (
               <TableRow key={lesson.id}>
@@ -44,7 +55,13 @@ export function CreatorLessons() {
                 <TableCell>{lesson.duration}</TableCell>
                 <TableCell>{lesson.linkedProducts}</TableCell>
                 <TableCell>{lesson.views.toLocaleString()}</TableCell>
-                <TableCell><div className="flex justify-end gap-2"><Button variant="ghost" size="sm"><Pencil className="h-4 w-4" />Edit content</Button><Button variant="ghost" size="sm"><Link2 className="h-4 w-4" />Link products</Button><Button variant="ghost" size="sm" className="text-destructive"><Trash2 className="h-4 w-4" />Delete</Button></div></TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm"><Pencil className="h-4 w-4" />{t("creator.lessons.editContent")}</Button>
+                    <Button variant="ghost" size="sm"><Link2 className="h-4 w-4" />{t("creator.lessons.linkProducts")}</Button>
+                    <Button variant="ghost" size="sm" className="text-destructive"><Trash2 className="h-4 w-4" />{t("creator.lessons.delete")}</Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

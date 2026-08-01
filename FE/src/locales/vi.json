@@ -427,6 +427,71 @@
     "terms": "Điều khoản sử dụng",
     "cookies": "Chính sách Cookie"
   },
+  "creator": {
+    "courses": {
+      "title": "Quản lý khóa học",
+      "subtitle": "Xây dựng lộ trình kỹ năng và xuất bản bài học với combo nguyên liệu liên kết.",
+      "createNew": "Tạo khóa học mới",
+      "createDialogTitle": "Tạo khóa học mới",
+      "createDialogDesc": "Form mẫu cho khóa học Len&Em mới.",
+      "courseName": "Tên khóa học",
+      "level": "Trình độ",
+      "saveDraft": "Lưu nháp",
+      "tableHeaders": {
+        "courseName": "Tên khóa học",
+        "level": "Trình độ",
+        "lessons": "Bài học",
+        "students": "Học viên",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
+      "edit": "Chỉnh sửa",
+      "preview": "Xem trước",
+      "publish": "Xuất bản",
+      "unpublish": "Hủy xuất bản",
+      "delete": "Xóa",
+      "placeholder": {
+        "courseName": "Bó hoa ấm áp",
+        "level": "Cơ bản / Trung cấp / Nâng cao"
+      }
+    },
+    "lessons": {
+      "title": "Quản lý bài học",
+      "subtitle": "Sắp xếp lại bài học với mũi tên, chỉnh sửa nội dung và liên kết sản phẩm cửa hàng trực tiếp trong video.",
+      "tableHeaders": {
+        "order": "Thứ tự",
+        "lessonName": "Tên bài học",
+        "duration": "Thời lượng",
+        "linkedProducts": "Sản phẩm liên kết",
+        "views": "Lượt xem",
+        "actions": "Thao tác"
+      },
+      "editContent": "Chỉnh sửa nội dung",
+      "linkProducts": "Liên kết sản phẩm",
+      "delete": "Xóa"
+    },
+    "products": {
+      "title": "Sản phẩm liên kết trong video",
+      "subtitle": "Quản lý liên kết combo nguyên liệu và đo lường ý định thêm vào giỏ từ bài học.",
+      "addProductLink": "Thêm liên kết sản phẩm",
+      "linkDialogTitle": "Liên kết sản phẩm với bài học",
+      "linkDialogDesc": "Mối quan hệ mẫu để theo dõi chuyển đổi sản phẩm ↔ bài học.",
+      "addLink": "Thêm liên kết",
+      "tableHeaders": {
+        "productName": "Tên sản phẩm",
+        "linkedLesson": "Bài học liên kết",
+        "clicks": "Lượt thêm vào giỏ",
+        "revenue": "Doanh thu dự kiến",
+        "actions": "Thao tác"
+      },
+      "changeLink": "Đổi liên kết",
+      "remove": "Xóa",
+      "placeholder": {
+        "product": "Combo người mới / chuyên gia",
+        "lesson": "Vòng tròn ma thuật không stress"
+      }
+    }
+  },
   "about": {
     "welcomeTitle": "Chào mừng đến với ",
     "welcomeSubtitle": "Nền tảng đan móc tất cả trong một — dành cho những ai yêu thích làm đồ bằng tay.",
@@ -495,7 +560,14 @@
     "retryPaymentInitError": "Không thể khởi tạo thanh toán lại.",
     "cancelRequestSent": "Yêu cầu huỷ đã được gửi, chờ admin duyệt",
     "cancelRequestError": "Không thể gửi yêu cầu huỷ",
-    "approveCancelPending": "⏳ Đang chờ duyệt huỷ"
+    "cancelOrder": "Hủy đơn",
+    "cancelPending": "Đang chờ duyệt huỷ",
+    "cancelModalTitle": "Huỷ đơn hàng",
+    "cancelModalDesc": "Vui lòng cho chúng tôi biết lý do bạn muốn huỷ đơn hàng này. Yêu cầu sẽ được admin xem xét.",
+    "cancelModalPlaceholder": "Nhập lý do huỷ...",
+    "cancelModalBack": "Trở lại",
+    "cancelModalSubmit": "Xác nhận huỷ",
+    "cancelModalSubmitting": "Đang huỷ..."
   },
   "orderDetail": {
     "loadError": "Không thể tải thông tin đơn hàng.",
@@ -813,6 +885,7 @@
       "searchPlaceholder": "Tìm kiếm khóa học...",
       "createCourse": "Tạo khóa học",
       "editCourse": "Chỉnh sửa khóa học",
+      "newCourse": "Khóa học mới",
       "courseName": "Tên khóa học",
       "courseNamePlaceholder": "VD: Complete Crochet Course for Beginners",
       "description": "Mô tả",
@@ -847,7 +920,28 @@
       "course": "Khóa học",
       "lessonsCount": "Số bài học",
       "durationMin": "{duration} phút",
-      "loading": "Đang tải khóa học..."
+      "loading": "Đang tải khóa học...",
+      "form": {
+        "back": "Quay lại",
+        "title": "Tiêu đề *",
+        "description": "Mô tả",
+        "thumbnailUrl": "URL hình thu nhỏ",
+        "level": "Trình độ",
+        "tags": "Thẻ",
+        "published": "Đã xuất bản",
+        "saving": "Đang lưu...",
+        "updateCourse": "Cập nhật khóa học",
+        "createCourse": "Tạo khóa học",
+        "linkedLessons": "Bài học liên kết",
+        "searchLessonsPlaceholder": "Tìm kiếm bài học...",
+        "noLessonsMatch": "Không tìm thấy bài học phù hợp",
+        "noLessonsAvailable": "Không có bài học nào",
+        "failedToLoad": "Không thể tải khóa học",
+        "failedUpdate": "Không thể cập nhật khóa học",
+        "failedCreate": "Không thể tạo khóa học",
+        "updatedSuccess": "Cập nhật khóa học thành công",
+        "createdSuccess": "Tạo khóa học thành công"
+      }
     },
     "lessons": {
       "title": "Quản lý bài học",
@@ -855,6 +949,7 @@
       "searchPlaceholder": "Tìm kiếm bài học...",
       "createLesson": "Tạo bài học",
       "editLesson": "Chỉnh sửa bài học",
+      "newLesson": "Bài học mới",
       "lessonTitle": "Tiêu đề bài học",
       "lessonTitlePlaceholder": "VD: Bài 1: Hướng dẫn tạo vòng tròn ma thuật",
       "videoUrl": "URL video",
@@ -863,6 +958,7 @@
       "order": "Thứ tự",
       "preview": "Xem trước",
       "linkedProducts": "Sản phẩm liên kết",
+      "linkedCombos": "Combo liên kết",
       "searchProducts": "Tìm kiếm sản phẩm...",
       "searchCombos": "Tìm kiếm combo...",
       "noLessonsFound": "Không tìm thấy bài học",
@@ -880,7 +976,28 @@
       "productsLabel": "Sản phẩm",
       "previewLabel": "Xem trước",
       "actions": "Thao tác",
-      "loading": "Đang tải bài học..."
+      "loading": "Đang tải bài học...",
+      "form": {
+        "back": "Quay lại",
+        "title": "Tiêu đề *",
+        "order": "Thứ tự",
+        "duration": "Thời lượng (phút)",
+        "preview": "Xem trước (miễn phí)",
+        "videoUrl": "URL video *",
+        "saving": "Đang lưu...",
+        "updateLesson": "Cập nhật bài học",
+        "createLesson": "Tạo bài học",
+        "failedToLoad": "Không thể tải bài học",
+        "failedUpdate": "Không thể cập nhật bài học",
+        "failedCreate": "Không thể tạo bài học",
+        "updatedSuccess": "Cập nhật bài học thành công",
+        "createdSuccess": "Tạo bài học thành công",
+        "placeholder": {
+          "title": "VD: Bài 1: Hướng dẫn tạo vòng tròn ma thuật",
+          "videoUrl": "https://www.youtube.com/watch?v=..."
+        },
+        "hint": "YouTube, Vimeo, hoặc URL video trực tiếp. Video sẽ được nhúng trong trình phát bài học."
+      }
     },
     "users": {
       "title": "Quản lý người dùng",

@@ -65,7 +65,11 @@ function resolveImageUrl(url: string | undefined | null): string {
     return url;
   }
   // Relative path — prefix with API base URL
-  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+  const base =
+    import.meta.env.VITE_API_BASE_URL ||
+    (import.meta.env.PROD
+      ? "https://yarn-shop-be.onrender.com/api/v1"
+      : "http://localhost:5000/api/v1");
   // Remove trailing slash from base and ensure leading slash on path
   const cleanBase = base.replace(/\/+$/, "");
   const cleanPath = url.startsWith("/") ? url : `/${url}`;

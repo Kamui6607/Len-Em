@@ -79,7 +79,14 @@ export interface RegisterResponseData {
 }
 
 export function mapRoleNameToUserRole(roleName: string): UserRole {
-  const map: Record<string, UserRole> = { Admin: "admin", Staff: "staff", User: "user", Customer: "user", Creator: "creator" };
+  const map: Record<string, UserRole> = {
+    Admin: "admin",
+    Staff: "staff",
+    User: "user",
+    Customer: "user",
+    Cus: "user",
+    Creator: "creator",
+  };
   return map[roleName] || "user";
 }
 
@@ -114,7 +121,13 @@ export function normalizeApiUserProfile(profile: ApiUserProfile): User {
 }
 
 // ---- Request DTOs ----
-export interface LoginRequest { username?: string; email?: string; password: string; }
+export interface LoginRequest {
+  username?: string;
+  email?: string;
+  password: string;
+  /** If false, tokens are stored in sessionStorage (cleared when tab closes). */
+  rememberMe?: boolean;
+}
 
 export interface RegisterRequest {
   username: string; email: string; password: string; fullName: string; phone: string;

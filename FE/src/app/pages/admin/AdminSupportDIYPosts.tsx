@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ReportButton } from "../../components/ReportButton";
 import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { useLanguage } from "../../../context/LanguageContext";
 
 const STATUS_OPTIONS = ["", "Pending", "Done", "Cancel"];
 
@@ -21,6 +22,7 @@ type SortField = "id" | "title" | "status" | "date";
 type SortDirection = "asc" | "desc";
 
 export function AdminSupportDIYPosts() {
+  const { t } = useLanguage();
   const [posts, setPosts] = useState<SupportDIYPost[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
@@ -35,7 +37,12 @@ export function AdminSupportDIYPosts() {
 
   // Edit modal state
   const [editModal, setEditModal] = useState<SupportDIYPost | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", description: "", tags: "", price: 0 });
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    tags: "",
+    price: 0,
+  });
   const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchPosts = useCallback(async () => {
@@ -49,7 +56,7 @@ export function AdminSupportDIYPosts() {
       setPosts(data.data.posts);
       setTotalPages(data.data.totalPages);
     } catch {
-      toast.error("Failed to load Support DIY posts");
+      toast.error(t("admin.supportDIY.loadError"));
     } finally {
       setLoading(false);
     }
@@ -76,14 +83,17 @@ export function AdminSupportDIYPosts() {
       await supportDIYService.updatePost(editModal._id, {
         title: editForm.title.trim(),
         description: editForm.description.trim(),
-        tags: editForm.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        tags: editForm.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
         price: editForm.price,
       });
-      toast.success("Post updated successfully");
+      toast.success(t("admin.supportDIY.updateSuccess"));
       setEditModal(null);
       fetchPosts();
     } catch {
-      toast.error("Failed to update post");
+      toast.error(t("admin.supportDIY.updateError"));
     } finally {
       setSavingEdit(false);
     }
@@ -347,7 +357,20 @@ export function AdminSupportDIYPosts() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {(() => { try { return new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); } catch { return "—"; } })()}
+                        {(() => {
+                          try {
+                            return new Date(post.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "2-digit",
+                                year: "numeric",
+                              },
+                            );
+                          } catch {
+                            return "—";
+                          }
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -417,7 +440,16 @@ export function AdminSupportDIYPosts() {
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">
                     #{post._id.slice(-8)} •{" "}
-                    {(() => { try { return new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); } catch { return "—"; } })()}
+                    {(() => {
+                      try {
+                        return new Date(post.createdAt).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "2-digit", year: "numeric" },
+                        );
+                      } catch {
+                        return "—";
+                      }
+                    })()}
                   </p>
                   <button
                     onClick={() => setSelectedPost(post)}
@@ -487,31 +519,61 @@ export function AdminSupportDIYPosts() {
             </div>
             <div className="admin-dialog-body space-y-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Description
+                </p>
                 <p className="text-sm">{selectedPost.description}</p>
               </div>
               {selectedPost.price != null && selectedPost.price > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Price</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Price
+                  </p>
                   <p className="text-sm font-semibold">
-                    {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(selectedPost.price)}
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(selectedPost.price)}
                   </p>
                 </div>
               )}
               {selectedPost.images && selectedPost.images.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Images</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Images
+                  </p>
                   <div className="flex gap-2 flex-wrap">
                     {selectedPost.images.map((img, i) => (
-                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                      <img
+                        key={i}
+                        src={img}
+                        alt=""
+                        className="w-20 h-20 rounded-lg object-cover"
+                      />
                     ))}
                   </div>
                 </div>
               )}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Created</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  Created
+                </p>
                 <p className="text-sm">
-                  {(() => { try { return new Date(selectedPost.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return "—"; } })()}
+                  {(() => {
+                    try {
+                      return new Date(
+                        selectedPost.createdAt,
+                      ).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+                    } catch {
+                      return "—";
+                    }
+                  })()}
                 </p>
               </div>
               {selectedPost.status === "Pending" && (
@@ -521,7 +583,8 @@ export function AdminSupportDIYPosts() {
                     disabled={statusUpdating}
                     className="btn-primary"
                   >
-                    <CheckCircle className="w-4 h-4 inline mr-1" /> Confirm (Done)
+                    <CheckCircle className="w-4 h-4 inline mr-1" /> Confirm
+                    (Done)
                   </button>
                   <button
                     onClick={() => handleCancelPost(selectedPost._id)}
@@ -548,7 +611,9 @@ export function AdminSupportDIYPosts() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">Edit Support DIY Request</h3>
+              <h3 className="text-base font-semibold">
+                Edit Support DIY Request
+              </h3>
               <button
                 onClick={() => setEditModal(null)}
                 style={{ color: "var(--foreground-muted)" }}
@@ -558,30 +623,103 @@ export function AdminSupportDIYPosts() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveEdit();
+              }}
+            >
               <div className="admin-dialog-body space-y-4">
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  <label
+                    className="block text-xs font-medium mb-1.5"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
                     Title <span className="text-destructive">*</span>
                   </label>
-                  <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="input w-full" placeholder="Request title" />
+                  <input
+                    type="text"
+                    required
+                    value={editForm.title}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, title: e.target.value })
+                    }
+                    className="input w-full"
+                    placeholder="Request title"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Description</label>
-                  <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className="input w-full resize-none" placeholder="Request description" />
+                  <label
+                    className="block text-xs font-medium mb-1.5"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, description: e.target.value })
+                    }
+                    rows={3}
+                    className="input w-full resize-none"
+                    placeholder="Request description"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Tags (comma separated)</label>
-                  <input type="text" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="input w-full" placeholder="e.g. support, help, crochet" />
+                  <label
+                    className="block text-xs font-medium mb-1.5"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
+                    Tags (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.tags}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, tags: e.target.value })
+                    }
+                    className="input w-full"
+                    placeholder="e.g. support, help, crochet"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Price</label>
-                  <input type="number" value={editForm.price || ""} onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })} className="input w-full" placeholder="0 for free" min={0} />
+                  <label
+                    className="block text-xs font-medium mb-1.5"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.price || ""}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        price: Number(e.target.value),
+                      })
+                    }
+                    className="input w-full"
+                    placeholder="0 for free"
+                    min={0}
+                  />
                 </div>
               </div>
               <div className="admin-dialog-footer">
-                <button type="button" onClick={() => setEditModal(null)} disabled={savingEdit} className="btn-modal-cancel">Cancel</button>
-                <button type="submit" disabled={savingEdit} className="btn-modal-primary">{savingEdit ? "Saving…" : "Update Request"}</button>
+                <button
+                  type="button"
+                  onClick={() => setEditModal(null)}
+                  disabled={savingEdit}
+                  className="btn-modal-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="btn-modal-primary"
+                >
+                  {savingEdit ? "Saving…" : "Update Request"}
+                </button>
               </div>
             </form>
           </div>

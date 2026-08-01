@@ -247,20 +247,41 @@ export function Checkout() {
       if (!selectedProvince || !selectedDistrict || !selectedWard) {
         return;
       }
-      // If no items in cart, we cannot calculate shipping fee (API doesn't accept kits)
-      if (cartItems.length === 0) {
-        setDeliveryFee(null);
-        return;
-      }
 
       setCalculatingFee(true);
       try {
-        const payload: ShippingFeePreviewRequest = {
-          items: cartItems.map((item) => ({
+        // Build items array for shipping calculation
+        // Include both individual cart items and kit products
+        const itemsForShipping: ShippingFeePreviewRequest["items"] = [];
+        
+        // Add individual cart items
+        cartItems.forEach((item) => {
+          itemsForShipping.push({
             productId: item.productId,
             variantId: item.variantId,
             quantity: item.quantity,
-          })),
+          });
+        });
+        
+        // Add kit products (expand kits into individual products for shipping calculation)
+        cartKits.forEach((kit) => {
+          kit.products.forEach((product) => {
+            itemsForShipping.push({
+              productId: product.productId,
+              variantId: product.variantId,
+              quantity: 1, // Each product in kit counts as 1 for shipping
+            });
+          });
+        });
+
+        // If still no items, skip calculation
+        if (itemsForShipping.length === 0) {
+          setDeliveryFee(null);
+          return;
+        }
+
+        const payload: ShippingFeePreviewRequest = {
+          items: itemsForShipping,
           provinceName: selectedProvince.provinceName,
           districtName: selectedDistrict.districtName,
           wardName: selectedWard.wardName,
@@ -345,20 +366,19 @@ export function Checkout() {
       clearCart();
 
       if (result.payUrl) {
-        // VNPAY: redirect to payment gateway
+        // VNPAY/MOMO: redirect to payment gateway
         window.location.href = result.payUrl;
         return;
       }
 
-      const orderId = result?.order?._id || "";
-      const date = new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-      navigate(
-        `/order/success?orderId=${orderId}&date=${encodeURIComponent(date)}`,
-      );
+      // For COD: show pending message (payment will be confirmed upon delivery)
+      // For other payment methods without redirect: show success
+      if (paymentMethod === "COD") {
+        toast.success("Đặt hàng thành công! Vui lòng chuẩn bị tiền khi nhận hàng.");
+      } else {
+        toast.success("Đặt hàng thành công!");
+      }
+      navigate(`/purchased`);
     } catch (error: unknown) {
       const axiosError = error as {
         response?: {

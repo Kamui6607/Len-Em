@@ -12,6 +12,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
+import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 interface ProductCardProps {
   product: Product;
@@ -304,7 +305,7 @@ function AnimatedGiftRibbon({
         fill="none"
         stroke={accent}
         strokeWidth="2"
-        initial={false}
+        initial={{ r: 6, opacity: 0 }}
         animate={
           isHovered
             ? {
@@ -394,7 +395,7 @@ function AnimatedGiftRibbon({
               cy="148"
               r={p.size / 2}
               fill={fill}
-              initial={false}
+              initial={{ opacity: 0, scale: 0.3 }}
               animate={commonAnimate}
               style={{ originX: 150, originY: 148 }}
             />
@@ -410,7 +411,7 @@ function AnimatedGiftRibbon({
               height="2.8"
               rx="1.4"
               fill={fill}
-              initial={false}
+              initial={{ opacity: 0, scale: 0.3 }}
               animate={commonAnimate}
               style={{ originX: 150, originY: 148 }}
             />
@@ -425,7 +426,7 @@ function AnimatedGiftRibbon({
             height={p.size}
             rx="1.5"
             fill={fill}
-            initial={false}
+            initial={{ opacity: 0, scale: 0.3 }}
             animate={commonAnimate}
             style={{ originX: 150, originY: 148 }}
           />
@@ -464,6 +465,7 @@ function AnimatedGiftRibbon({
           in the resting/"wrapped" state: string + ring + tag card with the
           product's difficulty level and "Len&Em Materials". ── */}
       <motion.g
+        initial={{ y: 0, opacity: 1 }}
         animate={
           isHovered
             ? {
@@ -557,6 +559,7 @@ function AnimatedGiftRibbon({
         fill="none"
         strokeLinecap="round"
         strokeOpacity="0.5"
+        initial={{ d: "M 140,172 C 126,180 120,186 118,198", strokeOpacity: 0.5 }}
         animate={
           isHovered
             ? {
@@ -600,7 +603,7 @@ function HoverSparkles({ isHovered }: { isHovered: boolean }) {
             color: "#fff",
             filter: "drop-shadow(0 1px 4px rgba(107,63,160,0.5))",
           }}
-          initial={false}
+          initial={{ opacity: 0, scale: 0.4 }}
           animate={
             isHovered
               ? {
@@ -738,7 +741,7 @@ export const ProductCard = memo(function ProductCard({
       {/* Subtle animated gradient halo behind the card, only visible on hover */}
       <motion.div
         aria-hidden
-        initial={false}
+        initial={{ opacity: 0 }}
         animate={{ opacity: isHovered ? 1 : 0 }}
         transition={{ duration: 0.35 }}
         style={{
@@ -778,7 +781,7 @@ export const ProductCard = memo(function ProductCard({
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             style={{ width: "100%", height: "100%" }}
           >
-            <img
+            <ResponsiveImage
               src={product.image}
               alt={product.name}
               style={{
@@ -807,7 +810,7 @@ export const ProductCard = memo(function ProductCard({
           {/* Soft glow sweep that passes over the image on hover */}
           <motion.div
             aria-hidden
-            initial={false}
+            initial={{ opacity: 0, x: "-120%" }}
             animate={{
               x: isHovered ? "120%" : "-120%",
               opacity: isHovered ? 0.5 : 0,
@@ -938,7 +941,7 @@ export const ProductCard = memo(function ProductCard({
               which keeps it perfectly centered and legible every time it appears. */}
           <motion.button
             type="button"
-            initial={false}
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{
               opacity: showReveal ? 1 : 0,
               scale: showReveal ? 1 : 0.85,

@@ -12,7 +12,7 @@ import { formatPrice } from "../../lib/formatPrice";
 import { useState, useEffect } from "react";
 
 export function DIYDetailPage() {
-  const { addToCart } = useCart();
+  const { addToCart, addKitToCart: addKitToCartContext } = useCart();
   const { postId } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -143,16 +143,25 @@ export function DIYDetailPage() {
     toast.success(`${productName} added to cart`);
   };
 
-  const addKitToCart = (kit: Kit) => {
-    addToCart({
-      productId: kit._id,
-      variantId: "kit",
+  const handleAddKitToCart = (kit: Kit) => {
+    const products = (kit.products || []).map((kitProduct) => {
+      const product = kitProduct.productId;
+      const firstVariant = product?.variants?.[0];
+      return {
+        productId: product._id,
+        variantId: kitProduct.variantId,
+        name: product.name,
+        image: firstVariant?.image || product.image,
+        price: firstVariant?.price || 0,
+      };
+    });
+
+    addKitToCartContext({
+      kitId: kit._id,
       name: kit.name,
-      image: kit.thumbnail,
-      color: "",
-      hexCode: "#ccc",
+      thumbnail: kit.thumbnail,
       price: kit.price,
-      stock: 999,
+      products,
     });
     toast.success(`${kit.name} added to cart`);
   };
@@ -278,7 +287,7 @@ export function DIYDetailPage() {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          requireAuth(() => kit && addKitToCart(kit));
+                          requireAuth(() => kit && handleAddKitToCart(kit));
                         }}
                       >
                         <div className="btn-text">

@@ -98,7 +98,7 @@ export function KitDetail() {
 
     // Use kit.products which has the correct structure
     const products = kit.products.map((kitProduct) => {
-      const product = kitProduct.product;
+      const product = kitProduct.productId;
       const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
 
       return {
@@ -285,8 +285,8 @@ export function KitDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {displayedProducts.map((kitProduct, index) => {
                   const isLastVisible = index === 2 && remainingCount > 0;
-                  // kitProduct.product is the full product object (populated)
-                  const product = kitProduct.product;
+                  // kitProduct.productId is the full product object (populated)
+                  const product = kitProduct.productId;
                   const variantId = kitProduct.variantId;
                   const quantity = kitProduct.quantity;
                   
@@ -435,7 +435,7 @@ export function KitDetail() {
               <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {(kit.products || []).map((kitProduct) => {
-                    const product = kitProduct.product;
+                    const product = kitProduct.productId;
                     const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
                     
                     return (

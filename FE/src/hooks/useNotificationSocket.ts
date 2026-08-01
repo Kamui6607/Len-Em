@@ -8,8 +8,12 @@ import type { ApiNotification } from "../api/notificationService";
 import type { Notification } from "../types/notification.types";
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace("/api/v1", "")
-  : "http://localhost:5000";
+  ? import.meta.env.VITE_API_BASE_URL.startsWith("/")
+    ? "" // relative base (/api/v1) → same origin, Vite proxy forwards in dev
+    : import.meta.env.VITE_API_BASE_URL.replace("/api/v1", "")
+  : import.meta.env.PROD
+    ? "https://yarn-shop-be.onrender.com"
+    : "http://localhost:5000";
 
 function mapApiNotification(apiNotif: ApiNotification): Notification {
   return {
@@ -53,19 +57,34 @@ export function useNotificationSocket() {
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
 
+    // Validate token format before connecting
+    if (!accessToken.startsWith("Bearer ") && !accessToken.match(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/)) {
+      console.warn("[NotificationSocket] Invalid token format, skipping connection");
+      return;
+    }
+
+    const token = accessToken.startsWith("Bearer ") ? accessToken.slice(7) : accessToken;
     const socket = io(`${SOCKET_URL}/notifications`, {
-      auth: { token: `Bearer ${accessToken}` },
+      auth: { token: `Bearer ${token}` },
       transports: ["polling", "websocket"],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-      timeout: 10000,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 3000,
+      timeout: 15000,
     });
 
     socketRef.current = socket;
 
+    const connectTimeout = setTimeout(() => {
+      if (!socket.connected) {
+        console.warn("[NotificationSocket] Connection timeout");
+        socket.disconnect();
+      }
+    }, 20000);
+
     socket.on("connect", () => {
       console.log("[NotificationSocket] Connected");
+      clearTimeout(connectTimeout);
     });
 
     socket.on("new_notification", (apiNotif: ApiNotification) => {
@@ -85,15 +104,21 @@ export function useNotificationSocket() {
       });
     });
 
-    socket.on("disconnect", () => {
-      console.log("[NotificationSocket] Disconnected");
+    socket.on("disconnect", (reason) => {
+      console.log("[NotificationSocket] Disconnected:", reason);
     });
 
     socket.on("connect_error", (err) => {
       console.warn("[NotificationSocket] Connection error:", err.message);
+      // Don't retry on authentication errors
+      if (err.message.includes("Authentication error") || err.message.includes("Invalid token")) {
+        socket.disconnect();
+      }
     });
 
     return () => {
+      clearTimeout(connectTimeout);
+      socket.removeAllListeners();
       socket.disconnect();
       socketRef.current = null;
     };

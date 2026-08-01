@@ -301,7 +301,7 @@ export function Navigation({ cartCount }: NavigationProps) {
         {/* Thread seam — a hairline running-stitch that appears once the bar lifts off the page */}
         <motion.div
           aria-hidden="true"
-          initial={false}
+          initial={{ opacity: 0 }}
           animate={{ opacity: isFloating ? 1 : 0 }}
           transition={{ duration: 0.3 }}
           className="pointer-events-none absolute inset-x-6 -bottom-px h-px"
@@ -424,7 +424,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                     <motion.span
                       className="h-0 w-full border-b-2 border-dashed"
                       style={{ borderColor: "var(--primary)" }}
-                      initial={false}
+                      initial={{ opacity: 0, scale: 0.85 }}
                       animate={{
                         scaleX: active ? 1 : 0,
                         opacity: active ? 0.55 : 0,

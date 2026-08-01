@@ -2,9 +2,21 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import { products } from "../data/products";
 import { useDebounce } from "./useDebounce";
+import { useProductsQuery } from "./useProductsQuery";
 import { fetchProducts } from "../../features/shop/services/product.service";
 import type { Product } from "../data/products";
 import type { PaginatedResponse } from "../../shared/types/api.types";
+
+// Simple cache to prevent duplicate requests
+interface CachedProducts {
+  data: Product[];
+  totalItems: number;
+  totalPages: number;
+  page: number;
+  timestamp: number;
+}
+const productsCache = new Map<string, CachedProducts>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export type SortOption = "popular" | "newest" | "oldest" | "price-asc" | "price-desc" | "rating";
 
@@ -157,9 +169,21 @@ export function useProducts() {
 
     async function loadAllProductsForFilters() {
       try {
+        // Check cache first
+        const cacheKey = "products_filters_all";
+        const cached = productsCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+          if (!cancelled) {
+            setAllProducts(cached.data);
+          }
+          return;
+        }
+
         const firstPage = await fetchProducts({ page: 1, limit: 100 });
         if (cancelled) return;
 
+        let allProductsData: Product[] = [];
+        
         if (firstPage.totalPages > 1) {
           // Fetch only 1 more page (cap total at 2 pages) to bound cost
           const pagesToFetch = Math.min(firstPage.totalPages - 1, 1);
@@ -169,12 +193,25 @@ export function useProducts() {
             )
           );
           if (cancelled) return;
-          setAllProducts([
+          allProductsData = [
             ...firstPage.data,
             ...restPages.flatMap((pageResult) => pageResult.data),
-          ]);
+          ];
         } else {
-          setAllProducts(firstPage.data);
+          allProductsData = firstPage.data;
+        }
+
+        // Cache the results
+        productsCache.set(cacheKey, {
+          data: allProductsData,
+          totalItems: firstPage.totalItems,
+          totalPages: firstPage.totalPages,
+          page: 1,
+          timestamp: Date.now(),
+        });
+
+        if (!cancelled) {
+          setAllProducts(allProductsData);
         }
       } catch (error) {
         if (!cancelled) {
@@ -190,93 +227,106 @@ export function useProducts() {
 
   // ---- Apply filters + pagination via the service ----
   // Use filters.search (the URL-synced, debounced value) to avoid double-debouncing
+  // Fetch list qua TanStack Query → cache 5 phút, dedupe request, retry tự động
+  const queryParams = useMemo(
+    () => ({
+      category: filters.category === "all" ? undefined : filters.category,
+      search: filters.search || undefined,
+      sort: filters.sort,
+      page: filters.page,
+      limit: 12,
+    }),
+    [filters.category, filters.search, filters.sort, filters.page],
+  );
+
+  const { data: productsPage, isFetching, isError } = useProductsQuery(queryParams);
+
+  // isLoading giữ nguyên interface: bật skeleton khi đang fetch (kể cả khi đổi filter)
   useEffect(() => {
-    let cancelled = false;
+    setIsLoading(isFetching);
+  }, [isFetching]);
 
-    async function load() {
-      setIsLoading(true);
-      try {
-        let result = await fetchProducts({
-          category: filters.category === "all" ? undefined : filters.category,
-          search: filters.search || undefined,
-          sort: filters.sort,
-          page: filters.page,
-          limit: 12,
-        });
+  // Client-side filters (giữ nguyên logic cũ) chạy trên kết quả server
+  useEffect(() => {
+    if (!productsPage) return;
 
-        if (filters.color.length > 0) {
-          const selectedColors = new Set(filters.color);
-          result = {
-            ...result,
-            data: result.data.filter((product) =>
-              product.variants?.some((variant) =>
-                variant.color ? selectedColors.has(variant.color) : false
-              )
-            ),
-          };
-        }
+    let result = productsPage;
 
-        if (filters.material.length > 0) {
-          const selectedMaterials = new Set(filters.material);
-          result = {
-            ...result,
-            data: result.data.filter((product) =>
-              product.material ? selectedMaterials.has(product.material) : false
-            ),
-          };
-        }
-
-        if (filters.weight.length > 0) {
-          const selectedWeights = new Set(filters.weight);
-          result = {
-            ...result,
-            data: result.data.filter((product) =>
-              product.weight ? selectedWeights.has(product.weight) : false
-            ),
-          };
-        }
-
-        if (filters.difficulty.length > 0) {
-          const selectedDifficulties = new Set(filters.difficulty);
-          result = {
-            ...result,
-            data: result.data.filter((product) =>
-              product.difficulty ? selectedDifficulties.has(product.difficulty) : false
-            ),
-          };
-        }
-
-        if (filters.minPrice > 0 || filters.maxPrice > 0) {
-          result = {
-            ...result,
-            data: result.data.filter((product) => {
-              const prices = product.variants?.map((variant) => variant.price) ?? [];
-              const minProductPrice = prices.length > 0 ? Math.min(...prices) : 0;
-              const maxProductPrice = prices.length > 0 ? Math.max(...prices) : 0;
-              return (
-                (filters.minPrice <= 0 || maxProductPrice >= filters.minPrice) &&
-                (filters.maxPrice <= 0 || minProductPrice <= filters.maxPrice)
-              );
-            }),
-          };
-        }
-
-        if (!cancelled) {
-          setPaginatedResult(result);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.warn("Failed to fetch products:", error);
-          setPaginatedResult(null);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+    if (filters.color.length > 0) {
+      const selectedColors = new Set(filters.color);
+      result = {
+        ...result,
+        data: result.data.filter((product) =>
+          product.variants?.some((variant) =>
+            variant.color ? selectedColors.has(variant.color) : false
+          )
+        ),
+      };
     }
 
-    load();
-    return () => { cancelled = true; };
-  }, [filters.category, filters.search, filters.color, filters.material, filters.weight, filters.difficulty, filters.sort, filters.page, filters.minPrice, filters.maxPrice]);
+    if (filters.material.length > 0) {
+      const selectedMaterials = new Set(filters.material);
+      result = {
+        ...result,
+        data: result.data.filter((product) =>
+          product.material ? selectedMaterials.has(product.material) : false
+        ),
+      };
+    }
+
+    if (filters.weight.length > 0) {
+      const selectedWeights = new Set(filters.weight);
+      result = {
+        ...result,
+        data: result.data.filter((product) =>
+          product.weight ? selectedWeights.has(product.weight) : false
+        ),
+      };
+    }
+
+    if (filters.difficulty.length > 0) {
+      const selectedDifficulties = new Set(filters.difficulty);
+      result = {
+        ...result,
+        data: result.data.filter((product) =>
+          product.difficulty ? selectedDifficulties.has(product.difficulty) : false
+        ),
+      };
+    }
+
+    if (filters.minPrice > 0 || filters.maxPrice > 0) {
+      result = {
+        ...result,
+        data: result.data.filter((product) => {
+          const prices = product.variants?.map((variant) => variant.price) ?? [];
+          const minProductPrice = prices.length > 0 ? Math.min(...prices) : 0;
+          const maxProductPrice = prices.length > 0 ? Math.max(...prices) : 0;
+          return (
+            (filters.minPrice <= 0 || maxProductPrice >= filters.minPrice) &&
+            (filters.maxPrice <= 0 || minProductPrice <= filters.maxPrice)
+          );
+        }),
+      };
+    }
+
+    setPaginatedResult(result);
+  }, [
+    productsPage,
+    filters.color,
+    filters.material,
+    filters.weight,
+    filters.difficulty,
+    filters.minPrice,
+    filters.maxPrice,
+  ]);
+
+  // Lỗi fetch → kết quả null như cũ (hiển thị empty state)
+  useEffect(() => {
+    if (isError) {
+      console.warn("Failed to fetch products via TanStack Query");
+      setPaginatedResult(null);
+    }
+  }, [isError]);
 
   // Derived data for backward compatibility
   const filteredProducts: Product[] = paginatedResult?.data ?? [];

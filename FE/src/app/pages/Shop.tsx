@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
+import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 import { useProducts } from "../hooks/useProducts";
 import { products } from "../data/products";
 import {
@@ -407,162 +408,165 @@ export function Shop() {
     </>
   );
 
-  const FilterContent = ({ showHeader = true }: { showHeader?: boolean }) => (
-    <>
-      {showHeader && (
-        <div className="filter-header">
-          <span className="filter-title">Filters</span>
-          {hasActiveFilters && (
-            <motion.button
-              type="button"
-              onClick={clearFilters}
-              className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
-              style={{
-                borderColor: "var(--clear-btn-border)",
-                background: "var(--clear-btn-bg)",
-                color: "var(--clear-btn-text)",
-              }}
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 4px 12px var(--clear-btn-glow)"
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Clear all
-            </motion.button>
-          )}
-        </div>
-      )}
+  const FilterContent = memo(({ showHeader = true }: { showHeader?: boolean }) => {
+    return (
+      <>
+        {showHeader && (
+          <div className="filter-header">
+            <span className="filter-title">Filters</span>
+            {hasActiveFilters && (
+              <motion.button
+                type="button"
+                onClick={clearFilters}
+                className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
+                style={{
+                  borderColor: "var(--clear-btn-border)",
+                  background: "var(--clear-btn-bg)",
+                  color: "var(--clear-btn-text)",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 4px 12px var(--clear-btn-glow)"
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Clear all
+              </motion.button>
+            )}
+          </div>
+        )}
 
-      {/* Smart lesson filter */}
-      {currentCourseId && currentCourseComboIds.length > 0 && (
-        <div className="filter-group">
-          <button
-            className={`chip-filter ${lessonFilterActive ? "active" : ""}`}
-            onClick={() => {
-              setLessonFilterActive((active) => !active);
-              updateFilter("category", "all");
-            }}
-          >
-            📚 Based on your current lesson
-          </button>
-        </div>
-      )}
-
-      {/* Category */}
-      <div className="filter-group">
-        <FilterLabel icon="category">Category</FilterLabel>
-        <div className="filter-chip-group">
-          {categoryOptions.map(([key, cat]) => (
+        {/* Smart lesson filter */}
+        {currentCourseId && currentCourseComboIds.length > 0 && (
+          <div className="filter-group">
             <button
-              key={key}
-              className={`chip-filter ${filters.category === key ? "active" : ""}`}
-              onClick={() => updateFilter("category", key)}
+              className={`chip-filter ${lessonFilterActive ? "active" : ""}`}
+              onClick={() => {
+                setLessonFilterActive((active) => !active);
+                updateFilter("category", "all");
+              }}
             >
-              {cat.emoji} {cat.label}
+              📚 Based on your current lesson
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* Color */}
-      {dynamicFilters.colors.length > 0 && (
+        {/* Category */}
         <div className="filter-group">
-          <FilterLabel icon="color">Color</FilterLabel>
+          <FilterLabel icon="category">Category</FilterLabel>
           <div className="filter-chip-group">
-            {dynamicFilters.colors.map((c) => (
+            {categoryOptions.map(([key, cat]) => (
               <button
-                key={c.name}
-                className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
-                onClick={() => toggleArrayFilter("color", c.name)}
+                key={key}
+                className={`chip-filter ${filters.category === key ? "active" : ""}`}
+                onClick={() => updateFilter("category", key)}
               >
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: c.hex,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                  }}
-                />
-                {c.name}
+                {cat.emoji} {cat.label}
               </button>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Material */}
-      {dynamicFilters.materials.length > 0 && (
-        <div className="filter-group">
-          <FilterLabel icon="material">Material</FilterLabel>
-          <div className="filter-chip-group">
-            {dynamicFilters.materials.map((m) => (
-              <button
-                key={m.name}
-                className={`chip-filter ${filters.material.includes(m.name) ? "active" : ""}`}
-                onClick={() => toggleArrayFilter("material", m.name)}
-              >
-                {m.name}
-              </button>
-            ))}
+        {/* Color */}
+        {dynamicFilters.colors.length > 0 && (
+          <div className="filter-group">
+            <FilterLabel icon="color">Color</FilterLabel>
+            <div className="filter-chip-group">
+              {dynamicFilters.colors.map((c) => (
+                <button
+                  key={c.name}
+                  className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
+                  onClick={() => toggleArrayFilter("color", c.name)}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: c.hex,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                    }}
+                  />
+                  {c.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Weight */}
-      {dynamicFilters.weights.length > 0 && (
-        <div className="filter-group">
-          <FilterLabel icon="weight">Weight</FilterLabel>
-          <div className="filter-chip-group">
-            {dynamicFilters.weights.map((w) => (
-              <button
-                key={w.name}
-                className={`chip-filter ${filters.weight.includes(w.name) ? "active" : ""}`}
-                onClick={() => toggleArrayFilter("weight", w.name)}
-              >
-                {w.name}
-              </button>
-            ))}
+        {/* Material */}
+        {dynamicFilters.materials.length > 0 && (
+          <div className="filter-group">
+            <FilterLabel icon="material">Material</FilterLabel>
+            <div className="filter-chip-group">
+              {dynamicFilters.materials.map((m) => (
+                <button
+                  key={m.name}
+                  className={`chip-filter ${filters.material.includes(m.name) ? "active" : ""}`}
+                  onClick={() => toggleArrayFilter("material", m.name)}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Difficulty */}
-      {dynamicFilters.difficulties.length > 0 && (
-        <div className="filter-group">
-          <FilterLabel icon="difficulty">Difficulty</FilterLabel>
-          <div className="filter-chip-group">
-            {dynamicFilters.difficulties.map((d) => (
-              <button
-                key={d.name}
-                className={`chip-filter ${filters.difficulty.includes(d.name) ? "active" : ""}`}
-                onClick={() => toggleArrayFilter("difficulty", d.name)}
-              >
-                {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
-              </button>
-            ))}
+        {/* Weight */}
+        {dynamicFilters.weights.length > 0 && (
+          <div className="filter-group">
+            <FilterLabel icon="weight">Weight</FilterLabel>
+            <div className="filter-chip-group">
+              {dynamicFilters.weights.map((w) => (
+                <button
+                  key={w.name}
+                  className={`chip-filter ${filters.weight.includes(w.name) ? "active" : ""}`}
+                  onClick={() => toggleArrayFilter("weight", w.name)}
+                >
+                  {w.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Price range - standalone component with own state */}
-      <PriceRangeFilter
-        onApply={(min, max) => {
-          updateFilter("minPrice", min);
-          updateFilter("maxPrice", max);
-        }}
-      />
+        {/* Difficulty */}
+        {dynamicFilters.difficulties.length > 0 && (
+          <div className="filter-group">
+            <FilterLabel icon="difficulty">Difficulty</FilterLabel>
+            <div className="filter-chip-group">
+              {dynamicFilters.difficulties.map((d) => (
+                <button
+                  key={d.name}
+                  className={`chip-filter ${filters.difficulty.includes(d.name) ? "active" : ""}`}
+                  onClick={() => toggleArrayFilter("difficulty", d.name)}
+                >
+                  {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-      {!isLoading && (
-        <div className="filter-summary">
-          <Boxes size={13} />
-          Showing <strong>{displayedProducts.length}</strong> of {totalCount} products
-        </div>
-      )}
-    </>
-  );
+        {/* Price range - standalone component with own state */}
+        <PriceRangeFilter
+          onApply={(min, max) => {
+            updateFilter("minPrice", min);
+            updateFilter("maxPrice", max);
+          }}
+        />
+
+        {!isLoading && (
+          <div className="filter-summary">
+            <Boxes size={13} />
+            Showing <strong>{displayedProducts.length}</strong> of {totalCount} products
+          </div>
+        )}
+      </>
+    );
+  });
+
 
   return (
     <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-8">
@@ -1357,7 +1361,7 @@ export function Shop() {
                         aria-label={`${t("shop.kitDetail")} ${kit.name}`}
                       >
                         <div className="aspect-[4/3] overflow-hidden bg-muted relative">
-                          <img
+                          <ResponsiveImage
                             src={kit.thumbnail}
                             alt={kit.name}
                             className="w-full h-full object-cover"

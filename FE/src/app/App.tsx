@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { BrowserRouter } from "react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "./components/ui/sonner";
+import { queryClient } from "../lib/queryClient";
 import { useAuthStore } from "../store/auth.store";
 import { useMembershipStore } from "../features/membership/store/membership.store";
 import { FavoritesProvider } from "./context/FavoritesContext";
@@ -34,6 +37,8 @@ export default function App() {
   }, [isAuthenticated, initializeMembership]);
 
   return (
+    <QueryClientProvider client={queryClient}>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     <LanguageProvider>
       <ThemeProvider>
         <AdminProvider>
@@ -61,5 +66,6 @@ export default function App() {
         </AdminProvider>
       </ThemeProvider>
     </LanguageProvider>
+    </QueryClientProvider>
   );
 }

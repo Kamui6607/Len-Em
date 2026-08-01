@@ -209,8 +209,16 @@ export function RegisterPage() {
   const v2 = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (!form.password) errors.password = "Please enter a password.";
-    else if (form.password.length < 6)
-      errors.password = "Password must be at least 6 characters.";
+    else if (form.password.length < 8)
+      errors.password = "Password must be at least 8 characters.";
+    else if (!/[A-Z]/.test(form.password))
+      errors.password = "Password must include an uppercase letter.";
+    else if (!/[a-z]/.test(form.password))
+      errors.password = "Password must include a lowercase letter.";
+    else if (!/[0-9]/.test(form.password))
+      errors.password = "Password must include a number.";
+    else if (!/[^A-Za-z0-9]/.test(form.password))
+      errors.password = "Password must include a special character.";
     if (!form.confirmPassword)
       errors.confirmPassword = "Please confirm your password.";
     else if (form.password !== form.confirmPassword)

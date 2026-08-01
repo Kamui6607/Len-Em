@@ -122,10 +122,23 @@ export function MapPicker({
 
   const doReverseGeocodeRef = useRef<(lat: number, lng: number) => Promise<void>>(async () => {});
 
+  const lastGeocodeTimeRef = useRef(0);
+  const GEOCODE_COOLDOWN_MS = 1100; // Nominatim requires >= 1s between requests
+
   const doReverseGeocode = useCallback(
     async (lat: number, lng: number) => {
       setLoading(true);
       try {
+        // Rate limiting: enforce minimum delay between geocode requests
+        const now = Date.now();
+        const timeSinceLastGeocode = now - lastGeocodeTimeRef.current;
+        if (timeSinceLastGeocode < GEOCODE_COOLDOWN_MS) {
+          await new Promise(resolve => 
+            setTimeout(resolve, GEOCODE_COOLDOWN_MS - timeSinceLastGeocode)
+          );
+        }
+        lastGeocodeTimeRef.current = Date.now();
+
         const result = mapboxToken
           ? await reverseGeocodeMapbox(lat, lng, mapboxToken)
           : await reverseGeocodeNominatim(lat, lng);

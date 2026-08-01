@@ -51,7 +51,7 @@ export function Purchased() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [kitNames, setKitNames] = useState<Record<string, string>>({});
   const [kitNamesLoaded, setKitNamesLoaded] = useState(false);
-  const { addToCart } = useCart();
+  const { addToCart, addKitToCart } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,12 +84,15 @@ export function Purchased() {
               } catch {
                 return { kitId, name: "Kit" };
               }
-            })
+            }),
           );
-          const kitNameMap = kitResults.reduce((acc, { kitId, name }) => {
-            if (name) acc[kitId] = name;
-            return acc;
-          }, {} as Record<string, string>);
+          const kitNameMap = kitResults.reduce(
+            (acc, { kitId, name }) => {
+              if (name) acc[kitId] = name;
+              return acc;
+            },
+            {} as Record<string, string>,
+          );
           setKitNames(kitNameMap);
         }
         setKitNamesLoaded(true);
@@ -165,15 +168,57 @@ export function Purchased() {
     };
   }, []);
 
-  const handleReorder = (order: Order) => {
-    const items = order.items.filter(
-      (item) => item.productId && item.productName,
-    );
-    if (items.length === 0) {
-      toast.error(t("purchased.toastNoReorderItems"));
-      return;
+  const handleReorder = async (order: Order) => {
+    const { kitGroups, standalone } = groupItemsByKit(order.items);
+    
+    // Reorder kits - add entire kit back to cart
+    for (const group of kitGroups) {
+      try {
+        const { data } = await kitService.getById(group.kitId);
+        const kit = data.data?.kit;
+        if (kit) {
+          const products = (kit.products || []).map((kitProduct) => {
+            const product = kitProduct.productId;
+            const firstVariant = product?.variants?.[0];
+            return {
+              productId: product._id,
+              variantId: kitProduct.variantId,
+              name: product.name,
+              image: firstVariant?.image || product.image,
+              price: firstVariant?.price || 0,
+            };
+          });
+
+          addKitToCart({
+            kitId: kit._id,
+            name: kit.name,
+            thumbnail: kit.thumbnail,
+            price: kit.price,
+            products,
+          });
+        }
+      } catch {
+        // If kit fetch fails, add items individually as fallback
+        group.items.forEach((item) => {
+          addToCart(
+            {
+              productId: item.productId,
+              variantId: item.productId,
+              name: item.productName || "Product",
+              image: item.image || "",
+              color: item.color || "",
+              hexCode: item.hexCode || "",
+              price: item.price ?? 0,
+              stock: 999,
+            },
+            item.quantity,
+          );
+        });
+      }
     }
-    items.forEach((item) => {
+
+    // Reorder standalone products
+    standalone.forEach((item) => {
       addToCart(
         {
           productId: item.productId,
@@ -188,8 +233,10 @@ export function Purchased() {
         item.quantity,
       );
     });
+
+    const totalItems = standalone.length + kitGroups.length;
     toast.success(
-      t("purchased.toastReorderSuccess", undefined, { count: items.length }),
+      t("purchased.toastReorderSuccess", undefined, { count: totalItems }),
     );
     navigate("/cart");
   };
@@ -251,7 +298,9 @@ export function Purchased() {
       const { data } = await orderApi.retryPayment(order._id);
       if (data.payUrl) {
         const methodLabel = order.payment.method === "MOMO" ? "MoMo" : "VNPay";
-        toast.success(t("purchased.retryPaymentRedirect", { method: methodLabel }));
+        toast.success(
+          t("purchased.retryPaymentRedirect", { method: methodLabel }),
+        );
         setTimeout(() => {
           window.location.href = data.payUrl;
         }, 500);
@@ -417,7 +466,8 @@ export function Purchased() {
                                             </div>
                                           </div>
                                           <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                                            {order.orderStatus === "DELIVERED" &&
+                                            {order.orderStatus ===
+                                              "DELIVERED" &&
                                               !reviewed && (
                                                 <button
                                                   onClick={(e) => {
@@ -437,7 +487,8 @@ export function Purchased() {
                                                   {t("purchased.reviewButton")}
                                                 </button>
                                               )}
-                                            {order.orderStatus === "DELIVERED" &&
+                                            {order.orderStatus ===
+                                              "DELIVERED" &&
                                               reviewed && (
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
@@ -567,7 +618,8 @@ export function Purchased() {
                             }}
                             className="text-xs bg-destructive/10 text-destructive px-4 py-2 rounded-full hover:bg-destructive/20 transition-colors"
                           >
-                            <XCircle className="w-3 h-3 inline mr-1" /> {t("purchased.cancelOrder")}
+                            <XCircle className="w-3 h-3 inline mr-1" />{" "}
+                            {t("purchased.cancelOrder")}
                           </button>
                         )}
                       {order.isCancelRequested &&
@@ -661,7 +713,9 @@ export function Purchased() {
             className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-semibold mb-1">{t("purchased.cancelModalTitle")}</h3>
+            <h3 className="font-semibold mb-1">
+              {t("purchased.cancelModalTitle")}
+            </h3>
             <p className="text-xs text-muted-foreground mb-4">
               {t("purchased.cancelModalDesc")}
             </p>
@@ -686,7 +740,9 @@ export function Purchased() {
                 disabled={cancelling || !cancelModal.reason.trim()}
                 className="flex-1 py-2.5 rounded-full text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
               >
-                {cancelling ? t("purchased.cancelModalSubmitting") : t("purchased.cancelModalSubmit")}
+                {cancelling
+                  ? t("purchased.cancelModalSubmitting")
+                  : t("purchased.cancelModalSubmit")}
               </button>
             </div>
           </div>

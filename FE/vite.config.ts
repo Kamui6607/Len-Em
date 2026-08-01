@@ -31,6 +31,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/socket.io': {
+        target: 'https://yarn-shop-be.onrender.com',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
+      '/notifications': {
+        target: 'https://yarn-shop-be.onrender.com',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
     },
   },
 

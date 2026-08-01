@@ -16,6 +16,7 @@ import { products as staticProducts } from "../../data/products";
 import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { useAdmin } from "../../context/AdminContext";
+import { useLanguage } from "../../../context/LanguageContext";
 
 interface StatCard {
   title: string;
@@ -29,6 +30,7 @@ interface StatCard {
 
 export function AdminDashboard() {
   const { activities } = useAdmin();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalProducts, setTotalProducts] = useState<number | null>(null);
@@ -40,16 +42,11 @@ export function AdminDashboard() {
     async function loadData() {
       try {
         setLoading(true);
-        // NOTE: orders is capped at 200 here to keep the dashboard responsive.
-        // For a fully accurate total across very large order volumes, a
-        // dedicated backend aggregate endpoint (e.g. GET /admin/stats/summary
-        // returning totalRevenue/orderCounts precomputed) would be more
-        // correct and efficient than paginating orders client-side.
-        const [ordersRes, usersRes, productsRes, statsRes] = await Promise.allSettled([
-          orderService.getAllOrders({ page: 1, limit: 200 }),
-          userService.getAllUsers({ page: 1, limit: 10 }),
-          productService.getAll({ limit: 10 }),
+        // Fetch only essential data for dashboard stats
+        const [ordersRes, statsRes, productsRes] = await Promise.allSettled([
+          orderService.getAllOrders({ page: 1, limit: 50 }),
           userService.getStatistics(),
+          productService.getAll({ limit: 1 }),
         ]);
 
         if (cancelled) return;
@@ -57,18 +54,12 @@ export function AdminDashboard() {
         if (ordersRes.status === "fulfilled") {
           setOrders(ordersRes.value.data.orders.map(normalizeOrder));
         }
-        if (usersRes.status === "fulfilled") {
-          setTotalUsers(usersRes.value.data.data.result.totalUsers || 0);
-        }
         if (statsRes.status === "fulfilled") {
           const statsData = statsRes.value.data.data;
           setTotalUsers(statsData.totalUsers || 0);
         }
         if (productsRes.status === "fulfilled") {
-          // Assumes the API returns a `total` count alongside the page of
-          // products, matching the pagination shape used for users/orders.
-          // Falls back to the local product catalog if that field is absent
-          // so the card never silently breaks.
+          // Use total count from API if available, otherwise fallback to static products
           const data = productsRes.value.data as {
             data?: { total?: number; products?: unknown[] };
           };
@@ -98,35 +89,40 @@ export function AdminDashboard() {
 
   const stats: StatCard[] = [
     {
-      title: "Total Users",
+      title: t("admin.dashboard.stats.totalUsers"),
       value: totalUsers,
       icon: Users,
       iconBg: "var(--primary-soft)",
       iconColor: "var(--primary)",
     },
     {
-      title: "Total Products",
+      title: t("admin.dashboard.stats.totalProducts"),
       value: totalProducts ?? "—",
       icon: Package,
       iconBg: "var(--info-bg)",
       iconColor: "var(--info-text)",
     },
     {
-      title: "Total Orders",
+      title: t("admin.dashboard.stats.totalOrders"),
       value: orders.length,
       icon: ShoppingCart,
       iconBg: "var(--warning-bg)",
       iconColor: "var(--warning-text)",
-      meta: pendingOrders > 0 ? `${pendingOrders} pending` : "No pending orders",
+      meta: pendingOrders > 0 
+        ? t("admin.dashboard.stats.pendingOrders", { count: pendingOrders }) 
+        : t("admin.dashboard.stats.noPendingOrders"),
       metaTone: pendingOrders > 0 ? "neutral" : "up",
     },
     {
-      title: "Total Revenue",
+      title: t("admin.dashboard.totalRevenue"),
       value: formatPrice(totalRevenue),
       icon: DollarSign,
       iconBg: "var(--success-bg)",
       iconColor: "var(--success-text)",
-      meta: `${paidOrders.length} paid order${paidOrders.length !== 1 ? "s" : ""}`,
+      meta: t("admin.dashboard.stats.paidOrders", { 
+        count: paidOrders.length, 
+        suffix: paidOrders.length !== 1 ? "s" : "" 
+      }),
       metaTone: "neutral",
     },
   ];
@@ -134,9 +130,9 @@ export function AdminDashboard() {
   const recentActivities = activities.slice(0, 8);
 
   const orderBreakdown = [
-    { label: "Delivered", value: confirmedOrders, color: "var(--success-text)" },
-    { label: "Pending", value: pendingOrders, color: "var(--warning-text)" },
-    { label: "Cancelled", value: cancelledOrders, color: "var(--destructive)" },
+    { label: t("admin.dashboard.orderBreakdown.delivered"), value: confirmedOrders, color: "var(--success-text)" },
+    { label: t("admin.dashboard.orderBreakdown.pending"), value: pendingOrders, color: "var(--warning-text)" },
+    { label: t("admin.dashboard.orderBreakdown.cancelled"), value: cancelledOrders, color: "var(--destructive)" },
   ];
   const breakdownTotal = orderBreakdown.reduce((s, o) => s + o.value, 0) || 1;
 
@@ -144,9 +140,9 @@ export function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="mb-1">Dashboard Overview</h1>
+        <h1 className="mb-1">{t("admin.dashboard.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Welcome back! Here's what's happening with your store today.
+          {t("admin.dashboard.welcomeBack")}
         </p>
       </div>
 
@@ -215,7 +211,7 @@ export function AdminDashboard() {
             >
               <Activity className="w-4.5 h-4.5" />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
+            <h2 className="text-base font-semibold text-foreground">{t("admin.dashboard.recentActivity")}</h2>
           </div>
           <div className="p-6" style={{ background: "var(--card)" }}>
             {recentActivities.length > 0 ? (
@@ -237,7 +233,7 @@ export function AdminDashboard() {
               </ul>
             ) : (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No recent activity yet
+                {t("admin.dashboard.noRecentActivity")}
               </p>
             )}
           </div>
@@ -258,7 +254,7 @@ export function AdminDashboard() {
             >
               <TrendingUp className="w-4.5 h-4.5" />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Order Statistics</h2>
+            <h2 className="text-base font-semibold text-foreground">{t("admin.dashboard.orderStatistics")}</h2>
           </div>
           <div className="p-6 space-y-5" style={{ background: "var(--card)" }}>
             {/* Proportion bar */}
@@ -287,7 +283,7 @@ export function AdminDashboard() {
             </div>
 
             <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: "var(--border)" }}>
-              <span className="text-sm font-medium text-foreground">Total Revenue</span>
+              <span className="text-sm font-medium text-foreground">{t("admin.dashboard.totalRevenue")}</span>
               <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
                 {formatPrice(totalRevenue)}
               </span>

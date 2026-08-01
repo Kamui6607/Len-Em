@@ -38,12 +38,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n._id === notificationId ? { ...n, read: true } : n))
-    );
-    // Call API to mark as read on server
-    notificationService.markAsRead(notificationId).catch(() => {
-      // Silent fail — local state is already updated
+    setNotifications((prev) => {
+      const notification = prev.find((n) => n._id === notificationId);
+      // Only call API if notification exists and is not already read
+      if (notification && !notification.read) {
+        notificationService.markAsRead(notificationId).catch(() => {
+          // Silent fail — local state is already updated
+        });
+      }
+      return prev.map((n) => (n._id === notificationId ? { ...n, read: true } : n));
     });
   }, []);
 

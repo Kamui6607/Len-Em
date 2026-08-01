@@ -338,7 +338,7 @@ function KitFormModal({
     price: kit?.price || 0,
     isActive: kit?.isActive ?? true,
     products: kit?.products.map(p => ({
-      productId: p.product._id,
+      productId: p.productId._id,
       variantId: p.variantId,
       quantity: p.quantity,
     })) || [],

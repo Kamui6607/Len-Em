@@ -18,7 +18,12 @@ import {
 import { Switch } from "../../components/ui/switch";
 import { courseService } from "../../../api/courseService";
 import { lessonService } from "../../../api/lessonService";
-import type { CourseLevel, CourseFormData, Lesson } from "../../../features/learn/types/learn.types";
+import type {
+  CourseLevel,
+  CourseFormData,
+  Lesson,
+} from "../../../features/learn/types/learn.types";
+import { useLanguage } from "../../../context/LanguageContext";
 
 const levelOptions: { value: CourseLevel; label: string }[] = [
   { value: "beginner", label: "Beginner" },
@@ -30,6 +35,7 @@ export function CourseFormPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
   const isEditing = Boolean(courseId);
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -114,7 +120,7 @@ export function CourseFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
-      toast.error("Title is required");
+      toast.error(t("admin.courses.form.titleRequired"));
       return;
     }
 
@@ -131,7 +137,7 @@ export function CourseFormPage() {
           linkedCombo: form.linkedCombo,
           isPublished: form.isPublished,
         });
-        toast.success("Course updated successfully");
+        toast.success(t("admin.courses.form.updatedSuccess"));
       } else {
         await courseService.create({
           title: form.title,
@@ -143,11 +149,13 @@ export function CourseFormPage() {
           linkedCombo: form.linkedCombo,
           isPublished: form.isPublished,
         });
-        toast.success("Course created successfully");
+        toast.success(t("admin.courses.form.createdSuccess"));
       }
       navigate("/admin/courses");
     } catch {
-      toast.error(isEditing ? "Failed to update course" : "Failed to create course");
+      toast.error(
+        isEditing ? t("admin.courses.form.failedUpdate") : t("admin.courses.form.failedCreate"),
+      );
     } finally {
       setSaving(false);
     }
@@ -156,75 +164,102 @@ export function CourseFormPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-center py-20 text-muted-foreground">Loading course...</div>
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          Loading course...
+        </div>
       </div>
     );
   }
 
   const filteredLessons = allLessons.filter((lesson) =>
-    lesson.title.toLowerCase().includes(lessonSearch.toLowerCase())
+    lesson.title.toLowerCase().includes(lessonSearch.toLowerCase()),
   );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/admin/courses")}>
-          <ArrowLeft className="size-4" /> Back
+          <ArrowLeft className="size-4" /> {t("admin.courses.form.back")}
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold">{isEditing ? "Edit Course" : "New Course"}</h1>
+          <h1 className="text-2xl font-semibold">
+            {isEditing ? t("admin.courses.editCourse") : t("admin.courses.newCourse")}
+          </h1>
           <p className="text-muted-foreground">
-            {isEditing ? "Update course details and settings" : "Create a new course for learners"}
+            {isEditing
+              ? t("admin.courses.form.updateCourseDetails")
+              : t("admin.courses.form.createNewCourse")}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-8 lg:grid-cols-[1fr_380px]"
+      >
         <main className="space-y-6">
           <Card>
             <CardContent className="space-y-5 p-6">
               <div>
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title">{t("admin.courses.form.title")}</Label>
                 <Input
                   id="title"
                   value={form.title}
-                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Complete Crochet Course for Beginners"
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  placeholder={t("admin.courses.form.placeholder.title")}
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t("admin.courses.form.description")}</Label>
                 <Textarea
                   id="description"
                   value={form.description}
-                  onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Course description..."
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  placeholder={t("admin.courses.form.placeholder.description")}
                   rows={5}
                 />
               </div>
 
               <div>
-                <Label htmlFor="thumbnail">Thumbnail URL</Label>
+                <Label htmlFor="thumbnail">{t("admin.courses.form.thumbnailUrl")}</Label>
                 <Input
                   id="thumbnail"
                   value={form.thumbnail}
-                  onChange={(e) => setForm((prev) => ({ ...prev, thumbnail: e.target.value }))}
-                  placeholder="https://images.unsplash.com/..."
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, thumbnail: e.target.value }))
+                  }
+                  placeholder={t("admin.courses.form.placeholder.thumbnail")}
                 />
                 {form.thumbnail && (
                   <div className="mt-3 overflow-hidden rounded-xl border">
-                    <img src={form.thumbnail} alt="Preview" className="aspect-video w-full object-cover" />
+                    <img
+                      src={form.thumbnail}
+                      alt="Preview"
+                      className="aspect-video w-full object-cover"
+                    />
                   </div>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="level">Level</Label>
+                <Label htmlFor="level">{t("admin.courses.form.level")}</Label>
                 <Select
                   value={form.level}
-                  onValueChange={(value) => setForm((prev) => ({ ...prev, level: value as CourseLevel }))}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      level: value as CourseLevel,
+                    }))
+                  }
                 >
                   <SelectTrigger id="level">
                     <SelectValue placeholder="Select level" />
@@ -240,7 +275,7 @@ export function CourseFormPage() {
               </div>
 
               <div>
-                <Label>Tags</Label>
+                <Label>{t("admin.courses.form.tags")}</Label>
                 <div className="mt-2 flex gap-2">
                   <Input
                     value={tagInput}
@@ -251,17 +286,21 @@ export function CourseFormPage() {
                         addTag();
                       }
                     }}
-                    placeholder="Add a tag and press Enter"
+                    placeholder={t("admin.courses.form.placeholder.tag")}
                   />
                   <Button type="button" variant="outline" onClick={addTag}>
-                    Add
+                    {t("common.add")}
                   </Button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {form.tags.map((tag) => (
                     <Badge key={tag} variant="outline" className="gap-1">
                       #{tag}
-                      <button type="button" onClick={() => removeTag(tag)} className="text-muted-foreground hover:text-foreground">
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
                         ×
                       </button>
                     </Badge>
@@ -276,17 +315,27 @@ export function CourseFormPage() {
           <Card>
             <CardContent className="space-y-5 p-6">
               <div className="flex items-center justify-between">
-                <Label htmlFor="isPublished">Published</Label>
+                <Label htmlFor="isPublished">{t("admin.courses.form.published")}</Label>
                 <Switch
                   id="isPublished"
                   checked={form.isPublished}
-                  onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isPublished: checked }))}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({ ...prev, isPublished: checked }))
+                  }
                 />
               </div>
 
-              <button type="submit" className="btn-modal-primary w-full" disabled={saving}>
+              <button
+                type="submit"
+                className="btn-modal-primary w-full"
+                disabled={saving}
+              >
                 <Save className="size-4" />
-                {saving ? "Saving..." : isEditing ? "Update Course" : "Create Course"}
+                {saving
+                  ? t("admin.courses.form.saving")
+                  : isEditing
+                    ? t("admin.courses.form.updateCourse")
+                    : t("admin.courses.form.createCourse")}
               </button>
             </CardContent>
           </Card>
@@ -295,7 +344,7 @@ export function CourseFormPage() {
           <Card>
             <CardContent className="space-y-4 p-6">
               <div className="flex items-center justify-between">
-                <Label>Linked Lessons</Label>
+                <Label>{t("admin.courses.form.linkedLessons")}</Label>
                 <Badge variant="outline">{form.linkedLessons.length}</Badge>
               </div>
               <div className="relative w-full">
@@ -306,17 +355,25 @@ export function CourseFormPage() {
                   type="text"
                   value={lessonSearch}
                   onChange={(e) => setLessonSearch(e.target.value)}
-                  placeholder="Search lessons..."
+                  placeholder={t("admin.courses.form.searchLessonsPlaceholder")}
                   className="input w-full !rounded-xl !pl-10 !py-2.5 text-sm"
-                  style={{ background: "var(--input-bg)", borderColor: "var(--border)" }}
+                  style={{
+                    background: "var(--input-bg)",
+                    borderColor: "var(--border)",
+                  }}
                 />
               </div>
-              <div className="max-h-[300px] overflow-y-auto space-y-1" style={{ minHeight: "100px" }}>
+              <div
+                className="max-h-[300px] overflow-y-auto space-y-1"
+                style={{ minHeight: "100px" }}
+              >
                 {lessonsLoading ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Loading lessons...</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {t("admin.courses.form.loading")}
+                  </p>
                 ) : filteredLessons.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    {lessonSearch ? "No lessons match" : "No lessons available"}
+                    {lessonSearch ? t("admin.courses.form.noLessonsMatch") : t("admin.courses.form.noLessonsAvailable")}
                   </p>
                 ) : (
                   filteredLessons.map((lesson) => {
@@ -332,14 +389,24 @@ export function CourseFormPage() {
                             : "hover:bg-[var(--surface-secondary)] text-foreground"
                         }`}
                       >
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          selected ? "border-primary bg-primary" : "border-border"
-                        }`}>
-                          {selected && <Check className="w-3 h-3 text-primary-foreground" />}
+                        <div
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selected
+                              ? "border-primary bg-primary"
+                              : "border-border"
+                          }`}
+                        >
+                          {selected && (
+                            <Check className="w-3 h-3 text-primary-foreground" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium text-xs">{lesson.title}</p>
-                          <p className="text-[10px] text-muted-foreground">Order {lesson.order} • {lesson.duration} min</p>
+                          <p className="truncate font-medium text-xs">
+                            {lesson.title}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Order {lesson.order} • {lesson.duration} min
+                          </p>
                         </div>
                       </button>
                     );

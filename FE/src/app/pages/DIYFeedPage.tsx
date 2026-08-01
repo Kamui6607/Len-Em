@@ -18,6 +18,7 @@ import type { DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { userService } from "../../features/users/services/user.service";
 import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
+import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 type FeedFilter = "all" | "newest" | "purchased";
 
@@ -48,11 +49,18 @@ export function DIYFeedPage() {
       const creatorIds = [...new Set(data.data.posts.map((p) => p.creatorId))];
       const creatorMap: Record<string, CreatorInfo> = {};
 
-      // Fetch all creators in parallel instead of sequential for loop
+      // Fetch all creators in parallel with error handling
+      // Note: getUserById is admin-only, so we gracefully handle 403 errors
       const results = await Promise.allSettled(
         creatorIds.map(async (creatorId) => {
-          const { data: userData } = await userService.getUserById(creatorId);
-          return { creatorId, userData };
+          try {
+            const { data: userData } = await userService.getUserById(creatorId);
+            return { creatorId, userData };
+          } catch (error) {
+            // Silently fail for non-admin users - they can't access other users' data
+            console.warn(`Cannot fetch creator ${creatorId}:`, error);
+            return { creatorId, userData: null };
+          }
         })
       );
 
@@ -107,8 +115,8 @@ export function DIYFeedPage() {
         name: kit.name,
         thumbnail: kit.thumbnail,
         price: kit.price,
-        products: (kit.products || []).map((kitProduct: KitProduct) => {
-          const product = kitProduct.product;
+      products: (kit.products || []).map((kitProduct: KitProduct) => {
+          const product = kitProduct.productId;
           const firstVariant = product?.variants?.[0];
           return {
             productId: product._id,
@@ -290,7 +298,7 @@ export function DIYFeedPage() {
                   className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-xl"
                 >
                   <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-                    <img
+                    <ResponsiveImage
                       src={post.images[0]}
                       alt={post.title}
                       className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"

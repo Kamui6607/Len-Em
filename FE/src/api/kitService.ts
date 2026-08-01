@@ -21,9 +21,9 @@ export interface KitRating {
 }
 
 // For reading kit data (GET responses)
-// BE returns: products[].product (populated), products[].variantId, products[].quantity
+// BE returns: products[].productId (populated product object), products[].variantId, products[].quantity
 export interface KitProduct {
-  product: {
+  productId: {
     _id: string;
     name: string;
     description: string;

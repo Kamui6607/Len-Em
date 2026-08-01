@@ -268,7 +268,7 @@ export function CourseDetailPage() {
                 level: c.level,
                 price: c.price,
                 products: c.productIds.map((pid) => ({
-                  product: {
+                  productId: {
                     _id: pid,
                     name: pid,
                     description: "",
@@ -495,7 +495,7 @@ export function CourseDetailPage() {
       return;
     }
     const kitProducts = (kit.products || []).map((kitProduct) => {
-      const product = kitProduct.product;
+      const product = kitProduct.productId;
       const variant = product?.variants?.[0];
       return {
         productId: product._id,

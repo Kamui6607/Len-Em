@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ReportButton } from "../../components/ReportButton";
 import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { useLanguage } from "../../../context/LanguageContext";
 
 const STATUS_OPTIONS = ["", "Pending", "Done"];
 
@@ -22,6 +23,7 @@ type SortField = "id" | "title" | "status" | "date";
 type SortDirection = "asc" | "desc";
 
 export function AdminDIYPosts() {
+  const { t } = useLanguage();
   const [posts, setPosts] = useState<DIYPost[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
@@ -50,7 +52,7 @@ export function AdminDIYPosts() {
       setPosts(data.data.posts);
       setTotalPages(data.data.totalPages);
     } catch {
-      toast.error("Failed to load DIY posts");
+      toast.error(t("admin.diyPosts.loadError"));
     } finally {
       setLoading(false);
     }
@@ -80,11 +82,11 @@ export function AdminDIYPosts() {
         tags: editForm.tags.split(",").map((t) => t.trim()).filter(Boolean),
         price: editForm.price,
       });
-      toast.success("Post updated successfully");
+      toast.success(t("admin.diyPosts.updateSuccess"));
       setEditModal(null);
       fetchPosts();
     } catch {
-      toast.error("Failed to update post");
+      toast.error(t("admin.diyPosts.updateError"));
     } finally {
       setSavingEdit(false);
     }
@@ -94,11 +96,11 @@ export function AdminDIYPosts() {
     setStatusUpdating(true);
     try {
       await diyService.updatePostStatus(id, { status: "Done" });
-      toast.success("Post confirmed");
+      toast.success(t("admin.diyPosts.updateSuccess"));
       setSelectedPost(null);
       fetchPosts();
     } catch {
-      toast.error("Failed to confirm post");
+      toast.error(t("admin.diyPosts.updateError"));
     } finally {
       setStatusUpdating(false);
     }
@@ -107,10 +109,10 @@ export function AdminDIYPosts() {
   const handleDelete = async (post: DIYPost) => {
     try {
       await diyService.deletePost(post._id);
-      toast.success("Post deleted");
+      toast.success(t("admin.diyPosts.deleteSuccess"));
       fetchPosts();
     } catch {
-      toast.error("Failed to delete post");
+      toast.error(t("admin.diyPosts.deleteError"));
     }
   };
 
@@ -188,9 +190,9 @@ export function AdminDIYPosts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="mb-2">DIY Posts Management</h1>
+          <h1 className="mb-2">{t("admin.diyPosts.title")}</h1>
           <p className="text-muted-foreground">
-            Manage all DIY posts from creators
+            {t("admin.diyPosts.subtitle")}
           </p>
         </div>
         <Link to="/admin/diy-posts/new" className="btn-create">
@@ -216,7 +218,7 @@ export function AdminDIYPosts() {
                 style={{ paddingRight: "2.5rem" }}
               >
                 <span className="text-sm">
-                  {filterStatus === "" ? "All Status" : filterStatus}
+                  {filterStatus === "" ? t("admin.diyPosts.allStatus") : filterStatus}
                 </span>
                 <ChevronDown
                   className={`w-4 h-4 absolute right-3 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
@@ -247,7 +249,7 @@ export function AdminDIYPosts() {
                         className="w-full px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)] transition-colors flex items-center justify-between"
                         style={{ color: "var(--foreground)" }}
                       >
-                        <span>All Status</span>
+                          <span>{t("admin.diyPosts.allStatus")}</span>
                         {filterStatus === "" && (
                           <Check
                             className="w-4 h-4"
@@ -295,7 +297,7 @@ export function AdminDIYPosts() {
             className="text-center py-16 text-muted-foreground"
             style={{ background: "var(--card)" }}
           >
-            No DIY posts found.
+            {t("admin.diyPosts.noPostsFound")}
           </div>
         ) : (
           <>
@@ -306,10 +308,10 @@ export function AdminDIYPosts() {
               <table className="admin-table w-full text-sm">
                 <thead>
                   <tr>
-                    <SortableHeader label="ID" field="id" />
-                    <SortableHeader label="Title" field="title" />
-                    <SortableHeader label="Status" field="status" />
-                    <SortableHeader label="Date" field="date" />
+                    <SortableHeader label={t("admin.diyPosts.postId")} field="id" />
+                    <SortableHeader label={t("admin.diyPosts.postTitle")} field="title" />
+                    <SortableHeader label={t("admin.diyPosts.status")} field="status" />
+                    <SortableHeader label={t("admin.diyPosts.date")} field="date" />
                     <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[200px]">
                       Actions
                     </th>
@@ -344,7 +346,7 @@ export function AdminDIYPosts() {
                               onClick={() => handleConfirmPost(post._id)}
                               disabled={statusUpdating}
                               className="admin-action-btn edit"
-                              title="Confirm"
+                                title={t("admin.diyPosts.confirm")}
                             >
                               <CheckCircle className="w-4 h-4" />
                             </button>
@@ -352,20 +354,20 @@ export function AdminDIYPosts() {
                           <button
                             onClick={() => openEditModal(post)}
                             className="admin-action-btn edit"
-                            title="Edit"
+                                title={t("admin.diyPosts.edit")}
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setSelectedPost(post)}
                             className="admin-action-btn view"
-                            title="View details"
+                                title={t("admin.diyPosts.view")}
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <HoldToDeleteButton
                             onDelete={() => handleDelete(post)}
-                            title="Hold 2s to delete"
+                            title={t("admin.diyPosts.holdToDelete")}
                           />
                         </div>
                       </td>
@@ -401,7 +403,7 @@ export function AdminDIYPosts() {
                     onClick={() => setSelectedPost(post)}
                     className="text-primary hover:underline text-xs"
                   >
-                    View Details
+                     {t("admin.diyPosts.view")}
                   </button>
                 </div>
               ))}
@@ -511,7 +513,7 @@ export function AdminDIYPosts() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">Edit DIY Post</h3>
+              <h3 className="text-base font-semibold">{t("admin.diyPosts.editingTitle")}</h3>
               <button
                 onClick={() => setEditModal(null)}
                 style={{ color: "var(--foreground-muted)" }}
@@ -525,26 +527,26 @@ export function AdminDIYPosts() {
               <div className="admin-dialog-body space-y-4">
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                    Title <span className="text-destructive">*</span>
+                    {t("admin.diyPosts.modal.titleField")} <span className="text-destructive">*</span>
                   </label>
                   <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="input w-full" placeholder="Post title" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Description</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>{t("admin.diyPosts.modal.descriptionField")}</label>
                   <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className="input w-full resize-none" placeholder="Post description" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Tags (comma separated)</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>{t("admin.diyPosts.modal.tagsField")}</label>
                   <input type="text" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="input w-full" placeholder="e.g. funny, pokemon, ghibli" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>Price</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>{t("admin.diyPosts.modal.priceField")}</label>
                   <input type="number" value={editForm.price || ""} onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })} className="input w-full" placeholder="0 for free" min={0} />
                 </div>
               </div>
               <div className="admin-dialog-footer">
-                <button type="button" onClick={() => setEditModal(null)} disabled={savingEdit} className="btn-modal-cancel">Cancel</button>
-                <button type="submit" disabled={savingEdit} className="btn-modal-primary">{savingEdit ? "Saving…" : "Update Post"}</button>
+                <button type="button" onClick={() => setEditModal(null)} disabled={savingEdit} className="btn-modal-cancel">{t("admin.diyPosts.modal.cancel")}</button>
+                <button type="submit" disabled={savingEdit} className="btn-modal-primary">{savingEdit ? t("admin.diyPosts.modal.saving") : t("admin.diyPosts.modal.updatePost")}</button>
               </div>
             </form>
           </div>

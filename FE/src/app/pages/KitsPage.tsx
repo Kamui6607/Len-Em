@@ -13,6 +13,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { cn } from "../components/ui/utils";
 import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
+import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All Levels", emoji: "🎁" },
@@ -248,7 +249,7 @@ export function KitsPage() {
                         className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all"
                       >
                         <div className="aspect-[4/3] overflow-hidden bg-muted relative">
-                          <img
+                          <ResponsiveImage
                             src={kit.thumbnail}
                             alt={kit.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
