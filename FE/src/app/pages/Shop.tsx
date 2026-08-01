@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Package,
-  Search,
   SlidersHorizontal,
   X,
   Heart,
@@ -14,6 +13,7 @@ import {
   DollarSign,
   Sparkles,
   Boxes,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../components/ProductCard";
@@ -32,7 +32,10 @@ import { useLanguage } from "../../context/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit } from "../../api/kitService";
 import { cn } from "../components/ui/utils";
-import { ProductSkeleton, ProductGridSkeleton } from "../../components/skeletons/ProductSkeleton";
+import {
+  ProductSkeleton,
+  ProductGridSkeleton,
+} from "../../components/skeletons/ProductSkeleton";
 
 const CATEGORY_META: Record<
   string,
@@ -74,7 +77,13 @@ const FILTER_ICONS: Record<string, React.ReactNode> = {
   level: <Gauge size={13} />,
 };
 
-function FilterLabel({ icon, children }: { icon: keyof typeof FILTER_ICONS; children: React.ReactNode }) {
+function FilterLabel({
+  icon,
+  children,
+}: {
+  icon: keyof typeof FILTER_ICONS;
+  children: React.ReactNode;
+}) {
   return (
     <span className="filter-group-label">
       {FILTER_ICONS[icon]}
@@ -85,7 +94,10 @@ function FilterLabel({ icon, children }: { icon: keyof typeof FILTER_ICONS; chil
 
 // Builds a compact page list with ellipses so pagination never sprawls
 // across the screen once a catalog has more than a handful of pages.
-function getPaginationRange(current: number, total: number): (number | "dots")[] {
+function getPaginationRange(
+  current: number,
+  total: number,
+): (number | "dots")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const range: (number | "dots")[] = [1];
   const left = Math.max(2, current - 1);
@@ -98,7 +110,11 @@ function getPaginationRange(current: number, total: number): (number | "dots")[]
 }
 
 // ── Price range filter component (standalone to preserve input focus) ──
-function PriceRangeFilter({ onApply }: { onApply: (min: number, max: number) => void }) {
+function PriceRangeFilter({
+  onApply,
+}: {
+  onApply: (min: number, max: number) => void;
+}) {
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(0);
 
@@ -142,8 +158,6 @@ export function Shop() {
 
   const {
     filters,
-    searchInput,
-    setSearchInput,
     filteredProducts,
     dynamicFilters,
     hasActiveFilters,
@@ -159,6 +173,13 @@ export function Shop() {
     removeChip,
     goToPage,
   } = useProducts();
+
+  // Debug: log search state
+  useEffect(() => {
+    if (filters.search) {
+      console.log("Shop - filters.search:", filters.search, "filteredProducts:", filteredProducts.length);
+    }
+  }, [filters.search, filteredProducts]);
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"products" | "combo">("products");
@@ -178,7 +199,8 @@ export function Shop() {
 
   // Check if kit level filter is active
   const hasActiveKitLevel = kitLevel !== "all";
-  const hasActiveKitFilters = hasActiveKitLevel || kitMinPrice > 0 || kitMaxPrice > 0;
+  const hasActiveKitFilters =
+    hasActiveKitLevel || kitMinPrice > 0 || kitMaxPrice > 0;
 
   // Filter kits by price range
   const filteredKits = useMemo(() => {
@@ -202,7 +224,11 @@ export function Shop() {
     if (viewMode === "combo") {
       setKitsLoading(true);
       kitService
-        .getAll({ page: 1, limit: 50, level: kitLevel === "all" ? undefined : kitLevel })
+        .getAll({
+          page: 1,
+          limit: 50,
+          level: kitLevel === "all" ? undefined : kitLevel,
+        })
         .then((res) => setKits(res.data.data?.kits ?? []))
         .catch(() => toast.error("Failed to load kits"))
         .finally(() => setKitsLoading(false));
@@ -272,9 +298,8 @@ export function Shop() {
   }, [currentCourseId, currentLessons]);
   const recommendedProducts = useMemo(() => {
     if (!currentLesson) return [];
-    const lessonProductIds = currentLesson.linkedProducts?.map(
-      (product) => product.productId,
-    ) ?? [];
+    const lessonProductIds =
+      currentLesson.linkedProducts?.map((product) => product.productId) ?? [];
     return products
       .filter((product) => lessonProductIds.includes(product.id))
       .slice(0, 4);
@@ -328,13 +353,22 @@ export function Shop() {
     return "No products found";
   };
 
+  // Clear search function
+  const clearSearch = () => {
+    updateFilter("search", "");
+  };
+
   const paginationRange = useMemo(
     () => getPaginationRange(currentPage, totalPages),
     [currentPage, totalPages],
   );
 
   // Kit filter content for combo view
-  const KitFilterContent = ({ showHeader = true }: { showHeader?: boolean }) => (
+  const KitFilterContent = ({
+    showHeader = true,
+  }: {
+    showHeader?: boolean;
+  }) => (
     <>
       {showHeader && (
         <div className="filter-header">
@@ -351,7 +385,7 @@ export function Shop() {
               }}
               whileHover={{
                 scale: 1.05,
-                boxShadow: "0 4px 12px var(--clear-btn-glow)"
+                boxShadow: "0 4px 12px var(--clear-btn-glow)",
               }}
               whileTap={{ scale: 0.95 }}
             >
@@ -408,165 +442,167 @@ export function Shop() {
     </>
   );
 
-  const FilterContent = memo(({ showHeader = true }: { showHeader?: boolean }) => {
-    return (
-      <>
-        {showHeader && (
-          <div className="filter-header">
-            <span className="filter-title">Filters</span>
-            {hasActiveFilters && (
-              <motion.button
-                type="button"
-                onClick={clearFilters}
-                className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
-                style={{
-                  borderColor: "var(--clear-btn-border)",
-                  background: "var(--clear-btn-bg)",
-                  color: "var(--clear-btn-text)",
-                }}
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 4px 12px var(--clear-btn-glow)"
-                }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Clear all
-              </motion.button>
-            )}
-          </div>
-        )}
+  const FilterContent = memo(
+    ({ showHeader = true }: { showHeader?: boolean }) => {
+      return (
+        <>
+          {showHeader && (
+            <div className="filter-header">
+              <span className="filter-title">Filters</span>
+              {hasActiveFilters && (
+                <motion.button
+                  type="button"
+                  onClick={clearFilters}
+                  className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
+                  style={{
+                    borderColor: "var(--clear-btn-border)",
+                    background: "var(--clear-btn-bg)",
+                    color: "var(--clear-btn-text)",
+                  }}
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: "0 4px 12px var(--clear-btn-glow)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Clear all
+                </motion.button>
+              )}
+            </div>
+          )}
 
-        {/* Smart lesson filter */}
-        {currentCourseId && currentCourseComboIds.length > 0 && (
-          <div className="filter-group">
-            <button
-              className={`chip-filter ${lessonFilterActive ? "active" : ""}`}
-              onClick={() => {
-                setLessonFilterActive((active) => !active);
-                updateFilter("category", "all");
-              }}
-            >
-              📚 Based on your current lesson
-            </button>
-          </div>
-        )}
-
-        {/* Category */}
-        <div className="filter-group">
-          <FilterLabel icon="category">Category</FilterLabel>
-          <div className="filter-chip-group">
-            {categoryOptions.map(([key, cat]) => (
+          {/* Smart lesson filter */}
+          {currentCourseId && currentCourseComboIds.length > 0 && (
+            <div className="filter-group">
               <button
-                key={key}
-                className={`chip-filter ${filters.category === key ? "active" : ""}`}
-                onClick={() => updateFilter("category", key)}
+                className={`chip-filter ${lessonFilterActive ? "active" : ""}`}
+                onClick={() => {
+                  setLessonFilterActive((active) => !active);
+                  updateFilter("category", "all");
+                }}
               >
-                {cat.emoji} {cat.label}
+                📚 Based on your current lesson
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
 
-        {/* Color */}
-        {dynamicFilters.colors.length > 0 && (
+          {/* Category */}
           <div className="filter-group">
-            <FilterLabel icon="color">Color</FilterLabel>
+            <FilterLabel icon="category">Category</FilterLabel>
             <div className="filter-chip-group">
-              {dynamicFilters.colors.map((c) => (
+              {categoryOptions.map(([key, cat]) => (
                 <button
-                  key={c.name}
-                  className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
-                  onClick={() => toggleArrayFilter("color", c.name)}
+                  key={key}
+                  className={`chip-filter ${filters.category === key ? "active" : ""}`}
+                  onClick={() => updateFilter("category", key)}
                 >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: c.hex,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                    }}
-                  />
-                  {c.name}
+                  {cat.emoji} {cat.label}
                 </button>
               ))}
             </div>
           </div>
-        )}
 
-        {/* Material */}
-        {dynamicFilters.materials.length > 0 && (
-          <div className="filter-group">
-            <FilterLabel icon="material">Material</FilterLabel>
-            <div className="filter-chip-group">
-              {dynamicFilters.materials.map((m) => (
-                <button
-                  key={m.name}
-                  className={`chip-filter ${filters.material.includes(m.name) ? "active" : ""}`}
-                  onClick={() => toggleArrayFilter("material", m.name)}
-                >
-                  {m.name}
-                </button>
-              ))}
+          {/* Color */}
+          {dynamicFilters.colors.length > 0 && (
+            <div className="filter-group">
+              <FilterLabel icon="color">Color</FilterLabel>
+              <div className="filter-chip-group">
+                {dynamicFilters.colors.map((c) => (
+                  <button
+                    key={c.name}
+                    className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("color", c.name)}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: c.hex,
+                        border: "1px solid rgba(0,0,0,0.12)",
+                      }}
+                    />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Weight */}
-        {dynamicFilters.weights.length > 0 && (
-          <div className="filter-group">
-            <FilterLabel icon="weight">Weight</FilterLabel>
-            <div className="filter-chip-group">
-              {dynamicFilters.weights.map((w) => (
-                <button
-                  key={w.name}
-                  className={`chip-filter ${filters.weight.includes(w.name) ? "active" : ""}`}
-                  onClick={() => toggleArrayFilter("weight", w.name)}
-                >
-                  {w.name}
-                </button>
-              ))}
+          {/* Material */}
+          {dynamicFilters.materials.length > 0 && (
+            <div className="filter-group">
+              <FilterLabel icon="material">Material</FilterLabel>
+              <div className="filter-chip-group">
+                {dynamicFilters.materials.map((m) => (
+                  <button
+                    key={m.name}
+                    className={`chip-filter ${filters.material.includes(m.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("material", m.name)}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Difficulty */}
-        {dynamicFilters.difficulties.length > 0 && (
-          <div className="filter-group">
-            <FilterLabel icon="difficulty">Difficulty</FilterLabel>
-            <div className="filter-chip-group">
-              {dynamicFilters.difficulties.map((d) => (
-                <button
-                  key={d.name}
-                  className={`chip-filter ${filters.difficulty.includes(d.name) ? "active" : ""}`}
-                  onClick={() => toggleArrayFilter("difficulty", d.name)}
-                >
-                  {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
-                </button>
-              ))}
+          {/* Weight */}
+          {dynamicFilters.weights.length > 0 && (
+            <div className="filter-group">
+              <FilterLabel icon="weight">Weight</FilterLabel>
+              <div className="filter-chip-group">
+                {dynamicFilters.weights.map((w) => (
+                  <button
+                    key={w.name}
+                    className={`chip-filter ${filters.weight.includes(w.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("weight", w.name)}
+                  >
+                    {w.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Price range - standalone component with own state */}
-        <PriceRangeFilter
-          onApply={(min, max) => {
-            updateFilter("minPrice", min);
-            updateFilter("maxPrice", max);
-          }}
-        />
+          {/* Difficulty */}
+          {dynamicFilters.difficulties.length > 0 && (
+            <div className="filter-group">
+              <FilterLabel icon="difficulty">Difficulty</FilterLabel>
+              <div className="filter-chip-group">
+                {dynamicFilters.difficulties.map((d) => (
+                  <button
+                    key={d.name}
+                    className={`chip-filter ${filters.difficulty.includes(d.name) ? "active" : ""}`}
+                    onClick={() => toggleArrayFilter("difficulty", d.name)}
+                  >
+                    {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {!isLoading && (
-          <div className="filter-summary">
-            <Boxes size={13} />
-            Showing <strong>{displayedProducts.length}</strong> of {totalCount} products
-          </div>
-        )}
-      </>
-    );
-  });
+          {/* Price range - standalone component with own state */}
+          <PriceRangeFilter
+            onApply={(min, max) => {
+              updateFilter("minPrice", min);
+              updateFilter("maxPrice", max);
+            }}
+          />
 
+          {!isLoading && (
+            <div className="filter-summary">
+              <Boxes size={13} />
+              Showing <strong>{displayedProducts.length}</strong> of{" "}
+              {totalCount} products
+            </div>
+          )}
+        </>
+      );
+    },
+  );
 
   return (
     <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-8">
@@ -586,12 +622,12 @@ export function Shop() {
           background: var(--accent-blush) !important;
           color: var(--foreground) !important;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(240, 196, 224, 0.4);
+          box-shadow: 0 4px 12px var(--glow-primary);
         }
         .shop-mode-btn.shop-mode-active {
           background: var(--accent-blush);
           color: var(--foreground);
-          box-shadow: 0 2px 8px rgba(240, 196, 224, 0.4);
+          box-shadow: 0 2px 8px var(--glow-primary);
         }
         .dark .shop-mode-btn {
           border-color: var(--primary);
@@ -600,12 +636,12 @@ export function Shop() {
         .dark .shop-mode-btn:hover {
           background: var(--primary) !important;
           color: var(--primary-foreground) !important;
-          box-shadow: 0 4px 12px rgba(155, 111, 214, 0.35);
+          box-shadow: 0 4px 12px var(--glow-primary);
         }
         .dark .shop-mode-btn.shop-mode-active {
           background: var(--primary);
           color: var(--primary-foreground);
-          box-shadow: 0 2px 8px rgba(155, 111, 214, 0.3);
+          box-shadow: 0 2px 8px var(--glow-primary);
         }
         .mode-count {
           display: inline-flex;
@@ -625,7 +661,7 @@ export function Shop() {
 
         /* ── Top bar ── */
         .shop-top {
-          background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+          background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-700) 100%);
           padding: 2rem 1rem 1.5rem;
           position: relative; overflow: hidden;
         }
@@ -734,7 +770,7 @@ export function Shop() {
           max-height: calc(100vh - 8rem);
           overflow-y: auto;
         }
-        .dark .filter-panel { background: var(--surface) !important; border-color: rgba(155,111,214,0.15) !important; }
+        .dark .filter-panel { background: var(--surface) !important; border-color: var(--chip-border) !important; }
         .dark .filter-panel .filter-group-label { color: var(--foreground-muted) !important; }
         .dark .filter-panel .filter-title { color: var(--foreground) !important; }
         .dark .filter-panel .filter-clear { color: var(--primary) !important; }
@@ -810,7 +846,7 @@ export function Shop() {
           touch-action: manipulation;
         }
         .chip-filter:hover, .chip-filter:active { border-color: var(--primary); background: var(--accent-blush); color: var(--foreground); }
-        .dark .chip-filter { background: var(--surface); color: var(--foreground); border-color: rgba(155,111,214,0.15); }
+        .dark .chip-filter { background: var(--surface); color: var(--foreground); border-color: var(--chip-border); }
         .dark .chip-filter:hover, .dark .chip-filter:active { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
         .chip-filter.active { background: var(--accent-blush); color: var(--foreground); border-color: var(--primary); }
         .dark .chip-filter.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
@@ -837,7 +873,7 @@ export function Shop() {
           background: var(--accent-pink);
           color: var(--foreground);
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(240, 196, 224, 0.4);
+          box-shadow: 0 4px 12px var(--glow-primary);
         }
         .dark .add-cart-btn {
           background: var(--primary);
@@ -846,7 +882,7 @@ export function Shop() {
         }
         .dark .add-cart-btn:hover {
           background: var(--primary-hover);
-          box-shadow: 0 4px 12px rgba(155, 111, 214, 0.35);
+          box-shadow: 0 4px 12px var(--glow-primary);
         }
 
         /* ── Price range ── */
@@ -913,7 +949,7 @@ export function Shop() {
           border-radius: 18px;
           background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-card)), var(--color-bg-card));
           padding: 1rem;
-          box-shadow: 0 12px 32px rgba(44,36,32,0.08);
+          box-shadow: var(--shadow-card);
         }
         .lesson-banner-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
         .lesson-banner-title { font-weight: 700; color: var(--color-text); }
@@ -991,6 +1027,27 @@ export function Shop() {
           font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;
           text-transform: uppercase; color: var(--primary);
         }
+
+        /* ── Lesson banner & drawer CTA hover effects ── */
+        .lesson-add-btn {
+          transition: all 0.2s ease;
+        }
+        .lesson-add-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px var(--glow-primary);
+        }
+        .drawer-cta-btn {
+          width: 100%; padding: 13px;
+          background: var(--primary); color: var(--primary-foreground);
+          border: none; border-radius: 12px;
+          font-size: 0.95rem; font-weight: 600; cursor: pointer;
+          margin-top: 0.5rem; touch-action: manipulation;
+          transition: all 0.2s ease;
+        }
+        .drawer-cta-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px var(--glow-primary);
+        }
       `}</style>
 
       {/* ── TOP BAR ── */}
@@ -1007,15 +1064,6 @@ export function Shop() {
               <Sparkles size={14} />
               <strong>{totalCount}</strong>&nbsp;items in the shop
             </div>
-          </div>
-          <div className="search-wrap">
-            <Search size={16} className="search-icon" />
-            <input
-              className="search-input"
-              placeholder={t("shop.searchPlaceholder")}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-            />
           </div>
           {viewMode === "products" && (
             <div className="quick-nav">
@@ -1065,19 +1113,12 @@ export function Shop() {
                 </div>
                 <button
                   onClick={() => requireAuth(addAllLessonProducts)}
-                  className="chip-filter active"
-                  style={{ marginBottom: "0.75rem", transition: "all 0.2s" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(196,94,62,0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "";
-                    e.currentTarget.style.boxShadow = "";
-                  }}
+                  className="chip-filter active lesson-add-btn"
+                  style={{ marginBottom: "0.75rem" }}
                 >
-                  <span style={{ position: "relative", zIndex: 1 }}>Add to cart</span>
+                  <span style={{ position: "relative", zIndex: 1 }}>
+                    Add to cart
+                  </span>
                 </button>
                 <div className="lesson-banner-grid">
                   {recommendedProducts.map((product) => (
@@ -1112,7 +1153,9 @@ export function Shop() {
               }`}
             >
               🎁 Combo
-              {kits.length > 0 && <span className="mode-count">{kits.length}</span>}
+              {kits.length > 0 && (
+                <span className="mode-count">{kits.length}</span>
+              )}
             </button>
           </div>
 
@@ -1284,11 +1327,28 @@ export function Shop() {
                   <p style={{ fontSize: "0.83rem" }}>
                     Try adjusting your filters
                   </p>
-                  {hasActiveFilters && (
-                    <button type="button" className="empty-state-cta" onClick={clearFilters}>
-                      Clear filters
-                    </button>
-                  )}
+                  <div style={{ marginTop: "16px", display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        className="empty-state-cta"
+                        onClick={clearFilters}
+                        style={{ marginRight: "8px" }}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                    {filters.search && (
+                      <button
+                        type="button"
+                        className="empty-state-cta"
+                        onClick={clearSearch}
+                        style={{ background: "var(--accent-blush)", color: "var(--foreground)" }}
+                      >
+                        Clear search
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1320,7 +1380,12 @@ export function Shop() {
                           fontWeight: 700,
                         }}
                       >
-                        {[hasActiveKitLevel, kitMinPrice > 0 || kitMaxPrice > 0].filter(Boolean).length}
+                        {
+                          [
+                            hasActiveKitLevel,
+                            kitMinPrice > 0 || kitMaxPrice > 0,
+                          ].filter(Boolean).length
+                        }
                       </span>
                     )}
                   </button>
@@ -1343,7 +1408,11 @@ export function Shop() {
                   <Package size={44} className="mx-auto mb-3 opacity-40" />
                   <p>No kits found</p>
                   {hasActiveKitFilters && (
-                    <button type="button" className="empty-state-cta" onClick={clearKitFilters}>
+                    <button
+                      type="button"
+                      className="empty-state-cta"
+                      onClick={clearKitFilters}
+                    >
                       Clear filters
                     </button>
                   )}
@@ -1383,7 +1452,7 @@ export function Shop() {
                               toast.success(
                                 isFavorite
                                   ? t("shop.removedFromFavorites")
-                                  : "Added to favorites"
+                                  : "Added to favorites",
                               );
                             }}
                             className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
@@ -1402,7 +1471,7 @@ export function Shop() {
                                 "w-4 h-4 transition-colors",
                                 isFavorite
                                   ? "fill-destructive text-destructive"
-                                  : "text-muted-foreground hover:text-destructive"
+                                  : "text-muted-foreground hover:text-destructive",
                               )}
                             />
                           </button>
@@ -1430,6 +1499,28 @@ export function Shop() {
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {kit.description}
                           </p>
+                          {kit.totalRatings > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-0.5">
+                                {Array.from({ length: 5 }, (_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={cn(
+                                      "w-3.5 h-3.5",
+                                      i < Math.floor(kit.averageRating)
+                                        ? "fill-amber-400 text-amber-400"
+                                        : i < kit.averageRating
+                                          ? "fill-amber-400/50 text-amber-400"
+                                          : "fill-muted-foreground/20 text-muted-foreground/30",
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {kit.averageRating.toFixed(1)} ({kit.totalRatings})
+                              </span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-lg font-bold text-primary">
                               {formatPrice(kit.price)}
@@ -1475,37 +1566,18 @@ export function Shop() {
               >
                 <X size={20} />
               </button>
-              {viewMode === "products" ? <FilterContent /> : <KitFilterContent />}
+              {viewMode === "products" ? (
+                <FilterContent />
+              ) : (
+                <KitFilterContent />
+              )}
               <button
                 onClick={() => setFilterOpen(false)}
-                style={{
-                  width: "100%",
-                  padding: "13px",
-                  background: "var(--primary)",
-                  color: "var(--primary-foreground)",
-                  border: "none",
-                  borderRadius: "12px",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  marginTop: "0.5rem",
-                  touchAction: "manipulation",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 12px rgba(196,94,62,0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "";
-                  e.currentTarget.style.boxShadow = "";
-                }}
+                className="drawer-cta-btn"
               >
                 {viewMode === "products"
                   ? `Show ${resultCount} results`
-                  : `Show ${filteredKits.length} results`
-                }
+                  : `Show ${filteredKits.length} results`}
               </button>
             </motion.div>
           </>

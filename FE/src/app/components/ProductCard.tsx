@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Heart, Plus, Eye, Sparkles } from "lucide-react";
+import { Heart, Plus, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import type { Product } from "../data/products";
@@ -8,7 +8,6 @@ import { getBasePrice } from "../data/products";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
-import { useTheme } from "../context/ThemeContext";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
@@ -36,596 +35,6 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-// Fixed (non-random) confetti burst layout — computed once so every render
-// and every hover is identical, no per-render jitter. Each piece bursts out
-// from the knot at its own angle/distance/rotation, like a party popper.
-const CONFETTI_PIECES = (() => {
-  const defs: Array<{
-    angle: number; // degrees, 0 = right, negative = up (SVG y-down)
-    dist: number;
-    rotate: number;
-    shape: "rect" | "circle" | "strip";
-    size: number;
-    tone: "accent" | "color" | "gold" | "white";
-    delay: number;
-  }> = [
-    {
-      angle: -100,
-      dist: 92,
-      rotate: 340,
-      shape: "rect",
-      size: 7,
-      tone: "gold",
-      delay: 0,
-    },
-    {
-      angle: -66,
-      dist: 108,
-      rotate: -260,
-      shape: "circle",
-      size: 4.5,
-      tone: "white",
-      delay: 0.02,
-    },
-    {
-      angle: -34,
-      dist: 96,
-      rotate: 200,
-      shape: "strip",
-      size: 10,
-      tone: "accent",
-      delay: 0.01,
-    },
-    {
-      angle: -6,
-      dist: 118,
-      rotate: -180,
-      shape: "rect",
-      size: 6,
-      tone: "color",
-      delay: 0.035,
-    },
-    {
-      angle: 26,
-      dist: 100,
-      rotate: 300,
-      shape: "circle",
-      size: 5,
-      tone: "gold",
-      delay: 0,
-    },
-    {
-      angle: 58,
-      dist: 92,
-      rotate: -240,
-      shape: "strip",
-      size: 9,
-      tone: "white",
-      delay: 0.02,
-    },
-    {
-      angle: 96,
-      dist: 86,
-      rotate: 260,
-      shape: "rect",
-      size: 6,
-      tone: "accent",
-      delay: 0.045,
-    },
-    {
-      angle: 130,
-      dist: 88,
-      rotate: -300,
-      shape: "circle",
-      size: 5,
-      tone: "color",
-      delay: 0.01,
-    },
-    {
-      angle: 158,
-      dist: 102,
-      rotate: 220,
-      shape: "rect",
-      size: 7,
-      tone: "gold",
-      delay: 0.03,
-    },
-    {
-      angle: -158,
-      dist: 96,
-      rotate: -180,
-      shape: "circle",
-      size: 4,
-      tone: "white",
-      delay: 0.02,
-    },
-    {
-      angle: -128,
-      dist: 90,
-      rotate: 320,
-      shape: "strip",
-      size: 10,
-      tone: "accent",
-      delay: 0.015,
-    },
-    {
-      angle: -200 + 180,
-      dist: 108,
-      rotate: -260,
-      shape: "rect",
-      size: 6,
-      tone: "color",
-      delay: 0.04,
-    },
-    {
-      angle: 210,
-      dist: 100,
-      rotate: 200,
-      shape: "circle",
-      size: 5,
-      tone: "gold",
-      delay: 0.012,
-    },
-    {
-      angle: -14,
-      dist: 132,
-      rotate: 260,
-      shape: "rect",
-      size: 6,
-      tone: "white",
-      delay: 0.05,
-    },
-  ];
-  return defs.map((d) => {
-    const rad = (d.angle * Math.PI) / 180;
-    return { ...d, dx: Math.cos(rad) * d.dist, dy: Math.sin(rad) * d.dist };
-  });
-})();
-
-// ── Animated Gift Ribbon: a clean horizontal ribbon + hanging material tag
-//    at rest (matches the "wrapped" reference look), which pops apart into
-//    confetti like a party popper the moment the card is hovered. ──
-function AnimatedGiftRibbon({
-  isHovered,
-  color = "#E8DEFF",
-  accent = "#5B3DF5",
-  level = "Beginner",
-}: {
-  isHovered: boolean;
-  color?: string;
-  accent?: string;
-  level?: string;
-}) {
-  const toneColor = { accent, color, gold: "#F5C94A", white: "#FFFFFF" };
-  const tagFontSize = level.length > 9 ? "6" : level.length > 6 ? "6.8" : "7.5";
-
-  return (
-    <svg
-      viewBox="0 0 300 400"
-      width="100%"
-      height="100%"
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        zIndex: 2,
-      }}
-      aria-hidden
-    >
-      <defs>
-        <filter
-          id="unw-ribbon-shadow"
-          x="-5%"
-          y="-10%"
-          width="110%"
-          height="140%"
-        >
-          <feDropShadow
-            dx="0"
-            dy="4"
-            stdDeviation="4"
-            floodColor="rgba(30,10,50,0.22)"
-          />
-        </filter>
-      </defs>
-
-      {/* ── Ribbon band (still wrapped) — a single clean horizontal strip,
-          exactly like the reference: no extra boxes crossing it. It loosens
-          and droops away once the bow at the center pops. ── */}
-      <motion.g
-        filter="url(#unw-ribbon-shadow)"
-        animate={
-          isHovered
-            ? {
-                y: 10,
-                opacity: 0,
-                transition: {
-                  duration: 0.35,
-                  delay: 0.06,
-                  ease: [0.16, 1, 0.3, 1],
-                },
-              }
-            : {
-                y: 0,
-                opacity: 1,
-                transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
-              }
-        }
-      >
-        {/* Shadow cast by the ribbon */}
-        <path
-          d="M -6,156 C 80,146 180,165 306,153 L 306,170 C 180,180 80,163 -6,172 Z"
-          fill="rgba(20,5,40,0.16)"
-        />
-        {/* Ribbon body */}
-        <path
-          d="M -4,148 C 80,138 180,158 304,146 L 304,166 C 180,176 80,158 -4,168 Z"
-          fill={color}
-          fillOpacity="0.92"
-        />
-        {/* Top sheen (light reflection) */}
-        <path
-          d="M -4,148 C 80,138 180,158 304,146 L 304,154 C 180,166 80,146 -4,156 Z"
-          fill="white"
-          fillOpacity="0.28"
-        />
-        {/* Top / bottom edge threads */}
-        <path
-          d="M -4,148 C 80,138 180,158 304,146"
-          stroke={accent}
-          strokeWidth="0.9"
-          fill="none"
-          strokeOpacity="0.45"
-        />
-        <path
-          d="M -4,168 C 80,158 180,178 304,166"
-          stroke={accent}
-          strokeWidth="0.9"
-          fill="none"
-          strokeOpacity="0.45"
-        />
-        {/* Loose thread tail curling away on the right */}
-        <path
-          d="M 304,153 C 316,150 320,146 318,140 C 316,136 310,137 308,142"
-          stroke={accent}
-          strokeWidth="1.2"
-          fill="none"
-          strokeLinecap="round"
-          strokeOpacity="0.55"
-        />
-      </motion.g>
-
-      {/* ── Pop flash — a quick ring crack at the knot, like the moment a
-          party popper goes off. Pure light/shadow, no fill so it never
-          looks like a solid blob. ── */}
-      <motion.circle
-        cx="150"
-        cy="148"
-        r="6"
-        fill="none"
-        stroke={accent}
-        strokeWidth="2"
-        initial={{ r: 6, opacity: 0 }}
-        animate={
-          isHovered
-            ? {
-                r: [6, 34],
-                opacity: [0.65, 0],
-                transition: { duration: 0.35, ease: "easeOut" },
-              }
-            : {
-                r: 6,
-                opacity: 0,
-                transition: { duration: 0.15 },
-              }
-        }
-      />
-
-      {/* ── Popper cap — the knot itself flicks up and away first, as if it
-          just cracked open, a beat before the confetti follows. ── */}
-      <motion.g
-        animate={
-          isHovered
-            ? {
-                x: 6,
-                y: -46,
-                rotate: 70,
-                opacity: 0,
-                transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
-              }
-            : {
-                x: 0,
-                y: 0,
-                rotate: 0,
-                opacity: 1,
-                transition: { duration: 0.3, delay: 0.05 },
-              }
-        }
-        style={{ originX: 150, originY: 148 }}
-      >
-        <ellipse
-          cx="150"
-          cy="148"
-          rx="7"
-          ry="5"
-          fill={accent}
-          fillOpacity="0.85"
-        />
-        <ellipse
-          cx="150"
-          cy="148"
-          rx="3"
-          ry="2"
-          fill={color}
-          fillOpacity="0.9"
-        />
-      </motion.g>
-
-      {/* ── Confetti burst ── */}
-      {CONFETTI_PIECES.map((p, i) => {
-        const fill = toneColor[p.tone];
-        const commonAnimate = isHovered
-          ? {
-              x: [0, p.dx * 0.55, p.dx, p.dx * 1.05],
-              y: [0, p.dy * 0.55 - 18, p.dy, p.dy + 26],
-              rotate: [0, p.rotate * 0.5, p.rotate, p.rotate * 1.15],
-              opacity: [0, 1, 1, 0],
-              scale: [0.3, 1, 1, 0.8],
-              transition: {
-                duration: 0.85,
-                delay: p.delay + 0.05,
-                times: [0, 0.3, 0.7, 1],
-                ease: [0.22, 1, 0.36, 1],
-              },
-            }
-          : {
-              x: 0,
-              y: 0,
-              rotate: 0,
-              opacity: 0,
-              scale: 0.3,
-              transition: { duration: 0.15 },
-            };
-
-        if (p.shape === "circle") {
-          return (
-            <motion.circle
-              key={i}
-              cx="150"
-              cy="148"
-              r={p.size / 2}
-              fill={fill}
-              initial={{ opacity: 0, scale: 0.3 }}
-              animate={commonAnimate}
-              style={{ originX: 150, originY: 148 }}
-            />
-          );
-        }
-        if (p.shape === "strip") {
-          return (
-            <motion.rect
-              key={i}
-              x={150 - p.size}
-              y={148 - 1.4}
-              width={p.size * 2}
-              height="2.8"
-              rx="1.4"
-              fill={fill}
-              initial={{ opacity: 0, scale: 0.3 }}
-              animate={commonAnimate}
-              style={{ originX: 150, originY: 148 }}
-            />
-          );
-        }
-        return (
-          <motion.rect
-            key={i}
-            x={150 - p.size / 2}
-            y={148 - p.size / 2}
-            width={p.size}
-            height={p.size}
-            rx="1.5"
-            fill={fill}
-            initial={{ opacity: 0, scale: 0.3 }}
-            animate={commonAnimate}
-            style={{ originX: 150, originY: 148 }}
-          />
-        );
-      })}
-
-      {/* ── Loose ribbon end (right) — droops down instead of stretching far
-          away, consistent with "the bow came undone" rather than "pulled". ── */}
-      <motion.path
-        d="M 310,153 C 322,150 326,146 324,140 C 322,136 316,137 314,142"
-        stroke={accent}
-        strokeWidth="1.2"
-        fill="none"
-        strokeLinecap="round"
-        strokeOpacity="0.55"
-        animate={
-          isHovered
-            ? {
-                d: "M 310,158 C 320,162 324,168 322,174 C 320,178 315,177 314,172",
-                strokeOpacity: 0.4,
-                transition: {
-                  duration: 0.4,
-                  delay: 0.08,
-                  ease: [0.16, 1, 0.3, 1],
-                },
-              }
-            : {
-                d: "M 310,153 C 322,150 326,146 324,140 C 322,136 316,137 314,142",
-                strokeOpacity: 0.55,
-                transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
-              }
-        }
-      />
-
-      {/* ── Hanging material tag — the piece the reference screenshot shows
-          in the resting/"wrapped" state: string + ring + tag card with the
-          product's difficulty level and "Len&Em Materials". ── */}
-      <motion.g
-        initial={{ y: 0, opacity: 1 }}
-        animate={
-          isHovered
-            ? {
-                y: 40,
-                opacity: 0,
-                transition: {
-                  duration: 0.4,
-                  delay: 0.2,
-                  ease: [0.16, 1, 0.3, 1],
-                },
-              }
-            : {
-                y: 0,
-                opacity: 1,
-                transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
-              }
-        }
-      >
-        <line
-          x1="150"
-          y1="170"
-          x2="150"
-          y2="192"
-          stroke={accent}
-          strokeWidth="0.85"
-          strokeDasharray="2.5 2"
-          strokeOpacity="0.65"
-        />
-        <circle
-          cx="150"
-          cy="193"
-          r="4"
-          fill="white"
-          fillOpacity="0.92"
-          stroke={accent}
-          strokeWidth="0.9"
-          strokeOpacity="0.6"
-        />
-        <circle cx="150" cy="193" r="2" fill={color} fillOpacity="0.7" />
-        <rect
-          x="118"
-          y="197"
-          width="64"
-          height="32"
-          rx="4"
-          fill="white"
-          fillOpacity="0.94"
-          stroke={accent}
-          strokeWidth="0.85"
-          strokeOpacity="0.5"
-        />
-        <text
-          x="150"
-          y="211"
-          textAnchor="middle"
-          fontFamily="'Inter', sans-serif"
-          fontSize={tagFontSize}
-          fontWeight="700"
-          letterSpacing="1"
-          fill={accent}
-          fillOpacity="0.9"
-        >
-          {level.toUpperCase()}
-        </text>
-        <rect
-          x="128"
-          y="216"
-          width="44"
-          height="2"
-          rx="1"
-          fill={color}
-          fillOpacity="0.7"
-        />
-        <text
-          x="150"
-          y="226"
-          textAnchor="middle"
-          fontFamily="'Inter', sans-serif"
-          fontSize="5.5"
-          fill={accent}
-          fillOpacity="0.55"
-        >
-          Len&amp;Em Materials
-        </text>
-      </motion.g>
-
-      <motion.path
-        d="M 140,172 C 126,180 120,186 118,198"
-        stroke={accent}
-        strokeWidth="0.9"
-        fill="none"
-        strokeLinecap="round"
-        strokeOpacity="0.5"
-        initial={{ d: "M 140,172 C 126,180 120,186 118,198", strokeOpacity: 0.5 }}
-        animate={
-          isHovered
-            ? {
-                d: "M 140,178 C 128,186 122,192 120,200",
-                strokeOpacity: 0.35,
-                transition: {
-                  duration: 0.4,
-                  delay: 0.08,
-                  ease: [0.16, 1, 0.3, 1],
-                },
-              }
-            : {
-                d: "M 140,172 C 126,180 120,186 118,198",
-                strokeOpacity: 0.5,
-                transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
-              }
-        }
-      />
-    </svg>
-  );
-}
-
-// ── Ambient sparkle accents that fade in on hover (purely decorative, absolutely positioned) ──
-function HoverSparkles({ isHovered }: { isHovered: boolean }) {
-  const sparkles = [
-    { top: "8%", left: "10%", size: 12, delay: 0 },
-    { top: "18%", left: "88%", size: 9, delay: 0.08 },
-    { top: "72%", left: "6%", size: 8, delay: 0.16 },
-  ];
-  return (
-    <>
-      {sparkles.map((s, i) => (
-        <motion.div
-          key={i}
-          style={{
-            position: "absolute",
-            top: s.top,
-            left: s.left,
-            zIndex: 4,
-            pointerEvents: "none",
-            color: "#fff",
-            filter: "drop-shadow(0 1px 4px rgba(107,63,160,0.5))",
-          }}
-          initial={{ opacity: 0, scale: 0.4 }}
-          animate={
-            isHovered
-              ? {
-                  opacity: [0, 1, 0],
-                  scale: [0.4, 1, 0.4],
-                  transition: {
-                    duration: 1.4,
-                    delay: s.delay,
-                    repeat: Infinity,
-                    repeatDelay: 0.6,
-                  },
-                }
-              : { opacity: 0, scale: 0.4, transition: { duration: 0.2 } }
-          }
-        >
-          <Sparkles size={s.size} strokeWidth={1.5} fill="currentColor" />
-        </motion.div>
-      ))}
-    </>
-  );
-}
-
 export const ProductCard = memo(function ProductCard({
   product,
   relatedLessonId,
@@ -635,7 +44,6 @@ export const ProductCard = memo(function ProductCard({
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
-  const { isDark } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
   const [quickViewHovered, setQuickViewHovered] = useState(false);
 
@@ -693,24 +101,18 @@ export const ProductCard = memo(function ProductCard({
   return (
     // NOTE ON LAYOUT STABILITY (no gaps in sibling cards on hover):
     // 1. The lift/scale effect below is done with `transform` (translateY +
-    //    scale) and a bumped `z-index`, never with width/height/margin.
-    //    `transform` is purely visual and is taken out of normal document
-    //    flow calculations, so the CSS Grid track this card lives in NEVER
-    //    resizes — sibling cards stay exactly where they are, no empty gaps
-    //    open up anywhere in the grid, no matter which card is hovered.
+    //    scale) and a bumped `z-index`, never with width/height/margin, so
+    //    the CSS Grid track this card lives in never resizes.
     // 2. `isolation: isolate` + `contain: layout` scope the raised z-index
-    //    and any repaint to this card only, so a hovered card is allowed to
-    //    visually overlap the space around it (as intended — it "grows" on
-    //    top of the page) without ever touching another card's own box.
-    // 3. The rating + "Add to cart" row further down has a fixed-height
-    //    wrapper that never changes size — its content is an absolutely
-    //    positioned layer that only fades/slides inside that fixed box.
+    //    and repaint to this card only.
+    // 3. The rating + "Add to cart" row has a height-animated wrapper that
+    //    only affects this card's own box (grid uses align-items: start).
     <motion.article
       initial={{ opacity: 1, y: 0 }}
       animate={{
         opacity: 1,
         y: isHovered ? -6 : 0,
-        scale: isHovered ? 1.025 : 1,
+        scale: isHovered ? 1.02 : 1,
       }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       onMouseEnter={() => setIsHovered(true)}
@@ -724,11 +126,8 @@ export const ProductCard = memo(function ProductCard({
         background: "var(--card)",
         borderRadius: "24px",
         overflow: "hidden",
-        boxShadow: isHovered
-          ? "0 20px 60px rgba(60,40,100,0.18)"
-          : "0 2px 12px rgba(60,40,100,0.06), 0 0 0 1px rgba(107,63,160,0.04)",
-        border: "1px solid var(--border-light)",
-        transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        boxShadow: isHovered ? "var(--shadow-card-hover)" : "var(--shadow-card)",
+        transition: "box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         position: "relative",
         isolation: "isolate",
         contain: "layout",
@@ -736,30 +135,7 @@ export const ProductCard = memo(function ProductCard({
         transformOrigin: "center bottom",
         willChange: "transform",
       }}
-      className={isHovered ? "dark:border-[#7C63FF]/40" : ""}
     >
-      {/* Subtle animated gradient halo behind the card, only visible on hover */}
-      <motion.div
-        aria-hidden
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isHovered ? 1 : 0 }}
-        transition={{ duration: 0.35 }}
-        style={{
-          position: "absolute",
-          inset: "-1px",
-          borderRadius: "21px",
-          padding: "1px",
-          zIndex: 0,
-          pointerEvents: "none",
-          background:
-            "linear-gradient(135deg, var(--primary) 0%, var(--accent-blush, #E8DEFF) 50%, var(--primary) 100%)",
-          WebkitMask:
-            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-          WebkitMaskComposite: "xor",
-          maskComposite: "exclude",
-        }}
-      />
-
       {/* ── Image area ── */}
       <Link
         to={`/shop/product/${product.id}`}
@@ -777,7 +153,7 @@ export const ProductCard = memo(function ProductCard({
           }}
         >
           <motion.div
-            animate={{ scale: isHovered ? 1.1 : 1 }}
+            animate={{ scale: isHovered ? 1.08 : 1 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             style={{ width: "100%", height: "100%" }}
           >
@@ -789,15 +165,12 @@ export const ProductCard = memo(function ProductCard({
                 height: "100%",
                 objectFit: "cover",
                 objectPosition: "center",
-                filter: isHovered
-                  ? "brightness(1.04) saturate(1.05)"
-                  : "brightness(0.97) saturate(0.96)",
                 transition: "filter 0.4s ease",
               }}
             />
           </motion.div>
 
-          {/* Ambient image vignette */}
+          {/* Ambient image vignette — subtle, keeps top badges legible */}
           <div
             style={{
               position: "absolute",
@@ -807,13 +180,13 @@ export const ProductCard = memo(function ProductCard({
             }}
           />
 
-          {/* Soft glow sweep that passes over the image on hover */}
+          {/* Single soft glow sweep on hover — the one decorative flourish we keep */}
           <motion.div
             aria-hidden
             initial={{ opacity: 0, x: "-120%" }}
             animate={{
               x: isHovered ? "120%" : "-120%",
-              opacity: isHovered ? 0.5 : 0,
+              opacity: isHovered ? 0.35 : 0,
             }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             style={{
@@ -825,20 +198,10 @@ export const ProductCard = memo(function ProductCard({
               pointerEvents: "none",
               zIndex: 1,
               background:
-                "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+                "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)",
               transform: "skewX(-12deg)",
             }}
           />
-
-          {/* Animated Gift Ribbon */}
-          <AnimatedGiftRibbon
-            isHovered={isHovered}
-            color="var(--accent-pink)"
-            accent="var(--primary)"
-            level={product.difficulty}
-          />
-
-          <HoverSparkles isHovered={isHovered} />
 
           {/* Heart button */}
           <motion.button
@@ -864,7 +227,7 @@ export const ProductCard = memo(function ProductCard({
               justifyContent: "center",
               cursor: "pointer",
               zIndex: 5,
-              boxShadow: "0 2px 8px rgba(107,63,160,0.15)",
+              boxShadow: "var(--shadow-sm)",
             }}
             aria-label={
               isFavorite(product.id)
@@ -892,7 +255,7 @@ export const ProductCard = memo(function ProductCard({
             </motion.span>
           </motion.button>
 
-          {/* Badge */}
+          {/* Level badge */}
           <div
             style={{
               position: "absolute",
@@ -924,11 +287,11 @@ export const ProductCard = memo(function ProductCard({
                 background: "var(--primary)",
                 border: "none",
                 fontFamily: "'Caveat', cursive",
-                fontSize: "0.65rem",
+                fontSize: "0.7rem",
                 fontWeight: 700,
                 color: "var(--primary-foreground)",
                 cursor: "pointer",
-                boxShadow: "0 2px 6px rgba(107,63,160,0.2)",
+                boxShadow: "0 2px 8px var(--glow-primary)",
                 zIndex: 5,
               }}
             >
@@ -936,9 +299,7 @@ export const ProductCard = memo(function ProductCard({
             </button>
           )}
 
-          {/* Quick view — always mounted (never conditionally rendered) so it can
-              never affect the image container's box; purely opacity/scale driven,
-              which keeps it perfectly centered and legible every time it appears. */}
+          {/* Quick view — always mounted, opacity/scale driven only */}
           <motion.button
             type="button"
             initial={{ opacity: 0, scale: 0.85 }}
@@ -956,7 +317,7 @@ export const ProductCard = memo(function ProductCard({
             style={{
               position: "absolute",
               bottom: "16px",
-              left: "30%",
+              left: "50%",
               transform: "translateX(-50%)",
               display: "inline-flex",
               alignItems: "center",
@@ -965,20 +326,14 @@ export const ProductCard = memo(function ProductCard({
               padding: "9px 18px",
               minWidth: "128px",
               borderRadius: "999px",
-              background: quickViewHovered
-                ? isDark
-                  ? ""
-                  : ""
-                : isDark
-                  ? "var(--foreground)"
-                  : "var(--bg-overlay-96)",
+              background: quickViewHovered ? "var(--primary)" : "var(--bg-overlay-92)",
               backdropFilter: "blur(10px)",
               border: quickViewHovered
                 ? "1.5px solid var(--primary)"
-                : "1px solid rgba(255,255,255,0.6)",
+                : "1px solid var(--border)",
               boxShadow: quickViewHovered
-                ? "0 8px 20px rgba(107,63,160,0.4)"
-                : "0 6px 18px rgba(58,42,77,0.22)",
+                ? "0 8px 22px var(--glow-primary)"
+                : "var(--shadow-sm)",
               cursor: "pointer",
               whiteSpace: "nowrap",
               zIndex: 6,
@@ -986,25 +341,16 @@ export const ProductCard = memo(function ProductCard({
               fontFamily: "'Inter', sans-serif",
               fontSize: "0.74rem",
               fontWeight: 700,
-              color: quickViewHovered
-                ? isDark
-                  ? "var(--foreground)"
-                  : "var(--primary-foreground)"
-                : isDark
-                  ? "#000000"
-                  : "var(--foreground)",
+              color: quickViewHovered ? "var(--primary-foreground)" : "var(--foreground)",
               letterSpacing: "0.01em",
-              transition:
-                "background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease",
+              transition: "background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease",
             }}
           >
             <Eye
               size={14}
               strokeWidth={2}
               style={{
-                color: quickViewHovered
-                  ? "var(--primary-foreground)"
-                  : "var(--primary)",
+                color: quickViewHovered ? "var(--primary-foreground)" : "var(--primary)",
                 flexShrink: 0,
                 transition: "color 0.2s ease",
               }}
@@ -1020,7 +366,6 @@ export const ProductCard = memo(function ProductCard({
           padding: "16px 20px",
           display: "flex",
           flexDirection: "column",
-          gap: "0",
           flex: 1,
           position: "relative",
           zIndex: 1,
@@ -1041,14 +386,13 @@ export const ProductCard = memo(function ProductCard({
               alignItems: "center",
               padding: "2px 10px",
               borderRadius: "999px",
-              background: isDark ? "var(--primary)" : "var(--accent-pink)",
-              border: "1px solid var(--border)",
+              background: "var(--accent-pink)",
               fontFamily: "'Poppins', sans-serif",
               fontSize: "0.62rem",
               fontWeight: 600,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "var(--foreground)",
+              color: "var(--text-accent)",
             }}
           >
             {product.category}
@@ -1061,7 +405,7 @@ export const ProductCard = memo(function ProductCard({
               fontFamily: "'Playfair Display', serif",
               fontSize: "1.15rem",
               fontWeight: 700,
-              color: isDark ? "var(--primary)" : "var(--primary)",
+              color: "var(--primary)",
               letterSpacing: "-0.02em",
               lineHeight: 1,
               transformOrigin: "right center",
@@ -1082,13 +426,7 @@ export const ProductCard = memo(function ProductCard({
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: "1.05rem",
               fontWeight: 600,
-              color: isHovered
-                ? isDark
-                  ? "var(--primary)"
-                  : "var(--primary)"
-                : isDark
-                  ? "var(--foreground)"
-                  : "#000000",
+              color: isHovered ? "var(--primary)" : "var(--foreground)",
               letterSpacing: "-0.015em",
               lineHeight: 1.2,
               marginBottom: "4px",
@@ -1147,14 +485,9 @@ export const ProductCard = memo(function ProductCard({
         </div>
 
         {/* ── Rating + Add to cart zone ──
-            Compact by default (takes NO extra space) — only reveals its
-            content, and only grows its own height, when THIS card is
-            hovered. `AnimatePresence` + `height: "auto"` animates the
-            reveal/collapse smoothly; `overflow: hidden` keeps the
-            transition clean. Because the parent grid uses
-            `align-items: start` (see .product-grid in Shop.tsx), this
-            card growing on hover no longer stretches its row siblings —
-            so there's no need to reserve fixed empty space up front. */}
+            Compact by default — only reveals content (and only grows its own
+            height) when THIS card is hovered/touched. Because the parent
+            grid uses align-items: start, this never disturbs sibling rows. */}
         <div style={{ marginTop: showReveal ? "2px" : "0" }}>
           <AnimatePresence initial={false}>
             {showReveal && (

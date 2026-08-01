@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../components/ui/badge";
@@ -83,6 +83,7 @@ interface MaterialItem {
 
 export function LessonPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { addToCart, addKitToCart } = useCart();
   const { courseId, lessonId } = useParams();
@@ -102,6 +103,14 @@ export function LessonPage() {
   const [loading, setLoading] = useState(true);
   const [watchedSeconds, setWatchedSeconds] = useState(0);
   const watchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  // Get search query from URL
+  const searchQuery = searchParams.get("search") || "";
+  
+  // Debug: log search state
+  useEffect(() => {
+    console.log("LessonPage - searchQuery:", searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (!courseId || !lessonId) return;

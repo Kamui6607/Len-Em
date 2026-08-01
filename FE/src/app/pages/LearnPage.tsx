@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   BookOpen,
   Clock,
@@ -45,6 +45,7 @@ type ActiveFilterChip = { type: "level" | "tag"; value: string; label: string };
 export function LearnPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, user, setUser } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,9 @@ export function LearnPage() {
   const [selectedLevels, setSelectedLevels] = useState<CourseLevel[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  
+  // Get search query from URL
+  const searchQuery = searchParams.get("search") || "";
 
   const levelLabels: Record<CourseLevel, string> = {
     beginner: t("learn.beginner"),
@@ -87,8 +91,19 @@ export function LearnPage() {
       selectedLevels.length === 0 || selectedLevels.includes(course.level);
     const matchesTags =
       selectedTags.length === 0 || selectedTags.some((tag) => course.tags.includes(tag));
-    return matchesLevel && matchesTags;
+    
+    // Search filter
+    const matchesSearch = !searchQuery.trim() || 
+      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return matchesLevel && matchesTags && matchesSearch;
   });
+
+  // Debug: log search state
+  useEffect(() => {
+    console.log("LearnPage - searchQuery:", searchQuery, "filteredCourses:", filteredCourses.length);
+  }, [searchQuery, filteredCourses]);
 
   const toggleValue = <T extends string>(
     value: T,

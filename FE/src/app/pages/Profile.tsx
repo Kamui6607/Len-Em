@@ -16,6 +16,10 @@ import {
   EyeOff,
   Loader as Loader2,
   Camera,
+  Check,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -96,6 +100,17 @@ export function Profile({ embedded = false }: ProfileProps) {
   // ── File input ref for avatar ──
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Avatar crop state ──
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [avatarZoom, setAvatarZoom] = useState(1);
+  const [avatarOffset, setAvatarOffset] = useState({ x: 0, y: 0 });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const avatarImgRef = useRef<HTMLImageElement | null>(null);
+  const CROP_SIZE = 280;
+
   const isDashboardUser = user?.roleId === "admin" || user?.roleId === "staff";
 
   // ── Open edit modal with pre-filled data ──
@@ -149,34 +164,138 @@ export function Profile({ embedded = false }: ProfileProps) {
     }
   }, [user, editForm, setUser]);
 
-  // ── Avatar upload ──
+  // ── Avatar crop logic ──
   const handleAvatarClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
   const handleAvatarChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file || !user) return;
+      if (!file) return;
 
       if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
         toast.error(t("profile.toastAvatarTypeError"));
         return;
       }
 
-      try {
-        const { data: res } = await userService.uploadAvatar(user.userId, file);
-        const avatarUrl = res.data.updatedUser.avatar.url;
-        setUser({ ...user, avatar: avatarUrl });
-        toast.success(t("profile.toastAvatarSuccess"));
-      } catch {
-        // Error toast handled by axiosClient
-      } finally {
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAvatarSrc(reader.result as string);
+        setAvatarZoom(1);
+        setAvatarOffset({ x: 0, y: 0 });
+        setAvatarModalOpen(true);
+      };
+      reader.readAsDataURL(file);
+
+      if (fileInputRef.current) fileInputRef.current.value = "";
     },
-    [user, setUser],
+    [t],
   );
+
+  const handleAvatarCancel = useCallback(() => {
+    setAvatarModalOpen(false);
+    setAvatarSrc(null);
+    setAvatarZoom(1);
+    setAvatarOffset({ x: 0, y: 0 });
+  }, []);
+
+  const handleAvatarConfirm = useCallback(async () => {
+    if (!avatarSrc || !user || !avatarImgRef.current) return;
+
+    setUploadingAvatar(true);
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const img = avatarImgRef.current;
+      const naturalSize = img.naturalWidth;
+      const displayedSizeVal = img.width;
+      const scale = naturalSize / displayedSizeVal;
+
+      canvas.width = CROP_SIZE;
+      canvas.height = CROP_SIZE;
+
+      const sx = (CROP_SIZE / 2 - avatarOffset.x) * scale / avatarZoom;
+      const sy = (CROP_SIZE / 2 - avatarOffset.y) * scale / avatarZoom;
+      const sSize = CROP_SIZE * scale / avatarZoom;
+
+      ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, CROP_SIZE, CROP_SIZE);
+
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) return;
+          const cropFile = new File([blob], "avatar.png", { type: "image/png" });
+
+          try {
+            const { data: res } = await userService.uploadAvatar(
+              user.userId,
+              cropFile
+            );
+            const avatarUrl = res.data.updatedUser.avatar.url;
+            setUser({ ...user, avatar: avatarUrl });
+            toast.success(t("profile.toastAvatarSuccess"));
+            handleAvatarCancel();
+          } catch {
+            // Error toast handled by axiosClient
+          } finally {
+            setUploadingAvatar(false);
+          }
+        },
+        "image/png",
+        1.0
+      );
+    } catch {
+      setUploadingAvatar(false);
+    }
+  }, [avatarSrc, avatarOffset, avatarZoom, user, setUser, t, handleAvatarCancel]);
+
+  const displayedSize = useCallback(() => {
+    if (!avatarImgRef.current) return { width: 0, height: 0 };
+    const natural = avatarImgRef.current.naturalWidth;
+    const zoomed = natural * avatarZoom;
+    return { width: zoomed, height: zoomed };
+  }, [avatarZoom]);
+
+  const handleAvatarImgLoad = useCallback(() => {
+    if (!avatarImgRef.current) return;
+    const img = avatarImgRef.current;
+    const containerSize = CROP_SIZE;
+    const naturalSize = img.naturalWidth;
+    const initialDisplaySize = naturalSize;
+    const scale = containerSize / initialDisplaySize;
+    const newZoom = scale;
+    setAvatarZoom(newZoom);
+  }, []);
+
+  const handleZoomChange = useCallback((z: number) => {
+    setAvatarZoom(z);
+  }, []);
+
+  const onAvatarPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - avatarOffset.x, y: e.clientY - avatarOffset.y });
+    },
+    [avatarOffset]
+  );
+
+  const onAvatarPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging) return;
+      setAvatarOffset({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    },
+    [isDragging, dragStart]
+  );
+
+  const onAvatarPointerUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   // ── Change password ──
   const handleChangePassword = useCallback(async () => {
@@ -244,19 +363,19 @@ export function Profile({ embedded = false }: ProfileProps) {
       icon: <Phone className="w-4 h-4" />,
       label: t("profile.phoneLabel"),
       value: user.phone || t("profile.notSet"),
-      color: "text-secondary bg-secondary/10",
+      color: "text-secondary-foreground bg-secondary",
     },
     {
       icon: <MapPin className="w-4 h-4" />,
       label: t("profile.addressLabel"),
       value: user.address || t("profile.notSet"),
-      color: "text-amber-500 bg-amber-500/10",
+      color: "text-warm bg-warm/10",
     },
     {
       icon: <Calendar className="w-4 h-4" />,
       label: t("profile.dobLabel"),
       value: formatDateForDisplay(user.dateOfBirth),
-      color: "text-teal-500 bg-teal-500/10",
+      color: "text-info-foreground bg-info",
     },
   ];
 
@@ -282,17 +401,19 @@ export function Profile({ embedded = false }: ProfileProps) {
           {/* ── Left column ── */}
           <div className="lg:col-span-3 space-y-4">
             {/* Avatar card */}
-            <div className="glass-panel-solid rounded-2xl overflow-hidden">
+            <div className="glass-panel-solid rounded-2xl overflow-hidden hover:shadow-[var(--shadow-card-hover)] transition-shadow">
               {/* Banner */}
-              <div className="h-20 bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/10" />
+              <div className="h-24 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent relative overflow-hidden">
+                <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(400px 160px at 20% 0%, var(--glow-primary), transparent 70%)" }} />
+              </div>
 
               {/* Avatar + name row */}
               <div className="px-5 pb-5">
-                <div className="flex items-end justify-between -mt-9 mb-3">
+                <div className="flex items-end justify-between -mt-10 mb-3">
                   <button
                     type="button"
                     onClick={handleAvatarClick}
-                    className="relative w-[72px] h-[72px] rounded-2xl bg-primary/15 border-4 border-card flex items-center justify-center text-xl font-bold text-primary shadow-md overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity"
+                    className="relative w-20 h-20 rounded-2xl bg-primary/15 border-4 border-card flex items-center justify-center text-xl font-bold text-primary shadow-[var(--shadow-card-elevated)] overflow-hidden group cursor-pointer hover:scale-[1.03] transition-transform"
                     title={t("profile.changeAvatar")}
                   >
                     {user.avatar ? (
@@ -732,6 +853,80 @@ export function Profile({ embedded = false }: ProfileProps) {
             >
               {changingPwd && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {changingPwd ? t("profile.changingButton") : t("profile.changePasswordButton")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Avatar Crop Modal ── */}
+      <Dialog open={avatarModalOpen} onOpenChange={(open) => !open && handleAvatarCancel()}>
+        <DialogContent className="sm:max-w-sm glass-panel-solid">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">{t("profile.cropModalTitle")}</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {t("profile.cropModalDesc")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-5 py-2">
+            <div
+              className="relative overflow-hidden rounded-full border-4 border-[var(--card)] shadow-[var(--shadow-card-elevated)] cursor-grab active:cursor-grabbing touch-none select-none"
+              style={{ width: CROP_SIZE, height: CROP_SIZE, background: "var(--muted)" }}
+              onPointerDown={onAvatarPointerDown}
+              onPointerMove={onAvatarPointerMove}
+              onPointerUp={onAvatarPointerUp}
+              onPointerLeave={onAvatarPointerUp}
+            >
+              {avatarSrc && (
+                <img
+                  ref={avatarImgRef}
+                  src={avatarSrc}
+                  alt="Avatar preview"
+                  onLoad={handleAvatarImgLoad}
+                  draggable={false}
+                  className="absolute top-1/2 left-1/2 max-w-none pointer-events-none"
+                  style={{
+                    ...displayedSize(),
+                    transform: `translate(-50%, -50%) translate(${avatarOffset.x}px, ${avatarOffset.y}px) scale(${avatarZoom})`,
+                  }}
+                />
+              )}
+              <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/25" />
+            </div>
+
+            <div className="flex w-full items-center gap-3 px-1">
+              <ZoomOut className="w-4 h-4 text-muted-foreground shrink-0" />
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={avatarZoom}
+                onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+                className="w-full accent-[var(--primary)]"
+              />
+              <ZoomIn className="w-4 h-4 text-muted-foreground shrink-0" />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <button
+              type="button"
+              onClick={handleAvatarCancel}
+              disabled={uploadingAvatar}
+              className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium flex items-center gap-1.5"
+            >
+              <X className="w-3.5 h-3.5" />
+              {t("profile.cancelButton")}
+            </button>
+            <button
+              type="button"
+              onClick={handleAvatarConfirm}
+              disabled={uploadingAvatar}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20 ml-auto"
+            >
+              {uploadingAvatar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {uploadingAvatar ? t("profile.savingButton") : t("profile.cropModalConfirm")}
             </button>
           </DialogFooter>
         </DialogContent>

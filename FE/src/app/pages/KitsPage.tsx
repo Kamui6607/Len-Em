@@ -4,15 +4,14 @@
 // ============================================================
 
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { motion } from "motion/react";
-import { Package, Heart, Search, SlidersHorizontal, X } from "lucide-react";
+import { Package, Heart, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { kitService, type Kit } from "../../api/kitService";
 import { useFavorites } from "../context/FavoritesContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { cn } from "../components/ui/utils";
-import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
 import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 const LEVEL_OPTIONS = [
@@ -23,6 +22,7 @@ const LEVEL_OPTIONS = [
 ];
 
 export function KitsPage() {
+  const [searchParams] = useSearchParams();
   const { isFavoriteKit, toggleFavoriteKit } = useFavorites();
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,18 +30,20 @@ export function KitsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [level, setLevel] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
-  const { inputValue, debouncedValue, setInputValue } = useDebouncedSearch({ delay: 400, minChars: 1 });
+  
+  // Get search query from URL params
+  const searchQuery = searchParams.get("search") || "";
 
-  // Client-side search filter with debounce
+  // Client-side search filter
   const searchedKits = useMemo(() => {
-    if (!debouncedValue.trim()) return kits;
-    const q = debouncedValue.toLowerCase().trim();
+    if (!searchQuery.trim()) return kits;
+    const q = searchQuery.toLowerCase().trim();
     return kits.filter(
       (kit) =>
         kit.name.toLowerCase().includes(q) ||
         kit.description.toLowerCase().includes(q)
     );
-  }, [kits, debouncedValue]);
+  }, [kits, searchQuery]);
 
   const fetchKits = async (page: number, levelFilter: string) => {
     setLoading(true);
@@ -109,18 +111,9 @@ export function KitsPage() {
           </p>
         </div>
 
-        {/* Search + Mobile Filter Toggle */}
+        {/* Mobile Filter Toggle */}
         <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Search kits by name or description..."
-              className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
+          <div className="w-full sm:w-auto" />
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <div className="text-sm text-muted-foreground whitespace-nowrap">
               {!loading && `${searchedKits.length} kits available`}

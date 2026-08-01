@@ -614,6 +614,7 @@
     "dobPlaceholder": "MM/DD/YYYY",
     "savingButton": "Saving...",
     "saveChanges": "Save Changes",
+    "cancelButton": "Cancel",
     "changePasswordTitle": "Change Password",
     "changePasswordDesc": "Enter your current password and choose a new one.",
     "currentPasswordLabel": "Current Password",
@@ -632,7 +633,10 @@
     "toastPasswordRequired": "Please fill in all required fields.",
     "toastPasswordMinLength": "Your new password must be at least 6 characters.",
     "toastPasswordMismatch": "Passwords do not match.",
-    "toastPasswordSuccess": "Password changed successfully."
+    "toastPasswordSuccess": "Password changed successfully.",
+    "cropModalTitle": "Edit Profile Picture",
+    "cropModalDesc": "Drag to adjust, use slider to zoom.",
+    "cropModalConfirm": "Confirm"
   },
   "supportDIY": {
     "title": "Request DIY Support",

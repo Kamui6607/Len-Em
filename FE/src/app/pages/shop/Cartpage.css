@@ -1,0 +1,210 @@
+/* ============================================================
+   CART PAGE — polish layer
+   Giữ nguyên toàn bộ token màu/spacing sẵn có của site
+   (--primary, --border, --surface, --background, ...).
+   File này chỉ đảm nhiệm 3 việc CSS thuần không làm được ở
+   inline style: hover/active state, responsive grid, và các
+   chi tiết trang trí mang tinh thần "đồ nghề thủ công"
+   (viền chỉ đứt nét, mép vé đục lỗ) để đồng bộ với minh hoạ
+   khung thêu ở trạng thái giỏ trống.
+   ============================================================ */
+
+@keyframes cart-fade-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.cart-fade-in { animation: cart-fade-in 0.35s ease-out both; }
+
+/* ── Bố cục 2 cột: danh sách + vé tổng kết ── */
+.cart-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 48px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .cart-layout {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .cart-summary-sticky {
+    position: static !important;
+  }
+}
+
+/* Vé tổng kết dính ngay dưới header cố định, không chừa khoảng trống.
+   Nếu site đã có biến --header-height dùng chung thì nó sẽ tự lấy;
+   nếu chưa, chỉnh số 88px này bằng đúng chiều cao thực tế của header. */
+.cart-summary-sticky {
+  position: sticky;
+  top: calc(var(--header-height, 88px) + 16px);
+}
+
+/* ── Gạch chỉ đứt nét dưới tiêu đề ── */
+.cart-heading-stitch {
+  width: 72px;
+  border-top: 2px dashed var(--primary);
+  opacity: 0.45;
+}
+
+/* ── Nút "Xoá tất cả" ── */
+.cart-clear-btn {
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.cart-clear-btn:hover {
+  background: var(--destructive);
+  border-color: var(--destructive);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+
+/* ── Card sản phẩm ── */
+.cart-item-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.cart-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+
+/* ── Khung ảnh kiểu "vòng thêu": viền đứt nét bao ngoài ── */
+.cart-thumb-ring {
+  padding: 4px;
+  border-radius: 20px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 40%, var(--border));
+  flex-shrink: 0;
+  transition: border-color 0.2s ease;
+}
+.cart-item-card:hover .cart-thumb-ring,
+.cart-kit-card:hover .cart-thumb-ring {
+  border-color: var(--primary);
+}
+
+/* ── Nút xoá tròn (X) ── */
+.cart-remove-btn {
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.cart-remove-btn:hover {
+  background: var(--destructive);
+  border-color: var(--destructive);
+  color: #fff;
+  transform: scale(1.1) rotate(90deg);
+}
+
+/* ── Stepper số lượng ── */
+.cart-stepper-btn {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cart-stepper-btn:hover:not(:disabled) {
+  background: var(--accent-blush);
+  color: var(--primary);
+}
+
+/* ── Card kit/bundle: viền đứt nét như tờ rập giấy ── */
+.cart-kit-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.cart-kit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.cart-kit-expand-btn {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.cart-kit-expand-btn:hover {
+  transform: translateX(3px);
+  opacity: 0.75;
+}
+
+/* ── Liên kết tiếp tục mua sắm ── */
+.cart-continue-link {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.cart-continue-link:hover {
+  transform: translateX(-4px);
+  opacity: 0.75;
+}
+
+/* ============================================================
+   "VÉ" TỔNG KẾT ĐƠN — mép trên đục lỗ như vé cắt vải,
+   góc phải có một vòng chỉ nhỏ xuyên qua — chi tiết đặc trưng
+   duy nhất của trang, phần còn lại giữ tiết chế.
+   ============================================================ */
+.cart-ticket {
+  position: relative;
+  overflow: hidden;
+}
+.cart-ticket::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background-image: radial-gradient(circle 6px, var(--background) 99%, transparent 100%);
+  background-size: 24px 24px;
+  background-position: 4px -7px;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+.cart-ticket-tag {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  transform: rotate(-10deg);
+  pointer-events: none;
+}
+
+.cart-promo-toggle {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.cart-promo-toggle:hover {
+  transform: translateX(2px);
+}
+
+.cart-promo-apply {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.cart-promo-apply:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 63, 160, 0.35);
+}
+
+.cart-checkout-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.cart-checkout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(107, 63, 160, 0.4);
+}
+
+.cart-empty-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+.cart-empty-btn:hover {
+  transform: translateY(-2px);
+  background: var(--primary);
+  color: var(--primary-foreground, #fff);
+  box-shadow: 0 10px 24px rgba(107, 63, 160, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-fade-in,
+  .cart-item-card,
+  .cart-kit-card,
+  .cart-remove-btn,
+  .cart-stepper-btn,
+  .cart-kit-expand-btn,
+  .cart-continue-link,
+  .cart-promo-toggle,
+  .cart-promo-apply,
+  .cart-checkout-btn,
+  .cart-empty-btn,
+  .cart-thumb-ring {
+    animation: none !important;
+    transition: none !important;
+  }
+}

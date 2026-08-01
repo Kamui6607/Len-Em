@@ -105,6 +105,7 @@
     "searchProducts": "Tìm sản phẩm...",
     "searchLessons": "Tìm khóa học...",
     "searchDiy": "Tìm dự án DIY...",
+    "searchKits": "Tìm kit...",
     "saved": "Yêu thích",
     "cart": "Giỏ hàng",
     "theme": "Giao diện",
@@ -614,6 +615,7 @@
     "dobPlaceholder": "MM/DD/YYYY",
     "savingButton": "Đang lưu...",
     "saveChanges": "Lưu thay đổi",
+    "cancelButton": "Hủy",
     "changePasswordTitle": "Đổi mật khẩu",
     "changePasswordDesc": "Nhập mật khẩu hiện tại và mật khẩu mới để tiếp tục.",
     "currentPasswordLabel": "Mật khẩu hiện tại",
@@ -632,7 +634,10 @@
     "toastPasswordRequired": "Vui lòng nhập đầy đủ thông tin.",
     "toastPasswordMinLength": "Mật khẩu mới phải có ít nhất 6 ký tự.",
     "toastPasswordMismatch": "Mật khẩu xác nhận không khớp.",
-    "toastPasswordSuccess": "Đổi mật khẩu thành công."
+    "toastPasswordSuccess": "Đổi mật khẩu thành công.",
+    "cropModalTitle": "Chỉnh sửa ảnh đại diện",
+    "cropModalDesc": "Kéo ảnh để căn chỉnh, dùng thanh trượt để phóng to.",
+    "cropModalConfirm": "Xác nhận"
   },
   "addresses": {
     "title": "Địa chỉ giao hàng",

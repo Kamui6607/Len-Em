@@ -98,8 +98,14 @@ const drawerItemVariants = {
 };
 
 // ── Shared "glass chip" treatment for icon-only buttons in the desktop bar ──
+// Nền hơi trong suốt (70%) để hoà vào lớp kính của header thay vì trông như
+// một khối trắng đặc dán chồng lên trên — tránh cảm giác "2 lớp nền" thừa.
 const iconChipClass =
-  "relative flex items-center justify-center rounded-full min-h-[42px] min-w-[42px] border border-[var(--chip-border)] bg-[var(--chip-bg)] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)] hover:bg-[var(--chip-hover-bg)] hover:border-[var(--primary)]/40";
+  "relative flex items-center justify-center rounded-full min-h-[42px] min-w-[42px] border border-[var(--chip-border)] bg-[color-mix(in_srgb,var(--chip-bg)_70%,transparent)] text-[var(--foreground-muted)] outline-none transition-colors hover:text-[var(--primary)] hover:bg-[var(--chip-hover-bg)] hover:border-[var(--primary)]/40 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]";
+
+// ── Focus ring dùng chung cho các phần tử tương tác tuỳ biến (không phải <Button>) ──
+const focusRingClass =
+  "outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]";
 
 export function Navigation({ cartCount }: NavigationProps) {
   const { t } = useLanguage();
@@ -132,7 +138,7 @@ export function Navigation({ cartCount }: NavigationProps) {
   const isAboutPage = location.pathname === "/about";
 
   // Only use homeNavLinks on Home and About Us pages, otherwise use navLinks
-  const displayedNavLinks = (isHomePage || isAboutPage) ? homeNavLinks : navLinks;
+  const displayedNavLinks = isHomePage || isAboutPage ? homeNavLinks : navLinks;
 
   const showFullActions = isAuthenticated && !isHomePage && !isAboutPage;
   const showAuthButtons = !isAuthenticated && !isLoading;
@@ -151,30 +157,51 @@ export function Navigation({ cartCount }: NavigationProps) {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // ── Search: navigate to the current active nav link's page with search query ──
+  // ── Search: navigate to current page with search query ──
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (!q) return;
-
-    // Find the active nav link based on current path
-    const currentNav = navLinks.find((link) => location.pathname.startsWith(link.href));
-    if (currentNav) {
-      // Navigate to the active link's page with search param
-      navigate(`${currentNav.href}?search=${encodeURIComponent(q)}`);
-    } else {
-      // Fallback: navigate to SHOP (most common search target)
-      navigate(`/shop?search=${encodeURIComponent(q)}`);
+    console.log("Search submitted:", q, "Current path:", location.pathname);
+    if (!q) {
+      // If empty search, clear search param from URL
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.delete("search");
+      const newUrl = searchParams.toString() 
+        ? `${location.pathname}?${searchParams.toString()}`
+        : location.pathname;
+      navigate(newUrl, { replace: true });
+      return;
     }
+
+    // Navigate to current page with search param
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set("search", q);
+    const newUrl = `${location.pathname}?${searchParams.toString()}`;
+    console.log("Navigating to:", newUrl);
+    navigate(newUrl);
     setSearchOpen(false);
     setSearchQuery("");
   };
 
   const toggleSearch = () => {
-    setSearchOpen((o) => !o);
+    const willOpen = !searchOpen;
+    setSearchOpen(willOpen);
+    
+    // Clear search when closing
+    if (!willOpen) {
+      setSearchQuery("");
+      // Also clear URL search param
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.delete("search");
+      const newUrl = searchParams.toString() 
+        ? `${location.pathname}?${searchParams.toString()}`
+        : location.pathname;
+      navigate(newUrl, { replace: true });
+    }
+    
     // Focus input when opening
     setTimeout(() => {
-      if (!searchOpen && searchInputRef.current) {
+      if (willOpen && searchInputRef.current) {
         searchInputRef.current.focus();
       }
     }, 100);
@@ -200,7 +227,12 @@ export function Navigation({ cartCount }: NavigationProps) {
       },
       { threshold: 0.4 },
     );
-    ["section-how-it-works", "section-learn", "section-shop", "section-diy"].forEach((id) => {
+    [
+      "section-how-it-works",
+      "section-learn",
+      "section-shop",
+      "section-diy",
+    ].forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
@@ -292,10 +324,10 @@ export function Navigation({ cartCount }: NavigationProps) {
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 border transition-all duration-300",
+          "sticky top-0 z-50 transition-all duration-300 ease-out",
           isFloating
-            ? "mt-3 mx-4 rounded-[24px] border-[var(--border-light)] bg-[var(--glass-bg)] backdrop-blur-[20px] shadow-[0_8px_30px_rgba(60,40,100,0.12)]"
-            : "border-[var(--border-light)] border-t-0 border-x-0 bg-[var(--glass-bg)] backdrop-blur-[20px]",
+            ? "navbar-float mt-2 sm:mt-3 mx-4 rounded-[24px] border border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-[22px]"
+            : "border-b border-[color-mix(in_srgb,var(--border-light)_55%,transparent)] bg-[color-mix(in_srgb,var(--glass-bg)_45%,transparent)] backdrop-blur-[10px]",
         )}
       >
         {/* Thread seam — a hairline running-stitch that appears once the bar lifts off the page */}
@@ -328,7 +360,13 @@ export function Navigation({ cartCount }: NavigationProps) {
           )}
 
           {/* Logo — mark reads as a wound spool: a dashed thread ring that loosens on hover */}
-          <Link to="/" className="group relative flex items-center gap-3">
+          <Link
+            to="/"
+            className={cn(
+              "group relative flex items-center gap-3 rounded-2xl",
+              focusRingClass,
+            )}
+          >
             <div className="relative flex size-11 items-center justify-center">
               <motion.span
                 aria-hidden="true"
@@ -395,6 +433,7 @@ export function Navigation({ cartCount }: NavigationProps) {
                   }
                   className={cn(
                     "group/link relative flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold tracking-[0.1em] select-none",
+                    focusRingClass,
                     active
                       ? "text-[var(--primary)]"
                       : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]",
@@ -429,7 +468,11 @@ export function Navigation({ cartCount }: NavigationProps) {
                         scaleX: active ? 1 : 0,
                         opacity: active ? 0.55 : 0,
                       }}
-                      transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 320,
+                        damping: 26,
+                      }}
                     />
                   </span>
                   <span className="pointer-events-none absolute bottom-1 left-3 right-3 flex justify-center overflow-hidden opacity-0 transition-opacity duration-200 group-hover/link:opacity-40">
@@ -442,7 +485,9 @@ export function Navigation({ cartCount }: NavigationProps) {
                   </span>
 
                   {/* Icon */}
-                  <span style={{ color: active ? "var(--primary)" : undefined }}>
+                  <span
+                    style={{ color: active ? "var(--primary)" : undefined }}
+                  >
                     <Icon className="size-4" />
                   </span>
                   {item.label}
@@ -454,65 +499,83 @@ export function Navigation({ cartCount }: NavigationProps) {
           {/* Desktop Right */}
           <div className="hidden items-center gap-2 md:flex">
             {/* ── Search button + input ── */}
-            {isAuthenticated && !isHomePage && !isAboutPage && (
-            <div className="relative flex items-center">
-              <AnimatePresence mode="wait">
-                {searchOpen ? (
-                  <motion.form
-                    key="search-form"
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 224, opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                    onSubmit={handleSearch}
-                    className="overflow-hidden"
-                  >
-                    <div className="relative">
-                      <Search
-                        size={15}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] pointer-events-none"
-                      />
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={
-                          location.pathname.startsWith("/shop")
-                            ? t("nav.searchProducts")
-                            : location.pathname.startsWith("/learn")
-                              ? t("nav.searchLessons")
-                              : location.pathname.startsWith("/diy")
-                                ? t("nav.searchDiy")
-                                : t("nav.search")
-                        }
-                        className="w-full h-[42px] pl-9 pr-3 rounded-full border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:shadow-[var(--input-focus-shadow)] transition-colors"
-                      />
-                    </div>
-                  </motion.form>
-                ) : (
-                  <motion.button
-                    key="search-btn"
-                    type="button"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    whileHover={{ scale: 1.06 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={toggleSearch}
-                    className={iconChipClass}
-                    aria-label="Search"
-                  >
-                    <Search className="size-[18px]" />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
+            {!isHomePage && !isAboutPage && (
+              <div className="relative flex items-center">
+                <AnimatePresence mode="wait">
+                  {searchOpen ? (
+                    <motion.form
+                      key="search-form"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 224, opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      onSubmit={handleSearch}
+                      className="overflow-hidden"
+                    >
+                      <div className="relative">
+                        <Search
+                          size={15}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-muted)] pointer-events-none"
+                        />
+                        <input
+                          ref={searchInputRef}
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder={
+                            location.pathname.startsWith("/shop")
+                              ? t("nav.searchProducts")
+                              : location.pathname.startsWith("/learn")
+                                ? t("nav.searchLessons")
+                                : location.pathname.startsWith("/diy")
+                                  ? t("nav.searchDiy")
+                                  : location.pathname.startsWith("/kits")
+                                    ? t("nav.searchKits")
+                                    : t("nav.search")
+                          }
+                          className="w-full h-[42px] pl-9 pr-8 rounded-full border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:shadow-[var(--input-focus-shadow)] transition-colors"
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery("");
+                              searchInputRef.current?.focus();
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex size-5 items-center justify-center rounded-full text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"
+                            aria-label="Clear search"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </motion.form>
+                  ) : (
+                    <motion.button
+                      key="search-btn"
+                      type="button"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      whileHover={{ scale: 1.06 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={toggleSearch}
+                      className={iconChipClass}
+                      aria-label="Search"
+                    >
+                      <Search className="size-[18px]" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {showFullActions && (
               <>
-                <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}>
+                <motion.div
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Link
                     to="/love"
                     aria-label="Favorites"
@@ -520,11 +583,16 @@ export function Navigation({ cartCount }: NavigationProps) {
                   >
                     <Heart className="size-[18px]" />
                     {favorites.length + favoriteKits.length > 0 && (
-                      <Counter>{favorites.length + favoriteKits.length}</Counter>
+                      <Counter>
+                        {favorites.length + favoriteKits.length}
+                      </Counter>
                     )}
                   </Link>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}>
+                <motion.div
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Link
                     to="/cart"
                     aria-label="Cart"
@@ -537,12 +605,23 @@ export function Navigation({ cartCount }: NavigationProps) {
               </>
             )}
 
-            <div className="mx-1 h-6 w-px bg-[var(--divider)]" aria-hidden="true" />
+            <div
+              className="mx-1 h-6 w-px bg-[var(--divider)]"
+              aria-hidden="true"
+            />
 
-            <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} className="nav-icon-btn">
+            <motion.div
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.95 }}
+              className="nav-icon-btn"
+            >
               <LanguageToggle />
             </motion.div>
-            <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} className="nav-icon-btn">
+            <motion.div
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.95 }}
+              className="nav-icon-btn"
+            >
               <ThemeToggle />
             </motion.div>
 
@@ -559,7 +638,10 @@ export function Navigation({ cartCount }: NavigationProps) {
                   whileHover={{ y: -1 }}
                   type="button"
                   onClick={() => navigate("/auth/login")}
-                  className="relative flex items-center gap-2 px-3.5 py-2 text-sm font-bold tracking-[0.1em] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)]"
+                  className={cn(
+                    "relative flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold tracking-[0.1em] text-[var(--foreground-muted)] transition-colors hover:text-[var(--primary)]",
+                    focusRingClass,
+                  )}
                 >
                   <LogIn className="size-4" />
                   LOGIN
@@ -569,7 +651,10 @@ export function Navigation({ cartCount }: NavigationProps) {
                   whileTap={{ scale: 0.97 }}
                   type="button"
                   onClick={() => navigate("/auth/register")}
-                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-4 py-2 text-sm font-bold tracking-[0.1em] text-white shadow-[0_6px_18px_rgba(107,63,160,0.28)] transition-shadow hover:shadow-[0_10px_26px_rgba(107,63,160,0.38)]"
+                  className={cn(
+                    "flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-4 py-2 text-sm font-bold tracking-[0.1em] text-white shadow-[0_6px_18px_rgba(107,63,160,0.28)] transition-shadow hover:shadow-[0_10px_26px_rgba(107,63,160,0.38)]",
+                    focusRingClass,
+                  )}
                 >
                   <UserPlus className="size-4" />
                   REGISTER
@@ -587,7 +672,8 @@ export function Navigation({ cartCount }: NavigationProps) {
                 </div>
               </motion.div>
             )}
-            {(isAuthenticated && isHomePage) || (isAuthenticated && isAboutPage) ? (
+            {(isAuthenticated && isHomePage) ||
+            (isAuthenticated && isAboutPage) ? (
               <ShimmerCTA onClick={() => navigate("/learn")} />
             ) : null}
           </div>
@@ -707,12 +793,13 @@ export function Navigation({ cartCount }: NavigationProps) {
                               : undefined,
                           )
                         }
-                          className={cn(
-                            "relative flex w-full items-center gap-3 overflow-hidden rounded-2xl py-2.5 pl-4 pr-3 text-left font-bold text-[var(--foreground)] transition-colors min-h-[44px]",
-                            active
-                              ? "bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-[var(--primary)]"
-                              : "hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]",
-                          )}
+                        className={cn(
+                          "relative flex w-full items-center gap-3 overflow-hidden rounded-2xl py-2.5 pl-4 pr-3 text-left font-bold text-[var(--foreground)] transition-colors min-h-[44px]",
+                          focusRingClass,
+                          active
+                            ? "bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-[var(--primary)]"
+                            : "hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]",
+                        )}
                       >
                         {/* Stitch marker — replaces the plain active dot */}
                         <motion.span
@@ -720,7 +807,10 @@ export function Navigation({ cartCount }: NavigationProps) {
                           className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full"
                           style={{ background: "var(--primary)" }}
                           initial={false}
-                          animate={{ opacity: active ? 1 : 0, scaleY: active ? 1 : 0.3 }}
+                          animate={{
+                            opacity: active ? 1 : 0,
+                            scaleY: active ? 1 : 0.3,
+                          }}
                           transition={{ duration: 0.2 }}
                         />
                         <span
@@ -751,7 +841,10 @@ export function Navigation({ cartCount }: NavigationProps) {
                         whileTap={{ scale: 0.98 }}
                         type="button"
                         onClick={() => navigateTo("/auth/login")}
-                        className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--chip-border)] px-4 py-3 text-center font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--chip-hover-bg)] min-h-[44px]"
+                        className={cn(
+                          "flex items-center justify-center gap-2 rounded-2xl border border-[var(--chip-border)] px-4 py-3 text-center font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--chip-hover-bg)] min-h-[44px]",
+                          focusRingClass,
+                        )}
                       >
                         <LogIn className="size-4" />
                         LOGIN
@@ -761,7 +854,10 @@ export function Navigation({ cartCount }: NavigationProps) {
                         whileTap={{ scale: 0.98 }}
                         type="button"
                         onClick={() => navigateTo("/auth/register")}
-                        className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-4 py-3 text-center font-bold text-white shadow-[0_6px_18px_rgba(107,63,160,0.28)] min-h-[44px]"
+                        className={cn(
+                          "flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-4 py-3 text-center font-bold text-white shadow-[0_6px_18px_rgba(107,63,160,0.28)] min-h-[44px]",
+                          focusRingClass,
+                        )}
                       >
                         <UserPlus className="size-4" />
                         REGISTER
@@ -769,7 +865,8 @@ export function Navigation({ cartCount }: NavigationProps) {
                     </div>
                   )}
 
-                  {(isAuthenticated && isHomePage) || (isAuthenticated && isAboutPage) ? (
+                  {(isAuthenticated && isHomePage) ||
+                  (isAuthenticated && isAboutPage) ? (
                     <motion.div variants={drawerItemVariants} className="pt-2">
                       <ShimmerCTA
                         full
@@ -801,7 +898,10 @@ export function Navigation({ cartCount }: NavigationProps) {
                       signOut();
                       navigate("/auth/login", { replace: true });
                     }}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-center font-bold text-[var(--error-text)] transition-colors hover:brightness-105 min-h-[44px]"
+                    className={cn(
+                      "flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--error-border)] bg-[var(--error-bg)] px-4 py-3 text-center font-bold text-[var(--error-text)] transition-colors hover:brightness-105 min-h-[44px]",
+                      focusRingClass,
+                    )}
                   >
                     <LogOut className="size-5" />
                     LOGOUT
@@ -836,6 +936,7 @@ function ShimmerCTA({
       whileTap={{ scale: 0.97 }}
       className={cn(
         "group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-5 py-2 text-sm font-bold tracking-[0.08em] text-white shadow-[0_6px_20px_rgba(107,63,160,0.3)] transition-shadow hover:shadow-[0_10px_28px_rgba(107,63,160,0.4)]",
+        focusRingClass,
         full && "w-full px-10 py-3",
       )}
     >

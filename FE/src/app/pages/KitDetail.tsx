@@ -56,6 +56,77 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
   );
 }
 
+/**
+ * Stock status thresholds:
+ * >70%  -> success (xanh lá)  "Còn nhiều hàng"
+ * 30-70% -> warning (cam)     "Số lượng có hạn"
+ * <30%  -> error (đỏ)         "Sắp hết hàng"
+ * 0     -> muted (xám)        "Hết hàng"
+ */
+function getStockStatus(stock: number, percent: number) {
+  if (stock === 0) {
+    return { key: "empty", colorVar: "var(--muted-foreground)", label: "Hết hàng" };
+  }
+  if (percent > 70) {
+    return { key: "high", colorVar: "var(--success-text)", label: "Còn nhiều hàng" };
+  }
+  if (percent >= 30) {
+    return { key: "mid", colorVar: "var(--warning-text)", label: "Số lượng có hạn" };
+  }
+  return { key: "low", colorVar: "var(--error-text)", label: "Sắp hết hàng" };
+}
+
+/** Thanh tồn kho hình một đoạn dây len — vân xoắn nhẹ, đổi màu theo mức tồn kho. */
+function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }) {
+  const percent =
+    maxStock > 0 ? Math.min(100, Math.max(0, Math.round((stock / maxStock) * 100))) : 0;
+  const status = getStockStatus(stock, percent);
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className="relative h-3 w-full max-w-[200px] overflow-hidden rounded-full"
+        style={{ background: "var(--muted)" }}
+      >
+        {/* nền dây - vân xoắn mờ */}
+        <svg className="absolute inset-0 h-full w-full" style={{ opacity: 0.35 }} preserveAspectRatio="none">
+          <defs>
+            <pattern id="yarn-twist-track" width="7" height="7" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+              <rect width="3.5" height="7" className="fill-foreground/25" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#yarn-twist-track)" />
+        </svg>
+
+        {/* phần dây đã "xe" theo % tồn kho */}
+        <div
+          className="relative h-full rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${percent}%`, backgroundColor: status.colorVar }}
+        >
+          <svg className="absolute inset-0 h-full w-full" style={{ opacity: 0.3 }} preserveAspectRatio="none">
+            <defs>
+              <pattern id={`yarn-twist-${status.key}`} width="6" height="6" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+                <rect width="3" height="6" fill="white" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#yarn-twist-${status.key})`} />
+          </svg>
+          {/* đầu dây - đánh dấu mốc hiện tại */}
+          {percent > 0 && (
+            <span
+              className="absolute -right-0.5 top-1/2 size-3 -translate-y-1/2 rounded-full border-2 border-background"
+              style={{ backgroundColor: status.colorVar }}
+            />
+          )}
+        </div>
+      </div>
+      <span className="whitespace-nowrap text-xs font-medium" style={{ color: status.colorVar }}>
+        {status.label}
+      </span>
+    </div>
+  );
+}
+
 export function KitDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -267,13 +338,22 @@ export function KitDetail() {
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
-                  Products included:
-                </span>
+                <span className="text-muted-foreground">Products included:</span>
                 <span className="font-medium">
                   {(kit.products || []).length} items
                 </span>
               </div>
+            </div>
+
+            {/* Stock Display */}
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <div className="mb-2.5 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Tồn kho</span>
+                <span className="font-medium">
+                  {kit.stock > 0 ? `${kit.stock} sản phẩm` : "Hết hàng"}
+                </span>
+              </div>
+              <YarnStockMeter stock={kit.stock} maxStock={100} />
             </div>
 
             {/* Products in Kit */}

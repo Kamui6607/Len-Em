@@ -1,12 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { motion } from "motion/react";
-import { Heart, Search, ShoppingBag, Bookmark, PackageOpen, Hand } from "lucide-react";
+import { Heart, ShoppingBag, Bookmark, PackageOpen, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../../hooks/useAuth";
@@ -17,7 +16,6 @@ import { kitService, type KitProduct } from "../../api/kitService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { userService } from "../../features/users/services/user.service";
-import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
 import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 type FeedFilter = "all" | "newest" | "purchased";
@@ -31,11 +29,12 @@ interface CreatorInfo {
 export function DIYFeedPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { addKitToCart } = useCart();
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [posts, setPosts] = useState<DIYPost[]>([]);
-  const { inputValue: search, debouncedValue: debouncedSearch, setInputValue: setSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const searchQuery = searchParams.get("search") || "";
   const [creators, setCreators] = useState<Record<string, CreatorInfo>>({});
   const [loading, setLoading] = useState(false);
   const { isDIYPostSaved, toggleDIYPostSave } = useFavorites();
@@ -142,9 +141,14 @@ export function DIYFeedPage() {
   const approvedPosts = useMemo(() => posts.filter((p) => p.status !== "pending"), [posts]);
 
   const filteredPosts = approvedPosts.filter((post) => {
-    if (!debouncedSearch.trim()) return true;
-    return post.tags.some((tag) => tag.toLowerCase().includes(debouncedSearch.toLowerCase()));
+    if (!searchQuery.trim()) return true;
+    return post.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
   });
+
+  // Debug: log search state
+  useEffect(() => {
+    console.log("DIYFeedPage - searchQuery:", searchQuery, "filteredPosts:", filteredPosts.length);
+  }, [searchQuery, filteredPosts]);
 
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     if (filter === "newest") {
@@ -262,15 +266,7 @@ export function DIYFeedPage() {
             <span>Hỗ trợ DIY</span>
           </Link>
           <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("diyFeed.searchPlaceholder")}
-                className="pl-9"
-              />
-            </div>
+            <div className="w-full sm:w-auto" />
             <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
               {sortedPosts.length} kết quả
             </span>
@@ -283,6 +279,19 @@ export function DIYFeedPage() {
             <PackageOpen className="mb-3 size-10 text-muted-foreground" />
             <p className="font-medium">Không tìm thấy công thức nào</p>
             <p className="mt-1 text-sm text-muted-foreground">Thử một từ khóa khác hoặc xóa bộ lọc</p>
+            {searchQuery && (
+              <button
+                type="button"
+                className="empty-state-cta"
+                onClick={() => {
+                  const newUrl = location.pathname;
+                  navigate(newUrl, { replace: true });
+                }}
+                style={{ marginTop: "16px" }}
+              >
+                Clear search
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">

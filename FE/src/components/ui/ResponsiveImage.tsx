@@ -75,7 +75,8 @@ export const ResponsiveImage = memo(function ResponsiveImage({
       // LCP image: eager + high priority. Còn lại: lazy + async (không chặn main thread)
       loading={priority ? "eager" : "lazy"}
       decoding={priority ? "sync" : "async"}
-      fetchPriority={priority ? "high" : "auto"}
+      // Use lowercase attribute to avoid React warning
+      {...(priority ? { fetchpriority: "high" } : {})}
       onError={onError}
     />
   );

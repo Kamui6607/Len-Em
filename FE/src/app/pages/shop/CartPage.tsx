@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useCart } from "../../../context/CartContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import { formatPrice } from "../../../lib/formatPrice";
+import "./CartPage.css";
 
 // ═══════════════════════════════════════════════════════════════════
 // EMPTY CART ILLUSTRATION — empty embroidery hoop
@@ -80,139 +81,29 @@ export function EmptyHoopIllustration({ size = 200 }: { size?: number }) {
       />
 
       {/* ── Screw clasp at top of hoop ── */}
-      {/* Outer clasp body */}
-      <rect
-        x="82"
-        y="50"
-        width="36"
-        height="13"
-        rx="6.5"
-        fill="var(--foreground-muted)"
-        fillOpacity="0.32"
-      />
-      {/* Inner bolt shaft */}
-      <rect
-        x="91"
-        y="39"
-        width="18"
-        height="13"
-        rx="4"
-        fill="var(--foreground-muted)"
-        fillOpacity="0.25"
-      />
-      {/* Bolt head */}
-      <rect
-        x="96"
-        y="31"
-        width="8"
-        height="10"
-        rx="2"
-        fill="var(--foreground-muted)"
-        fillOpacity="0.2"
-      />
-      {/* Tightening slot */}
-      <line
-        x1="100"
-        y1="31"
-        x2="100"
-        y2="37"
-        stroke="var(--foreground-muted)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeOpacity="0.35"
-      />
+      <rect x="82" y="50" width="36" height="13" rx="6.5" fill="var(--foreground-muted)" fillOpacity="0.32" />
+      <rect x="91" y="39" width="18" height="13" rx="4" fill="var(--foreground-muted)" fillOpacity="0.25" />
+      <rect x="96" y="31" width="8" height="10" rx="2" fill="var(--foreground-muted)" fillOpacity="0.2" />
+      <line x1="100" y1="31" x2="100" y2="37" stroke="var(--foreground-muted)" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.35" />
 
       {/* ── Empty fabric inside the hoop ── */}
-      <circle
-        cx="100"
-        cy="132"
-        r="60"
-        fill="var(--background)"
-        fillOpacity="0.55"
-      />
-      {/* Very subtle linen weave grid */}
+      <circle cx="100" cy="132" r="60" fill="var(--background)" fillOpacity="0.55" />
       {[-30, -15, 0, 15, 30, 45].map((y) => (
-        <line
-          key={`h${y}`}
-          x1="42"
-          y1={132 + y}
-          x2="158"
-          y2={132 + y}
-          stroke="var(--border)"
-          strokeWidth="0.7"
-          strokeOpacity="0.55"
-        />
+        <line key={`h${y}`} x1="42" y1={132 + y} x2="158" y2={132 + y} stroke="var(--border)" strokeWidth="0.7" strokeOpacity="0.55" />
       ))}
       {[-30, -15, 0, 15, 30, 45].map((x) => (
-        <line
-          key={`v${x}`}
-          x1={100 + x}
-          y1="72"
-          x2={100 + x}
-          y2="192"
-          stroke="var(--border)"
-          strokeWidth="0.7"
-          strokeOpacity="0.55"
-        />
+        <line key={`v${x}`} x1={100 + x} y1="72" x2={100 + x} y2="192" stroke="var(--border)" strokeWidth="0.7" strokeOpacity="0.55" />
       ))}
 
       {/* ── A lone needle parked in the fabric ── */}
-      <line
-        x1="126"
-        y1="88"
-        x2="130"
-        y2="168"
-        stroke="var(--foreground-muted)"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeOpacity="0.35"
-      />
-      {/* Needle eye */}
-      <ellipse
-        cx="127"
-        cy="90"
-        rx="3.5"
-        ry="2"
-        stroke="var(--foreground-muted)"
-        strokeWidth="1.2"
-        fill="none"
-        strokeOpacity="0.35"
-      />
-      {/* Thread through needle hanging loose */}
-      <path
-        d="M 127 90 C 122 81 124 74 120 68"
-        stroke="var(--accent-pink)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.55"
-      />
+      <line x1="126" y1="88" x2="130" y2="168" stroke="var(--foreground-muted)" strokeWidth="2.2" strokeLinecap="round" strokeOpacity="0.35" />
+      <ellipse cx="127" cy="90" rx="3.5" ry="2" stroke="var(--foreground-muted)" strokeWidth="1.2" fill="none" strokeOpacity="0.35" />
+      <path d="M 127 90 C 122 81 124 74 120 68" stroke="var(--accent-pink)" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.55" />
 
       {/* ── Trailing unraveled thread from bottom of hoop ── */}
-      <path
-        d="M 100 196 C 96 208 106 214 100 224 C 94 232 104 236 100 244"
-        stroke="var(--primary)"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        fill="none"
-        strokeDasharray="4.5 3"
-        strokeOpacity="0.45"
-      />
-      {/* Thread end dot */}
-      <circle
-        cx="100"
-        cy="244"
-        r="2.8"
-        fill="var(--primary)"
-        fillOpacity="0.35"
-      />
-      <circle
-        cx="100"
-        cy="244"
-        r="1.4"
-        fill="var(--primary)"
-        fillOpacity="0.55"
-      />
+      <path d="M 100 196 C 96 208 106 214 100 224 C 94 232 104 236 100 244" stroke="var(--primary)" strokeWidth="1.7" strokeLinecap="round" fill="none" strokeDasharray="4.5 3" strokeOpacity="0.45" />
+      <circle cx="100" cy="244" r="2.8" fill="var(--primary)" fillOpacity="0.35" />
+      <circle cx="100" cy="244" r="1.4" fill="var(--primary)" fillOpacity="0.55" />
 
       {/* ── Small decorative motif: tiny yarn loop hovering in the empty fabric ── */}
       <g transform="translate(78, 122)" opacity="0.28">
@@ -229,42 +120,65 @@ export function EmptyHoopIllustration({ size = 200 }: { size?: number }) {
 
 export function EmptyCartState() {
   const { t } = useLanguage();
-  
+
   return (
     <div
+      className="cart-fade-in"
       style={{
+        position: "relative" as const,
         display: "flex",
         flexDirection: "column" as const,
         alignItems: "center",
         justifyContent: "center",
-        padding: "80px 32px",
+        padding: "96px 32px",
         textAlign: "center" as const,
-        minHeight: "420px",
+        minHeight: "460px",
       }}
     >
-      <EmptyHoopIllustration size={180} />
+      {/* Soft ambient glow behind the hoop */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          width: "320px",
+          height: "320px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(107,63,160,0.08), transparent 70%)",
+          filter: "blur(4px)",
+          zIndex: 0,
+        }}
+      />
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <EmptyHoopIllustration size={190} />
+      </div>
 
       <h2
         style={{
+          position: "relative",
+          zIndex: 1,
           fontFamily: "'Playfair Display',serif",
-          fontSize: "1.4rem",
+          fontSize: "1.55rem",
           fontWeight: 600,
           fontStyle: "italic",
           color: "var(--foreground)",
           letterSpacing: "-0.015em",
-          marginTop: "24px",
-          marginBottom: "8px",
+          marginTop: "28px",
+          marginBottom: "10px",
         }}
       >
         {t("cart.emptyTitle")}
       </h2>
       <p
         style={{
+          position: "relative",
+          zIndex: 1,
           fontFamily: "'Caveat',cursive",
-          fontSize: "1rem",
+          fontSize: "1.15rem",
           color: "var(--foreground-muted)",
           letterSpacing: "0.02em",
-          marginBottom: "28px",
+          marginBottom: "30px",
+          maxWidth: "320px",
         }}
       >
         {t("cart.emptyDesc")}
@@ -272,24 +186,26 @@ export function EmptyCartState() {
 
       <Link
         to="/shop"
+        className="cart-empty-btn"
         style={{
+          position: "relative",
+          zIndex: 1,
           display: "inline-flex",
           alignItems: "center",
           gap: "8px",
-          padding: "11px 28px",
+          padding: "12px 30px",
           borderRadius: "999px",
           border: "1.5px solid var(--primary)",
           background: "var(--background)",
           color: "var(--primary)",
           fontFamily: "'Inter',sans-serif",
-          fontSize: "0.88rem",
+          fontSize: "0.9rem",
           fontWeight: 600,
           cursor: "pointer",
-          boxShadow: "var(--shadow-sm)",
           textDecoration: "none",
         }}
       >
-        <ShoppingBag size={14} strokeWidth={1.8} />
+        <ShoppingBag size={15} strokeWidth={1.8} />
         {t("cart.continueShopping")}
       </Link>
     </div>
@@ -318,14 +234,16 @@ function InlineStepper({
         border: "1.5px solid var(--border)",
         background: "var(--background)",
         overflow: "hidden",
-        height: "30px",
+        height: "34px",
+        flexShrink: 0,
       }}
     >
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
+        className="cart-stepper-btn"
         style={{
-          width: "28px",
-          height: "30px",
+          width: "32px",
+          height: "34px",
           border: "none",
           background: "transparent",
           cursor: value <= min ? "not-allowed" : "pointer",
@@ -333,27 +251,17 @@ function InlineStepper({
           alignItems: "center",
           justifyContent: "center",
           color: value <= min ? "var(--border)" : "var(--foreground-muted)",
-          transition: "all 0.2s ease",
         }}
-        onMouseEnter={(e) => {
-          if (value > min) {
-            e.currentTarget.style.background = "var(--accent-blush)";
-            e.currentTarget.style.color = "var(--primary)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = value <= min ? "var(--border)" : "var(--foreground-muted)";
-        }}
+        disabled={value <= min}
       >
-        <Minus size={11} strokeWidth={2.2} />
+        <Minus size={12} strokeWidth={2.2} />
       </button>
       <span
         style={{
-          minWidth: "22px",
+          minWidth: "26px",
           textAlign: "center" as const,
           fontFamily: "'Playfair Display',serif",
-          fontSize: "0.85rem",
+          fontSize: "0.92rem",
           fontWeight: 600,
           color: "var(--foreground)",
           userSelect: "none" as const,
@@ -363,9 +271,10 @@ function InlineStepper({
       </span>
       <button
         onClick={() => onChange(Math.min(max, value + 1))}
+        className="cart-stepper-btn"
         style={{
-          width: "28px",
-          height: "30px",
+          width: "32px",
+          height: "34px",
           border: "none",
           background: "transparent",
           cursor: value >= max ? "not-allowed" : "pointer",
@@ -373,58 +282,46 @@ function InlineStepper({
           alignItems: "center",
           justifyContent: "center",
           color: value >= max ? "var(--border)" : "var(--foreground-muted)",
-          transition: "all 0.2s ease",
         }}
-        onMouseEnter={(e) => {
-          if (value < max) {
-            e.currentTarget.style.background = "var(--accent-blush)";
-            e.currentTarget.style.color = "var(--primary)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = value >= max ? "var(--border)" : "var(--foreground-muted)";
-        }}
+        disabled={value >= max}
       >
-        <Plus size={11} strokeWidth={2.2} />
+        <Plus size={12} strokeWidth={2.2} />
       </button>
     </div>
   );
 }
 
-// ── Product image cell ────────────────────────────────────────────
+// ── Product image cell, framed like a little embroidery hoop ────────
 
 function ProductThumb({
   img,
   alt,
   fallbackSeed,
+  size = 84,
 }: {
   img: string | null;
   alt: string;
   fallbackSeed?: string;
+  size?: number;
 }) {
-  if (img) {
-    return (
+  const src = img || `https://picsum.photos/seed/${fallbackSeed || "product"}/100/100`;
+
+  return (
+    <div className="cart-thumb-ring" style={{ width: size, height: size }}>
       <div
         style={{
-          width: "80px",
-          height: "80px",
-          flexShrink: 0,
-          borderRadius: "14px",
+          width: "100%",
+          height: "100%",
+          borderRadius: "16px",
           overflow: "hidden",
           border: "1px solid var(--border)",
           background: "var(--surface)",
         }}
       >
         <img
-          src={img}
+          src={src}
           alt={alt}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           onError={(e) => {
             const target = e.currentTarget;
             if (!target.dataset.fallback) {
@@ -434,33 +331,6 @@ function ProductThumb({
           }}
         />
       </div>
-    );
-  }
-
-  const fallbackSrc = `https://picsum.photos/seed/${fallbackSeed || "product"}/100/100`;
-
-  return (
-    <div
-      style={{
-        width: "80px",
-        height: "80px",
-        flexShrink: 0,
-        borderRadius: "14px",
-        overflow: "hidden",
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-      }}
-    >
-      <img
-        src={fallbackSrc}
-        alt={alt}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
-      />
     </div>
   );
 }
@@ -493,14 +363,18 @@ export function CartProductRow({
 }: CartProductRowProps) {
   return (
     <div
+      className="cart-item-card cart-fade-in"
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "16px",
-        padding: "20px 0",
+        gap: "18px",
+        padding: "18px",
+        borderRadius: "20px",
+        border: "1px solid var(--border)",
+        background: "var(--surface)",
+        boxShadow: "var(--shadow-sm)",
       }}
     >
-      {/* Image */}
       <ProductThumb img={item.image} alt={item.name} fallbackSeed={item.productId} />
 
       {/* Name + variant */}
@@ -508,31 +382,22 @@ export function CartProductRow({
         <div
           style={{
             fontFamily: "'Playfair Display',serif",
-            fontSize: "1rem",
+            fontSize: "1.05rem",
             fontWeight: 600,
             color: "var(--foreground)",
             letterSpacing: "-0.01em",
-            lineHeight: 1.2,
-            marginBottom: "5px",
+            lineHeight: 1.25,
+            marginBottom: "6px",
           }}
         >
           {item.name}
         </div>
-        {/* Variant chips */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "7px",
-            marginTop: "6px",
-          }}
-        >
-          {/* Colour swatch */}
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" as const }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
             <div
               style={{
-                width: "12px",
-                height: "12px",
+                width: "13px",
+                height: "13px",
                 borderRadius: "50%",
                 background: item.hexCode,
                 border: "1px solid rgba(0,0,0,0.1)",
@@ -540,30 +405,21 @@ export function CartProductRow({
                 flexShrink: 0,
               }}
             />
-            <span
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: "0.68rem",
-                color: "var(--foreground-muted)",
-              }}
-            >
+            <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.72rem", color: "var(--foreground-muted)" }}>
               {item.color}
             </span>
           </div>
           {item.size && (
             <>
-              <span style={{ color: "var(--border)", fontSize: "0.7rem" }}>
-                ·
-              </span>
-              {/* Size pill */}
+              <span style={{ color: "var(--border)", fontSize: "0.7rem" }}>·</span>
               <span
                 style={{
-                  padding: "1px 7px",
+                  padding: "2px 8px",
                   borderRadius: "999px",
                   border: "1px solid var(--border)",
                   background: "var(--background)",
                   fontFamily: "'Inter',sans-serif",
-                  fontSize: "0.65rem",
+                  fontSize: "0.68rem",
                   color: "var(--foreground-muted)",
                 }}
               >
@@ -574,34 +430,30 @@ export function CartProductRow({
         </div>
       </div>
 
-      {/* Stepper */}
-      <InlineStepper
-        value={item.quantity}
-        onChange={(n) => onQtyChange(item.productId, item.variantId, n)}
-      />
+      <InlineStepper value={item.quantity} onChange={(n) => onQtyChange(item.productId, item.variantId, n)} />
 
-      {/* Price */}
       <div
         style={{
           fontFamily: "'Playfair Display',serif",
-          fontSize: "1rem",
+          fontSize: "1.05rem",
           fontWeight: 700,
           color: "var(--foreground)",
           letterSpacing: "-0.015em",
           textAlign: "right" as const,
-          minWidth: "58px",
+          minWidth: "64px",
           flexShrink: 0,
         }}
       >
         {formatPrice(item.price * item.quantity)}
       </div>
 
-      {/* Remove */}
       <button
         onClick={() => onRemove(item.productId, item.variantId)}
+        className="cart-remove-btn"
+        aria-label="Remove"
         style={{
-          width: "28px",
-          height: "28px",
+          width: "30px",
+          height: "30px",
           borderRadius: "50%",
           border: "1px solid var(--border)",
           background: "var(--background)",
@@ -611,22 +463,9 @@ export function CartProductRow({
           cursor: "pointer",
           color: "var(--foreground-muted)",
           flexShrink: 0,
-          transition: "all 0.2s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--destructive)";
-          e.currentTarget.style.borderColor = "var(--destructive)";
-          e.currentTarget.style.color = "white";
-          e.currentTarget.style.transform = "scale(1.1)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "var(--background)";
-          e.currentTarget.style.borderColor = "var(--border)";
-          e.currentTarget.style.color = "var(--foreground-muted)";
-          e.currentTarget.style.transform = "scale(1)";
         }}
       >
-        <X size={11} strokeWidth={2.5} />
+        <X size={12} strokeWidth={2.5} />
       </button>
     </div>
   );
@@ -675,43 +514,33 @@ export function CartKitRow({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const level = item.level || "beginner";
   const ls = KIT_LEVEL_STYLE[level];
-  const saving = item.originalIndividualTotal
-    ? item.originalIndividualTotal - item.price
-    : 0;
+  const saving = item.originalIndividualTotal ? item.originalIndividualTotal - item.price : 0;
 
   return (
     <div
+      className="cart-kit-card cart-fade-in"
       style={{
-        background: "rgba(107,63,160,0.028)",
-        borderRadius: "14px",
-        border: "1px solid rgba(107,63,160,0.12)",
+        background: "rgba(107,63,160,0.03)",
+        borderRadius: "20px",
+        border: "1.5px dashed rgba(107,63,160,0.28)",
         overflow: "hidden",
       }}
     >
       {/* Main row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          padding: "18px 16px",
-        }}
-      >
-        {/* Image + bundle badge overlay */}
+      <div style={{ display: "flex", alignItems: "center", gap: "18px", padding: "18px" }}>
         <div style={{ position: "relative" as const, flexShrink: 0 }}>
           <ProductThumb img={item.thumbnail} alt={item.name} fallbackSeed={item.kitId} />
-          {/* Bundle badge — bottom-left of image */}
           <div
             style={{
               position: "absolute" as const,
-              bottom: "-4px",
-              left: "-4px",
-              padding: "2px 7px",
+              bottom: "-6px",
+              left: "-6px",
+              padding: "2px 8px",
               borderRadius: "999px",
               background: ls.bg,
               border: "1.5px solid var(--background)",
               fontFamily: "'Caveat',cursive",
-              fontSize: "0.58rem",
+              fontSize: "0.62rem",
               fontWeight: 700,
               color: ls.text,
               whiteSpace: "nowrap" as const,
@@ -722,33 +551,23 @@ export function CartKitRow({
           </div>
         </div>
 
-        {/* Name + meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "8px",
-              marginBottom: "4px",
-              flexWrap: "wrap" as const,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "5px", flexWrap: "wrap" as const }}>
             <div
               style={{
                 fontFamily: "'Playfair Display',serif",
-                fontSize: "1rem",
+                fontSize: "1.05rem",
                 fontWeight: 600,
                 color: "var(--foreground)",
                 letterSpacing: "-0.01em",
-                lineHeight: 1.2,
+                lineHeight: 1.25,
               }}
             >
               {item.name}
             </div>
-            {/* Level badge */}
             <span
               style={{
-                padding: "2px 9px",
+                padding: "2px 10px",
                 borderRadius: "999px",
                 background: ls.bg,
                 fontFamily: "'Poppins','Inter',sans-serif",
@@ -763,23 +582,16 @@ export function CartKitRow({
               {level}
             </span>
           </div>
-          {/* Saving callout */}
+
           {saving > 0 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                marginBottom: "6px",
-              }}
-            >
+            <div style={{ marginBottom: "7px" }}>
               <span
                 style={{
-                  padding: "1px 7px",
+                  padding: "2px 8px",
                   borderRadius: "999px",
                   background: "var(--success-bg)",
                   fontFamily: "'Inter',sans-serif",
-                  fontSize: "0.62rem",
+                  fontSize: "0.64rem",
                   fontWeight: 700,
                   color: "var(--success-text)",
                 }}
@@ -788,9 +600,10 @@ export function CartKitRow({
               </span>
             </div>
           )}
-          {/* Expand toggle */}
+
           <button
             onClick={() => setExpanded((e) => !e)}
+            className="cart-kit-expand-btn"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -800,46 +613,34 @@ export function CartKitRow({
               cursor: "pointer",
               padding: 0,
               fontFamily: "'Caveat',cursive",
-              fontSize: "0.72rem",
+              fontSize: "0.78rem",
               color: "var(--primary)",
               letterSpacing: "0.02em",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateX(2px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateX(0)";
             }}
           >
             {expanded ? (
               <>
-                <ChevronUp size={12} strokeWidth={2} /> {t("cart.hideItems", { count: item.products.length })}
+                <ChevronUp size={13} strokeWidth={2} /> {t("cart.hideItems", { count: item.products.length })}
               </>
             ) : (
               <>
-                <ChevronDown size={12} strokeWidth={2} /> {t("cart.showItems", { count: item.products.length })}
+                <ChevronDown size={13} strokeWidth={2} /> {t("cart.showItems", { count: item.products.length })}
               </>
             )}
           </button>
         </div>
 
-        {/* Stepper */}
-        <InlineStepper
-          value={item.quantity}
-          onChange={(n) => onQtyChange(item.kitId, n)}
-        />
+        <InlineStepper value={item.quantity} onChange={(n) => onQtyChange(item.kitId, n)} />
 
-        {/* Price */}
         <div
           style={{
             fontFamily: "'Playfair Display',serif",
-            fontSize: "1rem",
+            fontSize: "1.05rem",
             fontWeight: 700,
             color: "var(--foreground)",
             letterSpacing: "-0.015em",
             textAlign: "right" as const,
-            minWidth: "58px",
+            minWidth: "64px",
             flexShrink: 0,
           }}
         >
@@ -848,7 +649,7 @@ export function CartKitRow({
             <div
               style={{
                 fontFamily: "'Inter',sans-serif",
-                fontSize: "0.6rem",
+                fontSize: "0.62rem",
                 fontWeight: 400,
                 color: "var(--foreground-muted)",
                 textDecoration: "line-through",
@@ -860,12 +661,13 @@ export function CartKitRow({
           )}
         </div>
 
-        {/* Remove */}
         <button
           onClick={() => onRemove(item.kitId)}
+          className="cart-remove-btn"
+          aria-label="Remove"
           style={{
-            width: "28px",
-            height: "28px",
+            width: "30px",
+            height: "30px",
             borderRadius: "50%",
             border: "1px solid var(--border)",
             background: "var(--background)",
@@ -875,47 +677,25 @@ export function CartKitRow({
             cursor: "pointer",
             color: "var(--foreground-muted)",
             flexShrink: 0,
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--destructive)";
-            e.currentTarget.style.borderColor = "var(--destructive)";
-            e.currentTarget.style.color = "white";
-            e.currentTarget.style.transform = "scale(1.1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "var(--background)";
-            e.currentTarget.style.borderColor = "var(--border)";
-            e.currentTarget.style.color = "var(--foreground-muted)";
-            e.currentTarget.style.transform = "scale(1)";
           }}
         >
-          <X size={11} strokeWidth={2.5} />
+          <X size={12} strokeWidth={2.5} />
         </button>
       </div>
 
       {/* Expandable sub-items */}
       {expanded && (
         <div
+          className="cart-fade-in"
           style={{
-            borderTop: "1px solid rgba(107,63,160,0.12)",
-            padding: "12px 16px 14px 112px", // indented to align with name column
-            background: "rgba(107,63,160,0.02)",
+            borderTop: "1.5px dashed rgba(107,63,160,0.28)",
+            padding: "14px 18px 16px 116px",
+            background: "rgba(107,63,160,0.025)",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column" as const,
-              gap: "8px",
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column" as const, gap: "9px" }}>
             {item.products.map((sub, i) => (
-              <div
-                key={i}
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                {/* Dot */}
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div
                   style={{
                     width: "10px",
@@ -927,30 +707,21 @@ export function CartKitRow({
                     boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
                   }}
                 />
-                {/* Name */}
-                <span
-                  style={{
-                    fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.78rem",
-                    fontWeight: 500,
-                    color: "var(--foreground)",
-                  }}
-                >
+                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.8rem", fontWeight: 500, color: "var(--foreground)" }}>
                   {sub.name}
                 </span>
-                {/* Included chip */}
                 <span
                   style={{
                     marginLeft: "auto",
-                    padding: "1px 7px",
+                    padding: "2px 8px",
                     borderRadius: "999px",
                     background: "var(--background)",
                     border: "1px solid var(--border)",
                     fontFamily: "'Caveat',cursive",
-                    fontSize: "0.6rem",
+                    fontSize: "0.65rem",
                     color: "var(--foreground-muted)",
                   }}
-                 >
+                >
                   {t("cart.included")}
                 </span>
               </div>
@@ -963,7 +734,7 @@ export function CartKitRow({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ORDER SUMMARY CARD
+// ORDER SUMMARY CARD — styled like a fabric-shop cutting ticket
 // ═══════════════════════════════════════════════════════════════════
 
 export function OrderSummaryCard({
@@ -983,8 +754,7 @@ export function OrderSummaryCard({
     cartItems.reduce((s, i) => s + i.price * i.quantity, 0) +
     cartKits.reduce((s, k) => s + k.price, 0);
   const kitSavings = cartKits.reduce(
-    (s, k) =>
-      s + (k.originalIndividualTotal ? k.originalIndividualTotal - k.price : 0),
+    (s, k) => s + (k.originalIndividualTotal ? k.originalIndividualTotal - k.price : 0),
     0,
   );
   const promoSaving = promoOk ? Math.round(subtotal * 0.1) : 0;
@@ -1000,135 +770,63 @@ export function OrderSummaryCard({
 
   return (
     <div
+      className="cart-ticket"
       style={{
-        borderRadius: "20px",
+        borderRadius: "24px",
         border: "1px solid var(--border)",
         background: "var(--surface)",
-        overflow: "hidden",
         boxShadow: "var(--shadow-card)",
       }}
     >
-      {/* Colour-stripe header */}
-      <div
-        style={{
-          height: "4px",
-          background:
-            "linear-gradient(90deg, var(--primary), var(--accent-pink), var(--accent-yellow))",
-        }}
-      />
+      {/* Decorative thread loop — the page's one signature flourish */}
+      <svg className="cart-ticket-tag" width="32" height="32" viewBox="0 0 34 34" fill="none" aria-hidden>
+        <circle cx="17" cy="9" r="5" stroke="var(--primary)" strokeWidth="2" opacity="0.35" />
+        <path d="M17 14 C 17 20, 10 20, 10 27" stroke="var(--primary)" strokeWidth="1.6" strokeDasharray="3 3" opacity="0.3" fill="none" />
+      </svg>
 
-      <div style={{ padding: "24px" }}>
-      <h2
-        style={{
-          fontFamily: "'Playfair Display',serif",
-          fontSize: "1.05rem",
-          fontWeight: 600,
-          color: "var(--foreground)",
-          letterSpacing: "-0.015em",
-          margin: "0 0 20px",
-        }}
-      >
-        {t("cart.orderSummary")}
-      </h2>
-
-        {/* Line items */}
-        <div
+      <div style={{ padding: "34px 26px 26px" }}>
+        <h2
           style={{
-            display: "flex",
-            flexDirection: "column" as const,
-            gap: "11px",
-            marginBottom: "16px",
+            fontFamily: "'Playfair Display',serif",
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            color: "var(--foreground)",
+            letterSpacing: "-0.015em",
+            margin: "0 0 22px",
           }}
         >
-          {/* Subtotal */}
+          {t("cart.orderSummary")}
+        </h2>
+
+        {/* Line items */}
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: "12px", marginBottom: "18px" }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: "0.83rem",
-                color: "var(--foreground-muted)",
-              }}
-            >
+            <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.85rem", color: "var(--foreground-muted)" }}>
               {t("cart.subtotal", { count: cartItems.reduce((s, i) => s + i.quantity, 0) + cartKits.length })}
             </span>
-            <span
-              style={{
-                fontFamily: "'Playfair Display',serif",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                color: "var(--foreground)",
-              }}
-            >
+            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.92rem", fontWeight: 600, color: "var(--foreground)" }}>
               {formatPrice(subtotal)}
             </span>
           </div>
 
-          {/* Kit savings */}
           {kitSavings > 0 && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Caveat',cursive",
-                  fontSize: "0.8rem",
-                  color: "var(--success-text)",
-                }}
-              >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: "'Caveat',cursive", fontSize: "0.85rem", color: "var(--success-text)" }}>
                 {t("cart.kitSavings")}
               </span>
-              <span
-                style={{
-                  fontFamily: "'Playfair Display',serif",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "var(--success-text)",
-                }}
-              >
-                 − {formatPrice(kitSavings)}{" "}
-                <span
-                  style={{
-                    fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.65rem",
-                    fontWeight: 400,
-                  }}
-                >
-                  {t("cart.saved")}
-                </span>
+              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.87rem", fontWeight: 600, color: "var(--success-text)" }}>
+                − {formatPrice(kitSavings)}{" "}
+                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.65rem", fontWeight: 400 }}>{t("cart.saved")}</span>
               </span>
             </div>
           )}
 
-          {/* Promo */}
           {promoOk && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Caveat',cursive",
-                  fontSize: "0.8rem",
-                  color: "var(--success-text)",
-                }}
-              >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: "'Caveat',cursive", fontSize: "0.85rem", color: "var(--success-text)" }}>
                 ✦ MAKER10 (10% off)
               </span>
-              <span
-                style={{
-                  fontFamily: "'Playfair Display',serif",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "var(--success-text)",
-                }}
-              >
+              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.87rem", fontWeight: 600, color: "var(--success-text)" }}>
                 − {formatPrice(promoSaving)}
               </span>
             </div>
@@ -1138,72 +836,58 @@ export function OrderSummaryCard({
           <div>
             <button
               onClick={() => setPromoOpen((o) => !o)}
+              className="cart-promo-toggle"
               style={{
                 border: "none",
                 background: "transparent",
                 padding: 0,
                 fontFamily: "'Caveat',cursive",
-                fontSize: "0.75rem",
+                fontSize: "0.8rem",
                 color: "var(--primary)",
                 cursor: "pointer",
                 letterSpacing: "0.02em",
                 display: "flex",
                 alignItems: "center",
                 gap: "4px",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateX(2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateX(0)";
               }}
             >
-              {promoOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+              {promoOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               {promoOk ? t("cart.promoApplied") : t("cart.havePromo")}
             </button>
 
             {promoOpen && !promoOk && (
-              <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+              <div style={{ display: "flex", gap: "7px", marginTop: "9px" }}>
                 <input
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
                   placeholder={t("cart.enterCode")}
                   style={{
                     flex: 1,
-                    padding: "7px 12px",
+                    padding: "9px 14px",
                     borderRadius: "999px",
                     border: "1.5px solid var(--border)",
                     background: "var(--background)",
                     fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.78rem",
+                    fontSize: "0.8rem",
                     color: "var(--foreground)",
                     outline: "none",
                   }}
                 />
                 <button
                   onClick={handleApplyPromo}
+                  className="cart-promo-apply"
+                  disabled={checking}
                   style={{
-                    padding: "7px 14px",
+                    padding: "9px 16px",
                     borderRadius: "999px",
                     border: "none",
                     background: "var(--primary)",
                     color: "var(--primary-foreground)",
                     fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.75rem",
+                    fontSize: "0.77rem",
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: checking ? "default" : "pointer",
                     opacity: checking ? 0.7 : 1,
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(107, 63, 160, 0.35)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   {checking ? "…" : t("cart.apply")}
@@ -1213,57 +897,40 @@ export function OrderSummaryCard({
           </div>
         </div>
 
-        {/* Divider with scissors */}
-        <div style={{ position: "relative" as const, margin: "4px 0 16px" }}>
-          <div
-            style={{
-              height: "1.5px",
-              background:
-                "linear-gradient(90deg, var(--primary) 0%, var(--accent-pink) 50%, var(--accent-yellow) 100%)",
-              opacity: 0.4,
-            }}
-          />
-        </div>
-
-        {/* Total */}
+        {/* Stitched divider */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            marginBottom: "20px",
+            height: 0,
+            margin: "6px 0 18px",
+            borderTop: "1.5px dashed color-mix(in srgb, var(--primary) 35%, var(--border))",
           }}
-        >
-              <div>
-                <div
-                  style={{
-                    fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase" as const,
-                    color: "var(--foreground-muted)",
-                  }}
-                >
-                  {t("cart.orderTotal")}
-                </div>
+        />
+
+        {/* Total */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "22px" }}>
+          <div>
+            <div
+              style={{
+                fontFamily: "'Inter',sans-serif",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase" as const,
+                color: "var(--foreground-muted)",
+              }}
+            >
+              {t("cart.orderTotal")}
+            </div>
             {(kitSavings > 0 || promoOk) && (
-              <div
-                style={{
-                  fontFamily: "'Caveat',cursive",
-                  fontSize: "0.72rem",
-                  color: "var(--success-text)",
-                  marginTop: "1px",
-                }}
-              >
-                 {t("cart.savingToday", { amount: formatPrice(kitSavings + promoSaving) })}
+              <div style={{ fontFamily: "'Caveat',cursive", fontSize: "0.75rem", color: "var(--success-text)", marginTop: "2px" }}>
+                {t("cart.savingToday", { amount: formatPrice(kitSavings + promoSaving) })}
               </div>
             )}
           </div>
           <span
             style={{
               fontFamily: "'Playfair Display',serif",
-              fontSize: "1.8rem",
+              fontSize: "1.95rem",
               fontWeight: 700,
               color: "var(--primary)",
               letterSpacing: "-0.03em",
@@ -1276,35 +943,25 @@ export function OrderSummaryCard({
         {/* Checkout CTA */}
         <Link
           to="/order"
+          className="cart-checkout-btn"
           style={{
             width: "100%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: "9px",
-            padding: "14px 24px",
+            padding: "15px 24px",
             borderRadius: "999px",
             border: "none",
             background: "var(--primary)",
             color: "var(--primary-foreground)",
             fontFamily: "'Inter',sans-serif",
-            fontSize: "0.95rem",
+            fontSize: "0.96rem",
             fontWeight: 700,
             cursor: "pointer",
             boxShadow: "0 6px 20px rgba(107,63,160,0.28)",
-            marginBottom: "12px",
+            marginBottom: "14px",
             textDecoration: "none",
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow =
-              "0 8px 24px rgba(107, 63, 160, 0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow =
-              "0 6px 20px rgba(107, 63, 160, 0.28)";
           }}
         >
           <Lock size={14} strokeWidth={2} />
@@ -1313,29 +970,20 @@ export function OrderSummaryCard({
         </Link>
 
         {/* Assurance strip */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "16px",
-            flexWrap: "wrap" as const,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", gap: "18px", flexWrap: "wrap" as const }}>
           {[t("cart.securePayment"), t("cart.returns30Day")].map((note) => (
             <span
               key={note}
               style={{
                 fontFamily: "'Caveat',cursive",
-                fontSize: "0.66rem",
+                fontSize: "0.7rem",
                 color: "var(--foreground-muted)",
                 display: "flex",
                 alignItems: "center",
                 gap: "3px",
               }}
             >
-              <span style={{ color: "var(--primary)", fontSize: "0.62rem" }}>
-                ✦
-              </span>
+              <span style={{ color: "var(--primary)", fontSize: "0.65rem" }}>✦</span>
               {note}
             </span>
           ))}
@@ -1362,15 +1010,9 @@ export function CartPage() {
     totalItems,
   } = useCart();
 
-  const updateQty = (productId: string, variantId: string, qty: number) =>
-    updateQuantity(productId, variantId, qty);
-
-  const updateKitQty = (kitId: string, qty: number) =>
-    updateKitQuantity(kitId, qty);
-
-  const removeItem = (productId: string, variantId: string) =>
-    removeFromCart(productId, variantId);
-
+  const updateQty = (productId: string, variantId: string, qty: number) => updateQuantity(productId, variantId, qty);
+  const updateKitQty = (kitId: string, qty: number) => updateKitQuantity(kitId, qty);
+  const removeItem = (productId: string, variantId: string) => removeFromCart(productId, variantId);
   const removeKit = (kitId: string) => removeKitFromCart(kitId);
 
   const handleClearCart = () => {
@@ -1381,22 +1023,9 @@ export function CartPage() {
   const isEmpty = cartItems.length === 0 && cartKits.length === 0;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--background)",
-        position: "relative" as const,
-      }}
-    >
-      {/* Ambient glows */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      >
+    <div style={{ minHeight: "100vh", background: "var(--background)", position: "relative" as const }}>
+      {/* Ambient texture + soft corner glows */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
         <div
           style={{
             position: "absolute",
@@ -1404,188 +1033,121 @@ export function CartPage() {
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.022'/%3E%3C/svg%3E")`,
           }}
         />
+        <div
+          style={{
+            position: "absolute",
+            top: "-140px",
+            right: "-120px",
+            width: "420px",
+            height: "420px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(232,181,196,0.18), transparent 70%)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "-160px",
+            left: "-140px",
+            width: "460px",
+            height: "460px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(240,200,120,0.12), transparent 70%)",
+          }}
+        />
       </div>
 
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            padding: "48px 40px 88px",
-          }}
-        >
+        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "56px 40px 100px" }}>
           {/* Page heading */}
-          <div style={{ marginBottom: "40px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "14px",
-                marginBottom: "6px",
-              }}
-            >
-              <div
-                style={{ display: "flex", alignItems: "baseline", gap: "14px" }}
-              >
+          <div style={{ marginBottom: "44px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", marginBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
                 <h1
                   style={{
                     fontFamily: "'Playfair Display',Georgia,serif",
-                    fontSize: "clamp(1.8rem, 2.5vw, 2.4rem)",
+                    fontSize: "clamp(2rem, 3vw, 2.6rem)",
                     fontWeight: 700,
                     color: "var(--foreground)",
                     letterSpacing: "-0.025em",
                     lineHeight: 1.1,
                     margin: 0,
                   }}
-                  >
-                    {t("cart.yourBag")}
-                  </h1>
-                  {!isEmpty && (
-                    <span
-                      style={{
-                        fontFamily: "'Caveat',cursive",
-                        fontSize: "0.9rem",
-                        color: "var(--foreground-muted)",
-                      }}
-                    >
-                      {totalItems} {t("cart.items")}
-                    </span>
-                  )}
+                >
+                  {t("cart.yourBag")}
+                </h1>
+                {!isEmpty && (
+                  <span style={{ fontFamily: "'Caveat',cursive", fontSize: "1rem", color: "var(--foreground-muted)" }}>
+                    {totalItems} {t("cart.items")}
+                  </span>
+                )}
               </div>
               {!isEmpty && (
                 <button
                   onClick={handleClearCart}
+                  className="cart-clear-btn"
                   style={{
                     fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.75rem",
+                    fontSize: "0.78rem",
                     color: "var(--destructive)",
                     background: "transparent",
                     border: "1px solid var(--destructive)",
                     borderRadius: "999px",
-                    padding: "6px 14px",
+                    padding: "7px 16px",
                     cursor: "pointer",
                     flexShrink: 0,
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "var(--destructive)";
-                    e.currentTarget.style.color = "white";
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(220, 38, 38, 0.25)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "var(--destructive)";
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   {t("cart.removeAllItems")}
                 </button>
               )}
             </div>
-            <div
-              style={{
-                width: "60px",
-                height: "2px",
-                borderRadius: "999px",
-                background: "var(--primary)",
-                opacity: 0.35,
-              }}
-            />
+            <div className="cart-heading-stitch" />
           </div>
 
           {isEmpty ? (
             <EmptyCartState />
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 360px",
-                gap: "40px",
-                alignItems: "start",
-              }}
-            >
+            <div className="cart-layout">
               {/* LEFT: items */}
               <div>
-                {/* Items container */}
-                <div
-                  style={{
-                    borderRadius: "18px",
-                    border: "1px solid var(--border)",
-                    background: "var(--background)",
-                    overflow: "hidden",
-                    boxShadow: "var(--shadow-sm)",
-                    padding: "0 20px",
-                  }}
-                >
-                  {cartItems.map((item, i) => (
-                    <div key={`${item.productId}-${item.variantId}`}>
-                      {i > 0 && (
-                        <div
-                          style={{ height: "1px", background: "var(--border)" }}
-                        />
-                      )}
-                      <CartProductRow
-                        item={item}
-                        onQtyChange={updateQty}
-                        onRemove={removeItem}
-                      />
-                    </div>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: "14px" }}>
+                  {cartItems.map((item) => (
+                    <CartProductRow
+                      key={`${item.productId}-${item.variantId}`}
+                      item={item}
+                      onQtyChange={updateQty}
+                      onRemove={removeItem}
+                    />
                   ))}
 
-                  {/* Cart Kits */}
-                  {cartKits.length > 0 && (
-                    <>
-                      {cartItems.length > 0 && (
-                        <div
-                          style={{ height: "1px", background: "var(--border)" }}
-                        />
-                      )}
-                      <div style={{ padding: "20px 0" }}>
-                        {cartKits.map((kit) => (
-                          <CartKitRow
-                            key={kit.kitId}
-                            item={kit}
-                            onQtyChange={updateKitQty}
-                            onRemove={removeKit}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
+                  {cartKits.map((kit) => (
+                    <CartKitRow key={kit.kitId} item={kit} onQtyChange={updateKitQty} onRemove={removeKit} />
+                  ))}
                 </div>
 
                 {/* Continue shopping link */}
-                <div style={{ marginTop: "12px", textAlign: "right" as const }}>
+                <div style={{ marginTop: "18px", textAlign: "right" as const }}>
                   <Link
                     to="/shop"
+                    className="cart-continue-link"
                     style={{
                       fontFamily: "'Caveat',cursive",
-                      fontSize: "0.82rem",
+                      fontSize: "0.86rem",
                       color: "var(--primary)",
                       textDecoration: "none",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "4px",
-                      transition: "all 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateX(-4px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateX(0)";
                     }}
                   >
-                   ← {t("cart.continueShopping")}
+                    ← {t("cart.continueShopping")}
                   </Link>
                 </div>
               </div>
 
               {/* RIGHT: order summary */}
-              <div style={{ position: "sticky" as const, top: "24px" }}>
+              <div className="cart-summary-sticky">
                 <OrderSummaryCard cartItems={cartItems} cartKits={cartKits} />
               </div>
             </div>

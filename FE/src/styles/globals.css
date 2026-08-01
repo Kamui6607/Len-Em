@@ -314,6 +314,26 @@ a.nav-icon-btn:hover {
     var(--shadow-card-hover);
 }
 
+/* ============================================================
+   NAVBAR FLOATING GLOW — Light & Dark Mode
+   ============================================================ */
+.navbar-float {
+  box-shadow:
+    0 1px 2px rgba(24, 24, 27, 0.04),
+    0 10px 30px rgba(91, 61, 245, 0.10),
+    0 22px 50px rgba(91, 61, 245, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset;
+}
+
+.dark .navbar-float {
+  box-shadow:
+    0 0 0 1px rgba(140, 123, 255, 0.28),
+    0 10px 30px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(140, 123, 255, 0.30),
+    0 0 90px rgba(140, 123, 255, 0.14),
+    0 0 0 1px rgba(140, 123, 255, 0.16) inset;
+}
+
 /* Dark mode glass panels */
 .dark .glass-panel,
 .dark .glass-panel-solid,
