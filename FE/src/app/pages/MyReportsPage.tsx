@@ -24,7 +24,7 @@ export function MyReportsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
-  const { inputValue, setInputValue } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const { inputValue, debouncedValue, setInputValue } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   // Detail modal state
   const [selectedReport, setSelectedReport] = useState<OrderReport | null>(null);
@@ -41,6 +41,7 @@ export function MyReportsPage() {
       const { data } = await orderReportService.getMyReports({
         page,
         limit: 10,
+        search: debouncedValue || undefined,
       });
       
       const newReports = data.data.reports;
@@ -78,7 +79,7 @@ export function MyReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, debouncedValue]);
 
   // Initial fetch
   useEffect(() => {

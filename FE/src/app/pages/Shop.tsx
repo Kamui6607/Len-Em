@@ -141,6 +141,8 @@ export function Shop() {
 
   const {
     filters,
+    searchInput,
+    setSearchInput,
     filteredProducts,
     dynamicFilters,
     hasActiveFilters,
@@ -1007,8 +1009,8 @@ export function Shop() {
             <input
               className="search-input"
               placeholder={t("shop.searchPlaceholder")}
-              value={filters.search}
-              onChange={(e) => updateFilter("search", e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
           {viewMode === "products" && (

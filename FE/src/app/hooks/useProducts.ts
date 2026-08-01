@@ -29,8 +29,6 @@ type DynamicFilters = {
   difficulties: { name: string; count: number }[];
 };
 
-
-
 function getCategoryLabel(category: string): string {
   return category;
 }
@@ -103,15 +101,43 @@ export function useProducts() {
     page: Number(searchParams.get("page")) || 1,
   }), [searchParams]);
 
-  const debouncedSearch = useDebounce(filters.search, 400);
+  // ── Search input: local state (fast typing) + debounced URL sync ──
+  // The input updates instantly; the URL is only touched after the user
+  // stops typing (400ms) to avoid history spam / full-page re-renders.
+  const [searchInput, setSearchInput] = useState(() => searchParams.get("search") || "");
+  const debouncedSearch = useDebounce(searchInput, 400);
 
-  // ---- Async data (future: API call) ----
+  // Sync local input when URL changes externally (back/forward navigation)
+  useEffect(() => {
+    setSearchInput(searchParams.get("search") || "");
+  }, [searchParams]);
+
+  // Push the settled search term to the URL (debounced) — 1 URL update per search
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+    if (debouncedSearch !== urlSearch) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (debouncedSearch) {
+            next.set("search", debouncedSearch);
+          } else {
+            next.delete("search");
+          }
+          next.delete("page"); // reset pagination on search change
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [debouncedSearch, searchParams, setSearchParams]);
+
+  // ---- Async data ----
   const [isLoading, setIsLoading] = useState(false);
   const [paginatedResult, setPaginatedResult] = useState<PaginatedResponse<Product> | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
 
-  // Dynamic filter options are fetched from GET /products with no category/color filters.
-  // The "All" category is kept in the UI by Shop.tsx to show all products.
+  // Dynamic filter options are fetched from GET /products.
   const dynamicFilters = useMemo(
     () => buildDynamicFiltersFromProducts(allProducts),
     [allProducts]
@@ -123,7 +149,9 @@ export function useProducts() {
     return Array.from(tagSet);
   }, []);
 
-  // ---- Load all products once for Category/Color filter options ----
+  // ---- Load a bounded sample of products for Category/Color filter options ----
+  // Fetch only up to 2 pages (200 records) instead of the entire catalog.
+  // This prevents N+1 requests per user when the catalog grows.
   useEffect(() => {
     let cancelled = false;
 
@@ -133,8 +161,10 @@ export function useProducts() {
         if (cancelled) return;
 
         if (firstPage.totalPages > 1) {
+          // Fetch only 1 more page (cap total at 2 pages) to bound cost
+          const pagesToFetch = Math.min(firstPage.totalPages - 1, 1);
           const restPages = await Promise.all(
-            Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+            Array.from({ length: pagesToFetch }, (_, index) =>
               fetchProducts({ page: index + 2, limit: 100 })
             )
           );
@@ -159,15 +189,16 @@ export function useProducts() {
   }, []);
 
   // ---- Apply filters + pagination via the service ----
+  // Use filters.search (the URL-synced, debounced value) to avoid double-debouncing
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setIsLoading(true);
-            try {
+      try {
         let result = await fetchProducts({
           category: filters.category === "all" ? undefined : filters.category,
-          search: debouncedSearch || undefined,
+          search: filters.search || undefined,
           sort: filters.sort,
           page: filters.page,
           limit: 12,
@@ -245,7 +276,7 @@ export function useProducts() {
 
     load();
     return () => { cancelled = true; };
-  }, [debouncedSearch, filters.category, filters.color, filters.material, filters.weight, filters.difficulty, filters.sort, filters.page, filters.minPrice, filters.maxPrice]);
+  }, [filters.category, filters.search, filters.color, filters.material, filters.weight, filters.difficulty, filters.sort, filters.page, filters.minPrice, filters.maxPrice]);
 
   // Derived data for backward compatibility
   const filteredProducts: Product[] = paginatedResult?.data ?? [];
@@ -269,34 +300,40 @@ export function useProducts() {
   }, [filters]);
 
   // ---- URL sync helpers ----
+  // Uses functional setSearchParams so stale closures don't lose params.
   const updateFilter = useCallback(
     (key: keyof FilterState, value: string | string[] | number) => {
-      const newParams = new URLSearchParams(searchParams);
+      setSearchParams(
+        (prev) => {
+          const newParams = new URLSearchParams(prev);
 
-      if (Array.isArray(value)) {
-        if (value.length > 0) {
-          newParams.set(key, value.join(","));
-        } else {
-          newParams.delete(key);
-        }
-      } else if (value === "" || value === "all" || value === 0) {
-        if (key === "category") {
-          newParams.set(key, "all");
-        } else {
-          newParams.delete(key);
-        }
-      } else {
-        newParams.set(key, String(value));
-      }
+          if (Array.isArray(value)) {
+            if (value.length > 0) {
+              newParams.set(key, value.join(","));
+            } else {
+              newParams.delete(key);
+            }
+          } else if (value === "" || value === "all" || value === 0) {
+            if (key === "category") {
+              newParams.set(key, "all");
+            } else {
+              newParams.delete(key);
+            }
+          } else {
+            newParams.set(key, String(value));
+          }
 
-      // Reset to page 1 on any filter change (except page change itself)
-      if (key !== "page") {
-        newParams.delete("page");
-      }
+          // Reset to page 1 on any filter change (except page change itself)
+          if (key !== "page") {
+            newParams.delete("page");
+          }
 
-      setSearchParams(newParams, { replace: true });
+          return newParams;
+        },
+        { replace: true },
+      );
     },
-    [searchParams, setSearchParams]
+    [setSearchParams]
   );
 
   const clearFilters = useCallback(() => {
@@ -325,7 +362,7 @@ export function useProducts() {
   const activeChips = useMemo(() => {
     const chips: { label: string; type: string; value: string }[] = [];
 
-        if (filters.search) {
+    if (filters.search) {
       chips.push({ label: `"${filters.search}"`, type: "search", value: filters.search });
     }
 
@@ -358,9 +395,10 @@ export function useProducts() {
     (type: string, value: string) => {
       switch (type) {
         case "search":
+          setSearchInput("");
           updateFilter("search", "");
           break;
-                case "category":
+        case "category":
           updateFilter("category", "all");
           break;
         case "color":
@@ -382,6 +420,8 @@ export function useProducts() {
 
   return {
     filters,
+    searchInput,
+    setSearchInput,
     debouncedSearch,
     filteredProducts,
     dynamicFilters,

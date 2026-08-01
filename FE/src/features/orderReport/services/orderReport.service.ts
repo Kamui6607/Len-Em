@@ -36,8 +36,8 @@ export const orderReportService = {
     }
   },
 
-  /** GET /order-reports/my — Customer gets their own reports (paginated) */
-  getMyReports: (params?: { page?: number; limit?: number }) =>
+  /** GET /order-reports/my — Customer gets their own reports (paginated, searchable) */
+  getMyReports: (params?: { page?: number; limit?: number; search?: string }) =>
     axiosClient.get<{ status: string; data: OrderReportsResponse }>("/order-reports/my", { params }),
 
   /** GET /order-reports/:id — Get report detail by ID */

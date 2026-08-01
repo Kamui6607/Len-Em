@@ -22,6 +22,7 @@ import { productService } from "../../../api/productService";
 import { formatPrice } from "../../../lib/formatPrice";
 import type { BackendProduct } from "../../../shared/types/product.types";
 import { useLanguage } from "../../../context/LanguageContext";
+import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All Levels" },
@@ -34,8 +35,8 @@ export function AdminKits() {
   const { t } = useLanguage();
   const [kits, setKits] = useState<Kit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
+  const { inputValue: searchQuery, debouncedValue: debouncedSearchQuery, setInputValue: setSearchQuery } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -80,10 +81,10 @@ export function AdminKits() {
   };
 
   const filteredKits = kits.filter((kit) => {
-    if (!searchQuery) return true;
+    if (!debouncedSearchQuery) return true;
     return (
-      kit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      kit.description.toLowerCase().includes(searchQuery.toLowerCase())
+      kit.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      kit.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
     );
   });
 
@@ -345,9 +346,9 @@ function KitFormModal({
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<BackendProduct[]>([]);
-  const [productSearch, setProductSearch] = useState("");
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const { inputValue: productSearch, debouncedValue: debouncedProductSearch, setInputValue: setProductSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   // Fetch products for selection
   const fetchProducts = async (search: string) => {
@@ -379,9 +380,9 @@ function KitFormModal({
 
   useEffect(() => {
     if (showProductSelector) {
-      fetchProducts(productSearch);
+      fetchProducts(debouncedProductSearch);
     }
-  }, [showProductSelector, productSearch]);
+  }, [showProductSelector, debouncedProductSearch]);
 
   const handleAddProduct = (product: BackendProduct) => {
     const exists = formData.products.find(p => p.productId === product._id);

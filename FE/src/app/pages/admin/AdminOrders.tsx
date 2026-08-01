@@ -16,6 +16,7 @@ import type {
   OrderStatus,
 } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
+import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
 
 type OrderFilter = "all" | OrderStatus;
 
@@ -34,8 +35,8 @@ export function AdminOrders() {
   const { logActivity } = useAdmin();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<OrderFilter>("all");
+  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -60,10 +61,10 @@ export function AdminOrders() {
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order._id.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
       (order.shippingAddress?.fullName || "")
         .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+        .includes(debouncedSearchTerm.toLowerCase());
     const matchesFilter = filter === "all" || order.orderStatus === filter;
     return matchesSearch && matchesFilter;
   });

@@ -17,6 +17,7 @@ import { kitService, type KitProduct } from "../../api/kitService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { userService } from "../../features/users/services/user.service";
+import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
 
 type FeedFilter = "all" | "newest" | "purchased";
 
@@ -32,8 +33,8 @@ export function DIYFeedPage() {
   const { isAuthenticated } = useAuth();
   const { addKitToCart } = useCart();
   const [filter, setFilter] = useState<FeedFilter>("all");
-  const [search, setSearch] = useState("");
   const [posts, setPosts] = useState<DIYPost[]>([]);
+  const { inputValue: search, debouncedValue: debouncedSearch, setInputValue: setSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [creators, setCreators] = useState<Record<string, CreatorInfo>>({});
   const [loading, setLoading] = useState(false);
   const { isDIYPostSaved, toggleDIYPostSave } = useFavorites();
@@ -133,8 +134,8 @@ export function DIYFeedPage() {
   const approvedPosts = useMemo(() => posts.filter((p) => p.status !== "pending"), [posts]);
 
   const filteredPosts = approvedPosts.filter((post) => {
-    if (!search.trim()) return true;
-    return post.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()));
+    if (!debouncedSearch.trim()) return true;
+    return post.tags.some((tag) => tag.toLowerCase().includes(debouncedSearch.toLowerCase()));
   });
 
   const sortedPosts = [...filteredPosts].sort((a, b) => {

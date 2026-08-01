@@ -12,6 +12,7 @@ import { products } from "../data/products";
 import { formatPrice } from "../../lib/formatPrice";
 import { diyService } from "../../features/diy/services/diy.service";
 import type { CreateDIYPostDTO } from "../../features/diy/types/diy.types";
+import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
 
 interface ComboItem {
   productId: string;
@@ -28,12 +29,12 @@ export function DIYCreatePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [productSearch, setProductSearch] = useState("");
   const [comboItems, setComboItems] = useState<ComboItem[]>([]);
+  const { inputValue: productSearch, debouncedValue: debouncedProductSearch, setInputValue: setProductSearch } = useDebouncedSearch({ delay: 300, minChars: 0 });
   const [loading, setLoading] = useState(false);
 
   const searchableProducts = useMemo(() => {
-    const search = productSearch.trim().toLowerCase();
+    const search = debouncedProductSearch.trim().toLowerCase();
     return products
       .map((product) => ({
         productId: product.id,
@@ -50,7 +51,7 @@ export function DIYCreatePage() {
         );
       })
       .slice(0, 8);
-  }, [productSearch]);
+  }, [debouncedProductSearch]);
 
   const comboTotal = comboItems.reduce(
     (sum, item) => sum + item.price * item.quantity,

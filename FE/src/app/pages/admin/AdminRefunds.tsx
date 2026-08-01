@@ -16,6 +16,7 @@ import { formatPrice } from "../../../lib/formatPrice";
 import { refundService, type RefundInvoice } from "../../../api/refundService";
 import { useAuth } from "../../../hooks/useAuth";
 import { AdminSelect } from "../../components/admin/AdminSelect";
+import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -304,6 +305,7 @@ export function AdminRefunds() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+  const { inputValue: searchInput, debouncedValue: debouncedSearch, setInputValue: setSearchInput } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   // Detail & process dialog state
   const [detailInvoice, setDetailInvoice] = useState<RefundInvoice | null>(null);
@@ -319,6 +321,7 @@ export function AdminRefunds() {
     try {
       const params: Record<string, string | number> = { page, limit };
       if (statusFilter) params.status = statusFilter;
+      if (debouncedSearch) params.search = debouncedSearch;
       const { data: response } = await refundService.getAll(params);
       const apiData = response.data;
       setInvoices(apiData.invoices ?? []);
@@ -329,7 +332,7 @@ export function AdminRefunds() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, debouncedSearch]);
 
   useEffect(() => {
     fetchInvoices();
@@ -390,6 +393,11 @@ export function AdminRefunds() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
+                value={searchInput}
+                onChange={(e) => {
+                  setSearchInput(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search by invoice ID or order ID…"
                 className="input w-full"
                 style={{

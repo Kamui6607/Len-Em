@@ -15,6 +15,7 @@ import { Input } from "../../components/ui/input";
 import { lessonService } from "../../../api/lessonService";
 import type { Lesson } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../context/LanguageContext";
+import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
 
 type SortField = "title" | "order" | "duration" | "products" | "preview";
 type SortDirection = "asc" | "desc";
@@ -23,9 +24,9 @@ export function AdminLessons() {
   const { t } = useLanguage();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   const fetchLessons = useCallback(async () => {
     try {
@@ -44,7 +45,7 @@ export function AdminLessons() {
   }, [fetchLessons]);
 
   const filteredLessons = lessons.filter((lesson) =>
-    lesson.title.toLowerCase().includes(searchTerm.toLowerCase()),
+    lesson.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()),
   );
 
   const sortedLessons = [...filteredLessons].sort((a, b) => {

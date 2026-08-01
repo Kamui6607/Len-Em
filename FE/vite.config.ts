@@ -110,9 +110,14 @@ export default defineConfig({
               return 'vendor-utils';
             }
 
-            // --- Generic React check (after all specific patterns) ---
-            // Include scheduler (react-dom dependency) to avoid circular chunk warning
-            if (id.includes('react-dom') || id.includes('react') || id.includes('scheduler')) {
+            // --- Core React check (after all specific patterns) ---
+            // Only bundle the core React runtime together: react, react-dom, and scheduler.
+            // Matching ONLY the top-level core packages (not "react-redux", "react-reconciler",
+            // "react-remove-scroll", etc.) keeps vendor-react a leaf chunk with no outgoing
+            // imports. This prevents circular chunk dependencies (e.g. vendor-other ->
+            // vendor-react -> vendor-other) that break module initialization at runtime
+            // (e.g. "Cannot read properties of undefined (reading 'useLayoutEffect')").
+            if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
               return 'vendor-react';
             }
 
