@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useCart } from "../../../context/CartContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import { formatPrice } from "../../../lib/formatPrice";
-import "./CartPage.css";
+import "./Cartpage.css";
 
 // ═══════════════════════════════════════════════════════════════════
 // EMPTY CART ILLUSTRATION — empty embroidery hoop
