@@ -158,6 +158,10 @@ export interface ShippingFeePreviewRequest {
   provinceName: string;
   districtName: string;
   wardName: string;
+  /** Latitude from map pin */
+  lat?: number;
+  /** Longitude from map pin */
+  lng?: number;
 }
 
 export interface ShippingFeePreviewResponse {

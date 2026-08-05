@@ -177,10 +177,8 @@ export function Navigation({ cartCount }: NavigationProps) {
     const searchParams = new URLSearchParams(location.search);
     searchParams.set("search", q);
     const newUrl = `${location.pathname}?${searchParams.toString()}`;
-    console.log("Navigating to:", newUrl);
     navigate(newUrl);
-    setSearchOpen(false);
-    setSearchQuery("");
+    // Keep search bar open so user can see the query
   };
 
   const toggleSearch = () => {
@@ -262,6 +260,12 @@ export function Navigation({ cartCount }: NavigationProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [searchOpen]);
+
+  // Close search on route change
+  useEffect(() => {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }, [location.pathname]);
 
   // Helpers
   const isActive = (href: string, sectionId?: string) => {
@@ -540,6 +544,13 @@ export function Navigation({ cartCount }: NavigationProps) {
                             type="button"
                             onClick={() => {
                               setSearchQuery("");
+                              // Clear URL search param
+                              const searchParams = new URLSearchParams(location.search);
+                              searchParams.delete("search");
+                              const newUrl = searchParams.toString() 
+                                ? `${location.pathname}?${searchParams.toString()}`
+                                : location.pathname;
+                              navigate(newUrl, { replace: true });
                               searchInputRef.current?.focus();
                             }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 flex size-5 items-center justify-center rounded-full text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors"

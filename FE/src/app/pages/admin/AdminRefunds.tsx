@@ -385,11 +385,11 @@ export function AdminRefunds() {
       <div className="admin-panel-glow rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
         {/* Filters */}
         <div
-          className="p-6 border-b border-border"
+          className="admin-toolbar p-6 border-b border-border"
           style={{ background: "var(--surface)" }}
         >
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[180px] max-w-sm">
+            <div className="admin-search-wrap relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
@@ -444,10 +444,10 @@ export function AdminRefunds() {
           </div>
         ) : invoices.length === 0 ? (
           <div
-            className="p-8 text-center text-muted-foreground"
+            className="admin-empty-state"
             style={{ background: "var(--card)" }}
           >
-            <DollarSign size={40} className="mx-auto mb-3 opacity-40" />
+            <DollarSign size={40} />
             <p>No refund invoices found</p>
           </div>
         ) : (
@@ -606,7 +606,7 @@ export function AdminRefunds() {
           >
             Previous
           </button>
-          <span className="text-sm text-muted-foreground">
+          <span className="admin-pagination-info">
             Page {page} of {totalPages}
           </span>
           <button

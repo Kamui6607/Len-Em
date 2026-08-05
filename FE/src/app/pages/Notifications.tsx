@@ -96,7 +96,7 @@ function DeleteButton({
 
 export function NotificationsPage() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotification } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotification, clearAllNotifications } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const filteredNotifications = notifications.filter((notif) => (filter === "unread" ? !notif.read : true));
@@ -126,6 +126,11 @@ export function NotificationsPage() {
     toast.success("Notification dismissed");
   };
 
+  const handleDeleteAll = () => {
+    clearAllNotifications();
+    toast.success("All notifications deleted");
+  };
+
   let cardIndex = 0;
 
   return (
@@ -150,15 +155,26 @@ export function NotificationsPage() {
             </p>
           </div>
 
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors"
-            >
-              <CheckCheck className="size-4" />
-              Mark all as read
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {notifications.length > 0 && (
+              <button
+                onClick={handleDeleteAll}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors"
+              >
+                <Trash2 className="size-4" />
+                Delete all
+              </button>
+            )}
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors"
+              >
+                <CheckCheck className="size-4" />
+                Mark all as read
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter tabs — fixed height, share the panel's left edge, own border below */}

@@ -179,7 +179,7 @@ function UserAvatar({ name, roleName }: { name: string; roleName: string }) {
   const s = getRoleStyle(roleName);
   return (
     <div
-      className={`w-11 h-11 rounded-full border-2 flex items-center justify-center text-sm font-semibold flex-shrink-0 ${s.avatar}`}
+      className={`admin-user-avatar w-11 h-11 rounded-full border-2 flex items-center justify-center text-sm font-semibold flex-shrink-0 ${s.avatar}`}
     >
       {initials || "?"}
     </div>
@@ -539,12 +539,12 @@ function StatCard({
 }) {
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+      className="admin-mini-stat group relative overflow-hidden rounded-xl border p-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
       style={{ background: bg, borderColor: border }}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         <span
-          className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+          className="admin-mini-stat-icon w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
           style={{ background: "var(--card)", color: text }}
         >
           {icon}

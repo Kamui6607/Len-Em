@@ -9,6 +9,12 @@ export interface UseProductsQueryParams {
   sort?: string;
   page?: number;
   limit?: number;
+  /** Comma-separated hex codes, e.g. "#FFF,#000" */
+  colors?: string;
+  /** Minimum price filter */
+  minPrice?: number;
+  /** Maximum price filter */
+  maxPrice?: number;
 }
 
 /**

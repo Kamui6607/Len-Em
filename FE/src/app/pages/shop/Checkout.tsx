@@ -65,7 +65,7 @@ const PAYMENT_METHODS = [
 export function Checkout() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { cartItems, cartKits, totalItems, totalPrice, clearCart } = useCart();
+  const { cartItems, cartKits, totalItems, totalPrice } = useCart();
   const user = useAuthStore((s) => s.user);
   const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "MOMO" | "COD">("VNPAY");
   const [submitting, setSubmitting] = useState(false);
@@ -83,9 +83,12 @@ export function Checkout() {
   // Address mode: "dropdown" (GHN API dropdowns) or "map" (map picker + map-address API)
   const [addressMode, setAddressMode] = useState<"dropdown" | "map">("dropdown");
 
-  // Map state
+  // Map state — coordinates + raw address names from map picker
   const [mapLat, setMapLat] = useState<number | undefined>(undefined);
   const [mapLng, setMapLng] = useState<number | undefined>(undefined);
+  const [mapProvinceName, setMapProvinceName] = useState("");
+  const [mapDistrictName, setMapDistrictName] = useState("");
+  const [mapWardName, setMapWardName] = useState("");
 
   const subtotal = totalPrice;
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
@@ -169,11 +172,19 @@ export function Checkout() {
   };
 
   // Handle map location selection
+  // The map picker returns raw address names + lat/lng. These are stored
+  // directly and sent to POST /orders/shipping-fee for fee calculation —
+  // the backend accepts name strings + coordinates, no GHN IDs needed.
   const handleLocationSelect = async (result: ReverseGeocodeResult) => {
     setMapLat(result.lat);
     setMapLng(result.lng);
+    setMapProvinceName(result.provinceName?.trim() || "");
+    setMapDistrictName(result.districtName?.trim() || "");
+    setMapWardName(result.wardName?.trim() || "");
 
-    // Only call /ghn/map-address if we have at least province name
+    // Bonus: try to auto-fill the GHN dropdowns via /ghn/map-address.
+    // This does NOT block shipping fee calculation — fee is computed
+    // directly from the map names + coordinates in the map-mode effect.
     const province = result.provinceName?.trim();
     const district = result.districtName?.trim();
     const ward = result.wardName?.trim();
@@ -184,6 +195,10 @@ export function Checkout() {
           provinceName: province || "",
           districtName: district || "",
           wardName: ward || "",
+          // Include lat/lng so backend can use coordinate-based lookup
+          ...(result.lat !== undefined && result.lng !== undefined
+            ? { lat: result.lat, lng: result.lng }
+            : {}),
         });
         const match = mapRes.data.data.match;
         if (match.success && match.provinceId) {
@@ -221,7 +236,7 @@ export function Checkout() {
         }
       } catch (error) {
         console.error("Map address mapping failed:", error);
-        // Fallback: try fuzzy match on province name
+        // Fallback: try fuzzy match on province name only (dropdowns remain empty)
         if (result.provinceName) {
           const matchedProvince = provinces.find(
             (p) =>
@@ -236,86 +251,100 @@ export function Checkout() {
     }
   };
 
-  // Calculate shipping fee when ward or cart items change
-  useEffect(() => {
-    if (!selectedWard) return;
+  // ── Shared shipping fee calculator ──
+  // Sends items + address names (+ optional lat/lng) to POST /orders/shipping-fee.
+  const fetchShippingFee = async (
+    provinceName: string,
+    districtName: string,
+    wardName: string,
+    lat?: number,
+    lng?: number
+  ) => {
     if (cartItems.length === 0 && cartKits.length === 0) return;
 
-    let cancelled = false;
+    setCalculatingFee(true);
+    try {
+      // Build items array for shipping calculation
+      // Include both individual cart items and kit products
+      const itemsForShipping: ShippingFeePreviewRequest["items"] = [];
+      
+      // Add individual cart items
+      cartItems.forEach((item) => {
+        itemsForShipping.push({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        });
+      });
+      
+      // Add kit products (expand kits into individual products for shipping calculation)
+      cartKits.forEach((kit) => {
+        kit.products.forEach((product) => {
+          itemsForShipping.push({
+            productId: product.productId,
+            variantId: product.variantId,
+            quantity: 1, // Each product in kit counts as 1 for shipping
+          });
+        });
+      });
 
-    const fetchShippingFee = async () => {
-      if (!selectedProvince || !selectedDistrict || !selectedWard) {
+      // If still no items, skip calculation
+      if (itemsForShipping.length === 0) {
+        setDeliveryFee(null);
         return;
       }
 
-      setCalculatingFee(true);
-      try {
-        // Build items array for shipping calculation
-        // Include both individual cart items and kit products
-        const itemsForShipping: ShippingFeePreviewRequest["items"] = [];
-        
-        // Add individual cart items
-        cartItems.forEach((item) => {
-          itemsForShipping.push({
-            productId: item.productId,
-            variantId: item.variantId,
-            quantity: item.quantity,
-          });
-        });
-        
-        // Add kit products (expand kits into individual products for shipping calculation)
-        cartKits.forEach((kit) => {
-          kit.products.forEach((product) => {
-            itemsForShipping.push({
-              productId: product.productId,
-              variantId: product.variantId,
-              quantity: 1, // Each product in kit counts as 1 for shipping
-            });
-          });
-        });
+      const payload: ShippingFeePreviewRequest = {
+        items: itemsForShipping,
+        provinceName,
+        districtName,
+        wardName,
+        // Include lat/lng when available (map mode)
+        ...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
+      };
 
-        // If still no items, skip calculation
-        if (itemsForShipping.length === 0) {
-          setDeliveryFee(null);
-          return;
-        }
+      console.log("[Checkout] Calculating shipping fee with payload:", payload);
+      const response = await orderApi.previewShippingFee(payload);
+      const data = response.data;
+      // Backend returns { subtotal, shippingFee, total }
+      console.log("[Checkout] Shipping fee response:", data);
+      setDeliveryFee(data.shippingFee ?? 0);
+    } catch (error) {
+      console.error("[Checkout] Failed to calculate shipping fee:", error);
+      // Show a toast with the error so the user knows what happened
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errMsg = axiosError?.response?.data?.message;
+      toast.error(errMsg || "Không thể tính phí vận chuyển. Vui lòng thử lại sau.");
+    } finally {
+      setCalculatingFee(false);
+    }
+  };
 
-        const payload: ShippingFeePreviewRequest = {
-          items: itemsForShipping,
-          provinceName: selectedProvince.provinceName,
-          districtName: selectedDistrict.districtName,
-          wardName: selectedWard.wardName,
-        };
+  // ── Effect 1: Dropdown mode — calculate fee when all 3 GHN dropdowns selected ──
+  useEffect(() => {
+    if (addressMode !== "dropdown") return;
+    if (!selectedProvince || !selectedDistrict || !selectedWard) return;
 
-        console.log("[Checkout] Calculating shipping fee with payload:", payload);
-        const response = await orderApi.previewShippingFee(payload);
-        const data = response.data;
-        // Backend returns { subtotal, shippingFee, total }
-        console.log("[Checkout] Shipping fee response:", data);
-        if (!cancelled) {
-          setDeliveryFee(data.shippingFee ?? 0);
-        }
-      } catch (error) {
-        console.error("[Checkout] Failed to calculate shipping fee:", error);
-        // Show a toast with the error so the user knows what happened
-        const axiosError = error as { response?: { data?: { message?: string } } };
-        const errMsg = axiosError?.response?.data?.message;
-        if (!cancelled) {
-          toast.error(errMsg || "Không thể tính phí vận chuyển. Vui lòng thử lại sau.");
-        }
-      } finally {
-        if (!cancelled) {
-          setCalculatingFee(false);
-        }
-      }
-    };
+    fetchShippingFee(
+      selectedProvince.provinceName,
+      selectedDistrict.districtName,
+      selectedWard.wardName
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWard, selectedProvince, selectedDistrict, addressMode, cartItems, cartKits]);
 
-    fetchShippingFee();
+  // ── Effect 2: Map mode — calculate fee directly from map result names + lat/lng ──
+  // This does NOT depend on GHN dropdowns or /ghn/map-address. As soon as
+  // the map picker returns provinceName/districtName/wardName + coordinates,
+  // we send them straight to /orders/shipping-fee.
+  useEffect(() => {
+    if (addressMode !== "map") return;
+    if (!mapProvinceName || !mapDistrictName || !mapWardName) return;
+    if (mapLat === undefined || mapLng === undefined) return;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedWard, selectedProvince, selectedDistrict, cartItems, cartKits]);
+    fetchShippingFee(mapProvinceName, mapDistrictName, mapWardName, mapLat, mapLng);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapProvinceName, mapDistrictName, mapWardName, mapLat, mapLng, addressMode, cartItems, cartKits]);
 
   const onSubmit = async (data: ShippingFormData) => {
     if (cartItems.length === 0 && cartKits.length === 0) {
@@ -324,9 +353,19 @@ export function Checkout() {
       return;
     }
 
-    if (!selectedProvince || !selectedDistrict || !selectedWard) {
-      toast.error("Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã");
-      return;
+    // In map mode: use the raw names from the map picker directly.
+    // In dropdown mode: use the GHN dropdown selections.
+    const isMapMode = addressMode === "map";
+    if (isMapMode) {
+      if (!mapProvinceName || !mapDistrictName || !mapWardName) {
+        toast.error("Vui lòng chọn vị trí trên bản đồ");
+        return;
+      }
+    } else {
+      if (!selectedProvince || !selectedDistrict || !selectedWard) {
+        toast.error("Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -347,9 +386,10 @@ export function Checkout() {
           fullName: data.fullName,
           phone: data.phone,
           address: data.address,
-          wardName: selectedWard.wardName,
-          districtName: selectedDistrict.districtName,
-          provinceName: selectedProvince.provinceName,
+          // Use map names in map mode, GHN dropdown names in dropdown mode
+          wardName: isMapMode ? mapWardName : selectedWard!.wardName,
+          districtName: isMapMode ? mapDistrictName : selectedDistrict!.districtName,
+          provinceName: isMapMode ? mapProvinceName : selectedProvince!.provinceName,
           // Include lat/lng from map if available
           ...(mapLat !== undefined && mapLng !== undefined
             ? { lat: mapLat, lng: mapLng }
@@ -362,8 +402,10 @@ export function Checkout() {
       const response = await orderApi.createOrder(payload);
       const result = response.data;
 
-      // Clear cart immediately after order is successfully created
-      clearCart();
+      // NOTE: Do NOT clear cart here! For VNPAY/MOMO, the user is redirected
+      // to the payment gateway. If they press Back or payment fails, the cart
+      // must still be intact. The cart is cleared on /order/success only after
+      // payment is confirmed (or for COD, when the order is created successfully).
 
       if (result.payUrl) {
         // VNPAY/MOMO: redirect to payment gateway
@@ -371,14 +413,16 @@ export function Checkout() {
         return;
       }
 
-      // For COD: show pending message (payment will be confirmed upon delivery)
-      // For other payment methods without redirect: show success
+      // For COD: navigate to /order/success so the cart is cleared
+      // only after the order is confirmed. For other payment methods
+      // without redirect, also go to success page.
       if (paymentMethod === "COD") {
         toast.success("Đặt hàng thành công! Vui lòng chuẩn bị tiền khi nhận hàng.");
+        navigate(`/order/success?orderId=${result.order?._id ?? ""}`);
       } else {
         toast.success("Đặt hàng thành công!");
+        navigate(`/order/success?orderId=${result.order?._id ?? ""}`);
       }
-      navigate(`/purchased`);
     } catch (error: unknown) {
       const axiosError = error as {
         response?: {
@@ -649,11 +693,11 @@ export function Checkout() {
                         initialLng={mapLng}
                         onLocationSelect={handleLocationSelect}
                       />
-                      {selectedProvince && selectedDistrict && selectedWard && (
+                      {(mapProvinceName || mapDistrictName || mapWardName) && (
                         <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-1">
                           <p className="text-sm font-medium text-primary">Địa chỉ đã chọn:</p>
                           <p className="text-sm text-muted-foreground">
-                            {selectedWard.wardName}, {selectedDistrict.districtName}, {selectedProvince.provinceName}
+                            {[mapWardName, mapDistrictName, mapProvinceName].filter(Boolean).join(", ") || "Đang xác định..."}
                           </p>
                           {mapLat !== undefined && mapLng !== undefined && (
                             <p className="text-xs text-muted-foreground">

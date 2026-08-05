@@ -15,7 +15,6 @@ import { diyService } from "../../features/diy/services/diy.service";
 import { kitService, type KitProduct } from "../../api/kitService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
-import { userService } from "../../features/users/services/user.service";
 import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 type FeedFilter = "all" | "newest" | "purchased";
@@ -45,39 +44,13 @@ export function DIYFeedPage() {
       const { data } = await diyService.getAllPosts({ page: 1, limit: 20 });
       setPosts(data.data.posts);
 
-      const creatorIds = [...new Set(data.data.posts.map((p) => p.creatorId))];
-      const creatorMap: Record<string, CreatorInfo> = {};
-
-      // Fetch all creators in parallel with error handling
-      // Note: getUserById is admin-only, so we gracefully handle 403 errors
-      const results = await Promise.allSettled(
-        creatorIds.map(async (creatorId) => {
-          try {
-            const { data: userData } = await userService.getUserById(creatorId);
-            return { creatorId, userData };
-          } catch (error) {
-            // Silently fail for non-admin users - they can't access other users' data
-            console.warn(`Cannot fetch creator ${creatorId}:`, error);
-            return { creatorId, userData: null };
-          }
-        })
-      );
-
-      for (const result of results) {
-        if (result.status === "fulfilled" && result.value.userData?.data?.result) {
-          const { creatorId, userData } = result.value;
-          creatorMap[creatorId] = {
-            userId: userData.data.result.userId,
-            fullName: userData.data.result.fullName,
-            avatar:
-              typeof userData.data.result.avatar === "object"
-                ? userData.data.result.avatar?.url
-                : userData.data.result.avatar,
-          };
-        }
-      }
-      setCreators(creatorMap);
-    } catch {
+      // Note: getUserById is admin-only, so we can't fetch creator info
+      // for regular users. The UI falls back to a generic avatar/name.
+      // If the backend later exposes a public endpoint for user profiles,
+      // we can populate `creators` here.
+      setCreators({});
+    } catch (error) {
+      console.error("DIYFeedPage - Error fetching posts:", error);
       toast.error("Failed to load posts, showing demo data");
     } finally {
       setLoading(false);
@@ -142,7 +115,12 @@ export function DIYFeedPage() {
 
   const filteredPosts = approvedPosts.filter((post) => {
     if (!searchQuery.trim()) return true;
-    return post.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = searchQuery.toLowerCase();
+    return (
+      post.title.toLowerCase().includes(q) ||
+      post.description.toLowerCase().includes(q) ||
+      post.tags.some((tag) => tag.toLowerCase().includes(q))
+    );
   });
 
   // Debug: log search state

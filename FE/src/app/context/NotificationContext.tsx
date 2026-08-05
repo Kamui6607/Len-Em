@@ -10,6 +10,7 @@ interface NotificationContextType {
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   clearNotification: (notificationId: string) => void;
+  clearAllNotifications: () => void;
   setNotifications: (notifications: Notification[]) => void;
 }
 
@@ -67,6 +68,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const clearAllNotifications = useCallback(() => {
+    // Get all notification IDs before clearing
+    const allNotificationIds = notifications.map((n) => n._id);
+    // Clear local state immediately
+    setNotifications([]);
+    // Delete each notification from server (backend only supports DELETE /notifications/{id})
+    allNotificationIds.forEach((id) => {
+      notificationService.delete(id).catch(() => {
+        // Silent fail — local state is already updated
+      });
+    });
+  }, [notifications]);
+
   return (
     <NotificationContext.Provider
       value={{
@@ -76,6 +90,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         markAsRead,
         markAllAsRead,
         clearNotification,
+        clearAllNotifications,
         setNotifications,
       }}
     >

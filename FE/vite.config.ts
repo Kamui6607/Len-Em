@@ -16,6 +16,9 @@ export default defineConfig({
 
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
+  // SPA mode - serves index.html for all routes
+  appType: 'spa',
+
   server: {
     port: 5000,
     host: 'localhost',

@@ -31,6 +31,13 @@ const LEVEL_OPTIONS = [
   { value: "advanced", label: "Advanced" },
 ];
 
+// Đồng bộ màu level với AdminCourses.tsx (badge-* dùng chung, có dark mode)
+const LEVEL_BADGE_CLASS: Record<string, string> = {
+  beginner: "badge-green",
+  intermediate: "badge-orange",
+  advanced: "badge-red",
+};
+
 export function AdminKits() {
   const { t } = useLanguage();
   const [kits, setKits] = useState<Kit[]>([]);
@@ -89,39 +96,44 @@ export function AdminKits() {
   });
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{t("admin.kits.title")}</h1>
-            <p className="text-muted-foreground">
-              {t("admin.kits.subtitle")}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={20} />
-            {t("admin.kits.createKit")}
-          </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="admin-page-title mb-2">{t("admin.kits.title")}</h1>
+          <p className="admin-page-subtitle text-muted-foreground">
+            {t("admin.kits.subtitle")}
+          </p>
         </div>
+        <button onClick={() => setShowCreateModal(true)} className="btn-create">
+          <Plus size={18} />
+          {t("admin.kits.createKit")}
+        </button>
+      </div>
 
+      {/* Filters + Table */}
+      <div
+        className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
+        style={{ borderColor: "var(--border)" }}
+      >
         {/* Filters */}
-        <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
+        <div
+          className="admin-toolbar p-6 border-b border-border"
+          style={{ background: "var(--surface)" }}
+        >
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+            <div className="admin-search-wrap relative flex-1">
               <Search
                 size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
               <input
                 type="text"
                 placeholder={t("admin.kits.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
+                className="input w-full"
+                style={{ paddingLeft: "3rem" }}
               />
             </div>
             <select
@@ -130,7 +142,7 @@ export function AdminKits() {
                 setLevelFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
+              className="input sm:w-56"
             >
               {LEVEL_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -142,155 +154,126 @@ export function AdminKits() {
         </div>
 
         {/* Kits Table */}
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : filteredKits.length === 0 ? (
-            <div className="text-center py-16">
-              <Package
-                size={64}
-                className="mx-auto mb-4 text-muted-foreground opacity-40"
-              />
-              <h3 className="text-xl font-semibold mb-2">{t("admin.kits.noKitsFound")}</h3>
-              <p className="text-muted-foreground">
-                {t("admin.kits.noKitsHint")}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left px-6 py-4 font-semibold">{t("admin.kits.kit")}</th>
-                    <th className="text-left px-6 py-4 font-semibold">{t("admin.kits.level")}</th>
-                    <th className="text-left px-6 py-4 font-semibold">{t("admin.kits.price")}</th>
-                    <th className="text-left px-6 py-4 font-semibold">{t("admin.kits.products")}</th>
-                    <th className="text-left px-6 py-4 font-semibold">{t("admin.kits.status")}</th>
-                    <th className="text-right px-6 py-4 font-semibold">{t("admin.kits.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredKits.map((kit) => (
-                    <tr
-                      key={kit._id}
-                      className="border-t border-border hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={kit.thumbnail}
-                            alt={kit.name}
-                            className="w-12 h-12 rounded-lg object-cover"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (!target.dataset.fallback) {
-                                target.dataset.fallback = "true";
-                                target.src = `https://picsum.photos/seed/${kit._id}/100/100`;
-                              }
-                            }}
-                          />
-                          <div>
-                            <div className="font-medium">{kit.name}</div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">
-                              {kit.description}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`
-                            px-3 py-1 rounded-full text-xs font-medium capitalize
-                            ${
-                              kit.level === "beginner"
-                                ? "bg-green-100 text-green-700"
-                                : kit.level === "intermediate"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
+        {loading ? (
+          <div
+            className="flex items-center justify-center py-16"
+            style={{ background: "var(--card)" }}
+          >
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : filteredKits.length === 0 ? (
+          <div className="admin-empty-state" style={{ background: "var(--card)" }}>
+            <Package size={48} />
+            <p>{t("admin.kits.noKitsFound")}</p>
+            <p className="text-sm">{t("admin.kits.noKitsHint")}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+            <table className="admin-table w-full">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.kit")}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.level")}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.price")}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.products")}</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.status")}</th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[130px]">{t("admin.kits.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredKits.map((kit) => (
+                  <tr key={kit._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={kit.thumbnail}
+                          alt={kit.name}
+                          className="size-11 rounded-lg object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallback) {
+                              target.dataset.fallback = "true";
+                              target.src = `https://picsum.photos/seed/${kit._id}/100/100`;
                             }
-                          `}
-                        >
-                          {kit.level}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 font-medium">
-                        {formatPrice(kit.price)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {(kit.products || []).length} {t("admin.kits.items")}
-                      </td>
-                      <td className="px-6 py-4">
-                         <span
-                           className={`
-                             px-3 py-1 rounded-full text-xs font-medium
-                             ${
-                               kit.isActive
-                                 ? "bg-green-100 text-green-700"
-                                 : "bg-gray-100 text-gray-700"
-                             }
-                           `}
-                         >
-                           {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
-                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                           <Link
-                             to={`/kits/${kit._id}`}
-                             className="p-2 hover:bg-muted rounded-lg transition-colors"
-                             title={t("admin.kits.view")}
-                           >
-                             <Eye size={18} />
-                           </Link>
-                           <button
-                             onClick={() => setEditingKit(kit)}
-                             className="p-2 hover:bg-muted rounded-lg transition-colors"
-                             title={t("admin.kits.edit")}
-                           >
-                             <Edit2 size={18} />
-                           </button>
-                           <button
-                             onClick={() => handleDelete(kit._id)}
-                             className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
-                             title={t("admin.kits.delete")}
-                           >
-                             <Trash2 size={18} />
-                           </button>
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <span className="block truncate font-medium text-sm max-w-[260px]">{kit.name}</span>
+                          <span className="text-xs text-muted-foreground truncate block max-w-[260px]">{kit.description}</span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg border border-border bg-card hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {t("admin.kits.previousPage")}
-            </button>
-            <span className="px-4 py-2 text-sm text-muted-foreground">
-              {t("admin.kits.pageInfo", { page: currentPage, totalPages })}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg border border-border bg-card hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {t("admin.kits.nextPage")}
-            </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`badge capitalize ${LEVEL_BADGE_CLASS[kit.level] ?? "badge-gray"}`}>
+                        {kit.level}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold" style={{ color: "var(--primary)" }}>
+                      {formatPrice(kit.price)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {(kit.products || []).length} {t("admin.kits.items")}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`badge ${kit.isActive ? "badge-green" : "badge-red"}`}>
+                        {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/kits/${kit._id}`}
+                          className="admin-action-btn view"
+                          title={t("admin.kits.view")}
+                        >
+                          <Eye size={16} />
+                        </Link>
+                        <button
+                          onClick={() => setEditingKit(kit)}
+                          className="admin-action-btn edit"
+                          title={t("admin.kits.edit")}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(kit._id)}
+                          className="admin-action-btn delete"
+                          title={t("admin.kits.delete")}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="btn-secondary"
+          >
+            {t("admin.kits.previousPage")}
+          </button>
+          <span className="admin-pagination-info">
+            {t("admin.kits.pageInfo", { page: currentPage, totalPages })}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="btn-secondary"
+          >
+            {t("admin.kits.nextPage")}
+          </button>
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       <AnimatePresence>
@@ -439,48 +422,52 @@ function KitFormModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="admin-dialog-overlay"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-background rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+        initial={{ scale: 0.96, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.96, opacity: 0, y: 10 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="admin-dialog-content max-w-2xl w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-2xl font-bold">
+        <div className="admin-dialog-header relative">
+          <h3 className="text-base font-semibold">
             {kit ? t("admin.kits.editKit") : t("admin.kits.createKit")}
-          </h2>
+          </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
+            style={{ color: "var(--foreground-muted)" }}
+            className="admin-action-btn absolute top-4 right-4"
+            aria-label="Close"
           >
-            <X size={18} />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit}>
+          <div className="admin-dialog-body space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
-                {t("admin.kits.kitName")} *
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                {t("admin.kits.kitName")} <span className="text-destructive">*</span>
               </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
-            />
-          </div>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="input w-full"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Description *
-            </label>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                Description <span className="text-destructive">*</span>
+              </label>
               <textarea
                 required
                 rows={3}
@@ -489,231 +476,230 @@ function KitFormModal({
                   setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder={t("admin.kits.descriptionPlaceholder")}
-                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary resize-none"
+                className="input w-full resize-none"
               />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {t("admin.kits.level")} *
-              </label>
-              <select
-                value={formData.level}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    level: e.target.value as
-                      | "beginner"
-                      | "intermediate"
-                      | "advanced",
-                  })
-                }
-                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
-              >
-                <option value="beginner">{t("admin.kits.beginner")}</option>
-                <option value="intermediate">{t("admin.kits.intermediate")}</option>
-                <option value="advanced">{t("admin.kits.advanced")}</option>
-              </select>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  {t("admin.kits.level")} <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={formData.level}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      level: e.target.value as
+                        | "beginner"
+                        | "intermediate"
+                        | "advanced",
+                    })
+                  }
+                  className="input w-full"
+                >
+                  <option value="beginner">{t("admin.kits.beginner")}</option>
+                  <option value="intermediate">{t("admin.kits.intermediate")}</option>
+                  <option value="advanced">{t("admin.kits.advanced")}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                  {t("admin.kits.price")} <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      price: Number(e.target.value),
+                    })
+                  }
+                  className="input w-full"
+                />
+              </div>
+            </div>
+
+            {/* Thumbnail Upload */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                {t("admin.kits.price")} *
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                {t("admin.kits.thumbnail")}
               </label>
               <input
-                type="number"
-                required
-                min="0"
-                value={formData.price}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    price: Number(e.target.value),
-                  })
-                }
-                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
+                className="input w-full"
               />
             </div>
-          </div>
 
-          {/* Thumbnail Upload */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("admin.kits.thumbnail")}
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
-              className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
-            />
-          </div>
+            {/* Products Selection */}
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: "var(--foreground-muted)" }}>
+                {t("admin.kits.productsInKit")}
+              </label>
 
-          {/* Products Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {t("admin.kits.productsInKit")}
-            </label>
-            
-            {/* Selected Products */}
-            {formData.products.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {formData.products.map((kitProduct) => {
-                  const product = products.find(p => p._id === kitProduct.productId);
-                  return (
-                    <div
-                      key={kitProduct.productId}
-                      className="flex items-center gap-3 p-3 bg-muted rounded-xl"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">
-                          {product?.name || kitProduct.productId}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {product?.variants[0]?.price ? formatPrice(product.variants[0].price) : ''}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateQuantity(kitProduct.productId, kitProduct.quantity - 1)}
-                          className="w-8 h-8 rounded-lg bg-background border border-border hover:border-primary flex items-center justify-center"
-                        >
-                          -
-                        </button>
-                        <span className="w-12 text-center font-medium">
-                          {kitProduct.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateQuantity(kitProduct.productId, kitProduct.quantity + 1)}
-                          className="w-8 h-8 rounded-lg bg-background border border-border hover:border-primary flex items-center justify-center"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveProduct(kitProduct.productId)}
-                        className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
+              {/* Selected Products */}
+              {formData.products.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {formData.products.map((kitProduct) => {
+                    const product = products.find(p => p._id === kitProduct.productId);
+                    return (
+                      <div
+                        key={kitProduct.productId}
+                        className="flex items-center gap-3 p-3 rounded-xl"
+                        style={{ background: "var(--muted)" }}
                       >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {product?.name || kitProduct.productId}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {product?.variants[0]?.price ? formatPrice(product.variants[0].price) : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateQuantity(kitProduct.productId, kitProduct.quantity - 1)}
+                            className="admin-action-btn !w-8 !h-8"
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center font-medium text-sm">
+                            {kitProduct.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateQuantity(kitProduct.productId, kitProduct.quantity + 1)}
+                            className="admin-action-btn !w-8 !h-8"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProduct(kitProduct.productId)}
+                          className="admin-action-btn delete !w-8 !h-8"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-            {/* Add Product Button */}
+              {/* Add Product Button */}
               <button
                 type="button"
                 onClick={() => setShowProductSelector(!showProductSelector)}
-                className="w-full px-4 py-2.5 border-2 border-dashed border-border hover:border-primary rounded-xl text-sm font-medium transition-colors"
+                className="w-full px-4 py-2.5 border-2 border-dashed rounded-xl text-sm font-medium transition-colors hover:border-primary"
+                style={{ borderColor: "var(--border)" }}
               >
                 {t("admin.kits.addProducts")}
               </button>
 
-            {/* Product Selector Dropdown */}
-            {showProductSelector && (
-              <div className="mt-3 p-4 bg-muted rounded-xl space-y-3">
+              {/* Product Selector Dropdown */}
+              {showProductSelector && (
+                <div className="mt-3 p-4 rounded-xl space-y-3" style={{ background: "var(--muted)" }}>
                   <input
                     type="text"
                     placeholder={t("admin.kits.searchProducts")}
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:border-primary"
+                    className="input w-full"
                     autoFocus
                   />
-                <div className="max-h-64 overflow-y-auto space-y-2">
-                  {loadingProducts ? (
-                      <div className="text-center py-4 text-muted-foreground">
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {loadingProducts ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
                         {t("admin.kits.loadingProducts")}
                       </div>
-                  ) : products.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground">
+                    ) : products.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
                         {t("admin.kits.noProductsFound")}
                       </div>
-                  ) : (
-                    products.map((product) => {
-                      const isAdded = formData.products.some(p => p.productId === product._id);
-                      return (
-                        <div
-                          key={product._id}
-                          className="flex items-center gap-3 p-3 bg-background rounded-lg hover:border-primary border border-transparent transition-colors"
-                        >
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (!target.dataset.fallback) {
-                                target.dataset.fallback = "true";
-                                target.src = `https://picsum.photos/seed/${product._id}/100/100`;
-                              }
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">
-                              {product.name}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatPrice(product.variants[0]?.price || 0)}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleAddProduct(product)}
-                            disabled={isAdded}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              isAdded
-                                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                : "bg-primary text-primary-foreground hover:bg-primary/90"
-                            }`}
+                    ) : (
+                      products.map((product) => {
+                        const isAdded = formData.products.some(p => p.productId === product._id);
+                        return (
+                          <div
+                            key={product._id}
+                            className="flex items-center gap-3 p-2.5 rounded-lg border border-transparent hover:border-primary transition-colors"
+                            style={{ background: "var(--card)" }}
                           >
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="size-10 rounded-lg object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.fallback) {
+                                  target.dataset.fallback = "true";
+                                  target.src = `https://picsum.photos/seed/${product._id}/100/100`;
+                                }
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">
+                                {product.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatPrice(product.variants[0]?.price || 0)}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleAddProduct(product)}
+                              disabled={isAdded}
+                              className={isAdded ? "btn-secondary !py-1.5 !px-3 text-xs" : "btn-primary !py-1.5 !px-3 text-xs"}
+                            >
                               {isAdded ? t("admin.kits.added") : t("admin.kits.add")}
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={formData.isActive}
-              onChange={(e) =>
-                setFormData({ ...formData, isActive: e.target.checked })
-              }
-              className="w-4 h-4 rounded border-border"
-            />
-            <label htmlFor="isActive" className="text-sm">
-              {t("admin.kits.active")}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) =>
+                  setFormData({ ...formData, isActive: e.target.checked })
+                }
+                className="rounded border-border"
+              />
+              <span className="text-sm font-medium">{t("admin.kits.active")}</span>
             </label>
           </div>
 
-          <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-6 py-3 border border-border rounded-full hover:bg-muted transition-colors"
-              >
-                {t("admin.kits.cancelButton")}
-              </button>
+          <div className="admin-dialog-footer">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="btn-modal-cancel"
+            >
+              {t("admin.kits.cancelButton")}
+            </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="btn-modal-primary"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : kit ? (
                 t("admin.kits.updateButton")
               ) : (

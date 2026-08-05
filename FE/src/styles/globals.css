@@ -761,3 +761,967 @@ body.lang-switching * {
     min-height: 360px;
   }
 }
+
+/* ================================================================
+   ADMIN DESIGN SYSTEM — PHẦN 1: FOUNDATION
+   Buttons · Inputs/Search · Filter Chips · Sortable Table Headers
+   ----------------------------------------------------------------
+   Cách dùng: nối file này vào cuối global.css (hoặc file css chung
+   của admin), KHÔNG cần đổi bất kỳ className nào trong .tsx —
+   toàn bộ class bên dưới đã đang được các component admin gọi tới
+   (btn-create, btn-primary, btn-secondary, btn-icon,
+   btn-modal-primary/cancel/destructive, input, chip-filter, ...).
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. BUTTONS
+   Nguyên tắc:
+   - Light: nổi bằng bóng đổ mềm + nhích lên (translateY) khi hover.
+   - Dark: nổi bằng GLOW (halo indigo) — cảm giác đèn phát sáng.
+   - Click (active): lún nhẹ xuống, glow thu lại — phản hồi rõ ràng.
+   - Focus bàn phím: luôn có ring rõ (accessibility).
+   ---------------------------------------------------------------- */
+
+.btn-primary,
+.btn-create,
+.btn-modal-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--primary-foreground);
+  background: var(--cta-gradient);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 0.65rem 1.25rem;
+  cursor: pointer;
+  box-shadow: var(--cta-shadow);
+  transition:
+    transform 0.18s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    filter 0.2s var(--ease-out),
+    background 0.25s var(--ease-out);
+}
+.btn-primary:hover,
+.btn-create:hover,
+.btn-modal-primary:hover {
+  transform: translateY(-1.5px);
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.03);
+}
+.btn-primary:active,
+.btn-create:active,
+.btn-modal-primary:active {
+  transform: translateY(0);
+  filter: brightness(0.97);
+  box-shadow: 0 2px 10px var(--glow-primary);
+}
+.btn-primary:focus-visible,
+.btn-create:focus-visible,
+.btn-modal-primary:focus-visible {
+  outline: none;
+  box-shadow: var(--cta-shadow), var(--focus-ring);
+}
+.btn-primary:disabled,
+.btn-create:disabled,
+.btn-modal-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Secondary — viền lilac nhẹ, nền gần trong suốt; dark = viền phát sáng nhẹ khi hover */
+.btn-secondary,
+.btn-modal-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--foreground);
+  background: var(--secondary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.6rem 1.15rem;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+.btn-secondary:hover,
+.btn-modal-cancel:hover {
+  background: var(--secondary-hover);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+.btn-secondary:active,
+.btn-modal-cancel:active {
+  transform: translateY(0);
+}
+.btn-secondary:focus-visible,
+.btn-modal-cancel:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.btn-secondary:disabled,
+.btn-modal-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.dark .btn-secondary:hover,
+.dark .btn-modal-cancel:hover {
+  box-shadow: 0 0 16px rgba(140, 123, 255, 0.22);
+}
+
+/* Destructive — dùng tông error-text sẵn có trong token, không lệch hệ màu */
+.btn-modal-destructive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #fff;
+  background: linear-gradient(135deg, #e2536b 0%, #c23b3b 100%);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 0.6rem 1.15rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(194, 59, 59, 0.22);
+  transition: all 0.2s var(--ease-out);
+}
+.btn-modal-destructive:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 22px rgba(194, 59, 59, 0.3);
+}
+.btn-modal-destructive:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 10px rgba(194, 59, 59, 0.25);
+}
+.dark .btn-modal-destructive {
+  box-shadow: 0 0 18px rgba(244, 135, 159, 0.28);
+}
+.dark .btn-modal-destructive:hover {
+  box-shadow: 0 0 28px rgba(244, 135, 159, 0.4);
+}
+
+/* Icon-only round button (back arrow, close, ...) */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--foreground-muted);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+.btn-icon:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--chip-active-bg);
+  transform: translateY(-1px);
+}
+.btn-icon:active {
+  transform: translateY(0);
+}
+.dark .btn-icon:hover {
+  box-shadow: 0 0 14px rgba(140, 123, 255, 0.3);
+}
+
+/* ----------------------------------------------------------------
+   2. INPUT / SEARCH
+   - Light: nền trắng, viền lilac mềm, focus = ring tím nhạt lan toả.
+   - Dark: nền tối, focus/hover = glow indigo mỏng bao viền (như đèn).
+   ---------------------------------------------------------------- */
+
+.input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: var(--input-bg);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--input-radius);
+  padding: 0.65rem 1rem;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out),
+    background 0.2s var(--ease-out);
+}
+.input::placeholder {
+  color: var(--input-placeholder);
+}
+.input:hover {
+  border-color: var(--input-hover-border);
+  background: var(--input-hover-bg);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-shadow);
+}
+.dark .input:hover {
+  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.22), 0 0 16px rgba(140, 123, 255, 0.16);
+}
+.dark .input:focus {
+  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.4), 0 0 22px rgba(140, 123, 255, 0.28), var(--input-focus-shadow);
+}
+
+/* Search icon inputs: canh icon + input đồng bộ chiều cao, không cần đổi markup */
+.admin-search-wrap {
+  position: relative;
+}
+.admin-search-wrap svg {
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------
+   3. FILTER CHIP (tags, DIY tags, quick filters)
+   ---------------------------------------------------------------- */
+
+.chip-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--chip-padding);
+  border-radius: var(--chip-radius);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--chip-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+.chip-filter:hover {
+  background: var(--chip-hover-bg);
+  transform: translateY(-1px);
+}
+.chip-filter.active {
+  background: var(--chip-active-bg);
+  border-color: var(--chip-active-border);
+  color: var(--primary);
+}
+.dark .chip-filter.active {
+  box-shadow: 0 0 12px rgba(140, 123, 255, 0.3);
+}
+
+/* ----------------------------------------------------------------
+   4. SORTABLE TABLE HEADER
+   Nâng cấp phần chevron lên/xuống trong SortableHeader (giữ nguyên
+   markup gốc: button > label + 2 ChevronUp/Down đứng chồng nhau).
+   ---------------------------------------------------------------- */
+
+.admin-table thead th button {
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out);
+}
+.admin-table thead th button:hover {
+  background: var(--chip-active-bg);
+  color: var(--primary);
+}
+.admin-table thead th button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dark .admin-table thead th button:hover {
+  box-shadow: 0 0 10px rgba(140, 123, 255, 0.22);
+}
+
+/* ----------------------------------------------------------------
+   5. PAGINATION (Prev/Next dùng .btn-secondary — style nhỏ thêm)
+   ---------------------------------------------------------------- */
+.btn-secondary:disabled:hover {
+  transform: none;
+  border-color: var(--border);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+/* ================================================================
+   ADMIN DESIGN SYSTEM — PHẦN 2: DASHBOARD
+   Stat Cards · Recent Activity · Order Breakdown
+   ----------------------------------------------------------------
+   Đi kèm AdminDashboard.tsx (bản chỉ thêm className, KHÔNG đổi logic)
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   Page title
+   ---------------------------------------------------------------- */
+.admin-page-title {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+.admin-page-subtitle {
+  color: var(--foreground-muted);
+}
+
+/* ----------------------------------------------------------------
+   1. STAT CARDS
+   Light: nhích lên nhẹ + bóng lilac ấm khi hover.
+   Dark: viền phát glow theo màu chính của icon (halo đồng bộ),
+   dùng --stat-glow set qua inline style ở icon wrapper, card cha
+   đọc lại qua currentColor trick không khả thi -> dùng glow chung
+   theo --primary để đơn giản & nhất quán.
+   ---------------------------------------------------------------- */
+.admin-stat-card {
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+.admin-stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(140px 80px at 85% -10%, var(--glow-primary), transparent 70%);
+  transition: opacity 0.35s var(--ease-out);
+}
+.admin-stat-card:hover {
+  transform: translateY(-3px);
+}
+.admin-stat-card:hover::after {
+  opacity: 1;
+}
+.dark .admin-stat-card:hover {
+  box-shadow:
+    0 0 0 1px rgba(140, 123, 255, 0.28),
+    0 12px 34px rgba(0, 0, 0, 0.45),
+    0 0 34px rgba(140, 123, 255, 0.28);
+}
+
+.admin-stat-icon {
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-out);
+}
+.admin-stat-card:hover .admin-stat-icon {
+  transform: scale(1.08) rotate(-4deg);
+}
+.dark .admin-stat-icon {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+.dark .admin-stat-card:hover .admin-stat-icon {
+  box-shadow: 0 0 18px currentColor;
+}
+
+.admin-stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Skeleton — shimmer nhẹ thay vì pulse phẳng, cảm giác "đang tải sáng" */
+.admin-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--muted);
+}
+.admin-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: admin-shimmer 1.4s infinite;
+}
+.dark .admin-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(140, 123, 255, 0.22), transparent);
+}
+@keyframes admin-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ----------------------------------------------------------------
+   2. SECTION HEADER (icon badge + title, dùng chung cho 2 panel)
+   ---------------------------------------------------------------- */
+.admin-section-icon {
+  transition: transform 0.3s var(--ease-spring);
+}
+.admin-panel-glow:hover .admin-section-icon {
+  transform: rotate(-6deg) scale(1.05);
+}
+.dark .admin-panel-glow:hover .admin-section-icon {
+  box-shadow: 0 0 16px rgba(140, 123, 255, 0.35);
+}
+
+/* ----------------------------------------------------------------
+   3. RECENT ACTIVITY LIST
+   ---------------------------------------------------------------- */
+.admin-activity-item {
+  border-radius: var(--radius-md);
+  padding: 10px 10px;
+  margin: 0 -10px;
+  transition: background 0.2s var(--ease-out);
+}
+.admin-activity-item:hover {
+  background: var(--surface-secondary);
+}
+.admin-activity-dot {
+  position: relative;
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.dark .admin-activity-dot {
+  box-shadow: 0 0 0 3px rgba(140, 123, 255, 0.16), 0 0 8px rgba(140, 123, 255, 0.6);
+}
+
+/* ----------------------------------------------------------------
+   4. ORDER BREAKDOWN
+   ---------------------------------------------------------------- */
+.admin-breakdown-track {
+  position: relative;
+}
+.admin-breakdown-segment {
+  transition: filter 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+.admin-breakdown-track:hover .admin-breakdown-segment {
+  filter: brightness(0.94);
+}
+.admin-breakdown-segment:hover {
+  filter: brightness(1.12) !important;
+  transform: scaleY(1.4);
+}
+.dark .admin-breakdown-track {
+  box-shadow: 0 0 14px rgba(140, 123, 255, 0.14);
+  border-radius: 9999px;
+}
+
+.admin-breakdown-row {
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+  margin: 0 -8px;
+  transition: background 0.2s var(--ease-out);
+}
+.admin-breakdown-row:hover {
+  background: var(--surface-secondary);
+}
+.admin-breakdown-dot {
+  position: relative;
+}
+.dark .admin-breakdown-dot {
+  box-shadow: 0 0 7px currentColor;
+}
+
+/* ================================================================
+   ADMIN DESIGN SYSTEM — PHẦN 3: TABLE SHELL DÙNG CHUNG
+   Search/Filter bar · Table rows · Pagination · Empty state
+   ----------------------------------------------------------------
+   Áp dụng tự động cho MỌI trang list (Courses, Lessons, Orders,
+   Reports, Refunds, DIY, SupportDIY, Users, Roles, Permissions...)
+   vì chúng đều dùng chung .admin-table / .admin-panel-glow / .input
+   / .btn-secondary / .badge / .order-filter-btn — không cần sửa .tsx.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. TABLE ROWS
+   Light: hover nền lilac cực nhẹ (đã có ở global.css) — bổ sung
+   viền trái nhấn khi hover để dẫn mắt theo hàng.
+   Dark: hover có glow lan nhẹ phía trái, cảm giác "hàng đang sáng".
+   ---------------------------------------------------------------- */
+.admin-table tbody tr {
+  position: relative;
+  transition: background 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
+  border-left: 2px solid transparent;
+}
+.admin-table tbody tr:hover {
+  border-left-color: var(--primary);
+}
+.dark .admin-table tbody tr:hover {
+  box-shadow: inset 3px 0 0 var(--primary), 0 0 18px -6px rgba(140, 123, 255, 0.35);
+}
+
+/* Sticky header — thêm bóng đổ tinh tế phân tách khi cuộn bảng ngang/dọc */
+.admin-table thead th {
+  box-shadow: 0 1px 0 var(--table-border);
+}
+.dark .admin-table thead th {
+  box-shadow: 0 1px 0 var(--table-border), 0 8px 16px -12px rgba(140, 123, 255, 0.4);
+}
+
+/* Cột đầu tiên (thường chứa avatar/ảnh/tiêu đề) — làm nổi nhẹ font-weight cho dễ quét mắt */
+.admin-table tbody td:first-child {
+  font-weight: 500;
+}
+
+/* ----------------------------------------------------------------
+   2. TOOLBAR (khối search + filter phía trên bảng)
+   Class tuỳ chọn — nếu muốn áp cho 1 trang cụ thể, chỉ cần thêm
+   className="admin-toolbar" vào div bọc search/filter (div có
+   background: var(--surface) hiện tại). Không bắt buộc, CSS bảng
+   & input vẫn đẹp nếu không thêm.
+   ---------------------------------------------------------------- */
+.admin-toolbar {
+  position: relative;
+}
+.admin-toolbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--chip-active-border), transparent);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+.admin-toolbar:focus-within::after {
+  opacity: 0.6;
+}
+
+/* Filter select trigger (AdminSelect / FilterSelect) — đồng bộ với .input */
+.admin-filter-trigger {
+  font-size: 0.875rem;
+  padding: 0.65rem 1rem;
+}
+
+/* ----------------------------------------------------------------
+   3. PAGINATION
+   ---------------------------------------------------------------- */
+.admin-pagination-info {
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground-muted);
+  font-size: 0.8125rem;
+}
+
+/* ----------------------------------------------------------------
+   4. EMPTY STATE
+   Hầu hết các trang dùng pattern: <Icon size={40} className="...
+   opacity-40" /> bên trong khối text-center. Lucide gắn sẵn class
+   "lucide" nên style được luôn mà không cần sửa .tsx.
+   ---------------------------------------------------------------- */
+svg.lucide.opacity-40 {
+  color: var(--foreground-subtle);
+}
+.dark svg.lucide.opacity-40 {
+  filter: drop-shadow(0 0 14px rgba(140, 123, 255, 0.32));
+}
+
+/* Khối empty-state chung (tuỳ chọn thêm className="admin-empty-state") */
+.admin-empty-state {
+  padding: 3.5rem 1rem;
+  text-align: center;
+  color: var(--foreground-muted);
+}
+.admin-empty-state svg {
+  margin: 0 auto 0.75rem;
+  opacity: 0.4;
+}
+.dark .admin-empty-state svg {
+  filter: drop-shadow(0 0 14px rgba(140, 123, 255, 0.32));
+}
+.admin-empty-state p:first-of-type {
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 0.25rem;
+}
+
+/* ----------------------------------------------------------------
+   5. FILTER PILL GROUP (order-filter-btn) — tinh chỉnh khoảng cách
+   & viền để đồng bộ hoàn toàn với chip-filter ở Phần 1.
+   ---------------------------------------------------------------- */
+.order-filter-btn {
+  font-size: 0.8125rem;
+  border-radius: var(--chip-radius);
+  padding: 0.5rem 1rem;
+}
+
+/* ================================================================
+   ADMIN DESIGN SYSTEM — PHẦN 4: MODAL / DIALOG
+   Overlay · Content · Header · Body · Footer · Close button
+   ----------------------------------------------------------------
+   100% CSS-only — .admin-dialog-* đã được dùng ở mọi popup admin
+   (order detail, refund detail, edit DIY/support post, permission/
+   role modal, create/update user, kit form, delete confirm...).
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. OVERLAY — fade-in mềm, blur tăng dần (tránh giật khi mở)
+   ---------------------------------------------------------------- */
+@keyframes admin-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.admin-dialog-overlay {
+  animation: admin-overlay-in 0.22s var(--ease-out);
+}
+
+/* ----------------------------------------------------------------
+   2. CONTENT — scale + rise nhẹ khi mở, dark có viền glow bao quanh
+   như một khối "phát sáng" nổi trên nền tối, light thì bóng mềm sâu.
+   ---------------------------------------------------------------- */
+@keyframes admin-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.admin-dialog-content {
+  animation: admin-dialog-in 0.28s var(--ease-spring);
+  position: relative;
+}
+
+/* Vệt sáng mảnh ở mép trên — dấu hiệu nhận diện brand xuyên suốt mọi modal */
+.admin-dialog-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--cta-gradient);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  opacity: 0.9;
+}
+.dark .admin-dialog-content::before {
+  box-shadow: 0 0 14px rgba(140, 123, 255, 0.65);
+}
+
+/* ----------------------------------------------------------------
+   3. HEADER — sticky, nền hơi khác content để phân lớp thị giác
+   ---------------------------------------------------------------- */
+.admin-dialog-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--modal-bg);
+}
+.admin-dialog-header h3 {
+  letter-spacing: -0.01em;
+}
+
+/* ----------------------------------------------------------------
+   4. FOOTER — sticky đáy, viền trên nhẹ tách khỏi nội dung cuộn
+   ---------------------------------------------------------------- */
+.admin-dialog-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--modal-bg);
+}
+
+/* ----------------------------------------------------------------
+   5. BODY — khoảng cách đọc dễ chịu hơn cho các khối label/value
+   (áp dụng cho pattern flex justify-between lặp lại rất nhiều lần
+   trong OrderDetail / RefundDetail / UserDetail...)
+   ---------------------------------------------------------------- */
+.admin-dialog-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.admin-dialog-body::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-dialog-body::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+.admin-dialog-body::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ----------------------------------------------------------------
+   6. CLOSE BUTTON (X) — thường dùng .admin-action-btn absolute
+   top-4 right-4. Thêm hiệu ứng xoay nhẹ khi hover cho sinh động,
+   không đổi kích thước/màu nền (giữ đồng bộ admin-action-btn gốc).
+   ---------------------------------------------------------------- */
+.admin-dialog-header .admin-action-btn svg,
+.admin-dialog-header button[aria-label="Close"] svg {
+  transition: transform 0.25s var(--ease-spring);
+}
+.admin-dialog-header .admin-action-btn:hover svg,
+.admin-dialog-header button[aria-label="Close"]:hover svg {
+  transform: rotate(90deg);
+}
+
+/* ----------------------------------------------------------------
+   7. FIELD ROW pattern (label bên trái / value bên phải, dùng rất
+   nhiều trong các modal chi tiết) — style qua cấu trúc có sẵn,
+   không cần class mới: mọi hàng flex justify-between trong body.
+   ---------------------------------------------------------------- */
+.admin-dialog-body > div.border-t,
+.admin-dialog-body > div[style*="border-top"] {
+  transition: background 0.2s var(--ease-out);
+}
+
+/* ----------------------------------------------------------------
+   8. Amount / số tiền nổi bật trong modal (RefundDetail, OrderDetail)
+   dùng chung .text-primary hoặc style color primary — thêm chút
+   glow ở dark cho các con số quan trọng khi nằm trong dialog.
+   ---------------------------------------------------------------- */
+.dark .admin-dialog-body .text-primary {
+  text-shadow: 0 0 18px rgba(140, 123, 255, 0.35);
+}
+
+/* Reduced motion — tôn trọng người dùng tắt hiệu ứng */
+@media (prefers-reduced-motion: reduce) {
+  .admin-dialog-overlay,
+  .admin-dialog-content {
+    animation: none !important;
+  }
+}
+
+/* ================================================================
+   ADMIN DESIGN SYSTEM — PHẦN 5: FORM PAGES
+   Linked-item picker (checkbox card) · Upload ảnh · Scrollable list
+   ----------------------------------------------------------------
+   Áp dụng cho: LessonFormPage (linked products/combos), CourseFormPage
+   (linked lessons), DIYFormPage (material picker + image upload),
+   ProductManagement/AdminKits (file input trong modal form).
+   Hook trực tiếp vào tổ hợp class Tailwind mà logic hiện tại đã sinh
+   ra (border-primary + bg-primary khi selected...) — không cần sửa
+   .tsx.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. CHECKBOX VUÔNG trong linked-item picker
+   (LessonFormPage / CourseFormPage: selected → "border-primary bg-primary")
+   ---------------------------------------------------------------- */
+.border-primary.bg-primary {
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease-out);
+}
+.dark .border-primary.bg-primary {
+  box-shadow: 0 0 10px rgba(140, 123, 255, 0.55);
+}
+
+/* ----------------------------------------------------------------
+   2. HÀNG ITEM ĐƯỢC CHỌN trong picker
+   (selected → "bg-primary/10 text-primary")
+   ---------------------------------------------------------------- */
+.bg-primary\/10.text-primary {
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+.dark .bg-primary\/10.text-primary {
+  box-shadow: inset 0 0 0 1px rgba(140, 123, 255, 0.28), 0 0 16px -6px rgba(140, 123, 255, 0.4);
+}
+
+/* Hàng chưa chọn — hover mượt hơn (áp cho mọi nút picker item) */
+button[class*="rounded-lg"][class*="text-left"][class*="transition-colors"] {
+  transition: background 0.18s var(--ease-out), transform 0.15s var(--ease-out);
+}
+button[class*="rounded-lg"][class*="text-left"][class*="transition-colors"]:active {
+  transform: scale(0.99);
+}
+
+/* ----------------------------------------------------------------
+   3. Ô SEARCH bên trong picker (đã dùng .input, thêm viền mềm khi
+   nằm trong khối card để tách lớp thị giác rõ hơn với khối cha)
+   ---------------------------------------------------------------- */
+aside .input,
+[class*="max-h-"] ~ .input {
+  background: var(--input-bg);
+}
+
+/* ----------------------------------------------------------------
+   4. UPLOAD ẢNH — dropzone kiểu DIYFormPage (label bọc input file,
+   border-dashed có sẵn) + input file trần kiểu ProductManagement/Kits.
+   ---------------------------------------------------------------- */
+label:has(> input[type="file"]) {
+  transition: all 0.25s var(--ease-out);
+}
+label:has(> input[type="file"]):hover {
+  transform: translateY(-2px);
+  background: var(--chip-active-bg) !important;
+}
+.dark label:has(> input[type="file"]):hover {
+  box-shadow: 0 0 20px rgba(140, 123, 255, 0.28);
+}
+
+/* Input file trần (không bọc label riêng) — polish nút "Choose file" */
+input[type="file"].input {
+  cursor: pointer;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+input[type="file"].input::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+input[type="file"].input:hover::file-selector-button {
+  background: var(--chip-active-bg);
+}
+.dark input[type="file"].input::file-selector-button {
+  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.2);
+}
+
+/* ----------------------------------------------------------------
+   5. THANH CUỘN trong danh sách picker (max-h-*, overflow-y-auto) —
+   đồng bộ với style scrollbar mảnh đã dùng ở Phần 4 cho modal.
+   ---------------------------------------------------------------- */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ----------------------------------------------------------------
+   6. Badge đếm số lượng đã chọn (Badge variant="outline" cạnh Label,
+   vd "Linked Products  [3]") — nếu Badge component render border+text
+   mặc định, thêm chút trọng lượng số liệu cho rõ.
+   ---------------------------------------------------------------- */
+label + span[class*="Badge"],
+.space-y-4 > .flex.items-center.justify-between > span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------
+   7. Sticky "Save" button trong sidebar form (CourseFormPage) —
+   đã dùng .btn-modal-primary từ Phần 1, chỉ neo lại vị trí đẹp hơn
+   khi cuộn dài.
+   ---------------------------------------------------------------- */
+aside.lg\:sticky {
+  align-self: start;
+}
+
+/* ================================================================
+   ADMIN DESIGN SYSTEM — PHẦN 6: ADMIN USERS
+   FilterSelect / CustomDropdown portal · Mini Stat · User Avatar ·
+   Role & Status pill trong bảng · PaginationBar
+   ----------------------------------------------------------------
+   Đi kèm AdminUsers.tsx (chỉ thêm class admin-user-avatar /
+   admin-mini-stat / admin-mini-stat-icon — KHÔNG đổi logic).
+   Phần còn lại CSS-only trên class có sẵn (glass-panel,
+   badge-trigger, admin-filter-trigger, admin-action-btn, led-dot).
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. PORTAL DROPDOWN (FilterSelect & CustomDropdown dùng chung
+   .glass-panel) — thêm hiệu ứng mở mượt, hiện đang mở là "giật"
+   (không animation). Dùng lại keyframe dropdown-enter có sẵn.
+   ---------------------------------------------------------------- */
+.glass-panel {
+  animation: dropdown-enter 0.16s var(--ease-out);
+  transform-origin: top center;
+}
+
+/* ----------------------------------------------------------------
+   2. FILTER TRIGGER (status/role filter phía trên bảng)
+   ---------------------------------------------------------------- */
+.admin-filter-trigger {
+  font-weight: 500;
+}
+.admin-filter-trigger.is-open {
+  box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.10);
+}
+.dark .admin-filter-trigger.is-open {
+  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.4), 0 0 20px rgba(140, 123, 255, 0.28);
+}
+
+/* ----------------------------------------------------------------
+   3. ROLE / STATUS PILL TRONG BẢNG (CustomDropdown trigger —
+   .badge.badge-trigger) — thêm chevron xoay khi mở, đã có class
+   rotate-180 điều khiển bằng React nên chỉ cần transition mượt hơn.
+   ---------------------------------------------------------------- */
+.badge-trigger svg {
+  transition: transform 0.2s var(--ease-spring);
+}
+.badge-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ----------------------------------------------------------------
+   4. USER AVATAR (bảng + modal chi tiết + update modal — 1 component
+   dùng chung nên style 1 lần áp dụng khắp nơi)
+   ---------------------------------------------------------------- */
+.admin-user-avatar {
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s var(--ease-out);
+}
+.admin-table tbody tr:hover .admin-user-avatar {
+  transform: scale(1.06);
+}
+.dark .admin-user-avatar {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+.dark .admin-table tbody tr:hover .admin-user-avatar {
+  box-shadow: 0 0 14px currentColor;
+}
+
+/* ----------------------------------------------------------------
+   5. MINI STAT CARD (khối "User Statistics" ở đầu trang)
+   ---------------------------------------------------------------- */
+.admin-mini-stat {
+  cursor: default;
+}
+.admin-mini-stat-icon {
+  transition: transform 0.3s var(--ease-spring);
+}
+.admin-mini-stat:hover .admin-mini-stat-icon {
+  transform: scale(1.12) rotate(-6deg);
+}
+.dark .admin-mini-stat:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 22px -4px currentColor;
+}
+
+/* ----------------------------------------------------------------
+   6. "By role" chip hàng dưới thống kê (usersByRole map) — dùng
+   style inline var(--chip-bg)/var(--chip-border), thêm hover nhẹ
+   cho toàn bộ span có class text-xs px-2.5 py-1 rounded-full trong
+   khối thống kê.
+   ---------------------------------------------------------------- */
+.admin-panel-glow span.rounded-full[style*="chip-bg"] {
+  transition: transform 0.15s var(--ease-out);
+}
+.admin-panel-glow span.rounded-full[style*="chip-bg"]:hover {
+  transform: translateY(-1px);
+}
+
+/* ----------------------------------------------------------------
+   7. PAGINATION BAR (footer bảng users — dùng .admin-action-btn
+   cho nút prev/next, đã có glow ở global.css, chỉ căn số liệu)
+   ---------------------------------------------------------------- */
+.admin-table + div strong,
+[style*="borderColor"] p strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------------
+   8. Table-fixed columns — tránh giật layout khi loading skeleton
+   xen với dữ liệu thật (đã có table-fixed + colgroup sẵn, chỉ mượt
+   hoá chuyển động của skeleton).
+   ---------------------------------------------------------------- */
+.admin-table .animate-pulse {
+  animation: admin-shimmer-fade 1.4s ease-in-out infinite;
+}
+@keyframes admin-shimmer-fade {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+

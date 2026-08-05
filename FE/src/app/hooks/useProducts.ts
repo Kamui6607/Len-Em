@@ -1,22 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router";
-import { products } from "../data/products";
 import { useDebounce } from "./useDebounce";
 import { useProductsQuery } from "./useProductsQuery";
-import { fetchProducts } from "../../features/shop/services/product.service";
+import { fetchProductFacets } from "../../features/shop/services/product.service";
+import type { ProductFacets } from "../../features/shop/services/product.service";
 import type { Product } from "../data/products";
 import type { PaginatedResponse } from "../../shared/types/api.types";
-
-// Simple cache to prevent duplicate requests
-interface CachedProducts {
-  data: Product[];
-  totalItems: number;
-  totalPages: number;
-  page: number;
-  timestamp: number;
-}
-const productsCache = new Map<string, CachedProducts>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export type SortOption = "popular" | "newest" | "oldest" | "price-asc" | "price-desc" | "rating";
 
@@ -41,63 +30,12 @@ type DynamicFilters = {
   difficulties: { name: string; count: number }[];
 };
 
-function getCategoryLabel(category: string): string {
-  return category;
-}
-
-function buildDynamicFiltersFromProducts(productList: Product[]): DynamicFilters {
-  const categoryMap = new Map<string, number>();
-  const colorMap = new Map<string, { hex: string; count: number }>();
-  const materialMap = new Map<string, number>();
-  const weightMap = new Map<string, number>();
-  const difficultyMap = new Map<string, number>();
-
-  productList.forEach((product) => {
-    categoryMap.set(product.category, (categoryMap.get(product.category) ?? 0) + 1);
-
-    const productColors = new Set<string>();
-    product.variants?.forEach((variant) => {
-      if (!variant.color) return;
-      productColors.add(variant.color);
-      if (!colorMap.has(variant.color)) {
-        colorMap.set(variant.color, { hex: variant.hexCode || "#ccc", count: 0 });
-      }
-    });
-    productColors.forEach((color) => {
-      const current = colorMap.get(color);
-      if (current) current.count += 1;
-    });
-
-    if (product.material) {
-      materialMap.set(product.material, (materialMap.get(product.material) ?? 0) + 1);
-    }
-    if (product.weight) {
-      weightMap.set(product.weight, (weightMap.get(product.weight) ?? 0) + 1);
-    }
-    if (product.difficulty) {
-      difficultyMap.set(product.difficulty, (difficultyMap.get(product.difficulty) ?? 0) + 1);
-    }
-  });
-
-  return {
-    categories: Array.from(categoryMap.entries()).map(([value, count]) => ({
-      value,
-      label: getCategoryLabel(value),
-      count,
-    })),
-    colors: Array.from(colorMap.entries()).map(([name, value]) => ({
-      name,
-      hex: value.hex,
-      count: value.count,
-    })),
-    materials: Array.from(materialMap.entries()).map(([name, count]) => ({ name, count })),
-    weights: Array.from(weightMap.entries()).map(([name, count]) => ({ name, count })),
-    difficulties: Array.from(difficultyMap.entries()).map(([name, count]) => ({ name, count })),
-  };
-}
-
 export function useProducts() {
   const [searchParams, setSearchParams] = useSearchParams();
+  // Track whether the search input was changed by the user (typing) vs. synced
+  // from URL externally (e.g. Navigation search bar). This prevents the debounced
+  // effect from overwriting a URL search param that was set externally.
+  const isUserTyping = useRef(false);
 
   // ---- Parse URL params into filter state ----
   const filters: FilterState = useMemo(() => ({
@@ -122,12 +60,17 @@ export function useProducts() {
   // Sync local input when URL changes externally (back/forward navigation)
   useEffect(() => {
     setSearchInput(searchParams.get("search") || "");
+    // URL changed externally — not a user typing event
+    isUserTyping.current = false;
   }, [searchParams]);
 
   // Push the settled search term to the URL (debounced) — 1 URL update per search
   useEffect(() => {
     const urlSearch = searchParams.get("search") || "";
-    if (debouncedSearch !== urlSearch) {
+    // Only push to URL if the user actually typed in the local input.
+    // If the URL was changed externally (e.g. Navigation search bar), don't
+    // overwrite it with the stale debounced value.
+    if (isUserTyping.current && debouncedSearch !== urlSearch) {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -147,81 +90,92 @@ export function useProducts() {
   // ---- Async data ----
   const [isLoading, setIsLoading] = useState(false);
   const [paginatedResult, setPaginatedResult] = useState<PaginatedResponse<Product> | null>(null);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
 
-  // Dynamic filter options are fetched from GET /products.
-  const dynamicFilters = useMemo(
-    () => buildDynamicFiltersFromProducts(allProducts),
-    [allProducts]
-  );
+  // Dynamic filter options are fetched from GET /products/facets (server-side).
+  const [dynamicFilters, setDynamicFilters] = useState<DynamicFilters>({
+    categories: [],
+    colors: [],
+    materials: [],
+    weights: [],
+    difficulties: [],
+  });
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
-    products.forEach((p) => p.tags.forEach((t) => tagSet.add(t)));
+    // Tags come from the facets response if available, otherwise empty
     return Array.from(tagSet);
   }, []);
 
-  // ---- Load a bounded sample of products for Category/Color filter options ----
-  // Fetch only up to 2 pages (200 records) instead of the entire catalog.
-  // This prevents N+1 requests per user when the catalog grows.
+  // ---- Load facets (categories, colors, price range) from server ----
+  // Call GET /products/facets once when the Shop page loads.
+  // Cache the result in sessionStorage so we don't re-fetch on every visit.
+  // Also cache failures so we don't hammer a broken endpoint repeatedly.
   useEffect(() => {
     let cancelled = false;
 
-    async function loadAllProductsForFilters() {
+    async function loadFacets() {
+      // Check sessionStorage cache first (5 min TTL for success, 1 min for failure)
+      const cacheKey = "yarn_shop_product_facets";
       try {
-        // Check cache first
-        const cacheKey = "products_filters_all";
-        const cached = productsCache.get(cacheKey);
-        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-          if (!cancelled) {
-            setAllProducts(cached.data);
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw) as {
+            data?: ProductFacets;
+            error?: boolean;
+            timestamp: number;
+          };
+          const ttl = cached.error ? 60 * 1000 : 5 * 60 * 1000; // failures expire faster
+          if (Date.now() - cached.timestamp < ttl) {
+            if (!cancelled && cached.data) {
+              setDynamicFilters({
+                categories: cached.data.categories ?? [],
+                colors: cached.data.colors ?? [],
+                materials: [],
+                weights: [],
+                difficulties: [],
+              });
+            }
+            return; // either use cached data or skip retry (failed recently)
           }
-          return;
         }
+      } catch {
+        // Ignore cache read errors
+      }
 
-        const firstPage = await fetchProducts({ page: 1, limit: 100 });
+      try {
+        const facets: ProductFacets = await fetchProductFacets();
         if (cancelled) return;
 
-        let allProductsData: Product[] = [];
-        
-        if (firstPage.totalPages > 1) {
-          // Fetch only 1 more page (cap total at 2 pages) to bound cost
-          const pagesToFetch = Math.min(firstPage.totalPages - 1, 1);
-          const restPages = await Promise.all(
-            Array.from({ length: pagesToFetch }, (_, index) =>
-              fetchProducts({ page: index + 2, limit: 100 })
-            )
-          );
-          if (cancelled) return;
-          allProductsData = [
-            ...firstPage.data,
-            ...restPages.flatMap((pageResult) => pageResult.data),
-          ];
-        } else {
-          allProductsData = firstPage.data;
+        // Cache the successful result
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({ data: facets, timestamp: Date.now() }));
+        } catch {
+          // Ignore cache write errors
         }
 
-        // Cache the results
-        productsCache.set(cacheKey, {
-          data: allProductsData,
-          totalItems: firstPage.totalItems,
-          totalPages: firstPage.totalPages,
-          page: 1,
-          timestamp: Date.now(),
+        setDynamicFilters({
+          categories: facets.categories ?? [],
+          colors: facets.colors ?? [],
+          materials: [],
+          weights: [],
+          difficulties: [],
         });
-
-        if (!cancelled) {
-          setAllProducts(allProductsData);
-        }
       } catch (error) {
         if (!cancelled) {
-          console.warn("Failed to fetch all products for filters:", error);
-          setAllProducts([]);
+          console.warn("Failed to fetch product facets, falling back to client-side:", error);
+          // Cache the failure to avoid hammering the broken endpoint
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({ error: true, timestamp: Date.now() }));
+          } catch {
+            // Ignore cache write errors
+          }
+          // Keep dynamicFilters empty — the fallback effect below will
+          // derive categories/colors from the fetched products.
         }
       }
     }
 
-    loadAllProductsForFilters();
+    loadFacets();
     return () => { cancelled = true; };
   }, []);
 
@@ -235,90 +189,76 @@ export function useProducts() {
       sort: filters.sort,
       page: filters.page,
       limit: 12,
+      // Server-side filtering — pass colors and price range to backend
+      colors: filters.color.length > 0 ? filters.color.join(",") : undefined,
+      minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
+      maxPrice: filters.maxPrice > 0 ? filters.maxPrice : undefined,
     }),
-    [filters.category, filters.search, filters.sort, filters.page],
+    [filters.category, filters.search, filters.sort, filters.page, filters.color, filters.minPrice, filters.maxPrice],
   );
 
   const { data: productsPage, isFetching, isError } = useProductsQuery(queryParams);
+
+  // ---- Fallback: derive filter options from fetched products ----
+  // If the facets endpoint fails (e.g. 500), still show category/color
+  // filters derived from the products returned by the list query so the
+  // Shop page remains usable.
+  useEffect(() => {
+    if (!productsPage || productsPage.data.length === 0) return;
+
+    setDynamicFilters((prev) => {
+      // Only fill in if facets are empty (i.e., facets endpoint failed)
+      if (prev.categories.length > 0 || prev.colors.length > 0) return prev;
+
+      const categoryMap = new Map<string, number>();
+      const colorMap = new Map<string, { hex: string; count: number }>();
+
+      productsPage.data.forEach((product) => {
+        categoryMap.set(product.category, (categoryMap.get(product.category) ?? 0) + 1);
+
+        const productColors = new Set<string>();
+        product.variants?.forEach((variant) => {
+          if (!variant.color) return;
+          productColors.add(variant.color);
+          if (!colorMap.has(variant.color)) {
+            colorMap.set(variant.color, { hex: variant.hexCode || "#ccc", count: 0 });
+          }
+        });
+        productColors.forEach((color) => {
+          const current = colorMap.get(color);
+          if (current) current.count += 1;
+        });
+      });
+
+      return {
+        categories: Array.from(categoryMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count,
+        })),
+        colors: Array.from(colorMap.entries()).map(([name, value]) => ({
+          name,
+          hex: value.hex,
+          count: value.count,
+        })),
+        materials: [],
+        weights: [],
+        difficulties: [],
+      };
+    });
+  }, [productsPage]);
 
   // isLoading giữ nguyên interface: bật skeleton khi đang fetch (kể cả khi đổi filter)
   useEffect(() => {
     setIsLoading(isFetching);
   }, [isFetching]);
 
-  // Client-side filters (giữ nguyên logic cũ) chạy trên kết quả server
+  // Server-side filtering — the backend already applies color/price filters.
+  // We only need to set the paginated result directly from the server response.
   useEffect(() => {
     if (!productsPage) return;
-
-    let result = productsPage;
-
-    if (filters.color.length > 0) {
-      const selectedColors = new Set(filters.color);
-      result = {
-        ...result,
-        data: result.data.filter((product) =>
-          product.variants?.some((variant) =>
-            variant.color ? selectedColors.has(variant.color) : false
-          )
-        ),
-      };
-    }
-
-    if (filters.material.length > 0) {
-      const selectedMaterials = new Set(filters.material);
-      result = {
-        ...result,
-        data: result.data.filter((product) =>
-          product.material ? selectedMaterials.has(product.material) : false
-        ),
-      };
-    }
-
-    if (filters.weight.length > 0) {
-      const selectedWeights = new Set(filters.weight);
-      result = {
-        ...result,
-        data: result.data.filter((product) =>
-          product.weight ? selectedWeights.has(product.weight) : false
-        ),
-      };
-    }
-
-    if (filters.difficulty.length > 0) {
-      const selectedDifficulties = new Set(filters.difficulty);
-      result = {
-        ...result,
-        data: result.data.filter((product) =>
-          product.difficulty ? selectedDifficulties.has(product.difficulty) : false
-        ),
-      };
-    }
-
-    if (filters.minPrice > 0 || filters.maxPrice > 0) {
-      result = {
-        ...result,
-        data: result.data.filter((product) => {
-          const prices = product.variants?.map((variant) => variant.price) ?? [];
-          const minProductPrice = prices.length > 0 ? Math.min(...prices) : 0;
-          const maxProductPrice = prices.length > 0 ? Math.max(...prices) : 0;
-          return (
-            (filters.minPrice <= 0 || maxProductPrice >= filters.minPrice) &&
-            (filters.maxPrice <= 0 || minProductPrice <= filters.maxPrice)
-          );
-        }),
-      };
-    }
-
-    setPaginatedResult(result);
-  }, [
-    productsPage,
-    filters.color,
-    filters.material,
-    filters.weight,
-    filters.difficulty,
-    filters.minPrice,
-    filters.maxPrice,
-  ]);
+    setPaginatedResult(productsPage);
+  }, [productsPage]);
 
   // Lỗi fetch → kết quả null như cũ (hiển thị empty state)
   useEffect(() => {
@@ -330,7 +270,7 @@ export function useProducts() {
 
   // Derived data for backward compatibility
   const filteredProducts: Product[] = paginatedResult?.data ?? [];
-  const totalCount = paginatedResult?.totalItems ?? allProducts.length;
+  const totalCount = paginatedResult?.totalItems ?? 0;
   const resultCount = filteredProducts.length;
   const currentPage = paginatedResult?.page ?? 1;
   const totalPages = paginatedResult?.totalPages ?? 1;
@@ -445,6 +385,7 @@ export function useProducts() {
     (type: string, value: string) => {
       switch (type) {
         case "search":
+          isUserTyping.current = true;
           setSearchInput("");
           updateFilter("search", "");
           break;

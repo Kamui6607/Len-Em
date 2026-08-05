@@ -181,6 +181,17 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     error.message ||
     "Something went wrong";
 
+  // Debug logging for 403 errors
+  if (status === 403) {
+    console.error("403 Forbidden - Full error details:", {
+      url: error.config?.url,
+      method: error.config?.method,
+      status,
+      data,
+      message,
+    });
+  }
+
   // Skip toast for logout endpoint — backend may return 400 if no session
   const url = error.config?.url ?? "";
   if (url.includes("/auth/logout")) {

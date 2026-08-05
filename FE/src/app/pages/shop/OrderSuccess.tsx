@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { ArrowRight, ShoppingBag } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLanguage } from "../../../context/LanguageContext";
+import { useCart } from "../../../context/CartContext";
 
 // ═══════════════════════════════════════════════════════════════════
 // LARGE GIFT BOX SVG — celebratory, bow-tied, with sparkles
@@ -501,6 +503,7 @@ function ConfettiLayer() {
 
 export function OrderSuccess() {
   const { t } = useLanguage();
+  const { clearCart } = useCart();
   const [searchParams] = useSearchParams();
   // VNPAY returns orderId as "orderId" param for direct navigations,
   // or as "vnp_TxnRef" when redirected back from VNPAY gateway.
@@ -513,6 +516,13 @@ export function OrderSuccess() {
       month: "short",
       year: "numeric",
     });
+
+  // Clear the cart ONLY when the order is confirmed on this success page.
+  // This ensures that if the user presses Back on the VNPAY/MOMO gateway
+  // or payment fails, their cart is still intact.
+  useEffect(() => {
+    clearCart();
+  }, [clearCart]);
   return (
     <div
       style={{

@@ -21,6 +21,12 @@ export interface FetchProductsParams {
   sort?: string;
   page?: number;
   limit?: number;
+  /** Comma-separated hex codes, e.g. "#FFF,#000" */
+  colors?: string;
+  /** Minimum price filter */
+  minPrice?: number;
+  /** Maximum price filter */
+  maxPrice?: number;
 }
 
 /**
@@ -61,6 +67,11 @@ export async function fetchProducts(
   if (params.page) queryParams.page = params.page;
   if (params.limit) queryParams.limit = params.limit;
 
+  // Server-side filtering — pass through to backend
+  if (params.colors) queryParams.colors = params.colors;
+  if (params.minPrice) queryParams.minPrice = params.minPrice;
+  if (params.maxPrice) queryParams.maxPrice = params.maxPrice;
+
   const { data: response } = await axiosClient.get("/products", {
     params: queryParams,
   });
@@ -91,14 +102,43 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 }
 
 // ============================================================
-// 3. Fetch dynamic filter options
+// 3. Fetch dynamic filter options (facets)
 // ============================================================
 
-export interface DynamicFilterOptions {
-  colors: { name: string; hex: string; count: number }[];
-  materials: { name: string; count: number }[];
-  weights: { name: string; count: number }[];
-  difficulties: { name: string; count: number }[];
+export interface ProductFacetCategory {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface ProductFacetColor {
+  name: string;
+  hex: string;
+  count: number;
+}
+
+export interface ProductFacets {
+  categories: ProductFacetCategory[];
+  colors: ProductFacetColor[];
+  minPrice: number;
+  maxPrice: number;
+}
+
+/**
+ * GET /products/facets
+ * Fetch all available filter options (categories, colors, price range)
+ * in a single request. Call once when loading the Shop page.
+ */
+export async function fetchProductFacets(): Promise<ProductFacets> {
+  const { data: response } = await axiosClient.get("/products/facets");
+  // Backend returns: { status: "success", data: { categories, colors, minPrice, maxPrice } }
+  const facets = response.data;
+  return {
+    categories: facets.categories ?? [],
+    colors: facets.colors ?? [],
+    minPrice: facets.minPrice ?? 0,
+    maxPrice: facets.maxPrice ?? 0,
+  };
 }
 
 // ============================================================

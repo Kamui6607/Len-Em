@@ -140,8 +140,8 @@ export function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="mb-1">{t("admin.dashboard.title")}</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="admin-page-title mb-1">{t("admin.dashboard.title")}</h1>
+        <p className="admin-page-subtitle text-sm text-muted-foreground">
           {t("admin.dashboard.welcomeBack")}
         </p>
       </div>
@@ -153,21 +153,21 @@ export function AdminDashboard() {
           return (
             <div
               key={stat.title}
-              className="admin-panel-glow rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg"
+              className="admin-panel-glow admin-stat-card rounded-2xl border p-5 transition-all duration-300"
               style={{ background: "var(--card)", borderColor: "var(--border)" }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  className="admin-stat-icon w-10 h-10 rounded-xl flex items-center justify-center"
                   style={{ background: stat.iconBg, color: stat.iconColor }}
                 >
                   <Icon className="w-5 h-5" />
                 </div>
               </div>
               <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-              <h3 className="text-2xl font-bold text-foreground mb-2">
+              <h3 className="admin-stat-value text-2xl font-bold text-foreground mb-2">
                 {loading ? (
-                  <span className="inline-block h-7 w-16 rounded-md bg-muted animate-pulse" />
+                  <span className="admin-skeleton inline-block h-7 w-16 rounded-md" />
                 ) : (
                   stat.value
                 )}
@@ -198,7 +198,7 @@ export function AdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <div
-          className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
+          className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300"
           style={{ borderColor: "var(--border)" }}
         >
           <div
@@ -206,7 +206,7 @@ export function AdminDashboard() {
             style={{ background: "var(--surface)", borderColor: "var(--border)" }}
           >
             <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center"
+              className="admin-section-icon w-9 h-9 rounded-lg flex items-center justify-center"
               style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
             >
               <Activity className="w-4.5 h-4.5" />
@@ -217,9 +217,9 @@ export function AdminDashboard() {
             {recentActivities.length > 0 ? (
               <ul className="space-y-4">
                 {recentActivities.map((a) => (
-                  <li key={a.id} className="flex items-start gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
+                  <li key={a.id} className="admin-activity-item flex items-start gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
                     <span
-                      className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                      className="admin-activity-dot mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full"
                       style={{ background: "var(--primary)" }}
                     />
                     <div className="min-w-0 flex-1">
@@ -241,7 +241,7 @@ export function AdminDashboard() {
 
         {/* Order Statistics */}
         <div
-          className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
+          className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300"
           style={{ borderColor: "var(--border)" }}
         >
           <div
@@ -249,7 +249,7 @@ export function AdminDashboard() {
             style={{ background: "var(--surface)", borderColor: "var(--border)" }}
           >
             <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center"
+              className="admin-section-icon w-9 h-9 rounded-lg flex items-center justify-center"
               style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
             >
               <TrendingUp className="w-4.5 h-4.5" />
@@ -258,10 +258,11 @@ export function AdminDashboard() {
           </div>
           <div className="p-6 space-y-5" style={{ background: "var(--card)" }}>
             {/* Proportion bar */}
-            <div className="flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
+            <div className="admin-breakdown-track flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
               {orderBreakdown.map((o) => (
                 <div
                   key={o.label}
+                  className="admin-breakdown-segment"
                   style={{
                     width: `${(o.value / breakdownTotal) * 100}%`,
                     background: o.color,
@@ -272,9 +273,9 @@ export function AdminDashboard() {
 
             <div className="space-y-3">
               {orderBreakdown.map((o) => (
-                <div key={o.label} className="flex items-center justify-between">
+                <div key={o.label} className="admin-breakdown-row flex items-center justify-between">
                   <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="h-2 w-2 rounded-full" style={{ background: o.color }} />
+                    <span className="admin-breakdown-dot h-2 w-2 rounded-full" style={{ background: o.color, color: o.color }} />
                     {o.label}
                   </span>
                   <span className="text-sm font-semibold text-foreground">{o.value}</span>
