@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Heart, Plus, Eye } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import type { Product } from "../data/products";
@@ -27,7 +27,9 @@ function Stars({ value }: { value: number }) {
         <svg key={s} width="11" height="11" viewBox="0 0 11 11" fill="none">
           <path
             d="M5.5 1L6.7 4.1H10L7.4 6.1L8.4 9.2L5.5 7.4L2.6 9.2L3.6 6.1L1 4.1H4.3Z"
-            fill={s <= Math.round(value) ? "var(--rating-star)" : "var(--border)"}
+            fill={
+              s <= Math.round(value) ? "var(--rating-star)" : "var(--border)"
+            }
           />
         </svg>
       ))}
@@ -45,7 +47,6 @@ export const ProductCard = memo(function ProductCard({
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
-  const [quickViewHovered, setQuickViewHovered] = useState(false);
 
   // Thiết bị có chuột thật (desktop) mới dùng cơ chế hover-to-reveal.
   // Trên mobile/tablet cảm ứng, luôn hiện sẵn phần Add to cart + rating
@@ -118,7 +119,6 @@ export const ProductCard = memo(function ProductCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
-        setQuickViewHovered(false);
       }}
       style={{
         display: "flex",
@@ -126,7 +126,9 @@ export const ProductCard = memo(function ProductCard({
         background: "var(--card)",
         borderRadius: "24px",
         overflow: "hidden",
-        boxShadow: isHovered ? "var(--shadow-card-hover)" : "var(--shadow-card)",
+        boxShadow: isHovered
+          ? "var(--shadow-card-hover)"
+          : "var(--shadow-card)",
         transition: "box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         position: "relative",
         isolation: "isolate",
@@ -298,65 +300,6 @@ export const ProductCard = memo(function ProductCard({
               📹 Lesson
             </button>
           )}
-
-          {/* Quick view — always mounted, opacity/scale driven only */}
-          <motion.button
-            type="button"
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{
-              opacity: showReveal ? 1 : 0,
-              scale: showReveal ? 1 : 0.85,
-            }}
-            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            onMouseEnter={() => setQuickViewHovered(true)}
-            onMouseLeave={() => setQuickViewHovered(false)}
-            onClick={(event) => {
-              event.preventDefault();
-              navigate(`/shop/product/${product.id}`);
-            }}
-            style={{
-              position: "absolute",
-              bottom: "16px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              padding: "9px 18px",
-              minWidth: "128px",
-              borderRadius: "999px",
-              background: quickViewHovered ? "var(--primary)" : "var(--bg-overlay-92)",
-              backdropFilter: "blur(10px)",
-              border: quickViewHovered
-                ? "1.5px solid var(--primary)"
-                : "1px solid var(--border)",
-              boxShadow: quickViewHovered
-                ? "0 8px 22px var(--glow-primary)"
-                : "var(--shadow-sm)",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              zIndex: 6,
-              pointerEvents: showReveal ? "auto" : "none",
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "0.74rem",
-              fontWeight: 700,
-              color: quickViewHovered ? "var(--primary-foreground)" : "var(--foreground)",
-              letterSpacing: "0.01em",
-              transition: "background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease",
-            }}
-          >
-            <Eye
-              size={14}
-              strokeWidth={2}
-              style={{
-                color: quickViewHovered ? "var(--primary-foreground)" : "var(--primary)",
-                flexShrink: 0,
-                transition: "color 0.2s ease",
-              }}
-            />
-            <span>Quick view</span>
-          </motion.button>
         </div>
       </Link>
 

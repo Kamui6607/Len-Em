@@ -1,6 +1,19 @@
+/**
+ * Creator info populated by the backend inside `GET /diy-posts`.
+ * Replaces the legacy plain-string `creatorId` (kept only as a fallback
+ * for mock/demo data).
+ */
+export interface DIYCreator {
+  _id: string;
+  username?: string;
+  fullName?: string;
+  avatar?: string;
+}
+
 export interface DIYPost {
   _id: string;
-  creatorId: string;
+  /** Populated creator object (string only in legacy/mock data). */
+  creatorId: string | DIYCreator;
   title: string;
   description: string;
   images: string[];

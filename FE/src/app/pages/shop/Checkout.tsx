@@ -686,26 +686,13 @@ export function Checkout() {
                   {addressMode === "map" && (
                     <div className="space-y-3">
                       <p className="text-sm text-muted-foreground">
-                        Click vào bản đồ để chọn vị trí giao hàng. Hệ thống sẽ tự động xác định tỉnh/thành, quận/huyện, phường/xã.
+                        Click vào bản đồ để chọn vị trí giao hàng.
                       </p>
                       <MapPicker
                         initialLat={mapLat}
                         initialLng={mapLng}
                         onLocationSelect={handleLocationSelect}
                       />
-                      {(mapProvinceName || mapDistrictName || mapWardName) && (
-                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-1">
-                          <p className="text-sm font-medium text-primary">Địa chỉ đã chọn:</p>
-                          <p className="text-sm text-muted-foreground">
-                            {[mapWardName, mapDistrictName, mapProvinceName].filter(Boolean).join(", ") || "Đang xác định..."}
-                          </p>
-                          {mapLat !== undefined && mapLng !== undefined && (
-                            <p className="text-xs text-muted-foreground">
-                              Tọa độ: {mapLat.toFixed(6)}, {mapLng.toFixed(6)}
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
 

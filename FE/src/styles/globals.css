@@ -511,41 +511,43 @@ a.nav-icon-btn:hover {
   --height: 48px;
   width: var(--width);
   height: var(--height);
-  background: var(--primary);
+  background: var(--accent-blush);
   position: relative;
   text-align: center;
+  border: 1px solid var(--primary);
   border-radius: var(--radius-lg);
   font-family: var(--font-body);
   transition: all 0.3s var(--ease-out);
-  border: none;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 4px 16px var(--glow-primary);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .add-to-cart-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(91, 61, 245, 0.35);
-  background: var(--primary-hover);
+  background: var(--primary);
+  box-shadow: 0 7px 18px var(--glow-primary);
 }
 
 .add-to-cart-btn:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(91, 61, 245, 0.25);
+  box-shadow: 0 3px 8px var(--glow-primary);
 }
 
 .dark .add-to-cart-btn {
-  background: var(--primary);
-  box-shadow: 0 4px 16px rgba(124, 99, 255, 0.3);
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent),
+    0 4px 14px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .dark .add-to-cart-btn:hover {
-  background: var(--primary-hover);
-  box-shadow: 0 8px 24px rgba(124, 99, 255, 0.45);
+  background: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 0 20px var(--glow-primary);
 }
 
 .dark .add-to-cart-btn:active {
-  box-shadow: 0 4px 12px rgba(124, 99, 255, 0.35);
+  box-shadow: 0 0 12px var(--glow-primary);
 }
 
 .add-to-cart-btn .btn-text,
@@ -555,7 +557,7 @@ a.nav-icon-btn:hover {
   width: 100%;
   height: 100%;
   left: 0;
-  color: var(--primary-foreground);
+  color: var(--foreground);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -575,15 +577,17 @@ a.nav-icon-btn:hover {
   align-items: center;
   justify-content: center;
   background: var(--primary);
+  color: var(--primary-foreground);
 }
 
-.dark .add-to-cart-btn .btn-icon {
-  background: var(--primary);
-}
-
+/* Keep the cart icon bounded when it slides into view. */
 .add-to-cart-btn .btn-icon svg {
-  width: 22px;
-  height: 22px;
+  display: block;
+  width: 20px;
+  height: 20px;
+  max-width: 20px;
+  max-height: 20px;
+  flex: 0 0 20px;
 }
 
 .add-to-cart-btn:hover .btn-text {
@@ -592,6 +596,19 @@ a.nav-icon-btn:hover {
 
 .add-to-cart-btn:hover .btn-icon {
   top: 0;
+}
+
+.add-to-cart-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent),
+    0 4px 14px var(--glow-primary);
+}
+
+.add-to-cart-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Custom Select Input */

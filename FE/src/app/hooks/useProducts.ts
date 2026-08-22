@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+
 import { useSearchParams } from "react-router";
 import { useDebounce } from "./useDebounce";
 import { useProductsQuery } from "./useProductsQuery";
-import { fetchProductFacets } from "../../features/shop/services/product.service";
-import type { ProductFacets } from "../../features/shop/services/product.service";
+import { getDynamicFilters, products as catalogProducts } from "../data/products";
 import type { Product } from "../data/products";
 import type { PaginatedResponse } from "../../shared/types/api.types";
 
@@ -41,7 +41,7 @@ export function useProducts() {
   const filters: FilterState = useMemo(() => ({
     search: searchParams.get("search") || "",
     category: (searchParams.get("category") as FilterState["category"]) || "all",
-    color: searchParams.get("color")?.split(",").filter(Boolean) || [],
+    color: (searchParams.get("colors") || searchParams.get("color"))?.split(",").filter(Boolean) || [],
     material: searchParams.get("material")?.split(",").filter(Boolean) || [],
     weight: searchParams.get("weight")?.split(",").filter(Boolean) || [],
     difficulty: searchParams.get("difficulty")?.split(",").filter(Boolean) || [],
@@ -91,93 +91,7 @@ export function useProducts() {
   const [isLoading, setIsLoading] = useState(false);
   const [paginatedResult, setPaginatedResult] = useState<PaginatedResponse<Product> | null>(null);
 
-  // Dynamic filter options are fetched from GET /products/facets (server-side).
-  const [dynamicFilters, setDynamicFilters] = useState<DynamicFilters>({
-    categories: [],
-    colors: [],
-    materials: [],
-    weights: [],
-    difficulties: [],
-  });
-
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    // Tags come from the facets response if available, otherwise empty
-    return Array.from(tagSet);
-  }, []);
-
-  // ---- Load facets (categories, colors, price range) from server ----
-  // Call GET /products/facets once when the Shop page loads.
-  // Cache the result in sessionStorage so we don't re-fetch on every visit.
-  // Also cache failures so we don't hammer a broken endpoint repeatedly.
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadFacets() {
-      // Check sessionStorage cache first (5 min TTL for success, 1 min for failure)
-      const cacheKey = "yarn_shop_product_facets";
-      try {
-        const cachedRaw = sessionStorage.getItem(cacheKey);
-        if (cachedRaw) {
-          const cached = JSON.parse(cachedRaw) as {
-            data?: ProductFacets;
-            error?: boolean;
-            timestamp: number;
-          };
-          const ttl = cached.error ? 60 * 1000 : 5 * 60 * 1000; // failures expire faster
-          if (Date.now() - cached.timestamp < ttl) {
-            if (!cancelled && cached.data) {
-              setDynamicFilters({
-                categories: cached.data.categories ?? [],
-                colors: cached.data.colors ?? [],
-                materials: [],
-                weights: [],
-                difficulties: [],
-              });
-            }
-            return; // either use cached data or skip retry (failed recently)
-          }
-        }
-      } catch {
-        // Ignore cache read errors
-      }
-
-      try {
-        const facets: ProductFacets = await fetchProductFacets();
-        if (cancelled) return;
-
-        // Cache the successful result
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify({ data: facets, timestamp: Date.now() }));
-        } catch {
-          // Ignore cache write errors
-        }
-
-        setDynamicFilters({
-          categories: facets.categories ?? [],
-          colors: facets.colors ?? [],
-          materials: [],
-          weights: [],
-          difficulties: [],
-        });
-      } catch (error) {
-        if (!cancelled) {
-          console.warn("Failed to fetch product facets, falling back to client-side:", error);
-          // Cache the failure to avoid hammering the broken endpoint
-          try {
-            sessionStorage.setItem(cacheKey, JSON.stringify({ error: true, timestamp: Date.now() }));
-          } catch {
-            // Ignore cache write errors
-          }
-          // Keep dynamicFilters empty — the fallback effect below will
-          // derive categories/colors from the fetched products.
-        }
-      }
-    }
-
-    loadFacets();
-    return () => { cancelled = true; };
-  }, []);
+    
 
   // ---- Apply filters + pagination via the service ----
   // Use filters.search (the URL-synced, debounced value) to avoid double-debouncing
@@ -197,56 +111,53 @@ export function useProducts() {
     [filters.category, filters.search, filters.sort, filters.page, filters.color, filters.minPrice, filters.maxPrice],
   );
 
-  const { data: productsPage, isFetching, isError } = useProductsQuery(queryParams);
+    const { data: productsPage, isFetching, isError } = useProductsQuery(queryParams);
 
-  // ---- Fallback: derive filter options from fetched products ----
-  // If the facets endpoint fails (e.g. 500), still show category/color
-  // filters derived from the products returned by the list query so the
-  // Shop page remains usable.
-  useEffect(() => {
-    if (!productsPage || productsPage.data.length === 0) return;
+    // Build filter options from the full catalog, not the current paginated
+  // result. Selecting a category must not make other filter groups disappear.
+  const dynamicFilters: DynamicFilters = useMemo(() => {
+    const extracted = getDynamicFilters(catalogProducts);
+        const categoryCounts = new Map<string, number>();
 
-    setDynamicFilters((prev) => {
-      // Only fill in if facets are empty (i.e., facets endpoint failed)
-      if (prev.categories.length > 0 || prev.colors.length > 0) return prev;
-
-      const categoryMap = new Map<string, number>();
-      const colorMap = new Map<string, { hex: string; count: number }>();
-
-      productsPage.data.forEach((product) => {
-        categoryMap.set(product.category, (categoryMap.get(product.category) ?? 0) + 1);
-
-        const productColors = new Set<string>();
-        product.variants?.forEach((variant) => {
-          if (!variant.color) return;
-          productColors.add(variant.color);
-          if (!colorMap.has(variant.color)) {
-            colorMap.set(variant.color, { hex: variant.hexCode || "#ccc", count: 0 });
-          }
-        });
-        productColors.forEach((color) => {
-          const current = colorMap.get(color);
-          if (current) current.count += 1;
-        });
-      });
-
-      return {
-        categories: Array.from(categoryMap.entries()).map(([value, count]) => ({
-          value,
-          label: value,
-          count,
-        })),
-        colors: Array.from(colorMap.entries()).map(([name, value]) => ({
-          name,
-          hex: value.hex,
-          count: value.count,
-        })),
-        materials: [],
-        weights: [],
-        difficulties: [],
-      };
+    catalogProducts.forEach((product) => {
+      const value = product.category.trim().toLowerCase();
+      if (!value) return;
+      categoryCounts.set(value, (categoryCounts.get(value) ?? 0) + 1);
     });
-  }, [productsPage]);
+
+        // Keep category values aligned with the backend enum. The frontend mock
+    // uses `tools`, but the API separates it into hook, needle, and accessory.
+    const backendCategories = ["yarn", "hook", "needle", "accessory", "kit"];
+    const categoryLabels: Record<string, string> = {
+      yarn: "Yarn",
+      hook: "Hooks",
+      needle: "Needles",
+      accessory: "Accessories",
+      kit: "DIY Kits",
+    };
+
+    return {
+      categories: backendCategories
+        .filter((value) => categoryCounts.has(value) || value !== "tools")
+        .map((value) => ({
+          value,
+          label: categoryLabels[value] ?? value,
+          count: categoryCounts.get(value) ?? 0,
+        })),
+      colors: extracted.colors,
+      materials: extracted.materials,
+      weights: extracted.weights,
+      difficulties: extracted.difficulties,
+    };
+  }, []);
+
+    const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    catalogProducts.forEach((product) => {
+      product.tags.forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet);
+  }, []);
 
   // isLoading giữ nguyên interface: bật skeleton khi đang fetch (kể cả khi đổi filter)
   useEffect(() => {
@@ -297,11 +208,13 @@ export function useProducts() {
         (prev) => {
           const newParams = new URLSearchParams(prev);
 
-          if (Array.isArray(value)) {
+                    if (Array.isArray(value)) {
+            const paramKey = key === "color" ? "colors" : key;
             if (value.length > 0) {
-              newParams.set(key, value.join(","));
+              newParams.set(paramKey, value.join(","));
             } else {
-              newParams.delete(key);
+              newParams.delete(paramKey);
+              if (key === "color") newParams.delete("color");
             }
           } else if (value === "" || value === "all" || value === 0) {
             if (key === "category") {
@@ -329,6 +242,25 @@ export function useProducts() {
   const clearFilters = useCallback(() => {
     setSearchParams({}, { replace: true });
   }, [setSearchParams]);
+
+    const updatePriceRange = useCallback(
+    (maxPrice: number) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("minPrice");
+
+          if (maxPrice > 0) next.set("maxPrice", String(maxPrice));
+          else next.delete("maxPrice");
+
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const toggleArrayFilter = useCallback(
     (key: "color" | "material" | "weight" | "difficulty", value: string) => {
@@ -425,6 +357,7 @@ export function useProducts() {
     currentPage,
     totalPages,
     updateFilter,
+    updatePriceRange,
     clearFilters,
     toggleArrayFilter,
     removeChip,

@@ -24,6 +24,21 @@ export interface Course {
   purchasedBy?: string[];
 }
 
+/**
+ * Persisted course progress returned/synced via:
+ *  - GET  /courses/{id}/progress
+ *  - POST /courses/{id}/lessons/{lessonId}/complete
+ */
+export interface CourseProgress {
+  userId: string;
+  courseId: string;
+  completedLessons: string[];
+  isCompleted: boolean;
+  completedAt?: string | null;
+  /** True when admin added a new lesson to an already-completed course. */
+  hasNewContent: boolean;
+}
+
 export interface CourseListResponse {
   courses: Course[];
   pagination: {

@@ -111,36 +111,35 @@ function getPaginationRange(
 
 // ── Price range filter component (standalone to preserve input focus) ──
 function PriceRangeFilter({
+  maxPrice,
   onApply,
 }: {
-  onApply: (min: number, max: number) => void;
+  maxPrice: number;
+  onApply: (max: number) => void;
 }) {
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(0);
+  const [maxInput, setMaxInput] = useState(maxPrice ? String(maxPrice) : "");
+
+  // Keep the input in sync with URL back/forward navigation.
+  useEffect(() => {
+    setMaxInput(maxPrice ? String(maxPrice) : "");
+  }, [maxPrice]);
 
   return (
     <div className="filter-group">
-      <FilterLabel icon="price">Price range</FilterLabel>
+      <FilterLabel icon="price">Maximum price</FilterLabel>
       <div className="price-inputs">
         <input
           className="price-input"
           type="number"
-          placeholder="Min"
-          value={minPrice || ""}
-          onChange={(e) => setMinPrice(Number(e.target.value))}
-        />
-        <span className="price-sep">–</span>
-        <input
-          className="price-input"
-          type="number"
-          placeholder="Max"
-          value={maxPrice || ""}
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
+          min="0"
+          placeholder="Price up to"
+          value={maxInput}
+          onChange={(e) => setMaxInput(e.target.value)}
         />
       </div>
       <button
         type="button"
-        onClick={() => onApply(minPrice, maxPrice)}
+        onClick={() => onApply(Math.max(0, Number(maxInput) || 0))}
         className="price-find-btn"
       >
         Find
@@ -168,25 +167,19 @@ export function Shop() {
     currentPage,
     totalPages,
     updateFilter,
+    updatePriceRange,
     clearFilters,
     toggleArrayFilter,
     removeChip,
     goToPage,
   } = useProducts();
 
-  // Debug: log search state
-  useEffect(() => {
-    if (filters.search) {
-      console.log("Shop - filters.search:", filters.search, "filteredProducts:", filteredProducts.length);
-    }
-  }, [filters.search, filteredProducts]);
-
   const [filterOpen, setFilterOpen] = useState(false);
+  const [showAllColors, setShowAllColors] = useState(false);
   const [viewMode, setViewMode] = useState<"products" | "combo">("products");
   const [kits, setKits] = useState<Kit[]>([]);
   const [kitsLoading, setKitsLoading] = useState(false);
   const [kitLevel, setKitLevel] = useState<string>("all");
-  const [kitMinPrice, setKitMinPrice] = useState<number>(0);
   const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
 
   // Kit level options for combo filter
@@ -199,23 +192,16 @@ export function Shop() {
 
   // Check if kit level filter is active
   const hasActiveKitLevel = kitLevel !== "all";
-  const hasActiveKitFilters =
-    hasActiveKitLevel || kitMinPrice > 0 || kitMaxPrice > 0;
+  const hasActiveKitFilters = hasActiveKitLevel || kitMaxPrice > 0;
 
-  // Filter kits by price range
+  // Show only combos at or below the selected maximum price.
   const filteredKits = useMemo(() => {
-    if (kitMinPrice <= 0 && kitMaxPrice <= 0) return kits;
-    return kits.filter((kit) => {
-      return (
-        (kitMinPrice <= 0 || kit.price >= kitMinPrice) &&
-        (kitMaxPrice <= 0 || kit.price <= kitMaxPrice)
-      );
-    });
-  }, [kits, kitMinPrice, kitMaxPrice]);
+    if (kitMaxPrice <= 0) return kits;
+    return kits.filter((kit) => kit.price <= kitMaxPrice);
+  }, [kits, kitMaxPrice]);
 
   const clearKitFilters = () => {
     setKitLevel("all");
-    setKitMinPrice(0);
     setKitMaxPrice(0);
   };
 
@@ -253,17 +239,19 @@ export function Shop() {
   const categoryOptions = useMemo(
     () => [
       ["all", CATEGORY_META.all] as const,
-      ...dynamicFilters.categories.map(
-        (category) =>
-          [
-            category.value,
-            {
-              label: category.label,
-              desc: category.label,
-              emoji: CATEGORY_META[category.value]?.emoji ?? "🛍️",
-            },
-          ] as const,
-      ),
+      ...dynamicFilters.categories
+        .filter((category) => category.value !== "kit")
+        .map(
+          (category) =>
+            [
+              category.value,
+              {
+                label: category.label,
+                desc: category.label,
+                emoji: CATEGORY_META[category.value]?.emoji ?? "🛍️",
+              },
+            ] as const,
+        ),
     ],
     [dynamicFilters.categories],
   );
@@ -505,9 +493,25 @@ export function Shop() {
           {/* Color */}
           {dynamicFilters.colors.length > 0 && (
             <div className="filter-group">
-              <FilterLabel icon="color">Color</FilterLabel>
+              <div className="filter-section-head">
+                <FilterLabel icon="color">Color</FilterLabel>
+                {dynamicFilters.colors.length > 6 && (
+                  <button
+                    type="button"
+                    className="filter-show-more"
+                    onClick={() => setShowAllColors((visible) => !visible)}
+                  >
+                    {showAllColors
+                      ? "Show less"
+                      : `Show all (${dynamicFilters.colors.length})`}
+                  </button>
+                )}
+              </div>
               <div className="filter-chip-group">
-                {dynamicFilters.colors.map((c) => (
+                {(showAllColors
+                  ? dynamicFilters.colors
+                  : dynamicFilters.colors.slice(0, 6)
+                ).map((c) => (
                   <button
                     key={c.name}
                     className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
@@ -516,11 +520,12 @@ export function Shop() {
                     <span
                       style={{
                         display: "inline-block",
-                        width: 10,
-                        height: 10,
+                        width: 12,
+                        height: 12,
                         borderRadius: "50%",
                         background: c.hex,
                         border: "1px solid rgba(0,0,0,0.12)",
+                        flexShrink: 0,
                       }}
                     />
                     {c.name}
@@ -530,66 +535,10 @@ export function Shop() {
             </div>
           )}
 
-          {/* Material */}
-          {dynamicFilters.materials.length > 0 && (
-            <div className="filter-group">
-              <FilterLabel icon="material">Material</FilterLabel>
-              <div className="filter-chip-group">
-                {dynamicFilters.materials.map((m) => (
-                  <button
-                    key={m.name}
-                    className={`chip-filter ${filters.material.includes(m.name) ? "active" : ""}`}
-                    onClick={() => toggleArrayFilter("material", m.name)}
-                  >
-                    {m.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Weight */}
-          {dynamicFilters.weights.length > 0 && (
-            <div className="filter-group">
-              <FilterLabel icon="weight">Weight</FilterLabel>
-              <div className="filter-chip-group">
-                {dynamicFilters.weights.map((w) => (
-                  <button
-                    key={w.name}
-                    className={`chip-filter ${filters.weight.includes(w.name) ? "active" : ""}`}
-                    onClick={() => toggleArrayFilter("weight", w.name)}
-                  >
-                    {w.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Difficulty */}
-          {dynamicFilters.difficulties.length > 0 && (
-            <div className="filter-group">
-              <FilterLabel icon="difficulty">Difficulty</FilterLabel>
-              <div className="filter-chip-group">
-                {dynamicFilters.difficulties.map((d) => (
-                  <button
-                    key={d.name}
-                    className={`chip-filter ${filters.difficulty.includes(d.name) ? "active" : ""}`}
-                    onClick={() => toggleArrayFilter("difficulty", d.name)}
-                  >
-                    {d.name.charAt(0).toUpperCase() + d.name.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Price range - standalone component with own state */}
           <PriceRangeFilter
-            onApply={(min, max) => {
-              updateFilter("minPrice", min);
-              updateFilter("maxPrice", max);
-            }}
+            maxPrice={filters.maxPrice}
+            onApply={(max) => updatePriceRange(max)}
           />
 
           {!isLoading && (
@@ -662,7 +611,7 @@ export function Shop() {
         /* ── Top bar ── */
         .shop-top {
           background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-700) 100%);
-          padding: 2rem 1rem 1.5rem;
+          padding: 1.5rem 1rem 1.1rem;
           position: relative; overflow: hidden;
         }
         .shop-top::before {
@@ -680,7 +629,7 @@ export function Shop() {
           background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 70%);
           pointer-events: none;
         }
-        .shop-container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+        .shop-container { max-width: 1440px; margin: 0 auto; position: relative; z-index: 1; }
 
         .shop-headline-row {
           display: flex;
@@ -694,11 +643,11 @@ export function Shop() {
           font-weight: 700; color: #fff; margin-bottom: 0.25rem; letter-spacing: -0.02em;
         }
         .shop-subhead {
-          color: rgba(255,255,255,0.75); font-size: 0.875rem; margin-bottom: 1rem;
+          color: rgba(255,255,255,0.75); font-size: 0.875rem; margin-bottom: 0.7rem;
         }
         .shop-stat-chip {
           display: inline-flex; align-items: center; gap: 6px;
-          padding: 6px 14px; margin-bottom: 1rem;
+          padding: 5px 12px; margin-bottom: 0.7rem;
           border-radius: 999px;
           background: rgba(255,255,255,0.16);
           backdrop-filter: blur(10px);
@@ -730,7 +679,7 @@ export function Shop() {
 
         /* ── Quick category nav (fills the top-bar, doubles as breadcrumb) ── */
         .quick-nav {
-          display: flex; gap: 8px; margin-top: 14px;
+          display: flex; gap: 6px; margin-top: 10px;
           overflow-x: auto; padding-bottom: 2px;
           scrollbar-width: none;
         }
@@ -738,7 +687,7 @@ export function Shop() {
         .quick-nav-pill {
           flex-shrink: 0;
           display: inline-flex; align-items: center; gap: 5px;
-          padding: 7px 14px; border-radius: 999px;
+          padding: 6px 12px; border-radius: 999px;
           font-size: 0.8rem; font-weight: 600;
           border: 1.5px solid rgba(255,255,255,0.32);
           background: rgba(255,255,255,0.10);
@@ -753,21 +702,21 @@ export function Shop() {
         .quick-nav-pill.active { background: #fff; color: var(--primary); border-color: #fff; }
 
         /* ── Body layout ── */
-        .shop-body {
-          max-width: 1200px; margin: 0 auto; padding: 1rem;
-          display: grid; grid-template-columns: 240px 1fr; gap: 1.25rem;
-        }
+                        .shop-body {
+                                  max-width: 1440px; margin: 0 auto; padding: 0.75rem;
+                                            display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 4fr); gap: 0.75rem;
+                                }
         @media (max-width: 768px) {
-          .shop-body { grid-template-columns: 1fr; }
-        }
+                  .shop-body { grid-template-columns: 1fr; padding: 0.65rem; }
+                }
 
         /* ── Sidebar (desktop) ── */
         .filter-panel {
           background: var(--card-bg, var(--card));
-          border-radius: 14px; border: 1px solid var(--border);
-          padding: 1.1rem; height: fit-content;
+                    border-radius: 14px; border: 1px solid var(--border);
+          padding: 0.8rem; height: fit-content;
           position: sticky; top: 6rem;
-          max-height: calc(100vh - 8rem);
+          max-height: calc(100vh - 7rem);
           overflow-y: auto;
         }
         .dark .filter-panel { background: var(--surface) !important; border-color: var(--chip-border) !important; }
@@ -800,11 +749,11 @@ export function Shop() {
           position: fixed; bottom: 0; left: 0; right: 0;
           background: var(--card-bg, var(--card));
           border-radius: 20px 20px 0 0;
-          padding: 0 1rem 2rem;
-          max-height: 85dvh; overflow-y: auto;
+          padding: 0 1rem 1rem;
+                    max-height: 82dvh; overflow-y: auto;
           z-index: 201;
           /* safe area for iPhone home indicator */
-          padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+          padding-bottom: calc(1rem + env(safe-area-inset-bottom));
         }
         .dark .drawer { background: var(--surface) !important; }
         .drawer-handle {
@@ -820,26 +769,30 @@ export function Shop() {
         /* ── Filter internals ── */
         .filter-header {
           display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 0.75rem;
-        }
-        .filter-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--foreground); font-family: var(--font-heading); }
+          margin-bottom: 0.55rem;
+                  }
+                  .filter-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--foreground); font-family: var(--font-heading); }
         .filter-clear { font-size: 0.78rem; color: var(--primary); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; font-weight: 500; }
         .filter-group {
-          padding-bottom: 0.9rem; margin-bottom: 0.9rem;
+          padding-bottom: 0.65rem; margin-bottom: 0.65rem;
           border-bottom: 1px dashed var(--border-subtle);
         }
         .filter-group:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .filter-group-label {
           display: flex; align-items: center; gap: 6px;
-          font-size: 0.8rem; font-weight: 600; color: var(--foreground-secondary);
-          margin-bottom: 0.45rem; letter-spacing: 0.02em;
+          font-size: 0.86rem; font-weight: 600; color: var(--foreground-secondary);
+          margin-bottom: 0.35rem; letter-spacing: 0.02em;
         }
-        .filter-group-label svg { color: var(--primary); opacity: 0.8; flex-shrink: 0; }
-        .filter-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+                .filter-group-label svg { color: var(--primary); opacity: 0.8; flex-shrink: 0; }
+        .filter-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 0.35rem; }
+                .filter-section-head .filter-group-label { margin-bottom: 0; }
+        .filter-show-more { border: 0; background: transparent; color: var(--primary); font-size: 0.72rem; font-weight: 600; cursor: pointer; padding: 2px 0; white-space: nowrap; }
+        .filter-show-more:hover { color: var(--primary-hover); text-decoration: underline; }
+        .filter-chip-group { display: flex; flex-wrap: wrap; gap: 5px; }
         .chip-filter {
           display: inline-flex; align-items: center; gap: 5px;
-          padding: 6px 12px; border-radius: 20px;
-          font-size: 0.8rem; font-weight: 500;
+                              padding: 5px 10px; border-radius: 18px;
+          font-size: 0.78rem; font-weight: 500;
           border: 1px solid var(--border); background: var(--card);
           color: var(--foreground); cursor: pointer; transition: all 0.2s;
           -webkit-tap-highlight-color: transparent;
@@ -856,7 +809,7 @@ export function Shop() {
         .filter-summary {
           display: flex; align-items: center; gap: 6px;
           font-size: 0.76rem; color: var(--foreground-muted);
-          padding-top: 0.6rem; margin-top: 0.1rem;
+          padding-top: 0.45rem; margin-top: 0;
           border-top: 1px solid var(--border-subtle);
         }
         .filter-summary svg { color: var(--primary); opacity: 0.7; flex-shrink: 0; }
@@ -888,7 +841,7 @@ export function Shop() {
         /* ── Price range ── */
         .price-inputs { display: flex; gap: 6px; align-items: center; }
         .price-input {
-          width: 100%; padding: 7px 8px;
+          width: 100%; padding: 8px 9px;
           border: 1px solid var(--border); border-radius: 8px;
           background: var(--card); font-size: 0.82rem; color: var(--foreground);
           outline: none; -webkit-appearance: none;
@@ -944,37 +897,41 @@ export function Shop() {
         .chip-x:hover { opacity: 1; }
 
         .lesson-banner {
-          margin-bottom: 1rem;
+                    margin-bottom: 0.75rem;
           border: 1px solid var(--color-border);
           border-radius: 18px;
           background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-card)), var(--color-bg-card));
-          padding: 1rem;
+                    padding: 0.8rem;
           box-shadow: var(--shadow-card);
         }
         .lesson-banner-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
         .lesson-banner-title { font-weight: 700; color: var(--color-text); }
         .lesson-banner-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 0.75rem; }
-        @media (min-width: 768px) { .lesson-banner-grid { grid-template-columns: repeat(4, 1fr); } }
-        .product-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 0.75rem;
-          align-items: start;
-        }
-        @media (min-width: 480px) {
-          .product-grid { gap: 1rem; }
+        @media (min-width: 768px) { .lesson-banner-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+                .product-grid,
+                .combo-grid {
+                  display: grid;
+                  grid-template-columns: repeat(2, minmax(0, 1fr));
+                  gap: 0.7rem;
+                  align-items: start;
+                }
+                @media (min-width: 480px) {
+          .product-grid,
+          .combo-grid { gap: 0.8rem; }
         }
         @media (min-width: 768px) {
-          .product-grid { grid-template-columns: repeat(2, 1fr); }
+          .product-grid,
+          .combo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
-        @media (min-width: 960px) {
-          .product-grid { grid-template-columns: repeat(3, 1fr); }
+        @media (min-width: 1100px) {
+          .product-grid,
+          .combo-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
 
         /* ── Pagination ── */
         .pagination {
           display: flex; align-items: center; justify-content: center;
-          gap: 4px; margin-top: 1.5rem; padding-bottom: 2rem;
+          gap: 4px; margin-top: 1.1rem; padding-bottom: 1.25rem;
           flex-wrap: wrap;
         }
         .page-btn {
@@ -1327,7 +1284,15 @@ export function Shop() {
                   <p style={{ fontSize: "0.83rem" }}>
                     Try adjusting your filters
                   </p>
-                  <div style={{ marginTop: "16px", display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      marginTop: "16px",
+                      display: "flex",
+                      gap: "8px",
+                      justifyContent: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     {hasActiveFilters && (
                       <button
                         type="button"
@@ -1343,7 +1308,10 @@ export function Shop() {
                         type="button"
                         className="empty-state-cta"
                         onClick={clearSearch}
-                        style={{ background: "var(--accent-blush)", color: "var(--foreground)" }}
+                        style={{
+                          background: "var(--accent-blush)",
+                          color: "var(--foreground)",
+                        }}
                       >
                         Clear search
                       </button>
@@ -1398,7 +1366,7 @@ export function Shop() {
                 </div>
               </div>
               {kitsLoading ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="combo-grid">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <ProductSkeleton key={i} />
                   ))}
@@ -1418,7 +1386,7 @@ export function Shop() {
                   )}
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="combo-grid">
                   {filteredKits.map((kit) => {
                     const isFavorite = isFavoriteKit(kit._id);
 
@@ -1517,7 +1485,8 @@ export function Shop() {
                                 ))}
                               </div>
                               <span className="text-xs text-muted-foreground">
-                                {kit.averageRating.toFixed(1)} ({kit.totalRatings})
+                                {kit.averageRating.toFixed(1)} (
+                                {kit.totalRatings})
                               </span>
                             </div>
                           )}

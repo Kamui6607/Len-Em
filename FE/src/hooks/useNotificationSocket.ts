@@ -64,9 +64,11 @@ export function useNotificationSocket() {
     }
 
     const token = accessToken.startsWith("Bearer ") ? accessToken.slice(7) : accessToken;
-    const socket = io(`${SOCKET_URL}/notifications`, {
+        const socket = io(`${SOCKET_URL}/notifications`, {
       auth: { token: `Bearer ${token}` },
       transports: ["polling", "websocket"],
+      // Network failures may retry, but auth failures are handled below and
+      // must not keep reconnecting with the same invalid token.
       reconnection: true,
       reconnectionAttempts: 3,
       reconnectionDelay: 3000,
@@ -108,11 +110,25 @@ export function useNotificationSocket() {
       console.log("[NotificationSocket] Disconnected:", reason);
     });
 
-    socket.on("connect_error", (err) => {
-      console.warn("[NotificationSocket] Connection error:", err.message);
-      // Don't retry on authentication errors
-      if (err.message.includes("Authentication error") || err.message.includes("Invalid token")) {
-        socket.disconnect();
+        socket.on("connect_error", (err) => {
+      const isAuthError =
+        err.message.includes("Authentication error") ||
+        err.message.includes("Invalid token");
+
+      if (!isAuthError) {
+        console.warn("[NotificationSocket] Connection error:", err.message);
+        return;
+      }
+
+      // Stop the Socket.IO manager before disconnecting; otherwise it can
+      // schedule another attempt with the same expired token.
+      console.warn("[NotificationSocket] Authentication failed; disabling reconnect");
+      clearTimeout(connectTimeout);
+            socket.io.opts.reconnection = false;
+      socket.removeAllListeners();
+      socket.disconnect();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
       }
     });
 

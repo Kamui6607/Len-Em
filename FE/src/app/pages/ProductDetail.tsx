@@ -1,7 +1,19 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { ArrowLeft, Heart, ShoppingCart, Package, Check, Star, Truck, ShieldCheck, RotateCcw, Minus, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Heart,
+  ShoppingCart,
+  Package,
+  Check,
+  Star,
+  Truck,
+  ShieldCheck,
+  RotateCcw,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { products, getTotalStock } from "../data/products";
 import { ProductVariantSelector } from "../components/ProductVariantSelector";
 import { useAuth } from "../../hooks/useAuth";
@@ -31,8 +43,8 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
               i < Math.floor(rating)
                 ? "fill-amber-400 text-amber-400"
                 : i < rating
-                ? "fill-amber-400/50 text-amber-400"
-                : "fill-muted-foreground/20 text-muted-foreground/30"
+                  ? "fill-amber-400/50 text-amber-400"
+                  : "fill-muted-foreground/20 text-muted-foreground/30",
             )}
           />
         ))}
@@ -53,21 +65,41 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
  */
 function getStockStatus(stock: number, percent: number) {
   if (stock === 0) {
-    return { key: "empty", colorVar: "var(--muted-foreground)", label: "Hết hàng" };
+    return {
+      key: "empty",
+      colorVar: "var(--muted-foreground)",
+      label: "Hết hàng",
+    };
   }
   if (percent > 70) {
-    return { key: "high", colorVar: "var(--success-text)", label: "Còn nhiều hàng" };
+    return {
+      key: "high",
+      colorVar: "var(--success-text)",
+      label: "Còn nhiều hàng",
+    };
   }
   if (percent >= 30) {
-    return { key: "mid", colorVar: "var(--warning-text)", label: "Số lượng có hạn" };
+    return {
+      key: "mid",
+      colorVar: "var(--warning-text)",
+      label: "Số lượng có hạn",
+    };
   }
   return { key: "low", colorVar: "var(--error-text)", label: "Sắp hết hàng" };
 }
 
 /** Thanh tồn kho hình một đoạn dây len — vân xoắn nhẹ, đổi màu theo mức tồn kho. */
-function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }) {
+function YarnStockMeter({
+  stock,
+  maxStock,
+}: {
+  stock: number;
+  maxStock: number;
+}) {
   const percent =
-    maxStock > 0 ? Math.min(100, Math.max(0, Math.round((stock / maxStock) * 100))) : 0;
+    maxStock > 0
+      ? Math.min(100, Math.max(0, Math.round((stock / maxStock) * 100)))
+      : 0;
   const status = getStockStatus(stock, percent);
 
   return (
@@ -77,9 +109,19 @@ function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }
         style={{ background: "var(--muted)" }}
       >
         {/* nền dây - vân xoắn mờ */}
-        <svg className="absolute inset-0 h-full w-full" style={{ opacity: 0.35 }} preserveAspectRatio="none">
+        <svg
+          className="absolute inset-0 h-full w-full"
+          style={{ opacity: 0.35 }}
+          preserveAspectRatio="none"
+        >
           <defs>
-            <pattern id="yarn-twist-track" width="7" height="7" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+            <pattern
+              id="yarn-twist-track"
+              width="7"
+              height="7"
+              patternTransform="rotate(35)"
+              patternUnits="userSpaceOnUse"
+            >
               <rect width="3.5" height="7" className="fill-foreground/25" />
             </pattern>
           </defs>
@@ -91,13 +133,27 @@ function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }
           className="relative h-full rounded-full transition-all duration-500 ease-out"
           style={{ width: `${percent}%`, backgroundColor: status.colorVar }}
         >
-          <svg className="absolute inset-0 h-full w-full" style={{ opacity: 0.3 }} preserveAspectRatio="none">
+          <svg
+            className="absolute inset-0 h-full w-full"
+            style={{ opacity: 0.3 }}
+            preserveAspectRatio="none"
+          >
             <defs>
-              <pattern id={`yarn-twist-${status.key}`} width="6" height="6" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+              <pattern
+                id={`yarn-twist-${status.key}`}
+                width="6"
+                height="6"
+                patternTransform="rotate(35)"
+                patternUnits="userSpaceOnUse"
+              >
                 <rect width="3" height="6" fill="white" />
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill={`url(#yarn-twist-${status.key})`} />
+            <rect
+              width="100%"
+              height="100%"
+              fill={`url(#yarn-twist-${status.key})`}
+            />
           </svg>
           {/* đầu dây - đánh dấu mốc hiện tại */}
           {percent > 0 && (
@@ -108,7 +164,10 @@ function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }
           )}
         </div>
       </div>
-      <span className="whitespace-nowrap text-xs font-medium" style={{ color: status.colorVar }}>
+      <span
+        className="whitespace-nowrap text-xs font-medium"
+        style={{ color: status.colorVar }}
+      >
         {status.label}
       </span>
     </div>
@@ -124,7 +183,8 @@ export function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariantUI | null>(null);
+  const [selectedVariant, setSelectedVariant] =
+    useState<ProductVariantUI | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
@@ -132,7 +192,10 @@ export function ProductDetail() {
 
   const currentCartItem = useMemo(() => {
     if (!selectedVariant) return null;
-    return cartItems.find(item => item.productId === product?.id && item.variantId === selectedVariant.id);
+    return cartItems.find(
+      (item) =>
+        item.productId === product?.id && item.variantId === selectedVariant.id,
+    );
   }, [cartItems, product?.id, selectedVariant]);
 
   const maxAvailableQuantity = useMemo(() => {
@@ -185,7 +248,8 @@ export function ProductDetail() {
     );
   }, [product]);
 
-  const currentImage = selectedVariant?.images?.[activeImageIndex] ?? product?.image ?? "";
+  const currentImage =
+    selectedVariant?.images?.[activeImageIndex] ?? product?.image ?? "";
   const currentPrice = selectedVariant?.price ?? variantItems[0]?.price ?? 0;
   const currentStock = selectedVariant?.stock ?? 0;
   const currentColor = selectedVariant?.color;
@@ -210,27 +274,33 @@ export function ProductDetail() {
     }
     const variant = selectedVariant || product.variants?.[0];
     if (variant) {
-      addToCart({
-        productId: product.id,
-        variantId: variant.id,
-        name: product.name,
-        image: variant.images?.[0] || product.image,
-        color: variant.color || "",
-        hexCode: variant.hexCode || "#ccc",
-        price: variant.price,
-        stock: variant.stock,
-      }, quantity);
+      addToCart(
+        {
+          productId: product.id,
+          variantId: variant.id,
+          name: product.name,
+          image: variant.images?.[0] || product.image,
+          color: variant.color || "",
+          hexCode: variant.hexCode || "#ccc",
+          price: variant.price,
+          stock: variant.stock,
+        },
+        quantity,
+      );
     } else {
-      addToCart({
-        productId: product.id,
-        variantId: "default",
-        name: product.name,
-        image: product.image,
-        color: "",
-        hexCode: "#ccc",
-        price: 0,
-        stock: 999,
-      }, quantity);
+      addToCart(
+        {
+          productId: product.id,
+          variantId: "default",
+          name: product.name,
+          image: product.image,
+          color: "",
+          hexCode: "#ccc",
+          price: 0,
+          stock: 999,
+        },
+        quantity,
+      );
     }
     toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
@@ -302,10 +372,14 @@ export function ProductDetail() {
                   toast.success(
                     isFavorite(product.id)
                       ? "Removed from favorites"
-                      : "Added to favorites"
+                      : "Added to favorites",
                   );
                 }}
-                title={isFavorite(product?.id || "") ? "Remove from favorites" : "Add to favorites"}
+                title={
+                  isFavorite(product?.id || "")
+                    ? "Remove from favorites"
+                    : "Add to favorites"
+                }
                 className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors"
                 style={{
                   background: "var(--card-glass)",
@@ -322,7 +396,7 @@ export function ProductDetail() {
                     "w-5 h-5 transition-colors",
                     isFavorite(product?.id || "")
                       ? "fill-destructive text-destructive"
-                      : "text-muted-foreground hover:text-destructive"
+                      : "text-muted-foreground hover:text-destructive",
                   )}
                 />
               </button>
@@ -357,7 +431,7 @@ export function ProductDetail() {
                       "w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0",
                       activeImageIndex === idx
                         ? "border-primary"
-                        : "border-border hover:border-primary/40"
+                        : "border-border hover:border-primary/40",
                     )}
                     style={{
                       touchAction: "manipulation",
@@ -389,7 +463,7 @@ export function ProductDetail() {
                       <span
                         className={cn(
                           "text-xs px-2.5 py-1 rounded-full capitalize",
-                          difficultyBadgeColors[product.difficulty]
+                          difficultyBadgeColors[product.difficulty],
                         )}
                       >
                         {product.difficulty}
@@ -431,10 +505,15 @@ export function ProductDetail() {
                   <div className="mb-2.5 flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Tồn kho</span>
                     <span className="font-medium">
-                      {currentStock > 0 ? `${currentStock} sản phẩm` : "Hết hàng"}
+                      {currentStock > 0
+                        ? `${currentStock} sản phẩm`
+                        : "Hết hàng"}
                     </span>
                   </div>
-                  <YarnStockMeter stock={currentStock} maxStock={maxVariantStock} />
+                  <YarnStockMeter
+                    stock={currentStock}
+                    maxStock={maxVariantStock}
+                  />
                   <p className="mt-2 text-xs text-muted-foreground">
                     {totalStock} sản phẩm trên tất cả màu
                   </p>
@@ -449,26 +528,36 @@ export function ProductDetail() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {product.material && (
                     <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">Material</span>
+                      <span className="text-muted-foreground text-xs">
+                        Material
+                      </span>
                       <p className="font-medium">{product.material}</p>
                     </div>
                   )}
                   {product.weight && (
                     <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">Weight</span>
+                      <span className="text-muted-foreground text-xs">
+                        Weight
+                      </span>
                       <p className="font-medium">{product.weight}</p>
                     </div>
                   )}
                   {product.yardage && (
                     <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">Yardage</span>
+                      <span className="text-muted-foreground text-xs">
+                        Yardage
+                      </span>
                       <p className="font-medium">{product.yardage} yards</p>
                     </div>
                   )}
                   {product.difficulty && (
                     <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">Skill Level</span>
-                      <p className="font-medium capitalize">{product.difficulty}</p>
+                      <span className="text-muted-foreground text-xs">
+                        Skill Level
+                      </span>
+                      <p className="font-medium capitalize">
+                        {product.difficulty}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -485,27 +574,37 @@ export function ProductDetail() {
                     <span
                       className={cn(
                         "px-3 py-0.5 rounded-full text-xs font-medium",
-                        difficultyBadgeColors[product.difficulty]
+                        difficultyBadgeColors[product.difficulty],
                       )}
                     >
-                      {product.difficulty.charAt(0).toUpperCase() + product.difficulty.slice(1)}
+                      {product.difficulty.charAt(0).toUpperCase() +
+                        product.difficulty.slice(1)}
                     </span>
                   </div>
                 )}
                 {product.estimatedTime && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Estimated time:</span>
+                    <span className="text-muted-foreground">
+                      Estimated time:
+                    </span>
                     <span className="font-medium">{product.estimatedTime}</span>
                   </div>
                 )}
                 {product.materials && product.materials.length > 0 && (
                   <div>
-                    <span className="text-sm text-muted-foreground block mb-2">What's included:</span>
+                    <span className="text-sm text-muted-foreground block mb-2">
+                      What's included:
+                    </span>
                     <ul className="space-y-1.5">
                       {product.materials.map((material, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm">
+                        <li
+                          key={index}
+                          className="flex items-start gap-2 text-sm"
+                        >
                           <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                          <span className="text-muted-foreground">{material}</span>
+                          <span className="text-muted-foreground">
+                            {material}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -526,21 +625,25 @@ export function ProductDetail() {
                       "w-10 h-10 rounded-full border flex items-center justify-center transition-all duration-200",
                       quantity <= 1
                         ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
-                        : "border-border hover:bg-muted hover:shadow-sm active:scale-90"
+                        : "border-border hover:bg-muted hover:shadow-sm active:scale-90",
                     )}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="w-8 text-center font-medium">{quantity}</span>
+                  <span className="w-8 text-center font-medium">
+                    {quantity}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setQuantity(Math.min(maxAvailableQuantity, quantity + 1))}
+                    onClick={() =>
+                      setQuantity(Math.min(maxAvailableQuantity, quantity + 1))
+                    }
                     disabled={quantity >= maxAvailableQuantity}
                     className={cn(
                       "w-10 h-10 rounded-full border flex items-center justify-center transition-all duration-200",
                       quantity >= maxAvailableQuantity
                         ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
-                        : "border-border hover:bg-muted hover:shadow-sm active:scale-90"
+                        : "border-border hover:bg-muted hover:shadow-sm active:scale-90",
                     )}
                   >
                     <Plus className="w-4 h-4" />
@@ -554,8 +657,14 @@ export function ProductDetail() {
                 type="button"
                 onClick={handleAddToCart}
                 disabled={currentStock === 0}
-                className={cn("add-to-cart-btn", currentStock === 0 && "opacity-50 cursor-not-allowed")}
-                style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+                className={cn(
+                  "add-to-cart-btn",
+                  currentStock === 0 && "opacity-50 cursor-not-allowed",
+                )}
+                style={{
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
+                }}
               >
                 <div className="btn-text">
                   <ShoppingCart className="w-5 h-5" />
@@ -582,7 +691,9 @@ export function ProductDetail() {
             <div className="pt-4 border-t border-border grid grid-cols-3 gap-4">
               <div className="text-center">
                 <Truck className="w-5 h-5 text-primary mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">Free shipping over $50</p>
+                <p className="text-xs text-muted-foreground">
+                  Free shipping over $50
+                </p>
               </div>
               <div className="text-center">
                 <RotateCcw className="w-5 h-5 text-primary mx-auto mb-1" />
@@ -599,19 +710,38 @@ export function ProductDetail() {
         <div className="mt-16">
           <h2 className="text-xl mb-6">You Might Also Like</h2>
           <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 scrollbar-none">
-            {products
-              .filter((p) => p.id !== product.id && p.category === product.category)
-              .slice(0, 4)
-              .map((related) => {
-                const relPrice = related.variants?.[0]?.price ?? 0;
-                return (
+            {(() => {
+              const currentColors = new Set(
+                product.variants
+                  ?.flatMap((variant) => [variant.color, variant.hexCode])
+                  .filter(Boolean),
+              );
+
+              return products
+                .filter((related) => {
+                  if (related.id === product.id) return false;
+                  if (related.category === product.category) return true;
+
+                  return related.variants?.some(
+                    (variant) =>
+                      Boolean(
+                        variant.color && currentColors.has(variant.color),
+                      ) ||
+                      Boolean(
+                        variant.hexCode && currentColors.has(variant.hexCode),
+                      ),
+                  );
+                })
+                .slice(0, 4)
+                .map((related) => (
                   <Link
                     key={related.id}
                     to={`/shop/product/${related.id}`}
                     className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20 shrink-0 w-[180px] md:w-auto"
                     style={{ boxShadow: "0 0 0 transparent" }}
                     onMouseEnter={(event) => {
-                      event.currentTarget.style.boxShadow = "0 14px 36px color-mix(in srgb, var(--primary) 8%, transparent)";
+                      event.currentTarget.style.boxShadow =
+                        "0 14px 36px color-mix(in srgb, var(--primary) 8%, transparent)";
                     }}
                     onMouseLeave={(event) => {
                       event.currentTarget.style.boxShadow = "0 0 0 transparent";
@@ -625,14 +755,11 @@ export function ProductDetail() {
                       />
                     </div>
                     <div className="p-4">
-                      <h4 className="line-clamp-1 text-sm">{related.name}</h4>
-                      <p className="text-primary font-semibold mt-1.5">
-                        {formatPrice(relPrice)}
-                      </p>
+                      <h4 className="line-clamp-2 text-sm">{related.name}</h4>
                     </div>
                   </Link>
-                );
-              })}
+                ));
+            })()}
           </div>
         </div>
       </div>
@@ -641,13 +768,20 @@ export function ProductDetail() {
         <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/97 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Price:</p>
-              <p className="text-base font-bold text-primary">{formatPrice(currentPrice)}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                Price:
+              </p>
+              <p className="text-base font-bold text-primary">
+                {formatPrice(currentPrice)}
+              </p>
             </div>
             <button
               onClick={handleAddToCart}
               disabled={currentStock === 0}
-              className={cn("add-to-cart-btn", currentStock === 0 && "opacity-50 cursor-not-allowed")}
+              className={cn(
+                "add-to-cart-btn",
+                currentStock === 0 && "opacity-50 cursor-not-allowed",
+              )}
             >
               <div className="btn-text">
                 <ShoppingCart className="w-5 h-5" />

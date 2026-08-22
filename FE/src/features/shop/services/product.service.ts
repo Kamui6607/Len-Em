@@ -69,8 +69,8 @@ export async function fetchProducts(
 
   // Server-side filtering — pass through to backend
   if (params.colors) queryParams.colors = params.colors;
-  if (params.minPrice) queryParams.minPrice = params.minPrice;
-  if (params.maxPrice) queryParams.maxPrice = params.maxPrice;
+    if (params.minPrice !== undefined) queryParams.minPrice = params.minPrice;
+  if (params.maxPrice !== undefined) queryParams.maxPrice = params.maxPrice;
 
   const { data: response } = await axiosClient.get("/products", {
     params: queryParams,
@@ -102,47 +102,7 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 }
 
 // ============================================================
-// 3. Fetch dynamic filter options (facets)
-// ============================================================
-
-export interface ProductFacetCategory {
-  value: string;
-  label: string;
-  count: number;
-}
-
-export interface ProductFacetColor {
-  name: string;
-  hex: string;
-  count: number;
-}
-
-export interface ProductFacets {
-  categories: ProductFacetCategory[];
-  colors: ProductFacetColor[];
-  minPrice: number;
-  maxPrice: number;
-}
-
-/**
- * GET /products/facets
- * Fetch all available filter options (categories, colors, price range)
- * in a single request. Call once when loading the Shop page.
- */
-export async function fetchProductFacets(): Promise<ProductFacets> {
-  const { data: response } = await axiosClient.get("/products/facets");
-  // Backend returns: { status: "success", data: { categories, colors, minPrice, maxPrice } }
-  const facets = response.data;
-  return {
-    categories: facets.categories ?? [],
-    colors: facets.colors ?? [],
-    minPrice: facets.minPrice ?? 0,
-    maxPrice: facets.maxPrice ?? 0,
-  };
-}
-
-// ============================================================
-// 4. Admin CRUD operations
+// 3. Admin CRUD operations
 // ============================================================
 
 export interface CreateProductData {

@@ -13,16 +13,19 @@ import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { diyService } from "../../features/diy/services/diy.service";
 import { kitService, type KitProduct } from "../../api/kitService";
-import type { DIYPost } from "../../features/diy/types/diy.types";
+import type { DIYCreator, DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
 
 type FeedFilter = "all" | "newest" | "purchased";
 
-interface CreatorInfo {
-  userId: string;
-  fullName: string;
-  avatar?: string;
+// Helper: the backend now populates `post.creatorId` with the creator object,
+// so the card can read avatar/fullName directly (no ID→creator lookup needed).
+// Falls back to undefined for legacy/mock string IDs.
+function getPostCreator(post: DIYPost): DIYCreator | undefined {
+  return post.creatorId && typeof post.creatorId === "object"
+    ? post.creatorId
+    : undefined;
 }
 
 export function DIYFeedPage() {
@@ -34,8 +37,14 @@ export function DIYFeedPage() {
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [posts, setPosts] = useState<DIYPost[]>([]);
   const searchQuery = searchParams.get("search") || "";
-  const [creators, setCreators] = useState<Record<string, CreatorInfo>>({});
   const [loading, setLoading] = useState(false);
+  const [postOpen, setPostOpen] = useState(false);
+  const [postSubmitting, setPostSubmitting] = useState(false);
+  const [postTitle, setPostTitle] = useState("");
+  const [postDescription, setPostDescription] = useState("");
+  const [postTags, setPostTags] = useState("");
+  const [postPrice, setPostPrice] = useState("");
+  const [postImages, setPostImages] = useState<File[]>([]);
   const { isDIYPostSaved, toggleDIYPostSave } = useFavorites();
 
   const fetchPosts = useCallback(async () => {
@@ -44,11 +53,8 @@ export function DIYFeedPage() {
       const { data } = await diyService.getAllPosts({ page: 1, limit: 20 });
       setPosts(data.data.posts);
 
-      // Note: getUserById is admin-only, so we can't fetch creator info
-      // for regular users. The UI falls back to a generic avatar/name.
-      // If the backend later exposes a public endpoint for user profiles,
-      // we can populate `creators` here.
-      setCreators({});
+      // Creator info is now populated by the backend on each post, so no
+      // extra per-creator requests or client-side ID mapping are needed.
     } catch (error) {
       console.error("DIYFeedPage - Error fetching posts:", error);
       toast.error("Failed to load posts, showing demo data");
@@ -69,6 +75,51 @@ export function DIYFeedPage() {
     action();
   };
 
+  const resetPostForm = () => {
+    setPostTitle("");
+    setPostDescription("");
+    setPostTags("");
+    setPostPrice("");
+    setPostImages([]);
+  };
+
+  const submitPost = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    if (!postTitle.trim() || !postDescription.trim()) {
+      toast.error("Vui lòng nhập tiêu đề và mô tả");
+      return;
+    }
+
+    setPostSubmitting(true);
+    try {
+      await diyService.createPost(
+        {
+          title: postTitle.trim(),
+          description: postDescription.trim(),
+          tags: postTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          price: postPrice ? Math.max(0, Number(postPrice)) : undefined,
+          status: "pending",
+        },
+        postImages,
+      );
+      toast.success("Đã gửi bài viết. Vui lòng chờ admin duyệt.");
+      resetPostForm();
+      setPostOpen(false);
+      await fetchPosts();
+    } catch {
+      toast.error("Không thể đăng bài viết");
+    } finally {
+      setPostSubmitting(false);
+    }
+  };
+
   const buyCombo = async (post: DIYPost) => {
     try {
       const combos = post.linkedCombo ?? [];
@@ -87,7 +138,7 @@ export function DIYFeedPage() {
         name: kit.name,
         thumbnail: kit.thumbnail,
         price: kit.price,
-      products: (kit.products || []).map((kitProduct: KitProduct) => {
+        products: (kit.products || []).map((kitProduct: KitProduct) => {
           const product = kitProduct.productId;
           const firstVariant = product?.variants?.[0];
           return {
@@ -111,7 +162,10 @@ export function DIYFeedPage() {
     toast.success(wasSaved ? "DIY post removed from saved" : "DIY post saved");
   };
 
-  const approvedPosts = useMemo(() => posts.filter((p) => p.status !== "pending"), [posts]);
+  const approvedPosts = useMemo(
+    () => posts.filter((p) => p.status !== "pending"),
+    [posts],
+  );
 
   const filteredPosts = approvedPosts.filter((post) => {
     if (!searchQuery.trim()) return true;
@@ -125,7 +179,12 @@ export function DIYFeedPage() {
 
   // Debug: log search state
   useEffect(() => {
-    console.log("DIYFeedPage - searchQuery:", searchQuery, "filteredPosts:", filteredPosts.length);
+    console.log(
+      "DIYFeedPage - searchQuery:",
+      searchQuery,
+      "filteredPosts:",
+      filteredPosts.length,
+    );
   }, [searchQuery, filteredPosts]);
 
   const sortedPosts = [...filteredPosts].sort((a, b) => {
@@ -140,11 +199,15 @@ export function DIYFeedPage() {
 
   const totalLikes = useMemo(
     () => approvedPosts.reduce((sum, p) => sum + (p.likeCount ?? 0), 0),
-    [approvedPosts]
+    [approvedPosts],
   );
   const heroImages = useMemo(
-    () => approvedPosts.slice(0, 3).map((p) => p.images[0]).filter(Boolean),
-    [approvedPosts]
+    () =>
+      approvedPosts
+        .slice(0, 3)
+        .map((p) => p.images[0])
+        .filter(Boolean),
+    [approvedPosts],
   );
 
   if (loading) {
@@ -154,7 +217,10 @@ export function DIYFeedPage() {
           <section className="mb-8 h-[220px] animate-pulse rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background md:h-[260px]" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+              <div
+                key={i}
+                className="overflow-hidden rounded-2xl border bg-card shadow-sm"
+              >
                 <div className="aspect-[4/5] w-full animate-pulse bg-muted" />
                 <div className="space-y-2.5 p-3 md:p-4">
                   <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
@@ -183,19 +249,28 @@ export function DIYFeedPage() {
               <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
                 {t("diyFeed.headline")}
               </h1>
-              <p className="max-w-xl text-muted-foreground md:text-lg">{t("diyFeed.subtitle")}</p>
+              <p className="max-w-xl text-muted-foreground md:text-lg">
+                {t("diyFeed.subtitle")}
+              </p>
 
               {approvedPosts.length > 0 && (
                 <div className="mt-6 flex flex-wrap gap-6">
                   <div>
-                    <p className="text-2xl font-semibold leading-none">{approvedPosts.length}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{t("diyFeed.all")}</p>
+                    <p className="text-2xl font-semibold leading-none">
+                      {approvedPosts.length}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("diyFeed.all")}
+                    </p>
                   </div>
                   <div className="h-9 w-px bg-border" />
                   <div>
-                    <p className="text-2xl font-semibold leading-none">{totalLikes.toLocaleString()}</p>
+                    <p className="text-2xl font-semibold leading-none">
+                      {totalLikes.toLocaleString()}
+                    </p>
                     <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                      <Heart className="size-3.5" /> {t("diyFeed.bought") ? "yêu thích" : "likes"}
+                      <Heart className="size-3.5" />{" "}
+                      {t("diyFeed.bought") ? "yêu thích" : "likes"}
                     </p>
                   </div>
                 </div>
@@ -228,21 +303,36 @@ export function DIYFeedPage() {
 
         {/* Filters */}
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as FeedFilter)}>
+          <Tabs
+            value={filter}
+            onValueChange={(value) => setFilter(value as FeedFilter)}
+          >
             <TabsList className="grid h-auto w-full grid-cols-3 gap-1 sm:w-fit">
               <TabsTrigger value="all">{t("diyFeed.all")}</TabsTrigger>
               <TabsTrigger value="newest">{t("diyFeed.newest")}</TabsTrigger>
-              <TabsTrigger value="purchased">{t("diyFeed.mostPurchased")}</TabsTrigger>
+              <TabsTrigger value="purchased">
+                {t("diyFeed.mostPurchased")}
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <Link
-            to="/support-diy/new"
-            className="relative flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary to-purple-600 text-white dark:text-white text-sm font-semibold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 active:scale-95 before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-r before:from-white/0 before:to-white/20 before:opacity-0 hover:before:opacity-100 before:transition-opacity"
-          >
-            <Hand className="w-5 h-5" />
-            <span>Hỗ trợ DIY</span>
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/support-diy/new"
+              className="flex items-center gap-2.5 rounded-full border border-[var(--primary)] bg-[var(--accent-blush)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] hover:shadow-lg hover:shadow-primary/25 active:translate-y-0"
+            >
+              <Hand className="w-5 h-5" />
+              <span>Hỗ trợ DIY</span>
+            </Link>
+            <Button
+              type="button"
+              onClick={() => requireAuth(() => setPostOpen(true))}
+              className="gap-2 border border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--primary-hover)] hover:shadow-lg hover:shadow-primary/25 active:translate-y-0"
+            >
+              <PackageOpen className="size-4" />
+              Post sản phẩm
+            </Button>
+          </div>
           <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
             <div className="w-full sm:w-auto" />
             <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
@@ -251,12 +341,120 @@ export function DIYFeedPage() {
           </div>
         </div>
 
+        {postOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.form
+              onSubmit={submitPost}
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border bg-card p-5 shadow-2xl md:p-6"
+            >
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Post sản phẩm</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Bài viết sẽ ở trạng thái Pending và cần admin duyệt trước
+                    khi hiển thị.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetPostForm();
+                    setPostOpen(false);
+                  }}
+                  className="text-2xl leading-none text-muted-foreground hover:text-foreground"
+                  aria-label="Đóng"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block text-sm font-medium">
+                  Tiêu đề
+                  <input
+                    required
+                    value={postTitle}
+                    onChange={(event) => setPostTitle(event.target.value)}
+                    className="input mt-1"
+                    placeholder="Ví dụ: Túi len hoa cúc"
+                  />
+                </label>
+                <label className="block text-sm font-medium">
+                  Mô tả
+                  <textarea
+                    required
+                    value={postDescription}
+                    onChange={(event) => setPostDescription(event.target.value)}
+                    className="input mt-1 min-h-28 resize-y"
+                    placeholder="Mô tả sản phẩm hoặc công thức DIY"
+                  />
+                </label>
+                <label className="block text-sm font-medium">
+                  Tags
+                  <input
+                    value={postTags}
+                    onChange={(event) => setPostTags(event.target.value)}
+                    className="input mt-1"
+                    placeholder="len, beginner, túi xách"
+                  />
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Phân tách bằng dấu phẩy
+                  </span>
+                </label>
+                <label className="block text-sm font-medium">
+                  Giá (không bắt buộc)
+                  <input
+                    type="number"
+                    min="0"
+                    value={postPrice}
+                    onChange={(event) => setPostPrice(event.target.value)}
+                    className="input mt-1"
+                    placeholder="0"
+                  />
+                </label>
+                <label className="block text-sm font-medium">
+                  Hình ảnh
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(event) =>
+                      setPostImages(Array.from(event.target.files ?? []))
+                    }
+                    className="input mt-1"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    resetPostForm();
+                    setPostOpen(false);
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={postSubmitting}>
+                  {postSubmitting ? "Đang đăng..." : "Gửi bài"}
+                </Button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+
         {/* Grid / empty state */}
         {sortedPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
             <PackageOpen className="mb-3 size-10 text-muted-foreground" />
             <p className="font-medium">Không tìm thấy công thức nào</p>
-            <p className="mt-1 text-sm text-muted-foreground">Thử một từ khóa khác hoặc xóa bộ lọc</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Thử một từ khóa khác hoặc xóa bộ lọc
+            </p>
             {searchQuery && (
               <button
                 type="button"
@@ -274,7 +472,7 @@ export function DIYFeedPage() {
         ) : (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {sortedPosts.map((post, index) => {
-              const creator = creators[post.creatorId];
+              const creator = getPostCreator(post);
               const saved = isDIYPostSaved(post._id);
               return (
                 <motion.article
@@ -297,12 +495,17 @@ export function DIYFeedPage() {
                       aria-label={saved ? "Bỏ lưu" : "Lưu công thức"}
                       className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-background"
                     >
-                      <Bookmark className={saved ? "size-4 fill-primary text-primary" : "size-4"} />
+                      <Bookmark
+                        className={
+                          saved ? "size-4 fill-primary text-primary" : "size-4"
+                        }
+                      />
                     </button>
 
                     {post.purchaseCount != null && post.purchaseCount > 0 && (
                       <Badge className="absolute left-2 top-2 z-10 bg-background/80 text-foreground backdrop-blur">
-                        {post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}
+                        {post.purchaseCount.toLocaleString()}{" "}
+                        {t("diyFeed.bought")}
                       </Badge>
                     )}
 
@@ -320,7 +523,10 @@ export function DIYFeedPage() {
                           {t("diyFeed.viewMaterial")}
                         </Link>
                       </Button>
-                      <Button size="sm" onClick={() => requireAuth(() => buyCombo(post))}>
+                      <Button
+                        size="sm"
+                        onClick={() => requireAuth(() => buyCombo(post))}
+                      >
                         <ShoppingBag className="size-4" /> {t("diyFeed.buyNow")}
                       </Button>
                     </div>
@@ -329,7 +535,10 @@ export function DIYFeedPage() {
                   <div className="flex flex-1 flex-col gap-2.5 p-3 md:p-4">
                     <div className="flex items-center gap-2">
                       <Avatar className="size-6">
-                        <AvatarImage src={creator?.avatar} alt={creator?.fullName} />
+                        <AvatarImage
+                          src={creator?.avatar}
+                          alt={creator?.fullName}
+                        />
                         <AvatarFallback className="text-[10px]">
                           {creator?.fullName?.charAt(0) || "C"}
                         </AvatarFallback>
@@ -362,7 +571,9 @@ export function DIYFeedPage() {
                         {post.price != null && post.price > 0 ? (
                           formatPrice(post.price)
                         ) : (
-                          <span className="font-normal text-muted-foreground">{t("diyFeed.free")}</span>
+                          <span className="font-normal text-muted-foreground">
+                            {t("diyFeed.free")}
+                          </span>
                         )}
                       </span>
                       <span className="flex items-center gap-1 text-sm text-muted-foreground">

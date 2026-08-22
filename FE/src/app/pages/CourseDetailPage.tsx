@@ -6,6 +6,7 @@ import {
   Play,
   Star,
   Users,
+  Award,
   ShoppingCart,
   PackageSearch,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import {
 } from "../components/ui/accordion";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import { Progress } from "../components/ui/progress";
 import { courseService } from "../../api/courseService";
 import { lessonService } from "../../api/lessonService";
 import { kitService, type Kit } from "../../api/kitService";
@@ -28,6 +30,7 @@ import { useCart } from "../../context/CartContext";
 import type {
   Course,
   CourseLevel,
+  CourseProgress,
   Lesson,
 } from "../../features/learn/types/learn.types";
 import { cn } from "../components/ui/utils";
@@ -159,12 +162,34 @@ export function CourseDetailPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
 
   // Get enrolled courses from user profile
   const enrolledCourses = user?.enrolled || [];
 
   // Check if current course is enrolled
   const isEnrolled = courseId ? enrolledCourses.includes(courseId) : false;
+
+  // Fetch the user's server-side course progress so the detail page shows
+  // real completion state (and the certificate when the course is finished).
+  useEffect(() => {
+    if (!courseId || !isAuthenticated || !isEnrolled) {
+      setCourseProgress(null);
+      return;
+    }
+    let active = true;
+    courseService
+      .getProgress(courseId)
+      .then((res) => {
+        if (active) setCourseProgress(res.data.data);
+      })
+      .catch(() => {
+        if (active) setCourseProgress(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [courseId, isAuthenticated, isEnrolled]);
 
   useEffect(() => {
     if (!courseId) return;
@@ -618,6 +643,45 @@ export function CourseDetailPage() {
                   {course.totalDuration} min · {course.totalLessons} lessons
                 </span>
               </div>
+              {isEnrolled && courseProgress && (
+                <div
+                  className="mb-5 rounded-xl border p-4"
+                  style={{ background: "var(--surface)" }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium">
+                      {courseProgress.completedLessons.length}/
+                      {course.totalLessons} lessons completed
+                    </p>
+                    {courseProgress.isCompleted && (
+                      <Badge variant="success">
+                        <Award className="size-3.5" /> Certificate
+                      </Badge>
+                    )}
+                  </div>
+                  <Progress
+                    className="mt-3"
+                    value={
+                      (courseProgress.completedLessons.length /
+                        Math.max(1, course.totalLessons)) *
+                      100
+                    }
+                  />
+                  {courseProgress.hasNewContent && (
+                    <p
+                      className="mt-3 rounded-lg border p-3 text-sm"
+                      style={{
+                        borderColor: "var(--warning-border)",
+                        background: "var(--warning-bg)",
+                        color: "var(--warning-text)",
+                      }}
+                    >
+                      🎁 This course just got a new lesson — jump back in to
+                      see what's new!
+                    </p>
+                  )}
+                </div>
+              )}
               <Accordion
                 type="single"
                 collapsible

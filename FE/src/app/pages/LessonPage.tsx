@@ -1,6 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock, ShoppingCart } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Link,
+  Navigate,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Award,
+  CheckCircle2,
+  Clock,
+  ShoppingCart,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -17,7 +30,23 @@ import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../context/CartContext";
 import { products } from "../data/products";
-import type { Course, Lesson, MaterialCombo } from "../../features/learn/types/learn.types";
+import type {
+  Course,
+  CourseProgress,
+  Lesson,
+  MaterialCombo,
+} from "../../features/learn/types/learn.types";
+
+/**
+ * Extract YouTube video ID from various YouTube URL formats.
+ */
+function getYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+  );
+  return match ? match[1] : null;
+}
 
 /**
  * Extract YouTube video ID from various YouTube URL formats.
@@ -25,7 +54,7 @@ import type { Course, Lesson, MaterialCombo } from "../../features/learn/types/l
 function getYouTubeEmbedUrl(url: string): string | null {
   if (!url) return null;
   const matchStandard = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
   );
   if (matchStandard) {
     return `https://www.youtube.com/embed/${matchStandard[1]}?autoplay=0&rel=0`;
@@ -42,22 +71,22 @@ function getYouTubeEmbedUrl(url: string): string | null {
  */
 function extractId(ref: unknown): string | null {
   if (!ref) return null;
-  
+
   // String ID
   if (typeof ref === "string") {
     return ref;
   }
-  
+
   // Object reference
   if (typeof ref === "object") {
     const obj = ref as Record<string, unknown>;
-    
+
     // Check for common ID field names
     const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
     if (typeof id === "string" && id.length > 0) {
       return id;
     }
-    
+
     // If object has _id or id but no specific field, it might be a populated object
     // Return the object's _id or id as the reference ID
     if (obj._id && typeof obj._id === "string") {
@@ -67,7 +96,7 @@ function extractId(ref: unknown): string | null {
       return obj.id;
     }
   }
-  
+
   return null;
 }
 
@@ -87,12 +116,17 @@ export function LessonPage() {
   const { isAuthenticated } = useAuth();
   const { addToCart, addKitToCart } = useCart();
   const { courseId, lessonId } = useParams();
-  const videoRef = useRef<HTMLIFrameElement | null>(null);
-  const setFeatureCurrentLesson = useFeatureLearnStore((state) => state.setCurrentLesson);
-  const updateProgress = useFeatureLearnStore((state) => state.updateProgress);
-  const markFeatureLessonComplete = useFeatureLearnStore((state) => state.markLessonComplete);
-  const progress = useFeatureLearnStore((state) => (lessonId ? state.progress[lessonId] : undefined));
-  const setCurrentLesson = useLearnStore((state) => state.setCurrentLesson);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
+  const ytContainerRef = useRef<HTMLDivElement | null>(null);
+  const ytPlayerRef = useRef<{ destroy: () => void } | null>(null);
+  const completeInFlightRef = useRef<string | null>(null);
+
+  const markFeatureLessonComplete = useFeatureLearnStore(
+    (state) => state.markLessonComplete,
+  );
+  const progress = useFeatureLearnStore((state) =>
+    lessonId ? state.progress[lessonId] : undefined,
+  );
   const markLessonComplete = useLearnStore((state) => state.markLessonComplete);
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -102,11 +136,12 @@ export function LessonPage() {
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [watchedSeconds, setWatchedSeconds] = useState(0);
+  const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
   const watchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+
   // Get search query from URL
   const searchQuery = searchParams.get("search") || "";
-  
+
   // Debug: log search state
   useEffect(() => {
     console.log("LessonPage - searchQuery:", searchQuery);
@@ -147,17 +182,25 @@ export function LessonPage() {
 
         if (lessonIdsToFetch.length > 0) {
           const lessonPromises = lessonIdsToFetch.map((id) =>
-            lessonService.getById(id).then((res) => res.data.data.lesson).catch(() => null)
+            lessonService
+              .getById(id)
+              .then((res) => res.data.data.lesson)
+              .catch(() => null),
           );
-          const fetchedLessons = (await Promise.all(lessonPromises)).filter((l): l is Lesson => l !== null);
+          const fetchedLessons = (await Promise.all(lessonPromises)).filter(
+            (l): l is Lesson => l !== null,
+          );
           populatedLessons.push(...fetchedLessons);
         }
 
-        const courseLessons = populatedLessons.sort((a, b) => a.order - b.order);
+        const courseLessons = populatedLessons.sort(
+          (a, b) => a.order - b.order,
+        );
         setLessons(courseLessons);
 
         // Find current lesson
-        const foundLesson = courseLessons.find((l) => l._id === lessonId) ?? null;
+        const foundLesson =
+          courseLessons.find((l) => l._id === lessonId) ?? null;
         setLesson(foundLesson);
 
         if (!foundLesson) {
@@ -178,95 +221,262 @@ export function LessonPage() {
   }, [courseId, lessonId]);
 
   useEffect(() => {
-    if (courseId && lessonId) {
-      setFeatureCurrentLesson(lessonId);
-      setCurrentLesson(courseId, lessonId);
+    if (!courseId || !lessonId) return;
+
+    // Read actions from the stores without subscribing this effect to action
+    // references, which prevents render/update loops when the store changes.
+    useFeatureLearnStore.getState().setCurrentLesson(lessonId);
+    useLearnStore.getState().setCurrentLesson(courseId, lessonId);
+  }, [courseId, lessonId]);
+
+  // ── Server-side course progress ──────────────────────────────────────
+  // Fetch the user's persisted progress on mount (instead of relying only on
+  // the offline Zustand store) so completion survives device changes/logins.
+  // Completed lesson IDs are also synced back into the local stores so the
+  // lesson UI reflects the server truth immediately.
+  useEffect(() => {
+    if (!courseId) return;
+    let active = true;
+    courseService
+      .getProgress(courseId)
+      .then((res) => {
+        if (!active) return;
+        const data = res.data.data;
+        setCourseProgress(data);
+        (data.completedLessons ?? []).forEach((id) => {
+          useFeatureLearnStore.getState().markLessonComplete(id);
+          useLearnStore.getState().markLessonComplete(courseId, id);
+        });
+      })
+      .catch(() => {
+        if (active) setCourseProgress(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [courseId]);
+
+  // ── Persist lesson completion to the server ──────────────────────────
+  // Shared by all completion paths (native <video> onEnded, YouTube API
+  // ENDED state and the watch-simulation fallback) so progress is always
+  // recorded server-side (survives device changes / logins).
+  const persistLessonComplete = useCallback(() => {
+    if (!course || !lesson) return;
+    // One in-flight request per lesson — ignore duplicates (e.g. the YouTube
+    // ENDED event and the watch-simulation fallback firing together).
+    if (completeInFlightRef.current === lesson._id) return;
+    completeInFlightRef.current = lesson._id;
+
+    // Optimistic local update (existing Zustand stores).
+    markFeatureLessonComplete(lesson._id);
+    markLessonComplete(course._id, lesson._id);
+
+    void courseService
+      .completeLesson(course._id, lesson._id)
+      .then((res) => setCourseProgress(res.data.data))
+      .catch(() => toast.error("Failed to save course progress"))
+      .finally(() => {
+        if (completeInFlightRef.current === lesson._id) {
+          completeInFlightRef.current = null;
+        }
+      });
+  }, [course, lesson, markFeatureLessonComplete, markLessonComplete]);
+
+  // ── YouTube embed: real "video ended" detection ──────────────────────
+  // Native <video> elements fire `onEnded`, but YouTube uses an <iframe>
+  // which can't. We drive the player through the YouTube IFrame API and
+  // mark the lesson complete when the actual ENDED state fires.
+  useEffect(() => {
+    if (!lesson?.videoUrl || !lessonId) return;
+    const isYouTube =
+      lesson.videoUrl.includes("youtube") ||
+      lesson.videoUrl.includes("youtu.be");
+    if (!isYouTube) return;
+    const videoId = getYouTubeVideoId(lesson.videoUrl);
+    if (!videoId) return;
+
+    let disposed = false;
+    // `window.YT` types aren't included in the project — access via a cast.
+    const W = window as unknown as {
+      YT?: {
+        Player: { new (element: HTMLElement, options: object): { destroy: () => void } };
+        PlayerState: { ENDED: number };
+      };
+      onYouTubeIframeAPIReady?: () => void;
+    };
+
+    const buildPlayer = () => {
+      if (disposed || !W.YT?.Player || !ytContainerRef.current) return;
+      try {
+        if (ytPlayerRef.current) {
+          try {
+            ytPlayerRef.current.destroy();
+          } catch {
+            /* ignore */
+          }
+          ytPlayerRef.current = null;
+        }
+        const player = new W.YT.Player(ytContainerRef.current, {
+          videoId,
+          width: "100%",
+          playerVars: { rel: 0 },
+          events: {
+            onStateChange: (event: { data: number }) => {
+              if (event.data === W.YT?.PlayerState.ENDED) {
+                persistLessonComplete();
+              }
+            },
+          },
+        });
+        if (disposed) {
+          try {
+            player.destroy();
+          } catch {
+            /* ignore */
+          }
+        } else {
+          ytPlayerRef.current = player;
+        }
+      } catch {
+        // If the player can't be built, the watch-time fallback below still
+        // completes the lesson after the simulated duration elapses.
+      }
+    };
+
+    if (W.YT?.Player) {
+      buildPlayer();
+    } else {
+      // Load the IFrame API once; onYouTubeIframeAPIReady → buildPlayer().
+      if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+      }
+      W.onYouTubeIframeAPIReady = buildPlayer;
     }
-  }, [courseId, lessonId, setFeatureCurrentLesson, setCurrentLesson]);
+
+    return () => {
+      disposed = true;
+      if (ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch {
+          /* ignore */
+        }
+        ytPlayerRef.current = null;
+      }
+    };
+  }, [lesson?.videoUrl, lessonId, persistLessonComplete]);
 
   // Simulate watching progress for YouTube embeds
   useEffect(() => {
-    if (!lesson || !lesson.videoUrl) return;
-    const isYouTube = lesson.videoUrl.includes("youtube") || lesson.videoUrl.includes("youtu.be");
+    if (!lesson?.videoUrl || !lessonId) return;
+    const isYouTube =
+      lesson.videoUrl.includes("youtube") ||
+      lesson.videoUrl.includes("youtu.be");
     if (!isYouTube) return;
 
+    // NOTE: never call store actions inside a React setState updater — the
+    // updater runs during the render phase, so a store .set() there triggers
+    // "Cannot update a component while rendering a different component"
+    // (Zustand notifies subscribers synchronously). Both the local state
+    // and the store are updated from the interval callback instead.
     watchIntervalRef.current = setInterval(() => {
-      setWatchedSeconds((prev) => {
-        const next = prev + 1;
-        updateProgress(lessonId!, next);
-        return next;
-      });
+      const next =
+        (useFeatureLearnStore.getState().progress[lessonId]?.watchedSeconds ??
+          0) + 1;
+      useFeatureLearnStore.getState().updateProgress(lessonId, next);
+      setWatchedSeconds(next);
+
+      // Fallback completion: if the user has watched the full lesson duration
+      // (covers cases where the YouTube API can't load and no ENDED event
+      // fires), persist it so course progress is always recorded.
+      if (next >= Math.max(lesson.duration, 1) * 60) {
+        persistLessonComplete();
+      }
     }, 1000);
 
     return () => {
       if (watchIntervalRef.current) {
         clearInterval(watchIntervalRef.current);
+        watchIntervalRef.current = null;
       }
     };
-  }, [lesson?.videoUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lesson?.videoUrl, lesson?.duration, lessonId, persistLessonComplete]);
 
   // Fetch linked combos from API for the lesson (when lesson is set)
   useEffect(() => {
     if (!lesson?.linkedCombo || lesson.linkedCombo.length === 0) return;
-    
+
     const fetchKits = async () => {
-      const comboIds: string[] = lesson.linkedCombo!.map((ref) => extractId(ref)).filter((id): id is string => id !== null);
+      const comboIds: string[] = lesson
+        .linkedCombo!.map((ref) => extractId(ref))
+        .filter((id): id is string => id !== null);
 
       if (comboIds.length > 0) {
         const kitPromises = comboIds.map((id) =>
-          kitService.getById(id).then((res) => res.data.data?.kit).catch(() => null)
+          kitService
+            .getById(id)
+            .then((res) => res.data.data?.kit)
+            .catch(() => null),
         );
-        const fetchedKits = (await Promise.all(kitPromises)).filter((k): k is Kit => k !== null);
-        
+        const fetchedKits = (await Promise.all(kitPromises)).filter(
+          (k): k is Kit => k !== null,
+        );
+
         // If API returned no kits, try to find from mock data
         if (fetchedKits.length === 0) {
           const mockKits = comboIds
             .map((id) => materialCombos.find((c) => c.id === id))
             .filter((c): c is MaterialCombo => c !== undefined)
-            .map((c) => ({
-              _id: c.id,
-              name: c.name,
-              description: c.description,
-              thumbnail: c.thumbnail,
-              level: c.level,
-              price: c.price,
-                products: c.productIds.map((pid) => {
-                const product = products.find((p) => p.id === pid);
-                const firstVariant = product?.variants?.[0];
-                return {
-                  productId: {
-                    _id: pid,
-                    name: product?.name ?? pid,
-                    description: product?.description ?? "",
-                    category: product?.category ?? "",
-                    image: product?.image ?? "",
-                    tags: product?.tags ?? [],
-                    variants: product?.variants?.map((v) => ({
-                      _id: v.id,
-                      color: v.color,
-                      hexCode: v.hexCode,
-                      price: v.price,
-                      stock: v.stock,
-                      image: v.images?.[0] ?? "",
-                    })) ?? [],
-                    isActive: true,
-                    createdAt: product?.createdAt ?? "",
-                    updatedAt: product?.createdAt ?? "",
-                    __v: 0,
-                  },
-                  variantId: firstVariant?.id ?? "default",
-                  quantity: 1,
-                };
-              }),
-              stock: 0,
-              isActive: true,
-              averageRating: 0,
-              totalRatings: 0,
-              ratings: [],
-              createdAt: "",
-              updatedAt: "",
-              __v: 0,
-            } as Kit));
+            .map(
+              (c) =>
+                ({
+                  _id: c.id,
+                  name: c.name,
+                  description: c.description,
+                  thumbnail: c.thumbnail,
+                  level: c.level,
+                  price: c.price,
+                  products: c.productIds.map((pid) => {
+                    const product = products.find((p) => p.id === pid);
+                    const firstVariant = product?.variants?.[0];
+                    return {
+                      productId: {
+                        _id: pid,
+                        name: product?.name ?? pid,
+                        description: product?.description ?? "",
+                        category: product?.category ?? "",
+                        image: product?.image ?? "",
+                        tags: product?.tags ?? [],
+                        variants:
+                          product?.variants?.map((v) => ({
+                            _id: v.id,
+                            color: v.color,
+                            hexCode: v.hexCode,
+                            price: v.price,
+                            stock: v.stock,
+                            image: v.images?.[0] ?? "",
+                          })) ?? [],
+                        isActive: true,
+                        createdAt: product?.createdAt ?? "",
+                        updatedAt: product?.createdAt ?? "",
+                        __v: 0,
+                      },
+                      variantId: firstVariant?.id ?? "default",
+                      quantity: 1,
+                    };
+                  }),
+                  stock: 0,
+                  isActive: true,
+                  averageRating: 0,
+                  totalRatings: 0,
+                  ratings: [],
+                  createdAt: "",
+                  updatedAt: "",
+                  __v: 0,
+                }) as Kit,
+            );
           setKits(mockKits);
         } else {
           setKits(fetchedKits);
@@ -279,15 +489,22 @@ export function LessonPage() {
   // Fetch linked products from API for the lesson
   useEffect(() => {
     if (!lesson?.linkedProduct || lesson.linkedProduct.length === 0) return;
-    
+
     const fetchProducts = async () => {
-      const productIds: string[] = lesson.linkedProduct!.map((lp) => extractId(lp)).filter((id): id is string => id !== null);
+      const productIds: string[] = lesson
+        .linkedProduct!.map((lp) => extractId(lp))
+        .filter((id): id is string => id !== null);
 
       if (productIds.length > 0) {
         const productPromises = productIds.map((id) =>
-          productService.getById(id).then((res) => res.data.data?.product).catch(() => null)
+          productService
+            .getById(id)
+            .then((res) => res.data.data?.product)
+            .catch(() => null),
         );
-        const fetchedProducts = (await Promise.all(productPromises)).filter((p): p is Product => p !== null);
+        const fetchedProducts = (await Promise.all(productPromises)).filter(
+          (p): p is Product => p !== null,
+        );
         setApiProducts(fetchedProducts);
       }
     };
@@ -303,7 +520,7 @@ export function LessonPage() {
       for (const lp of lesson.linkedProduct) {
         const productId = extractId(lp);
         if (!productId) continue;
-        
+
         // Try to find from API products first
         const apiProduct = apiProducts.find((p) => p._id === productId);
         if (apiProduct) {
@@ -317,7 +534,7 @@ export function LessonPage() {
           });
           continue;
         }
-        
+
         // Fallback to mock data
         const product = products.find((p) => p.id === productId);
         items.push({
@@ -345,7 +562,7 @@ export function LessonPage() {
     }
 
     return items;
-  }, [lesson?.linkedProduct, lesson?.linkedCombo, kits, apiProducts]);
+  }, [lesson?.linkedProduct, kits, apiProducts]);
 
   if (loading) {
     return (
@@ -365,14 +582,21 @@ export function LessonPage() {
 
   const lessonIndex = lessons.findIndex((item) => item._id === lessonId);
   const previousLesson = lessonIndex > 0 ? lessons[lessonIndex - 1] : null;
-  const nextLesson = lessonIndex >= 0 && lessonIndex < lessons.length - 1 ? lessons[lessonIndex + 1] : null;
+  const nextLesson =
+    lessonIndex >= 0 && lessonIndex < lessons.length - 1
+      ? lessons[lessonIndex + 1]
+      : null;
 
   const videoUrl = getYouTubeEmbedUrl(lesson.videoUrl);
-  const isYouTube = lesson.videoUrl.includes("youtube") || lesson.videoUrl.includes("youtu.be");
+  const isYouTube =
+    lesson.videoUrl.includes("youtube") || lesson.videoUrl.includes("youtu.be");
 
   const addProductToCart = (item: MaterialItem) => {
     if (item.type === "kit" && item.kitData) {
-      if (!isAuthenticated) { navigate("/auth/login"); return; }
+      if (!isAuthenticated) {
+        navigate("/auth/login");
+        return;
+      }
       const kitProducts = (item.kitData.products || []).map((kitProduct) => {
         const product = kitProduct.productId;
         const variant = product?.variants?.[0];
@@ -434,7 +658,7 @@ export function LessonPage() {
   const addAllToCart = () => {
     materials.forEach((item) => {
       if (item.type === "kit" && item.kitData) {
-      const kitProducts = (item.kitData.products || []).map((kitProduct) => {
+        const kitProducts = (item.kitData.products || []).map((kitProduct) => {
           const product = kitProduct.productId;
           const variant = product?.variants?.[0];
           return {
@@ -454,7 +678,7 @@ export function LessonPage() {
         });
         return;
       }
-      
+
       // For products, use API product data if available
       if (item.type === "product" && item.productData) {
         const variant = item.productData.variants[0];
@@ -470,7 +694,7 @@ export function LessonPage() {
         });
         return;
       }
-      
+
       const product = products.find((p) => p.id === item.id);
       if (!product) return;
       const variant = product.variants?.[0];
@@ -494,10 +718,16 @@ export function LessonPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <Button asChild variant="ghost" className="mb-2 px-0">
-              <Link to={`/learn/${course._id}`}><ArrowLeft className="size-4" /> Back to course</Link>
+              <Link to={`/learn/${course._id}`}>
+                <ArrowLeft className="size-4" /> Back to course
+              </Link>
             </Button>
-            <Badge variant="secondary" className="mb-3">Lesson {lesson.order} of {lessons.length}</Badge>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-4xl">{lesson.title}</h1>
+            <Badge variant="secondary" className="mb-3">
+              Lesson {lesson.order} of {lessons.length}
+            </Badge>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-4xl">
+              {lesson.title}
+            </h1>
             <p className="mt-2 text-muted-foreground">{course.title}</p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -509,23 +739,17 @@ export function LessonPage() {
           <main className="space-y-5">
             <div className="w-full overflow-hidden rounded-2xl border bg-black shadow-sm">
               {isYouTube ? (
-                <iframe
-                  ref={videoRef}
-                  src={videoUrl ?? ""}
+                <div
+                  ref={ytContainerRef}
                   className="aspect-video w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
                 />
               ) : (
                 <video
-                  ref={videoRef as unknown as React.RefObject<HTMLVideoElement>}
+                  ref={videoElementRef}
                   src={videoUrl ?? lesson.videoUrl}
                   controls
                   className="aspect-video w-full"
-                  onEnded={() => {
-                    markFeatureLessonComplete(lesson._id);
-                    markLessonComplete(course._id, lesson._id);
-                  }}
+                  onEnded={() => persistLessonComplete()}
                 />
               )}
             </div>
@@ -536,29 +760,97 @@ export function LessonPage() {
                   <div>
                     <h2 className="font-semibold">Progress</h2>
                     <p className="text-sm text-muted-foreground">
-                      {progress?.completed ? "Completed" : `${Math.floor(progress?.watchedSeconds ?? watchedSeconds)} seconds watched`}
+                      {progress?.completed
+                        ? "Completed"
+                        : `${Math.floor(progress?.watchedSeconds ?? watchedSeconds)} seconds watched`}
                     </p>
                   </div>
-                  {progress?.completed && <CheckCircle2 className="size-6 text-[var(--success-text)]" />}
+                  {progress?.completed && (
+                    <CheckCircle2 className="size-6 text-[var(--success-text)]" />
+                  )}
                 </div>
                 <Progress
                   value={
                     progress?.completed
                       ? 100
-                      : Math.min(((progress?.watchedSeconds ?? watchedSeconds) / (lesson.duration * 60)) * 100, 100)
+                      : Math.min(
+                          ((progress?.watchedSeconds ?? watchedSeconds) /
+                            (lesson.duration * 60)) *
+                            100,
+                          100,
+                        )
                   }
                 />
               </CardContent>
             </Card>
 
+            {courseProgress && (
+              <Card>
+                <CardContent className="space-y-4 p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h2 className="font-semibold">Course progress</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {courseProgress.completedLessons.length}/
+                        {lessons.length} lessons completed
+                      </p>
+                    </div>
+                    {courseProgress.isCompleted && (
+                      <Badge variant="success">
+                        <Award className="size-3.5" /> Certificate
+                      </Badge>
+                    )}
+                  </div>
+                  <Progress
+                    value={
+                      (courseProgress.completedLessons.length /
+                        Math.max(1, lessons.length)) *
+                      100
+                    }
+                  />
+                  {courseProgress.isCompleted && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <CheckCircle2 className="size-4 text-[var(--success-text)]" />
+                      Course completed — claim your certificate anytime.
+                    </p>
+                  )}
+                  {courseProgress.hasNewContent && (
+                    <div
+                      className="rounded-lg border p-3 text-sm"
+                      style={{
+                        borderColor: "var(--warning-border)",
+                        background: "var(--warning-bg)",
+                        color: "var(--warning-text)",
+                      }}
+                    >
+                      🎁 This course just got a new lesson — jump back in to
+                      see what's new!
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <div className="flex flex-wrap justify-between gap-3">
               <Button asChild variant="outline" disabled={!previousLesson}>
-                <Link to={previousLesson ? `/learn/${course._id}/lesson/${previousLesson._id}` : "#"}>
+                <Link
+                  to={
+                    previousLesson
+                      ? `/learn/${course._id}/lesson/${previousLesson._id}`
+                      : "#"
+                  }
+                >
                   <ArrowLeft className="size-4" /> Previous lesson
                 </Link>
               </Button>
               <Button asChild disabled={!nextLesson}>
-                <Link to={nextLesson ? `/learn/${course._id}/lesson/${nextLesson._id}` : `/learn/${course._id}`}>
+                <Link
+                  to={
+                    nextLesson
+                      ? `/learn/${course._id}/lesson/${nextLesson._id}`
+                      : `/learn/${course._id}`
+                  }
+                >
                   Next lesson <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -575,7 +867,15 @@ export function LessonPage() {
             }}
             className="lg:sticky lg:top-24 lg:h-fit"
           >
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "18px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "16px",
+                marginBottom: "18px",
+              }}
+            >
               <div>
                 <h2
                   style={{
@@ -622,9 +922,14 @@ export function LessonPage() {
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
               {materials.map((item) => {
-                const to = item.type === "kit" ? `/kits/${item.id}` : `/shop/product/${item.id}`;
+                const to =
+                  item.type === "kit"
+                    ? `/kits/${item.id}`
+                    : `/shop/product/${item.id}`;
                 return (
                   <div
                     key={`${item.type}-${item.id}`}
@@ -678,8 +983,14 @@ export function LessonPage() {
                           fontWeight: 700,
                           letterSpacing: "0.06em",
                           textTransform: "uppercase",
-                          color: item.type === "kit" ? "var(--primary)" : "var(--foreground-muted)",
-                          background: item.type === "kit" ? "var(--accent-pink)" : "var(--surface)",
+                          color:
+                            item.type === "kit"
+                              ? "var(--primary)"
+                              : "var(--foreground-muted)",
+                          background:
+                            item.type === "kit"
+                              ? "var(--accent-pink)"
+                              : "var(--surface)",
                         }}
                       >
                         {item.type === "kit" ? "Combo" : "Product"}

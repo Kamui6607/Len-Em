@@ -7,6 +7,7 @@ import type { ApiResponse } from "../types/auth.types";
 import type {
   Course,
   CourseListResponse,
+  CourseProgress,
   CreateCourseRequest,
   UpdateCourseRequest,
 } from "../features/learn/types/learn.types";
@@ -65,5 +66,17 @@ export const courseService = {
   unlinkLesson: (courseId: string, lessonId: string) =>
     axiosClient.delete<ApiResponse<{ message: string }>>(
       `${COURSES_BASE}/${courseId}/lessons/${lessonId}`
+    ),
+
+  /** GET /courses/{id}/progress — Fetch the current user's real course progress */
+  getProgress: (courseId: string) =>
+    axiosClient.get<ApiResponse<CourseProgress>>(
+      `${COURSES_BASE}/${courseId}/progress`
+    ),
+
+  /** POST /courses/{id}/lessons/{lessonId}/complete — Mark a lesson as watched (server-side) */
+  completeLesson: (courseId: string, lessonId: string) =>
+    axiosClient.post<ApiResponse<CourseProgress>>(
+      `${COURSES_BASE}/${courseId}/lessons/${lessonId}/complete`
     ),
 };

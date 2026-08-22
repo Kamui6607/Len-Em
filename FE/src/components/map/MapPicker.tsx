@@ -11,6 +11,7 @@
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import "leaflet/dist/leaflet.css";
 import { MapPin, Loader2, Crosshair } from "lucide-react";
 import type { ReverseGeocodeResult } from "../../types/address.types";
 
@@ -28,7 +29,7 @@ const DEFAULT_ZOOM = 12;
 // ── Nominatim reverse geocode ──
 async function reverseGeocodeNominatim(
   lat: number,
-  lng: number
+  lng: number,
 ): Promise<ReverseGeocodeResult> {
   const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=vi`;
   const res = await fetch(url, {
@@ -43,12 +44,24 @@ async function reverseGeocodeNominatim(
   //   - District: city_district, county, district
   //   - Province: state, city, region
   //   - Street: road, pedestrian, footway, residential
-  const wardName = addr.suburb || addr.neighbourhood || addr.village || addr.town || addr.quarter || addr.hamlet || "";
+  const wardName =
+    addr.suburb ||
+    addr.neighbourhood ||
+    addr.village ||
+    addr.town ||
+    addr.quarter ||
+    addr.hamlet ||
+    "";
   const districtName = addr.city_district || addr.county || addr.district || "";
   const provinceName = addr.state || addr.city || addr.region || "";
-  const street = addr.road || addr.pedestrian || addr.footway || addr.residential || addr.house_number
-    ? `${addr.road || addr.pedestrian || addr.footway || addr.residential || ""} ${addr.house_number || ""}`.trim()
-    : addr.display_name?.split(",")[0]?.trim() || "";
+  const street =
+    addr.road ||
+    addr.pedestrian ||
+    addr.footway ||
+    addr.residential ||
+    addr.house_number
+      ? `${addr.road || addr.pedestrian || addr.footway || addr.residential || ""} ${addr.house_number || ""}`.trim()
+      : addr.display_name?.split(",")[0]?.trim() || "";
 
   // Fallback: parse display_name if Nominatim didn't return structured data
   // display_name format: "Street, Ward, District, Province, Vietnam"
@@ -56,7 +69,9 @@ async function reverseGeocodeNominatim(
   let fallbackDistrict = districtName;
   let fallbackProvince = provinceName;
   if (!wardName || !districtName || !provinceName) {
-    const parts = (data.display_name || "").split(",").map((s: string) => s.trim());
+    const parts = (data.display_name || "")
+      .split(",")
+      .map((s: string) => s.trim());
     // Last part is "Vietnam", second-to-last is province, third-to-last is district, fourth-to-last is ward
     if (parts.length >= 3) {
       if (!fallbackProvince) fallbackProvince = parts[parts.length - 2] || "";
@@ -72,12 +87,17 @@ async function reverseGeocodeNominatim(
     districtName: fallbackDistrict,
     provinceName: fallbackProvince,
     countryCode: addr.country_code?.toUpperCase() || "VN",
-    lat, lng,
+    lat,
+    lng,
   };
 }
 
 // ── Mapbox reverse geocode ──
-async function reverseGeocodeMapbox(lat: number, lng: number, token: string): Promise<ReverseGeocodeResult> {
+async function reverseGeocodeMapbox(
+  lat: number,
+  lng: number,
+  token: string,
+): Promise<ReverseGeocodeResult> {
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=address,place,locality,neighborhood,district,region&language=vi`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Mapbox error: ${res.status}`);
@@ -99,7 +119,8 @@ async function reverseGeocodeMapbox(lat: number, lng: number, token: string): Pr
     districtName: context.district || "",
     provinceName: context.region || "",
     countryCode: "VN",
-    lat, lng,
+    lat,
+    lng,
   };
 }
 
@@ -118,9 +139,12 @@ export function MapPicker({
   const markerRef = useRef<L.Marker | null>(null);
   const initStartedRef = useRef(false);
   const [loading, setLoading] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<ReverseGeocodeResult | null>(null);
+  const [selectedResult, setSelectedResult] =
+    useState<ReverseGeocodeResult | null>(null);
 
-  const doReverseGeocodeRef = useRef<(lat: number, lng: number) => Promise<void>>(async () => {});
+  const doReverseGeocodeRef = useRef<
+    (lat: number, lng: number) => Promise<void>
+  >(async () => {});
 
   const lastGeocodeTimeRef = useRef(0);
   const GEOCODE_COOLDOWN_MS = 1100; // Nominatim requires >= 1s between requests
@@ -133,8 +157,8 @@ export function MapPicker({
         const now = Date.now();
         const timeSinceLastGeocode = now - lastGeocodeTimeRef.current;
         if (timeSinceLastGeocode < GEOCODE_COOLDOWN_MS) {
-          await new Promise(resolve => 
-            setTimeout(resolve, GEOCODE_COOLDOWN_MS - timeSinceLastGeocode)
+          await new Promise((resolve) =>
+            setTimeout(resolve, GEOCODE_COOLDOWN_MS - timeSinceLastGeocode),
           );
         }
         lastGeocodeTimeRef.current = Date.now();
@@ -148,8 +172,13 @@ export function MapPicker({
         console.error("Reverse geocode failed:", error);
         const fallback: ReverseGeocodeResult = {
           fullAddress: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-          street: "", wardName: "", districtName: "", provinceName: "",
-          countryCode: "VN", lat, lng,
+          street: "",
+          wardName: "",
+          districtName: "",
+          provinceName: "",
+          countryCode: "VN",
+          lat,
+          lng,
         };
         setSelectedResult(fallback);
         onLocationSelect(fallback);
@@ -157,7 +186,7 @@ export function MapPicker({
         setLoading(false);
       }
     },
-    [mapboxToken, onLocationSelect]
+    [mapboxToken, onLocationSelect],
   );
 
   doReverseGeocodeRef.current = doReverseGeocode;
@@ -176,26 +205,43 @@ export function MapPicker({
       // Guard 2: Container removed from DOM
       if (!container.isConnected) return;
       // Guard 3: Leaflet already initialized this container (StrictMode race)
-      if ((container as unknown as Record<string, unknown>)._leaflet_id !== undefined) return;
+      if (
+        (container as unknown as Record<string, unknown>)._leaflet_id !==
+        undefined
+      )
+        return;
 
       // Fix default icon paths
-      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)
+        ._getIconUrl;
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconRetinaUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        shadowUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
 
-      const center: [number, number] = initialLat && initialLng ? [initialLat, initialLng] : DEFAULT_CENTER;
-      const map = L.map(container, { center, zoom: DEFAULT_ZOOM, zoomControl: true, attributionControl: true });
+      const center: [number, number] =
+        initialLat && initialLng ? [initialLat, initialLng] : DEFAULT_CENTER;
+      const map = L.map(container, {
+        center,
+        zoom: DEFAULT_ZOOM,
+        zoomControl: true,
+        attributionControl: true,
+        preferCanvas: true,
+      });
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
       }).addTo(map);
 
       if (initialLat && initialLng) {
-        const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+        const marker = L.marker([initialLat, initialLng], {
+          draggable: true,
+        }).addTo(map);
         markerRef.current = marker;
         doReverseGeocodeRef.current(initialLat, initialLng);
       }
@@ -223,10 +269,27 @@ export function MapPicker({
       }
 
       mapRef.current = map;
+
+      // Checkout can change width after the map is mounted. Recalculate the
+      // Leaflet viewport so tiles fill the container instead of showing gaps.
+      requestAnimationFrame(() => map.invalidateSize());
+      const resizeObserver = new ResizeObserver(() => map.invalidateSize());
+      resizeObserver.observe(container);
+      map.on("resize", () => map.invalidateSize());
+
+      map.once("load", () => map.invalidateSize());
+
+      // Keep the observer with the map instance for cleanup on unmount.
+      (map as L.Map & { __resizeObserver?: ResizeObserver }).__resizeObserver =
+        resizeObserver;
     });
 
     return () => {
       if (mapRef.current) {
+        const mapWithObserver = mapRef.current as L.Map & {
+          __resizeObserver?: ResizeObserver;
+        };
+        mapWithObserver.__resizeObserver?.disconnect();
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -247,7 +310,9 @@ export function MapPicker({
             markerRef.current.setLatLng([latitude, longitude]);
           } else {
             const L = await import("leaflet");
-            const marker = L.marker([latitude, longitude], { draggable: true }).addTo(mapRef.current);
+            const marker = L.marker([latitude, longitude], {
+              draggable: true,
+            }).addTo(mapRef.current);
             markerRef.current = marker;
             marker.on("dragend", async () => {
               const pos = marker.getLatLng();
@@ -258,19 +323,40 @@ export function MapPicker({
         }
       },
       (error) => console.error("Geolocation error:", error),
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
   return (
-    <div className="space-y-3">
-      <div className="relative rounded-2xl overflow-hidden border-2 border-border">
-        <div ref={mapContainerRef} className="w-full h-[300px] md:h-[400px]" />
+    <div className="checkout-map-picker min-w-0 space-y-3">
+      <style>{`
+        /* Prevent global image rules from resizing Leaflet map tiles. */
+        .checkout-map .leaflet-container {
+          width: 100%;
+          height: 100%;
+          min-width: 0;
+          background: #e5e7eb;
+          font: inherit;
+        }
+        .checkout-map .leaflet-tile,
+        .checkout-map .leaflet-tile-container img {
+          max-width: none !important;
+          max-height: none !important;
+        }
+      `}</style>
+      <div className="checkout-map relative min-w-0 overflow-hidden rounded-2xl border-2 border-border">
+        <div
+          ref={mapContainerRef}
+          className="h-[220px] min-w-0 w-full sm:h-[260px] md:h-[280px]"
+          style={{ minHeight: 220 }}
+        />
         {loading && (
           <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-[1000]">
             <div className="flex items-center gap-2 bg-card px-4 py-2 rounded-full shadow-lg">
               <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <span className="text-sm font-medium">Đang xác định địa chỉ...</span>
+              <span className="text-sm font-medium">
+                Đang xác định địa chỉ...
+              </span>
             </div>
           </div>
         )}
@@ -292,12 +378,21 @@ export function MapPicker({
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-medium">{selectedResult.street || "Đang cập nhật..."}</p>
+              <p className="text-sm font-medium">
+                {selectedResult.street || "Đang cập nhật..."}
+              </p>
               <p className="text-xs text-muted-foreground">
-                {[selectedResult.wardName, selectedResult.districtName, selectedResult.provinceName].filter(Boolean).join(", ") || "Đang xác định..."}
+                {[
+                  selectedResult.wardName,
+                  selectedResult.districtName,
+                  selectedResult.provinceName,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Đang xác định..."}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Tọa độ: {selectedResult.lat.toFixed(6)}, {selectedResult.lng.toFixed(6)}
+                Tọa độ: {selectedResult.lat.toFixed(6)},{" "}
+                {selectedResult.lng.toFixed(6)}
               </p>
             </div>
           </div>

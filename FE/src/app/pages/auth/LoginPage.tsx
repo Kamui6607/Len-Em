@@ -763,7 +763,7 @@ export function LoginPage() {
                   <input
                     type="text"
                     className="field-input"
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -829,37 +829,6 @@ export function LoginPage() {
             <p className="reg-txt">
               <Link to="/auth/register">Create an account</Link> and start your journey ✦
             </p>
-
-            <div className="sep" />
-
-            <div className="demo-box">
-              <div className="demo-title">
-                🔑 Demo accounts — password: <strong>123456</strong>
-              </div>
-              <div className="demo-grid">
-                <div className="demo-chip">
-                  <div className="demo-role">
-                    <span className="demo-dot dot-admin" />
-                    Admin
-                  </div>
-                  admin
-                </div>
-                <div className="demo-chip">
-                  <div className="demo-role">
-                    <span className="demo-dot dot-staff" />
-                    Staff
-                  </div>
-                  staff1
-                </div>
-                <div className="demo-chip">
-                  <div className="demo-role">
-                    <span className="demo-dot dot-user" />
-                    Customer
-                  </div>
-                  customer1
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
