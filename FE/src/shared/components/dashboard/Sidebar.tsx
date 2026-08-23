@@ -6,6 +6,9 @@ import { UserMenu } from "../UserMenu";
 import { ThemeToggle } from "../ThemeToggle";
 import { Menu, ChevronDown, type LucideIcon } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useIsMobile } from "../../hooks/useMediaQuery";
+import { SidebarDesktop } from "./SidebarDesktop";
+import { SidebarMobile } from "./SidebarMobile";
 
 export interface NavItem {
   path?: string;
@@ -21,20 +24,20 @@ interface SidebarProps {
   onProfileClick?: () => void;
 }
 
-function ParentNavItem({ 
-  item, 
-  setIsMobileOpen, 
-  isDark 
-}: { 
-  item: NavItem; 
+function ParentNavItem({
+  item,
+  setIsMobileOpen,
+  isDark,
+}: {
+  item: NavItem;
   setIsMobileOpen: (open: boolean) => void;
   isDark: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const location = useLocation();
-  
-  const isChildActive = item.children?.some(child => 
-    child.path && location.pathname.startsWith(child.path)
+
+  const isChildActive = item.children?.some(
+    (child) => child.path && location.pathname.startsWith(child.path),
   );
 
   const isHighlighted = item.highlighted;
@@ -59,15 +62,22 @@ function ParentNavItem({
                 : "rgba(91,61,245,0.08)"
               : "transparent",
           color: isChildActive
-            ? isDark ? "#C9BBFF" : "var(--primary)"
-            : isHighlighted
-              ? isDark ? "#C9BBFF" : "var(--primary)"
-              : isDark ? "rgba(255,255,255,0.65)" : "var(--foreground-muted)",
-          boxShadow: isHighlighted && !isChildActive
             ? isDark
-              ? "0 0 12px rgba(124,99,255,0.2)"
-              : "0 0 12px rgba(91,61,245,0.15)"
-            : "none",
+              ? "#C9BBFF"
+              : "var(--primary)"
+            : isHighlighted
+              ? isDark
+                ? "#C9BBFF"
+                : "var(--primary)"
+              : isDark
+                ? "rgba(255,255,255,0.65)"
+                : "var(--foreground-muted)",
+          boxShadow:
+            isHighlighted && !isChildActive
+              ? isDark
+                ? "0 0 12px rgba(124,99,255,0.2)"
+                : "0 0 12px rgba(91,61,245,0.15)"
+              : "none",
         }}
         onMouseEnter={(e) => {
           if (!isChildActive) {
@@ -90,10 +100,16 @@ function ParentNavItem({
           className="w-4.5 h-4.5 shrink-0 transition-colors duration-200"
           style={{
             color: isChildActive
-              ? isDark ? "#C9BBFF" : "#5B3DF5"
+              ? isDark
+                ? "#C9BBFF"
+                : "#5B3DF5"
               : isHighlighted
-                ? isDark ? "#C9BBFF" : "#5B3DF5"
-                : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)",
+                ? isDark
+                  ? "#C9BBFF"
+                  : "#5B3DF5"
+                : isDark
+                  ? "rgba(255,255,255,0.5)"
+                  : "rgba(0,0,0,0.45)",
           }}
         />
         <span className="flex-1 text-left">{item.label}</span>
@@ -117,7 +133,7 @@ function ParentNavItem({
           <ChevronDown className="w-4 h-4" />
         </motion.div>
       </button>
-      
+
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -129,9 +145,11 @@ function ParentNavItem({
           >
             <div className="pl-4 pr-1 py-1 space-y-1">
               {item.children?.map((child) => {
-                const childActive = child.path ? location.pathname.startsWith(child.path) : false;
+                const childActive = child.path
+                  ? location.pathname.startsWith(child.path)
+                  : false;
                 const ChildIcon = child.icon;
-                
+
                 return (
                   <Link
                     key={child.path}
@@ -148,8 +166,12 @@ function ParentNavItem({
                           : "var(--chip-active-bg)"
                         : "transparent",
                       color: childActive
-                        ? isDark ? "#C9BBFF" : "var(--primary)"
-                        : isDark ? "rgba(255,255,255,0.65)" : "var(--foreground-muted)",
+                        ? isDark
+                          ? "#C9BBFF"
+                          : "var(--primary)"
+                        : isDark
+                          ? "rgba(255,255,255,0.65)"
+                          : "var(--foreground-muted)",
                     }}
                     onMouseEnter={(e) => {
                       if (!childActive) {
@@ -168,8 +190,12 @@ function ParentNavItem({
                       className="w-4 h-4 shrink-0 transition-colors duration-200"
                       style={{
                         color: childActive
-                          ? isDark ? "#C9BBFF" : "#5B3DF5"
-                          : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)",
+                          ? isDark
+                            ? "#C9BBFF"
+                            : "#5B3DF5"
+                          : isDark
+                            ? "rgba(255,255,255,0.5)"
+                            : "rgba(0,0,0,0.45)",
                       }}
                     />
                     <span>{child.label}</span>
@@ -197,7 +223,7 @@ function ParentNavItem({
   );
 }
 
-export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
+function LegacySidebar({ navItems, onProfileClick }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
   const { isDark } = useTheme();
@@ -217,7 +243,7 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
           "hover:scale-110 hover:shadow-xl",
           isDark
             ? "bg-[var(--card)] border border-[rgba(124,99,255,0.3)] text-[var(--foreground)]"
-            : "bg-[var(--accent-cream)] border border-[rgba(232,222,255,0.3)] text-[var(--primary)]"
+            : "bg-[var(--accent-cream)] border border-[rgba(232,222,255,0.3)] text-[var(--primary)]",
         )}
         aria-label="Open sidebar"
       >
@@ -252,16 +278,15 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
             : "4px 0 20px rgba(91,61,245,0.08)",
         }}
       >
-
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const hasChildren = item.children && item.children.length > 0;
-            
+
             if (hasChildren) {
               return (
-              <ParentNavItem
+                <ParentNavItem
                   key={item.label}
                   item={item}
                   setIsMobileOpen={setIsMobileOpen}
@@ -269,7 +294,7 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
                 />
               );
             }
-            
+
             const active = item.path ? isActive(item.path) : false;
             return (
               <Link
@@ -280,16 +305,20 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                   active ? "scale-[1.02]" : "hover:scale-[1.02]",
                 )}
-                  style={{
-                    background: active
-                      ? isDark
-                        ? "rgba(124,99,255,0.25)"
-                        : "var(--chip-active-bg)"
-                      : "transparent",
-                    color: active
-                      ? isDark ? "#C9BBFF" : "var(--primary)"
-                      : isDark ? "rgba(255,255,255,0.65)" : "var(--foreground-muted)",
-                  }}
+                style={{
+                  background: active
+                    ? isDark
+                      ? "rgba(124,99,255,0.25)"
+                      : "var(--chip-active-bg)"
+                    : "transparent",
+                  color: active
+                    ? isDark
+                      ? "#C9BBFF"
+                      : "var(--primary)"
+                    : isDark
+                      ? "rgba(255,255,255,0.65)"
+                      : "var(--foreground-muted)",
+                }}
                 onMouseEnter={(e) => {
                   if (!active) {
                     e.currentTarget.style.background = isDark
@@ -307,8 +336,12 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
                   className="w-4.5 h-4.5 shrink-0 transition-colors duration-200"
                   style={{
                     color: active
-                      ? isDark ? "#C9BBFF" : "#5B3DF5"
-                      : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)",
+                      ? isDark
+                        ? "#C9BBFF"
+                        : "#5B3DF5"
+                      : isDark
+                        ? "rgba(255,255,255,0.5)"
+                        : "rgba(0,0,0,0.45)",
                   }}
                 />
                 <span>{item.label}</span>
@@ -348,5 +381,33 @@ export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
         </div>
       </aside>
     </>
+  );
+}
+
+void LegacySidebar;
+
+export function Sidebar({ navItems, onProfileClick }: SidebarProps) {
+  const isMobile = useIsMobile();
+  const { isDark } = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (isMobile) {
+    return (
+      <SidebarMobile
+        navItems={navItems}
+        onProfileClick={onProfileClick}
+        isDark={isDark}
+        open={mobileOpen}
+        onOpen={() => setMobileOpen(true)}
+        onClose={() => setMobileOpen(false)}
+      />
+    );
+  }
+  return (
+    <SidebarDesktop
+      navItems={navItems}
+      onProfileClick={onProfileClick}
+      isDark={isDark}
+    />
   );
 }

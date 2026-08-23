@@ -1,7 +1,8 @@
 import { useEffect, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useLocation } from "react-router";
-import { Navigation } from "../Navigation";
+import { Navigation } from "../navigation/Navigation";
+
 import { Footer } from "../Footer";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useSwipeBack } from "../../hooks/useSwipeBack";
@@ -15,9 +16,7 @@ interface StoreLayoutProps {
 // Routes that should NOT render Navigation or Footer
 const NO_NAV_ROUTES = ["/order/success", "/chatbot"];
 
-export function StoreLayout({
-  children,
-}: StoreLayoutProps) {
+export function StoreLayout({ children }: StoreLayoutProps) {
   const { totalItems: cartCount } = useCart();
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 767px)");
@@ -36,7 +35,9 @@ export function StoreLayout({
       <div style={{ position: "relative", zIndex: 1 }}>
         {!hideNav && <Navigation cartCount={cartCount} />}
 
-        <div className={`main-content flex-1 ${!hideNav ? "pb-20 md:pb-0" : ""}`}>
+        <div
+          className={`main-content flex-1 ${!hideNav ? "pb-20 md:pb-0" : ""}`}
+        >
           {isMobile && !shouldReduceMotion ? (
             <AnimatePresence mode="wait">
               <motion.div
