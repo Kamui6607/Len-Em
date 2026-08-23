@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../shared/hooks/useAuth";
 import { useMembershipStore } from "../../features/membership/store/membership.store";
 import {
   Mail,
@@ -23,12 +23,12 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { authService } from "../../services/auth.service";
+import { authService } from "../../shared/api/authService";
 import { userService } from "../../features/users/services/user.service";
-import { MembershipCard } from "../components/membership/MembershipCard";
-import { RankBadge } from "../components/membership/RankBadge";
-import { normalizeApiUserProfile } from "../../types/auth.types";
-import { useAuthStore } from "../../store/auth.store";
+import { MembershipCard } from "../../shared/components/membership/MembershipCard";
+import { RankBadge } from "../../shared/components/membership/RankBadge";
+import { normalizeApiUserProfile } from "../../shared/types/auth.types";
+import { useAuthStore } from "../../shared/store/auth.store";
 import {
   Dialog,
   DialogContent,
@@ -36,8 +36,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "../components/ui/dialog";
-import { useLanguage } from "../../context/LanguageContext";
+} from "../../shared/components/ui/dialog";
+import { useLanguage } from "../../shared/contexts/LanguageContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

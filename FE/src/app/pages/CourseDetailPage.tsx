@@ -16,24 +16,24 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "../components/ui/accordion";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Progress } from "../components/ui/progress";
-import { courseService } from "../../api/courseService";
-import { lessonService } from "../../api/lessonService";
-import { kitService, type Kit } from "../../api/kitService";
-import { productService, type Product } from "../../api/productService";
+} from "../../shared/components/ui/accordion";
+import { Badge } from "../../shared/components/ui/badge";
+import { Button } from "../../shared/components/ui/button";
+import { Progress } from "../../shared/components/ui/progress";
+import { courseService } from "../../shared/api/courseService";
+import { lessonService } from "../../shared/api/lessonService";
+import { kitService, type Kit } from "../../shared/api/kitService";
+import { productService, type Product } from "../../shared/api/productService";
 import { materialCombos } from "../../features/learn/data/learn.mock";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
 import type {
   Course,
   CourseLevel,
   CourseProgress,
   Lesson,
 } from "../../features/learn/types/learn.types";
-import { cn } from "../components/ui/utils";
+import { cn } from "../../shared/components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 
 const levelLabels: Record<CourseLevel, string> = {

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
-import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { userService } from "../../../features/users/services/user.service";
 import type { OrderReport } from "../../../features/orderReport/types/orderReport.types";
 import type { UsersListResponse } from "../../../features/users/services/user.service";
-import { useAuth } from "../../../hooks/useAuth";
+import { useAuth } from "../../../shared/hooks/useAuth";
 
 type ApiUser = UsersListResponse["result"]["users"][0];
 

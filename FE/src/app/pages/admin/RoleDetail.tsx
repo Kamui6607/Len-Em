@@ -2,16 +2,16 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Shield } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "../../../hooks/useAuth";
+import { useAuth } from "../../../shared/hooks/useAuth";
 import {
   roleService,
   type RoleDetail as RoleDetailType,
-} from "../../../api/roleService";
+} from "../../../shared/api/roleService";
 import {
   permissionService,
   type Permission,
-} from "../../../api/permissionService";
-import { PermissionPicker } from "../../components/admin/PermissionPicker";
+} from "../../../shared/api/permissionService";
+import { PermissionPicker } from "../../../shared/components/admin/PermissionPicker";
 
 export function RoleDetail() {
   const { roleId } = useParams<{ roleId: string }>();

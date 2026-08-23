@@ -9,14 +9,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
-import { useAdmin } from "../../context/AdminContext";
+import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { orderService } from "../../../features/orders/services/order.service";
 import type {
   Order,
   OrderStatus,
 } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
-import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
 type OrderFilter = "all" | OrderStatus;
 

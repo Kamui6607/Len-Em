@@ -11,8 +11,8 @@ import {
   type MenuOption,
   type Flow,
   type FlowStep,
-} from "../../api/chatbotService";
-import "./ChatBot.css";
+} from "../../shared/api/chatbotService";
+import "../../styles/chatbot.css";
 
 // ─── Types ───────────────────────────────────────────────
 

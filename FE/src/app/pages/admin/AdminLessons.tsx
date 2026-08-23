@@ -8,14 +8,14 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { lessonService } from "../../../api/lessonService";
+import { Button } from "../../../shared/components/ui/button";
+import { Input } from "../../../shared/components/ui/input";
+import { lessonService } from "../../../shared/api/lessonService";
 import type { Lesson } from "../../../features/learn/types/learn.types";
-import { useLanguage } from "../../../context/LanguageContext";
-import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
 type SortField = "title" | "order" | "duration" | "products" | "preview";
 type SortDirection = "asc" | "desc";

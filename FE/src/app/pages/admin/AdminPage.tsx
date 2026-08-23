@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router";
-import { AdminLayout } from "../../components/admin/AdminLayout";
+import { AdminLayout } from "../../../shared/components/admin/AdminLayout";
 import { AdminDashboard } from "./AdminDashboard";
 import { AdminUsers } from "./AdminUsers";
 import { ProductManagement } from "./ProductManagement";

@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
-import { kitService, type Kit } from "../../api/kitService";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
-import { useFavorites } from "../context/FavoritesContext";
-import { cn } from "../components/ui/utils";
+import { kitService, type Kit } from "../../shared/api/kitService";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
+import { useFavorites } from "../../shared/contexts/FavoritesContext";
+import { cn } from "../../shared/components/ui/utils";
 import { motion, AnimatePresence } from "motion/react";
 
 const levelBadgeColors: Record<string, string> = {

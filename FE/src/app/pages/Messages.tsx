@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { useAuthStore } from "../../store/auth.store";
+import { useAuthStore } from "../../shared/store/auth.store";
 
 interface Conversation {
   _id: string;

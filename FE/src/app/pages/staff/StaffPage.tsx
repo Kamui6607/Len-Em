@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Users, Package, ShoppingCart, CheckCircle, Flag } from "lucide-react";
-import { useAuth } from "../../../hooks/useAuth";
-import { useAdmin } from "../../context/AdminContext";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { products } from "../../data/products";
-import { DashboardShell } from "../../components/dashboard/DashboardShell";
+import { DashboardShell } from "../../../shared/components/dashboard/DashboardShell";
 import { formatPrice } from "../../../lib/formatPrice";
 import { StaffReports } from "./StaffReports";
 import { orderService } from "../../../features/orders/services/order.service";
-import type { NavItem } from "../../components/dashboard/Sidebar";
+import type { NavItem } from "../../../shared/components/dashboard/Sidebar";
 import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { toast } from "sonner";

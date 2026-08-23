@@ -12,9 +12,9 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { ReportButton } from "../../components/ReportButton";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
-import { useLanguage } from "../../../context/LanguageContext";
+import { ReportButton } from "../../../shared/components/ReportButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 const STATUS_OPTIONS = ["", "Pending", "Done", "Cancel"];
 

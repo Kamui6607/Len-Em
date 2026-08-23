@@ -10,10 +10,10 @@ import { ArrowLeft, Search, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { orderReportService } from "../../features/orderReport/services/orderReport.service";
 import type { OrderReport } from "../../features/orderReport/types/orderReport.types";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
+import { Badge } from "../../shared/components/ui/badge";
+import { Button } from "../../shared/components/ui/button";
+import { Input } from "../../shared/components/ui/input";
+import { useDebouncedSearch } from "../../shared/hooks/useDebouncedSearch";
 
 const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];
 const POLLING_INTERVAL = 30000; // Poll every 30 seconds

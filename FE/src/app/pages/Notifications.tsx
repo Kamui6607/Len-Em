@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Check, CheckCheck, Inbox, Bell, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { useNotifications } from "../context/NotificationContext";
-import { useHoldToDelete } from "../../hooks/useHoldToDelete";
+import { useNotifications } from "../../shared/contexts/NotificationContext";
+import { useHoldToDelete } from "../../shared/hooks/useHoldToDelete";
 
 function getDateGroup(date: Date): "Today" | "Yesterday" | "This week" | "Earlier" {
   const now = new Date();

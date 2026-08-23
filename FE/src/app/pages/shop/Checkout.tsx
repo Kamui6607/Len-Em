@@ -11,22 +11,22 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { toast } from "sonner";
 import { Check, QrCode, ArrowLeft, ChevronDown, List, Map as MapIcon } from "lucide-react";
-import { useCart } from "../../../context/CartContext";
-import { useLanguage } from "../../../context/LanguageContext";
-import { useAuthStore } from "../../../store/auth.store";
-import { orderApi } from "../../../api/orderService";
-import { ghnApi } from "../../../api/ghnService";
+import { useCart } from "../../../shared/contexts/CartContext";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useAuthStore } from "../../../shared/store/auth.store";
+import { orderApi } from "../../../shared/api/orderService";
+import { ghnApi } from "../../../shared/api/ghnService";
 import type {
   ShippingFeePreviewRequest,
 } from "../../../features/orders/types/order.types";
-import { MapPicker } from "../../../components/map/MapPicker";
+import { MapPicker } from "../../../shared/components/map/MapPicker";
 import { formatPrice } from "../../../lib/formatPrice";
-import { ColorSwatch } from "../../components/ui/ColorSwatch";
-import { CoinUsage } from "../../components/membership/CoinUsage";
+import { ColorSwatch } from "../../../shared/components/ui/ColorSwatch";
+import { CoinUsage } from "../../../shared/components/membership/CoinUsage";
 import type { CreateOrderRequest } from "../../../features/orders/types/order.types";
-import type { GHNProvince, GHNDistrict, GHNWard } from "../../../types/ghn.types";
-import type { ReverseGeocodeResult } from "../../../types/address.types";
-import "./Checkout.css";
+import type { GHNProvince, GHNDistrict, GHNWard } from "../../../shared/types/ghn.types";
+import type { ReverseGeocodeResult } from "../../../shared/types/address.types";
+import "../../../styles/checkout.css";
 
 // ── Validation schema ──
 const shippingSchema = yup.object({

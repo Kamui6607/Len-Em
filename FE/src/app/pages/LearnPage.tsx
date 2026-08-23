@@ -13,20 +13,20 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { Checkbox } from "../components/ui/checkbox";
-import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "../../shared/components/ui/avatar";
+import { Badge } from "../../shared/components/ui/badge";
+import { Button } from "../../shared/components/ui/button";
+import { Card, CardContent } from "../../shared/components/ui/card";
+import { Checkbox } from "../../shared/components/ui/checkbox";
+import { Label } from "../../shared/components/ui/label";
+import { Separator } from "../../shared/components/ui/separator";
 import { freeVideos } from "../../features/learn/data/learn.mock";
-import { courseService } from "../../api/courseService";
-import { useAuth } from "../../hooks/useAuth";
-import { useLanguage } from "../../context/LanguageContext";
+import { courseService } from "../../shared/api/courseService";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useLanguage } from "../../shared/contexts/LanguageContext";
 import type { Course, CourseLevel } from "../../features/learn/types/learn.types";
-import { cn } from "../components/ui/utils";
-import { ProductSkeleton } from "../../components/skeletons/ProductSkeleton";
+import { cn } from "../../shared/components/ui/utils";
+import { ProductSkeleton } from "../../shared/components/skeletons/ProductSkeleton";
 
 const levelStyles: Record<CourseLevel, string> = {
   beginner: "border-green-200 bg-[var(--accent-green)] text-[var(--accent-green-text)]",

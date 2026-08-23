@@ -8,11 +8,11 @@ import { Link, useSearchParams } from "react-router";
 import { motion } from "motion/react";
 import { Package, Heart, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
-import { kitService, type Kit } from "../../api/kitService";
-import { useFavorites } from "../context/FavoritesContext";
+import { kitService, type Kit } from "../../shared/api/kitService";
+import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { formatPrice } from "../../lib/formatPrice";
-import { cn } from "../components/ui/utils";
-import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
+import { cn } from "../../shared/components/ui/utils";
+import { ResponsiveImage } from "../../shared/components/ui/ResponsiveImage";
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All Levels", emoji: "🎁" },

@@ -7,7 +7,7 @@ import { products } from "../../data/products";
 import { formatPrice } from "../../../lib/formatPrice";
 import { supportDIYService } from "../../../features/supportDIY/services/supportDIY.service";
 import type { CreateSupportDIYDTO } from "../../../features/supportDIY/types/supportDIY.types";
-import "./SupportDIYCreate.css";
+import "../../../styles/supportDIY.css";
 
 interface ComboItem {
   productId: string;

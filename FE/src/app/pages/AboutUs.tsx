@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { motion, useScroll, useSpring } from "motion/react";
-import { Reveal } from "../../components/motion/Reveal";
+import { Reveal } from "../../shared/components/motion/Reveal";
 import {
   Users,
   BookOpen,
@@ -11,7 +11,7 @@ import {
   Scissors,
 } from "lucide-react";
 import { Link } from "react-router";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../shared/contexts/LanguageContext";
 
 /* ------------------------------------------------------------------
    The signature element: a hand-stitched thread that runs the length

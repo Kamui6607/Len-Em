@@ -13,8 +13,8 @@ import {
   Palette,
   ShoppingBag,
 } from "lucide-react";
-import { useAuthStore } from "../../store/auth.store";
-import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
+import { useAuthStore } from "../../../shared/store/auth.store";
+import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 
 const welcomeFeatures = [
   {

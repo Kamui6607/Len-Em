@@ -6,7 +6,7 @@
 
 import { jwtDecode } from "jwt-decode";
 import { tokenStorage } from "./axiosClient";
-import type { DecodedToken, UserRole } from "../types/auth.types";
+import type { DecodedToken, UserRole } from "../shared/types/auth.types";
 
 // ---- Token helpers ----
 

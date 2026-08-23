@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { ArrowRight, ShoppingBag } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
-import { useLanguage } from "../../../context/LanguageContext";
-import { useCart } from "../../../context/CartContext";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useCart } from "../../../shared/contexts/CartContext";
 
 // ═══════════════════════════════════════════════════════════════════
 // LARGE GIFT BOX SVG — celebratory, bow-tied, with sparkles

@@ -5,7 +5,7 @@
 // ============================================================
 
 import { getUserRole, isAuthenticated } from "./authUtils";
-import type { UserRole } from "../types/auth.types";
+import type { UserRole } from "../shared/types/auth.types";
 
 /**
  * Admin-only routes.

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Users, UserCheck, UserX, Lock, BarChart3 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import {
   Search,
   Eye,
@@ -29,14 +29,14 @@ import {
   type ApiUser,
   type UserStatus,
 } from "../../../features/users/services/user.service";
-import { useAdmin } from "../../context/AdminContext";
-import { useAuth } from "../../../hooks/useAuth";
-import { useLanguage } from "../../../context/LanguageContext";
+import { useAdmin } from "../../../shared/contexts/AdminContext";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { toast } from "sonner";
 import type { UserStatistics } from "../../../features/users/services/user.service";
-import { authService } from "../../../services/auth.service";
-import { roleService, normalizeRoles } from "../../../api/roleService";
-import type { Role } from "../../../types/role";
+import { authService } from "../../../shared/api/authService";
+import { roleService, normalizeRoles } from "../../../shared/api/roleService";
+import type { Role } from "../../../shared/types/role";
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
 

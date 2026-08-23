@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Save, Search, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Switch } from "../../components/ui/switch";
-import { Badge } from "../../components/ui/badge";
-import { lessonService } from "../../../api/lessonService";
-import { productService, type Product } from "../../../api/productService";
-import { kitService, type Kit } from "../../../api/kitService";
+import { Button } from "../../../shared/components/ui/button";
+import { Card, CardContent } from "../../../shared/components/ui/card";
+import { Input } from "../../../shared/components/ui/input";
+import { Label } from "../../../shared/components/ui/label";
+import { Switch } from "../../../shared/components/ui/switch";
+import { Badge } from "../../../shared/components/ui/badge";
+import { lessonService } from "../../../shared/api/lessonService";
+import { productService, type Product } from "../../../shared/api/productService";
+import { kitService, type Kit } from "../../../shared/api/kitService";
 import type { LessonFormData } from "../../../features/learn/types/learn.types";
-import { useLanguage } from "../../../context/LanguageContext";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 export function LessonFormPage() {
   const navigate = useNavigate();

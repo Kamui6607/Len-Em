@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link2, Plus, Trash2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { useLanguage } from "../../../context/LanguageContext";
+import { Button } from "../../../shared/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../../shared/components/ui/dialog";
+import { Input } from "../../../shared/components/ui/input";
+import { Label } from "../../../shared/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../shared/components/ui/table";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { linkedProducts } from "../../../features/creator/data/creator.mock";
 
 export function CreatorProducts() {

@@ -15,14 +15,14 @@ import {
   Plus,
 } from "lucide-react";
 import { products, getTotalStock } from "../data/products";
-import { ProductVariantSelector } from "../components/ProductVariantSelector";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
-import { useFavorites } from "../context/FavoritesContext";
-import { cn } from "../components/ui/utils";
+import { ProductVariantSelector } from "../../shared/components/ProductVariantSelector";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
+import { useFavorites } from "../../shared/contexts/FavoritesContext";
+import { cn } from "../../shared/components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 import { fetchProductById } from "../../features/shop/services/product.service";
-import type { ProductVariantUI } from "../components/ProductVariantSelector";
+import type { ProductVariantUI } from "../../shared/components/ProductVariantSelector";
 import type { Product } from "../data/products";
 
 const difficultyBadgeColors: Record<string, string> = {

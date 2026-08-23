@@ -17,10 +17,10 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCart } from "../../../context/CartContext";
-import { useLanguage } from "../../../context/LanguageContext";
+import { useCart } from "../../../shared/contexts/CartContext";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { formatPrice } from "../../../lib/formatPrice";
-import "./Cartpage.css";
+import "../../../styles/cartpage.css";
 
 // ═══════════════════════════════════════════════════════════════════
 // EMPTY CART ILLUSTRATION — empty embroidery hoop

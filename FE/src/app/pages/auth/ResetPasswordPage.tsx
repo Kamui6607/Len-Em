@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Lock, ArrowLeft, CircleCheck as CheckCircle2, Loader as Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { authService } from "../../services/auth.service";
-import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
+import { authService } from "../../../shared/api/authService";
+import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();

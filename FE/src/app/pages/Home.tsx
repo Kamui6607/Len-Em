@@ -1,14 +1,14 @@
 import { motion } from "motion/react";
-import { HeroSection } from "../../components/HeroSection";
-import { HowItWorksSection } from "../../components/HowItWorksSection";
-import { LearnSection } from "../../components/LearnSection";
-import { ShopSection } from "../../components/ShopSection";
-import { DIYSection } from "../../components/DIYSection";
-import { ClosingCTA, LenEmFooter } from "../../components/ClosingCTA";
-import { Reveal } from "../../components/motion/Reveal";
-import { ScrollProgress } from "../../components/motion/ScrollProgress";
-import { SectionDivider } from "../../components/motion/SectionDivider";
-import { AnimatedBackground } from "../../components/motion/AnimatedBackground";
+import { HeroSection } from "../../shared/components/HeroSection";
+import { HowItWorksSection } from "../../shared/components/HowItWorksSection";
+import { LearnSection } from "../../shared/components/LearnSection";
+import { ShopSection } from "../../shared/components/ShopSection";
+import { DIYSection } from "../../shared/components/DIYSection";
+import { ClosingCTA, LenEmFooter } from "../../shared/components/ClosingCTA";
+import { Reveal } from "../../shared/components/motion/Reveal";
+import { ScrollProgress } from "../../shared/components/motion/ScrollProgress";
+import { SectionDivider } from "../../shared/components/motion/SectionDivider";
+import { AnimatedBackground } from "../../shared/components/motion/AnimatedBackground";
 
 export function Home() {
   

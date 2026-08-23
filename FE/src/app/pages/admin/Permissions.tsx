@@ -9,13 +9,13 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
-import { useAuth } from "../../../hooks/useAuth";
-import { permissionService } from "../../../api/permissionService";
-import type { Permission } from "../../../types/permission";
-import { AdminSelect } from "../../components/admin/AdminSelect";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { permissionService } from "../../../shared/api/permissionService";
+import type { Permission } from "../../../shared/types/permission";
+import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
 
 type SortField = "name" | "resource" | "created";
 type SortDirection = "asc" | "desc";

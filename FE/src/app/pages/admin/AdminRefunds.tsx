@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
-import { refundService, type RefundInvoice } from "../../../api/refundService";
-import { useAuth } from "../../../hooks/useAuth";
-import { AdminSelect } from "../../components/admin/AdminSelect";
-import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
+import { refundService, type RefundInvoice } from "../../../shared/api/refundService";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
 // ─── Helpers ─────────────────────────────────────────────
 

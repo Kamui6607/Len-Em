@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Package } from "lucide-react";
 import { toast } from "sonner";
-import { productService, type Product } from "../../../api/productService";
+import { productService, type Product } from "../../../shared/api/productService";
 import { formatPrice } from "../../../lib/formatPrice";
-import { ColorSwatchList } from "../../components/ui/ColorSwatch";
+import { ColorSwatchList } from "../../../shared/components/ui/ColorSwatch";
 
 function formatDate(value: string) {
   try {

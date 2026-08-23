@@ -17,9 +17,9 @@ import {
   Gift,
   Users,
 } from "lucide-react";
-import { useAuthStore } from "../../store/auth.store";
+import { useAuthStore } from "../../../shared/store/auth.store";
 import { toast } from "sonner";
-import { AnimatedBackgroundAuth } from "../../components/motion/AnimatedBackgroundAuth";
+import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 
 const welcomeFeatures = [
   {

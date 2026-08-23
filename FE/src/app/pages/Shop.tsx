@@ -16,26 +16,26 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ProductCard } from "../components/ProductCard";
-import { ResponsiveImage } from "../../components/ui/ResponsiveImage";
-import { useProducts } from "../hooks/useProducts";
+import { ProductCard } from "../../shared/components/ProductCard";
+import { ResponsiveImage } from "../../shared/components/ui/ResponsiveImage";
+import { useProducts } from "../../shared/hooks/useProducts";
 import { products } from "../data/products";
 import {
   getLessonsByCourse,
   materialCombos,
 } from "../../features/learn/data/learn.mock";
-import { useLearnStore } from "../../store/learn.store";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
-import { useFavorites } from "../context/FavoritesContext";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLearnStore } from "../../shared/store/learn.store";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
+import { useFavorites } from "../../shared/contexts/FavoritesContext";
+import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
-import { kitService, type Kit } from "../../api/kitService";
-import { cn } from "../components/ui/utils";
+import { kitService, type Kit } from "../../shared/api/kitService";
+import { cn } from "../../shared/components/ui/utils";
 import {
   ProductSkeleton,
   ProductGridSkeleton,
-} from "../../components/skeletons/ProductSkeleton";
+} from "../../shared/components/skeletons/ProductSkeleton";
 
 const CATEGORY_META: Record<
   string,
@@ -180,6 +180,7 @@ export function Shop() {
   const [kits, setKits] = useState<Kit[]>([]);
   const [kitsLoading, setKitsLoading] = useState(false);
   const [kitLevel, setKitLevel] = useState<string>("all");
+  const [kitMinPrice, setKitMinPrice] = useState<number>(0);
   const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
 
   // Kit level options for combo filter
@@ -192,16 +193,20 @@ export function Shop() {
 
   // Check if kit level filter is active
   const hasActiveKitLevel = kitLevel !== "all";
-  const hasActiveKitFilters = hasActiveKitLevel || kitMaxPrice > 0;
+  const hasActiveKitFilters = hasActiveKitLevel || kitMinPrice > 0 || kitMaxPrice > 0;
 
-  // Show only combos at or below the selected maximum price.
+  // Show combos within the selected price range (Min/Max).
   const filteredKits = useMemo(() => {
-    if (kitMaxPrice <= 0) return kits;
-    return kits.filter((kit) => kit.price <= kitMaxPrice);
-  }, [kits, kitMaxPrice]);
+    return kits.filter((kit) => {
+      if (kitMinPrice > 0 && kit.price < kitMinPrice) return false;
+      if (kitMaxPrice > 0 && kit.price > kitMaxPrice) return false;
+      return true;
+    });
+  }, [kits, kitMinPrice, kitMaxPrice]);
 
   const clearKitFilters = () => {
     setKitLevel("all");
+    setKitMinPrice(0);
     setKitMaxPrice(0);
   };
 

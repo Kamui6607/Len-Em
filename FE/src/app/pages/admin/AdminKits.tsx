@@ -17,12 +17,12 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { kitService, type Kit, type KitProductInput } from "../../../api/kitService";
-import { productService } from "../../../api/productService";
+import { kitService, type Kit, type KitProductInput } from "../../../shared/api/kitService";
+import { productService } from "../../../shared/api/productService";
 import { formatPrice } from "../../../lib/formatPrice";
 import type { BackendProduct } from "../../../shared/types/product.types";
-import { useLanguage } from "../../../context/LanguageContext";
-import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All Levels" },

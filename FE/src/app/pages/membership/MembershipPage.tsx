@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useMembershipStore } from "../../../features/membership/store/membership.store";
 import { RANK_CONFIGS } from "../../../features/membership/types/membership.types";
-import { useMediaQuery } from "../../../hooks/useMediaQuery";
-import { MembershipCard } from "../../components/membership/MembershipCard";
-import { BenefitList } from "../../components/membership/BenefitCard";
-import { RankTimeline, RankTimelineHorizontal } from "../../components/membership/RankTimeline";
-import { MembershipHistory } from "../../components/membership/MembershipHistory";
-import { RankPopup } from "../../components/membership/RankPopup";
+import { useMediaQuery } from "../../../shared/hooks/useMediaQuery";
+import { MembershipCard } from "../../../shared/components/membership/MembershipCard";
+import { BenefitList } from "../../../shared/components/membership/BenefitCard";
+import { RankTimeline, RankTimelineHorizontal } from "../../../shared/components/membership/RankTimeline";
+import { MembershipHistory } from "../../../shared/components/membership/MembershipHistory";
+import { RankPopup } from "../../../shared/components/membership/RankPopup";
 
 type TabType = "overview" | "benefits" | "timeline" | "history";
 

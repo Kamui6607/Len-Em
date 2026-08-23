@@ -8,8 +8,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import type { OrderReport } from "../../../features/orderReport/types/orderReport.types";
-import { useAuth } from "../../../hooks/useAuth";
-import { Badge } from "../../components/ui/badge";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { Badge } from "../../../shared/components/ui/badge";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
 
 const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];

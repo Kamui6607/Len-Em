@@ -9,16 +9,16 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
-import { useAuth } from "../../../hooks/useAuth";
-import { roleService, normalizeRoles } from "../../../api/roleService";
-import type { Role } from "../../../types/role";
-import { permissionService } from "../../../api/permissionService";
-import type { Permission } from "../../../types/permission";
-import { PermissionPicker } from "../../components/admin/PermissionPicker";
-import { AdminSelect } from "../../components/admin/AdminSelect";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { roleService, normalizeRoles } from "../../../shared/api/roleService";
+import type { Role } from "../../../shared/types/role";
+import { permissionService } from "../../../shared/api/permissionService";
+import type { Permission } from "../../../shared/types/permission";
+import { PermissionPicker } from "../../../shared/components/admin/PermissionPicker";
+import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
 
 type SortField = "name" | "permissions" | "status" | "created";
 type SortDirection = "asc" | "desc";

@@ -10,19 +10,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
-import { useReviews } from "../context/ReviewContext";
-import { useNotifications } from "../context/NotificationContext";
-import { ReportButton } from "../components/ReportButton";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
+import { useReviews } from "../../shared/contexts/ReviewContext";
+import { useNotifications } from "../../shared/contexts/NotificationContext";
+import { ReportButton } from "../../shared/components/ReportButton";
 import { Link, useNavigate } from "react-router";
-import { orderApi } from "../../api/orderService";
-import { productService } from "../../api/productService";
-import { kitService } from "../../api/kitService";
+import { orderApi } from "../../shared/api/orderService";
+import { productService } from "../../shared/api/productService";
+import { kitService } from "../../shared/api/kitService";
 import type { Order, OrderItem } from "../../features/orders/types/order.types";
 import { normalizeOrder } from "../../features/orders/types/order.types";
 import { getOrderStatusBadgeClass } from "../../constants/orderStatus";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../shared/contexts/LanguageContext";
 
 const PAGE_SIZE = 10;
 

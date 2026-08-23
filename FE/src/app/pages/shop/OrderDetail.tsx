@@ -7,10 +7,10 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { orderApi } from "../../../api/orderService";
-import { OrderDetailCard } from "../../components/order/OrderDetailCard";
+import { orderApi } from "../../../shared/api/orderService";
+import { OrderDetailCard } from "../../../shared/components/order/OrderDetailCard";
 import type { Order } from "../../../features/orders/types/order.types";
-import { useLanguage } from "../../../context/LanguageContext";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 export function OrderDetail() {
   const { id } = useParams<{ id: string }>();

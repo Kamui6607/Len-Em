@@ -11,12 +11,12 @@ import {
 import { formatPrice } from "../../../lib/formatPrice";
 import { orderService } from "../../../features/orders/services/order.service";
 import { userService } from "../../../features/users/services/user.service";
-import { productService } from "../../../api/productService";
+import { productService } from "../../../shared/api/productService";
 import { products as staticProducts } from "../../data/products";
 import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
-import { useAdmin } from "../../context/AdminContext";
-import { useLanguage } from "../../../context/LanguageContext";
+import { useAdmin } from "../../../shared/contexts/AdminContext";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 interface StatCard {
   title: string;

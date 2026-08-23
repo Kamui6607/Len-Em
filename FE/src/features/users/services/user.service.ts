@@ -3,7 +3,7 @@
 // ============================================================
 
 import axiosClient from "../../../lib/axiosClient";
-import type { ApiResponse } from "../../../types/auth.types";
+import type { ApiResponse } from "../../../shared/types/auth.types";
 
 const USERS_BASE = "/users";
 

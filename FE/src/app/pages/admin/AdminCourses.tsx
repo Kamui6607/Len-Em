@@ -1,15 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
 import { Edit, Eye, Plus, Search, BookOpen, ChevronUp, ChevronDown } from "lucide-react";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { courseService } from "../../../api/courseService";
+import { Badge } from "../../../shared/components/ui/badge";
+import { Button } from "../../../shared/components/ui/button";
+import { Input } from "../../../shared/components/ui/input";
+import { courseService } from "../../../shared/api/courseService";
 import type { Course, CourseLevel } from "../../../features/learn/types/learn.types";
-import { useLanguage } from "../../../context/LanguageContext";
-import { useDebouncedSearch } from "../../../hooks/useDebouncedSearch";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
 type SortField = "title" | "level" | "lessons" | "duration" | "status";
 type SortDirection = "asc" | "desc";

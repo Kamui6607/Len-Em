@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useFavorites } from "../context/FavoritesContext";
-import { useCart } from "../../context/CartContext";
-import { useLanguage } from "../../context/LanguageContext";
+import { useFavorites } from "../../shared/contexts/FavoritesContext";
+import { useCart } from "../../shared/contexts/CartContext";
+import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { products as mockProducts } from "../data/products";
 import { fetchProductById } from "../../features/shop/services/product.service";
-import { ProductCard } from "../components/ProductCard";
-import { kitService } from "../../api/kitService";
-import { cn } from "../components/ui/utils";
+import { ProductCard } from "../../shared/components/ProductCard";
+import { kitService } from "../../shared/api/kitService";
+import { cn } from "../../shared/components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 import type { Product } from "../data/products";
-import type { Kit } from "../../api/kitService";
+import type { Kit } from "../../shared/api/kitService";
 
 export function Love() {
   const { t } = useLanguage();

@@ -2,17 +2,17 @@ import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { ImagePlus, Plus, Search, Send, X } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
+import { Badge } from "../../shared/components/ui/badge";
+import { Button } from "../../shared/components/ui/button";
+import { Card, CardContent } from "../../shared/components/ui/card";
+import { Input } from "../../shared/components/ui/input";
+import { Label } from "../../shared/components/ui/label";
+import { Textarea } from "../../shared/components/ui/textarea";
 import { products } from "../data/products";
 import { formatPrice } from "../../lib/formatPrice";
 import { diyService } from "../../features/diy/services/diy.service";
 import type { CreateDIYPostDTO } from "../../features/diy/types/diy.types";
-import { useDebouncedSearch } from "../../hooks/useDebouncedSearch";
+import { useDebouncedSearch } from "../../shared/hooks/useDebouncedSearch";
 
 interface ComboItem {
   productId: string;

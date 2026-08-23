@@ -8,11 +8,11 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Plus, MapPin, Trash2, Check, ChevronDown } from "lucide-react";
-import { addressApi } from "../../api/addressService";
-import { ghnApi } from "../../api/ghnService";
-import { MapPicker } from "../../components/map/MapPicker";
-import type { Address, CreateAddressRequest, ReverseGeocodeResult } from "../../types/address.types";
-import type { GHNProvince, GHNDistrict, GHNWard } from "../../types/ghn.types";
+import { addressApi } from "../../shared/api/addressService";
+import { ghnApi } from "../../shared/api/ghnService";
+import { MapPicker } from "../../shared/components/map/MapPicker";
+import type { Address, CreateAddressRequest, ReverseGeocodeResult } from "../../shared/types/address.types";
+import type { GHNProvince, GHNDistrict, GHNWard } from "../../shared/types/ghn.types";
 
 type AddressFormData = {
   fullName: string;

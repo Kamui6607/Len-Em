@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router";
-import { CreatorLayout } from "../../components/creator/CreatorLayout";
+import { CreatorLayout } from "../../../shared/components/creator/CreatorLayout";
 import { CreatorOverview } from "./CreatorOverview";
 import { CreatorCourses } from "./CreatorCourses";
 import { CreatorLessons } from "./CreatorLessons";

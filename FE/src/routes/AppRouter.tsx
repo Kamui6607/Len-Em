@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router";
-import { AnimatedBackground } from "../components/motion/AnimatedBackground";
-import { RequireAuth } from "../components/auth/RequireAuth";
-import { RequireRole } from "../components/auth/RequireRole";
-import { StoreLayout } from "../app/components/layout/StoreLayout";
-import { LoadingFallback } from "../app/components/LoadingFallback";
+import { AnimatedBackground } from "../shared/components/motion/AnimatedBackground";
+import { RequireAuth } from "../shared/components/auth/RequireAuth";
+import { RequireRole } from "../shared/components/auth/RequireRole";
+import { StoreLayout } from "../shared/components/layout/StoreLayout";
+import { LoadingFallback } from "../shared/components/LoadingFallback";
 
 // Lazy-loaded pages
 const Home = lazy(() =>
@@ -69,18 +69,18 @@ const StaffPage = lazy(() =>
   })),
 );
 const LoginPage = lazy(() =>
-  import("../pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
+  import("../app/pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
 );
 const RegisterPage = lazy(() =>
-  import("../pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })),
+  import("../app/pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })),
 );
 
 const ForgotPasswordPage = lazy(() =>
-  import("../pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })),
+  import("../app/pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })),
 );
 
 const ResetPasswordPage = lazy(() =>
-  import("../pages/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })),
+  import("../app/pages/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })),
 );
 
 // ── NEW: Shop cart page (uses CartContext) ──

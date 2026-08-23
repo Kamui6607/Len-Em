@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { ChevronDown, ChevronUp, Link2, Pencil, Trash2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { useLanguage } from "../../../context/LanguageContext";
+import { Button } from "../../../shared/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../shared/components/ui/table";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { creatorCourses, creatorLessons } from "../../../features/creator/data/creator.mock";
 
 export function CreatorLessons() {

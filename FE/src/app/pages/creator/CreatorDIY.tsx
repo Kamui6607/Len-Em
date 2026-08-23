@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Eye, Plus, ShoppingBag } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { Button } from "../../../shared/components/ui/button";
 import { creatorDiyPosts } from "../../../features/creator/data/creator.mock";
 
 export function CreatorDIY() {

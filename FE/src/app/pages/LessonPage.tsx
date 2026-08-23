@@ -15,20 +15,20 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { Progress } from "../components/ui/progress";
-import { courseService } from "../../api/courseService";
-import { lessonService } from "../../api/lessonService";
-import { kitService, type Kit } from "../../api/kitService";
-import { productService, type Product } from "../../api/productService";
+import { Badge } from "../../shared/components/ui/badge";
+import { Button } from "../../shared/components/ui/button";
+import { Card, CardContent } from "../../shared/components/ui/card";
+import { Progress } from "../../shared/components/ui/progress";
+import { courseService } from "../../shared/api/courseService";
+import { lessonService } from "../../shared/api/lessonService";
+import { kitService, type Kit } from "../../shared/api/kitService";
+import { productService, type Product } from "../../shared/api/productService";
 import { materialCombos } from "../../features/learn/data/learn.mock";
 import { useLearnStore as useFeatureLearnStore } from "../../features/learn/store/learn.store";
-import { useLearnStore } from "../../store/learn.store";
+import { useLearnStore } from "../../shared/store/learn.store";
 import { formatPrice } from "../../lib/formatPrice";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
 import { products } from "../data/products";
 import type {
   Course,

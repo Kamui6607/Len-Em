@@ -1,13 +1,13 @@
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { ShoppingCart, Package } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "../../hooks/useAuth";
-import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../shared/hooks/useAuth";
+import { useCart } from "../../shared/contexts/CartContext";
 import { diyService } from "../../features/diy/services/diy.service";
-import { kitService } from "../../api/kitService";
-import { productService } from "../../api/productService";
+import { kitService } from "../../shared/api/kitService";
+import { productService } from "../../shared/api/productService";
 import type { DIYPost } from "../../features/diy/types/diy.types";
-import type { Kit } from "../../api/kitService";
+import type { Kit } from "../../shared/api/kitService";
 import { formatPrice } from "../../lib/formatPrice";
 import { useState, useEffect } from "react";
 

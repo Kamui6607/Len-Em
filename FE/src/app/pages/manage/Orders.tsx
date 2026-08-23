@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { orderApi } from "../../../api/orderService";
+import { orderApi } from "../../../shared/api/orderService";
 import { formatPrice } from "../../../lib/formatPrice";
 import {
   ORDER_STATUS_LABELS,

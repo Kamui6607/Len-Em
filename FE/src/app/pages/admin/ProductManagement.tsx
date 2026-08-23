@@ -9,19 +9,19 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { HoldToDeleteButton } from "../../components/admin/HoldToDeleteButton";
+import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { useNavigate } from "react-router";
 import { formatPrice } from "../../../lib/formatPrice";
-import { productService, type Product } from "../../../api/productService";
+import { productService, type Product } from "../../../shared/api/productService";
 import {
   VariantEditor,
   type VariantData,
   validateVariants,
   hasVariantErrors,
-} from "../../components/admin/VariantEditor";
-import { useAuth } from "../../../hooks/useAuth";
-import { useLanguage } from "../../../context/LanguageContext";
-import { AdminSelect } from "../../components/admin/AdminSelect";
+} from "../../../shared/components/admin/VariantEditor";
+import { useAuth } from "../../../shared/hooks/useAuth";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
 
 // ─── Types ───────────────────────────────────────────────
 
