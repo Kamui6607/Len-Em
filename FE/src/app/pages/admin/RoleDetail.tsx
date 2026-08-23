@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../shared/hooks/useAuth";
 import {
@@ -12,6 +12,9 @@ import {
   type Permission,
 } from "../../../shared/api/permissionService";
 import { PermissionPicker } from "../../../shared/components/admin/PermissionPicker";
+import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
+import { AdminPanel, AdminPanelHeader } from "../../../shared/components/admin/AdminPanel";
+import { AdminActivePill } from "../../../shared/components/admin/AdminStatusPill";
 
 export function RoleDetail() {
   const { roleId } = useParams<{ roleId: string }>();
@@ -103,50 +106,25 @@ export function RoleDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/admin/roles")}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
-            title="Back"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="mb-1">{role.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {role.description || "No description"}
-              <span className="mx-2">•</span>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
-                  role.isActive
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                    : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${role.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
-                />
-                {role.isActive ? "Active" : "Inactive"}
-              </span>
-            </p>
-          </div>
-        </div>
-
-      </div>
+      <AdminBackHeader
+        title={role.name}
+        subtitle={
+          <span className="flex items-center gap-2">
+            {role.description || "No description"}
+            <AdminActivePill active={role.isActive} activeLabel="Active" inactiveLabel="Inactive" />
+          </span>
+        }
+        onBack={() => navigate("/admin/roles")}
+      />
 
       {/* Permission Assignment */}
-      <div>
-        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
-          <h2 className="text-lg font-bold mb-1">Assigned Permissions</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            {selectedPermissionIds.length} permission
-            {selectedPermissionIds.length !== 1 ? "s" : ""} selected
-            {!isAdmin && " (read-only)"}
-          </p>
-        </div>
-        <div className="flex-1 overflow-y-auto relative z-10" style={{ background: "var(--card)" }}>
+      <AdminPanel>
+        <AdminPanelHeader
+          icon={<Shield className="w-4.5 h-4.5" />}
+          title="Assigned Permissions"
+          subtitle={`${selectedPermissionIds.length} permission${selectedPermissionIds.length !== 1 ? "s" : ""} selected${!isAdmin ? " (read-only)" : ""}`}
+        />
+        <div className="relative z-10" style={{ background: "var(--card)" }}>
           <PermissionPicker
             permissions={allPermissions}
             selected={selectedPermissionIds}
@@ -154,7 +132,7 @@ export function RoleDetail() {
             disabled={true}
           />
         </div>
-      </div>
+      </AdminPanel>
     </div>
   );
 }

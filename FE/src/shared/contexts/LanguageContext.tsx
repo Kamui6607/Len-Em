@@ -13,6 +13,20 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
+/**
+ * Last-resort fallback: turn "admin.products.create" into a readable label ("Create").
+ * Used only when a key is missing from both locale dictionaries.
+ */
+function humanizeKey(key: string): string {
+  const seg = key.split(".").pop() ?? key;
+  return seg
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
     const saved = localStorage.getItem("lenem_lang") as Language | null;
@@ -36,20 +50,34 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const t = useCallback(
     (key: string, fallback?: string | Record<string, string | number>, params?: Record<string, string | number>): string => {
       const keys = key.split(".");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let val: any = lang === "en" ? enDict : viDict;
-      for (const k of keys) {
-        if (val && typeof val === "object" && k in val) {
-          val = val[k];
-        } else {
-          return typeof fallback === "string" ? fallback : key;
-        }
-      }
-      if (typeof val !== "string") return typeof fallback === "string" ? fallback : key;
-      
+
       // Support both t(key, params) and t(key, fallback, params) signatures
       const resolvedParams = params ?? (typeof fallback === "object" ? fallback : undefined);
-      
+      const stringFallback = typeof fallback === "string" ? fallback : undefined;
+
+      const lookup = (dict: object) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let val: any = dict;
+        for (const k of keys) {
+          if (val && typeof val === "object" && k in val) {
+            val = val[k];
+          } else {
+            return undefined;
+          }
+        }
+        return typeof val === "string" ? val : undefined;
+      };
+
+      let val = lookup(lang === "en" ? enDict : viDict);
+      if (val === undefined) {
+        // Graceful cross-locale fallback so a missing key never renders as
+        // "admin.products.create" but shows the other language's text instead.
+        val = lookup(lang === "en" ? viDict : enDict);
+      }
+      if (val === undefined) {
+        return stringFallback ?? humanizeKey(key);
+      }
+
       // Replace placeholders with params if provided
       if (resolvedParams) {
         return val.replace(/\{(\w+)\}/g, (match, paramKey) => {
@@ -59,7 +87,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           return match;
         });
       }
-      
+
       return val;
     },
     [lang],

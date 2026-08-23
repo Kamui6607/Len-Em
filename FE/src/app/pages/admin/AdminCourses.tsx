@@ -1,15 +1,25 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
-import { Edit, Eye, Plus, Search, BookOpen, ChevronUp, ChevronDown } from "lucide-react";
+import { Edit, Eye, Plus, BookOpen } from "lucide-react";
 import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 import { toast } from "sonner";
 import { Badge } from "../../../shared/components/ui/badge";
 import { Button } from "../../../shared/components/ui/button";
-import { Input } from "../../../shared/components/ui/input";
 import { courseService } from "../../../shared/api/courseService";
 import type { Course, CourseLevel } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import {
+  AdminTableToolbar,
+  AdminSearchInput,
+  AdminTableScroll,
+  AdminSortableHeader,
+  AdminTableHeaderCell,
+  AdminTableEmptyRow,
+  AdminPageLoading,
+} from "../../../shared/components/admin/AdminDataTable";
 
 type SortField = "title" | "level" | "lessons" | "duration" | "status";
 type SortDirection = "asc" | "desc";
@@ -78,148 +88,105 @@ export function AdminCourses() {
     }
   };
 
-  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
-    const active = sortField === field;
-    return (
-      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
-        <button
-          type="button"
-          onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
-        >
-          {label}
-          <span className="flex flex-col items-center justify-center -space-y-[3px]">
-            <ChevronUp className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-            <ChevronDown className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-          </span>
-        </button>
-      </th>
-    );
-  }
-
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">{t("admin.courses.title")}</h1>
-        <div className="flex items-center justify-center py-20 text-muted-foreground">{t("admin.courses.loading")}</div>
-      </div>
-    );
+    return <AdminPageLoading title={t("admin.courses.title")} message={t("admin.courses.loading")} />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="mb-2">{t("admin.courses.title")}</h1>
-          <p className="text-muted-foreground">{t("admin.courses.subtitle")}</p>
-        </div>
-        <Link to="/admin/courses/new" className="btn-create">
-          <Plus size={18} />
-          {t("admin.courses.create")}
-        </Link>
-      </div>
+      <AdminPageHeader
+        title={t("admin.courses.title")}
+        subtitle={t("admin.courses.subtitle")}
+        actions={
+          <Link to="/admin/courses/new" className="btn-create">
+            <Plus size={18} />
+            {t("admin.courses.create")}
+          </Link>
+        }
+      />
 
-      {/* Table */}
-      <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>
-        {/* Filters */}
-        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t("admin.courses.searchPlaceholder")}
-              className="w-full pl-12 input"
-              style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
-            />
-          </div>
-        </div>
+      <AdminPanel>
+        <AdminTableToolbar>
+          <AdminSearchInput value={searchTerm} onChange={setSearchTerm} placeholder={t("admin.courses.searchPlaceholder")} />
+        </AdminTableToolbar>
 
-        {/* Table Body */}
-        <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
-          <table className="admin-table w-full">
-            <thead className="bg-muted">
-              <tr>
-                <SortableHeader label={t("admin.courses.course")} field="title" />
-                <SortableHeader label={t("admin.courses.level")} field="level" />
-                <SortableHeader label={t("admin.courses.lessons")} field="lessons" align="right" />
-                <SortableHeader label={t("admin.courses.duration")} field="duration" align="right" />
-                <SortableHeader label={t("admin.courses.status")} field="status" />
-                <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground w-[130px]">{t("admin.courses.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedCourses.length > 0 ? (
-                sortedCourses.map((course) => (
-                  <tr key={course._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="size-11 rounded-lg object-cover"
-                        />
-                        <div className="min-w-0">
-                          <span className="block truncate font-medium text-sm max-w-[300px]">{course.title}</span>
-                          <span className="text-xs text-muted-foreground">{course.tags?.slice(0, 2).join(", ")}</span>
-                        </div>
+        <AdminTableScroll>
+          <thead className="bg-muted">
+            <tr>
+              <AdminSortableHeader label={t("admin.courses.course")} field="title" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+              <AdminSortableHeader label={t("admin.courses.level")} field="level" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+              <AdminSortableHeader label={t("admin.courses.lessons")} field="lessons" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
+              <AdminSortableHeader label={t("admin.courses.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
+              <AdminSortableHeader label={t("admin.courses.status")} field="status" activeField={sortField} direction={sortDirection} onSort={handleSort} />
+              <AdminTableHeaderCell label={t("admin.courses.actions")} align="right" />
+            </tr>
+          </thead>
+          <tbody>
+            {sortedCourses.length > 0 ? (
+              sortedCourses.map((course) => (
+                <tr key={course._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="size-11 rounded-lg object-cover"
+                      />
+                      <div className="min-w-0">
+                        <span className="block truncate font-medium text-sm max-w-[300px]">{course.title}</span>
+                        <span className="text-xs text-muted-foreground">{course.tags?.slice(0, 2).join(", ")}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge className={levelStyles[course.level]} variant="outline">{levelLabels[course.level]}</Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="flex items-center gap-1.5 text-sm">
-                        <BookOpen className="size-4 text-muted-foreground" />
-                        {course.totalLessons}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{course.totalDuration} min</td>
-                    <td className="px-6 py-4">
-                      <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
-                        {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button asChild variant="ghost" size="sm" className="admin-action-btn view">
-                          <Link to={`/learn/${course._id}`} target="_blank">
-                            <Eye className="size-4" />
-                          </Link>
-                        </Button>
-                        <Button asChild variant="ghost" size="sm" className="admin-action-btn edit">
-                          <Link to={`/admin/courses/${course._id}`}>
-                            <Edit className="size-4" />
-                          </Link>
-                        </Button>
-                        <HoldToDeleteButton
-                          onDelete={async () => {
-                            try {
-                              await courseService.delete(course._id);
-                              toast.success(t("admin.courses.deleteSuccess"));
-                              setCourses((prev) => prev.filter((c) => c._id !== course._id));
-                            } catch {
-                              toast.error(t("admin.courses.deleteError"));
-                            }
-                          }}
-                          title={t("admin.courses.holdToDelete")}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                    {t("admin.courses.noCourses")}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge className={levelStyles[course.level]} variant="outline">{levelLabels[course.level]}</Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="flex items-center gap-1.5 text-sm">
+                      <BookOpen className="size-4 text-muted-foreground" />
+                      {course.totalLessons}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-muted-foreground">{course.totalDuration} min</td>
+                  <td className="px-6 py-4">
+                    <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
+                      {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button asChild variant="ghost" size="sm" className="admin-action-btn view">
+                        <Link to={`/learn/${course._id}`} target="_blank">
+                          <Eye className="size-4" />
+                        </Link>
+                      </Button>
+                      <Button asChild variant="ghost" size="sm" className="admin-action-btn edit">
+                        <Link to={`/admin/courses/${course._id}`}>
+                          <Edit className="size-4" />
+                        </Link>
+                      </Button>
+                      <HoldToDeleteButton
+                        onDelete={async () => {
+                          try {
+                            await courseService.delete(course._id);
+                            toast.success(t("admin.courses.deleteSuccess"));
+                            setCourses((prev) => prev.filter((c) => c._id !== course._id));
+                          } catch {
+                            toast.error(t("admin.courses.deleteError"));
+                          }
+                        }}
+                        title={t("admin.courses.holdToDelete")}
+                      />
+                    </div>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              ))
+            ) : (
+              <AdminTableEmptyRow colSpan={6} message={t("admin.courses.noCourses")} />
+            )}
+          </tbody>
+        </AdminTableScroll>
+      </AdminPanel>
     </div>
   );
 }

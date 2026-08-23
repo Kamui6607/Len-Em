@@ -5,7 +5,6 @@ import {
   ShoppingCart,
   Activity,
   TrendingUp,
-  TrendingDown,
   DollarSign,
 } from "lucide-react";
 import { formatPrice } from "../../../lib/formatPrice";
@@ -17,16 +16,9 @@ import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
-
-interface StatCard {
-  title: string;
-  value: string | number;
-  icon: typeof Users;
-  iconBg: string;
-  iconColor: string;
-  meta?: string;
-  metaTone?: "up" | "down" | "neutral";
-}
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminStatCard, AdminStatGrid, type AdminStatCardData } from "../../../shared/components/admin/AdminStatCard";
+import { AdminPanel, AdminPanelHeader, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
 
 export function AdminDashboard() {
   const { activities } = useAdmin();
@@ -87,7 +79,7 @@ export function AdminDashboard() {
   const confirmedOrders = orders.filter((o) => o.orderStatus === "DELIVERED").length;
   const cancelledOrders = orders.filter((o) => o.orderStatus === "CANCELLED").length;
 
-  const stats: StatCard[] = [
+  const stats: AdminStatCardData[] = [
     {
       title: t("admin.dashboard.stats.totalUsers"),
       value: totalUsers,
@@ -108,8 +100,8 @@ export function AdminDashboard() {
       icon: ShoppingCart,
       iconBg: "var(--warning-bg)",
       iconColor: "var(--warning-text)",
-      meta: pendingOrders > 0 
-        ? t("admin.dashboard.stats.pendingOrders", { count: pendingOrders }) 
+      meta: pendingOrders > 0
+        ? t("admin.dashboard.stats.pendingOrders", { count: pendingOrders })
         : t("admin.dashboard.stats.noPendingOrders"),
       metaTone: pendingOrders > 0 ? "neutral" : "up",
     },
@@ -119,9 +111,9 @@ export function AdminDashboard() {
       icon: DollarSign,
       iconBg: "var(--success-bg)",
       iconColor: "var(--success-text)",
-      meta: t("admin.dashboard.stats.paidOrders", { 
-        count: paidOrders.length, 
-        suffix: paidOrders.length !== 1 ? "s" : "" 
+      meta: t("admin.dashboard.stats.paidOrders", {
+        count: paidOrders.length,
+        suffix: paidOrders.length !== 1 ? "s" : "",
       }),
       metaTone: "neutral",
     },
@@ -138,82 +130,19 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="admin-page-title mb-1">{t("admin.dashboard.title")}</h1>
-        <p className="admin-page-subtitle text-sm text-muted-foreground">
-          {t("admin.dashboard.welcomeBack")}
-        </p>
-      </div>
+      <AdminPageHeader title={t("admin.dashboard.title")} subtitle={t("admin.dashboard.welcomeBack")} />
 
-      {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={stat.title}
-              className="admin-panel-glow admin-stat-card rounded-2xl border p-5 transition-all duration-300"
-              style={{ background: "var(--card)", borderColor: "var(--border)" }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="admin-stat-icon w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: stat.iconBg, color: stat.iconColor }}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-              <h3 className="admin-stat-value text-2xl font-bold text-foreground mb-2">
-                {loading ? (
-                  <span className="admin-skeleton inline-block h-7 w-16 rounded-md" />
-                ) : (
-                  stat.value
-                )}
-              </h3>
-              {stat.meta && !loading && (
-                <p
-                  className="flex items-center gap-1 text-xs font-medium"
-                  style={{
-                    color:
-                      stat.metaTone === "up"
-                        ? "var(--success-text)"
-                        : stat.metaTone === "down"
-                          ? "var(--destructive)"
-                          : "var(--foreground-muted)",
-                  }}
-                >
-                  {stat.metaTone === "up" && <TrendingUp className="w-3.5 h-3.5" />}
-                  {stat.metaTone === "down" && <TrendingDown className="w-3.5 h-3.5" />}
-                  {stat.meta}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <AdminStatGrid>
+        {stats.map((stat) => (
+          <AdminStatCard key={stat.title} stat={stat} loading={loading} />
+        ))}
+      </AdminStatGrid>
 
-      {/* Activity & Statistics */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <div
-          className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <div
-            className="flex items-center gap-3 p-6 border-b"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-          >
-            <div
-              className="admin-section-icon w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-            >
-              <Activity className="w-4.5 h-4.5" />
-            </div>
-            <h2 className="text-base font-semibold text-foreground">{t("admin.dashboard.recentActivity")}</h2>
-          </div>
-          <div className="p-6" style={{ background: "var(--card)" }}>
+        <AdminPanel>
+          <AdminPanelHeader icon={<Activity className="w-4.5 h-4.5" />} title={t("admin.dashboard.recentActivity")} />
+          <AdminPanelBody>
             {recentActivities.length > 0 ? (
               <ul className="space-y-4">
                 {recentActivities.map((a) => (
@@ -236,27 +165,13 @@ export function AdminDashboard() {
                 {t("admin.dashboard.noRecentActivity")}
               </p>
             )}
-          </div>
-        </div>
+          </AdminPanelBody>
+        </AdminPanel>
 
         {/* Order Statistics */}
-        <div
-          className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <div
-            className="flex items-center gap-3 p-6 border-b"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-          >
-            <div
-              className="admin-section-icon w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-            >
-              <TrendingUp className="w-4.5 h-4.5" />
-            </div>
-            <h2 className="text-base font-semibold text-foreground">{t("admin.dashboard.orderStatistics")}</h2>
-          </div>
-          <div className="p-6 space-y-5" style={{ background: "var(--card)" }}>
+        <AdminPanel>
+          <AdminPanelHeader icon={<TrendingUp className="w-4.5 h-4.5" />} title={t("admin.dashboard.orderStatistics")} />
+          <AdminPanelBody className="space-y-5">
             {/* Proportion bar */}
             <div className="admin-breakdown-track flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
               {orderBreakdown.map((o) => (
@@ -289,8 +204,8 @@ export function AdminDashboard() {
                 {formatPrice(totalRevenue)}
               </span>
             </div>
-          </div>
-        </div>
+          </AdminPanelBody>
+        </AdminPanel>
       </div>
     </div>
   );

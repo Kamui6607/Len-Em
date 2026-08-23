@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { toast } from "sonner";
 import { productService, type Product } from "../../../shared/api/productService";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatchList } from "../../../shared/components/ui/ColorSwatch";
+import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
+import { AdminPanel, AdminPanelHeader, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import { AdminActivePill } from "../../../shared/components/admin/AdminStatusPill";
 
 function formatDate(value: string) {
   try {
@@ -80,107 +83,86 @@ export function ProductDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate("/admin/products")}
-          className="p-2 hover:bg-muted rounded-lg transition-colors"
-          title="Back"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h1 className="mb-1">{product.name}</h1>
-          <p className="text-sm text-muted-foreground">Product detail</p>
-        </div>
-      </div>
+      <AdminBackHeader
+        title={product.name}
+        subtitle="Product detail"
+        onBack={() => navigate("/admin/products")}
+      />
 
       <div className="grid lg:grid-cols-[360px_1fr] gap-6">
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <AdminPanel hover={false}>
           <img
             src={product.image}
             alt={product.name}
             className="w-full aspect-square object-cover bg-muted"
           />
-        </div>
+        </AdminPanel>
 
-        <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="capitalize text-sm bg-muted px-2.5 py-1 rounded-full">
-              {product.category}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                product.isActive
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                  : "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400"
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
-              />
-              {product.isActive ? "Đang bán" : "Đã ẩn"}
-            </span>
-          </div>
-
-          <p className="text-muted-foreground leading-relaxed">
-            {product.description || "No description"}
-          </p>
-
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-muted/40">
-              <p className="text-xs text-muted-foreground mb-1">Price range</p>
-              <p className="font-semibold text-primary">
-                {minPrice === maxPrice
-                  ? formatPrice(minPrice)
-                  : `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`}
-              </p>
+        <AdminPanel hover={false}>
+          <AdminPanelBody className="space-y-5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="capitalize text-sm bg-muted px-2.5 py-1 rounded-full">
+                {product.category}
+              </span>
+              <AdminActivePill active={product.isActive} activeLabel="Đang bán" inactiveLabel="Đã ẩn" />
             </div>
-            <div className="p-4 rounded-xl bg-muted/40">
-              <p className="text-xs text-muted-foreground mb-1">Total stock</p>
-              <p className="font-semibold">{totalStock}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-muted/40">
-              <p className="text-xs text-muted-foreground mb-1">Variants</p>
-              <p className="font-semibold">{product.variants.length}</p>
-            </div>
-          </div>
 
-          {product.tags?.length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {product.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs bg-muted px-2.5 py-1 rounded-full"
-                  >
-                    {tag}
-                  </span>
-                ))}
+            <p className="text-muted-foreground leading-relaxed">
+              {product.description || "No description"}
+            </p>
+
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-muted/40">
+                <p className="text-xs text-muted-foreground mb-1">Price range</p>
+                <p className="font-semibold text-primary">
+                  {minPrice === maxPrice
+                    ? formatPrice(minPrice)
+                    : `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-muted/40">
+                <p className="text-xs text-muted-foreground mb-1">Total stock</p>
+                <p className="font-semibold">{totalStock}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-muted/40">
+                <p className="text-xs text-muted-foreground mb-1">Variants</p>
+                <p className="font-semibold">{product.variants.length}</p>
               </div>
             </div>
-          )}
 
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>Created: {formatDate(product.createdAt)}</p>
-            <p>Updated: {formatDate(product.updatedAt)}</p>
-          </div>
-        </div>
+            {product.tags?.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">Tags</p>
+                <div className="flex flex-wrap gap-2">
+                  {product.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-xs bg-muted px-2.5 py-1 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>Created: {formatDate(product.createdAt)}</p>
+              <p>Updated: {formatDate(product.updatedAt)}</p>
+            </div>
+          </AdminPanelBody>
+        </AdminPanel>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold">Variants</h2>
-            <p className="text-sm text-muted-foreground">
-              Colors, prices and stock
-            </p>
-          </div>
-          <ColorSwatchList variants={product.variants} size="sm" />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
+      <AdminPanel>
+        <AdminPanelHeader
+          title="Variants"
+          subtitle="Colors, prices and stock"
+          actions={<ColorSwatchList variants={product.variants} size="sm" />}
+        />
+        <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
+          <table className="admin-table w-full">
+            <thead className="bg-muted">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                   Image
@@ -200,7 +182,7 @@ export function ProductDetail() {
               {product.variants.map((variant) => (
                 <tr
                   key={variant._idVariants}
-                  className="border-t border-border"
+                  className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
                 >
                   <td className="px-6 py-4">
                     <img
@@ -230,7 +212,7 @@ export function ProductDetail() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AdminPanel>
     </div>
   );
 }

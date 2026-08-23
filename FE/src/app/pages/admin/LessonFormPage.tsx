@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Save, Search, Check } from "lucide-react";
+import { Save, Search, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "../../../shared/components/ui/button";
 import { Card, CardContent } from "../../../shared/components/ui/card";
 import { Input } from "../../../shared/components/ui/input";
 import { Label } from "../../../shared/components/ui/label";
@@ -13,6 +12,8 @@ import { productService, type Product } from "../../../shared/api/productService
 import { kitService, type Kit } from "../../../shared/api/kitService";
 import type { LessonFormData } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
+import { AdminPageLoading } from "../../../shared/components/admin/AdminDataTable";
 
 export function LessonFormPage() {
   const navigate = useNavigate();
@@ -139,11 +140,7 @@ export function LessonFormPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center py-20 text-muted-foreground">{t("admin.lessons.form.loading")}</div>
-      </div>
-    );
+    return <AdminPageLoading title={isEditing ? t("admin.lessons.editLesson") : t("admin.lessons.newLesson")} message={t("admin.lessons.form.loading")} />;
   }
 
   const filteredProducts = allProducts.filter((p) =>
@@ -155,19 +152,14 @@ export function LessonFormPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/admin/lessons")}>
-          <ArrowLeft className="size-4" /> {t("admin.lessons.form.back")}
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">{isEditing ? t("admin.lessons.editLesson") : t("admin.lessons.newLesson")}</h1>
-          <p className="text-muted-foreground">
-            {isEditing ? t("admin.lessons.form.updateLessonDetails") : t("admin.lessons.form.createNewLesson")}
-          </p>
-        </div>
-      </div>
+      <AdminBackHeader
+        title={isEditing ? t("admin.lessons.editLesson") : t("admin.lessons.newLesson")}
+        subtitle={isEditing ? t("admin.lessons.form.updateLessonDetails") : t("admin.lessons.form.createNewLesson")}
+        onBack={() => navigate("/admin/lessons")}
+        backLabel={t("admin.lessons.form.back")}
+      />
 
-      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_380px]">
+      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <main className="space-y-6">
           <Card>
             <CardContent className="space-y-5 p-6">
@@ -184,7 +176,7 @@ export function LessonFormPage() {
 
               <div className="grid gap-5 sm:grid-cols-3">
                 <div>
-                <Label htmlFor="order">{t("admin.lessons.form.order")}</Label>
+                  <Label htmlFor="order">{t("admin.lessons.form.order")}</Label>
                   <Input
                     id="order"
                     type="number"
@@ -194,7 +186,7 @@ export function LessonFormPage() {
                   />
                 </div>
                 <div>
-                <Label htmlFor="duration">{t("admin.lessons.form.duration")}</Label>
+                  <Label htmlFor="duration">{t("admin.lessons.form.duration")}</Label>
                   <Input
                     id="duration"
                     type="number"
