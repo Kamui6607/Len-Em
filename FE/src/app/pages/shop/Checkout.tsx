@@ -14,7 +14,7 @@ import { Check, QrCode, ArrowLeft, ChevronDown, List, Map as MapIcon } from "luc
 import { useCart } from "../../../shared/contexts/CartContext";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useAuthStore } from "../../../shared/store/auth.store";
-import { orderApi } from "../../../shared/api/orderService";
+import { orderService } from "../../../features/orders/services/order.service";
 import { ghnApi } from "../../../shared/api/ghnService";
 import type {
   ShippingFeePreviewRequest,
@@ -304,7 +304,7 @@ export function Checkout() {
       };
 
       console.log("[Checkout] Calculating shipping fee with payload:", payload);
-      const response = await orderApi.previewShippingFee(payload);
+      const response = await orderService.previewShippingFee(payload);
       const data = response.data;
       // Backend returns { subtotal, shippingFee, total }
       console.log("[Checkout] Shipping fee response:", data);
@@ -399,7 +399,7 @@ export function Checkout() {
         ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
       };
 
-      const response = await orderApi.createOrder(payload);
+      const response = await orderService.createOrder(payload);
       const result = response.data;
 
       // NOTE: Do NOT clear cart here! For VNPAY/MOMO, the user is redirected

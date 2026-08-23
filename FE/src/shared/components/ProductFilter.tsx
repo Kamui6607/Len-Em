@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLearnStore } from "../store/learn.store";
+import { useLearnStore } from "../../features/learn/store/learn.store";
 import { SearchBar } from "./filters/SearchBar";
 import { SortDropdown } from "./filters/SortDropdown";
 import { FilterDrawer, FilterToggleButton } from "./filters/FilterDrawer";

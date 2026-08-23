@@ -205,6 +205,16 @@
   --chip-padding:     6px 16px;
   --chip-text:        var(--brand-600);
 
+  /* ── About · Core Values — swatch "vải/len" theo đúng 2 sắc brand ──
+     Light: nền lilac nhạt (tint) + mực Indigo đậm → tương phản cao,
+     đúng ý "mảnh vải" pastel của ảnh mood board. */
+  --swatch-1-bg:     var(--brand-100);
+  --swatch-2-bg:     var(--brand-150);
+  --swatch-3-bg:     var(--brand-200);
+  --swatch-icon-bg:  rgba(91, 61, 245, 0.14);
+  --swatch-ink:      var(--brand-600);
+  --swatch-border:   #DED0F7;
+
   /* ── Input ── */
   --input-bg:           #FFFFFF;
   --input-border:       #DED0F7;
@@ -473,6 +483,17 @@
   --chip-active-bg:   rgba(140, 123, 255, 0.24);
   --chip-active-border: #8C7BFF;
   --chip-text:        #C6BAF5;
+
+  /* ── About · Core Values — dark: tint Indigo "đèn toả sáng", không phẳng
+     (mô phỏng --chip-active-bg / --decor-*-bg của dark mode).
+     Nền trong suốt lên bg tối → text --foreground sáng vẫn đọc được, 
+     icon dùng mực lilac sáng để tự "phát sáng". */
+  --swatch-1-bg:     rgba(140, 123, 255, 0.16);
+  --swatch-2-bg:     rgba(140, 123, 255, 0.24);
+  --swatch-3-bg:     rgba(140, 123, 255, 0.32);
+  --swatch-icon-bg:  rgba(162, 148, 255, 0.20);
+  --swatch-ink:      #C6BAF5;
+  --swatch-border:   #362B54;
 
   --input-bg:           #211B33;
   --input-border:       #362B54;

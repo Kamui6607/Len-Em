@@ -24,7 +24,7 @@ import {
   getLessonsByCourse,
   materialCombos,
 } from "../../features/learn/data/learn.mock";
-import { useLearnStore } from "../../shared/store/learn.store";
+import { useLearnStore } from "../../features/learn/store/learn.store";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";

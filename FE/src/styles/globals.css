@@ -611,6 +611,194 @@ a.nav-icon-btn:hover {
   box-shadow: none;
 }
 
+/* ============================================================
+   PRODUCT CARD — ADD TO CART (premium pill)
+   Viên trụ mềm + icon chip Indigo. Nền/viền/chữ nghỉ đều tính
+   bằng color-mix() trên chính --primary/--card của theme đang
+   active, nên tự cân bằng độ tương phản ở cả light lẫn dark mà
+   KHÔNG cần khai báo riêng cho .dark. Khi hover, nền "kéo" từ
+   trái sang phải bằng --cta-gradient và dùng --cta-shadow-hover
+   sẵn có — dark mode tự có hiệu ứng phát sáng như đèn. Chỉ dùng
+   trong ProductCard, không ảnh hưởng class chung .add-to-cart-btn.
+   ============================================================ */
+.card-add-btn {
+  --cab-bg-top: color-mix(in srgb, var(--primary) 6%, var(--card));
+  --cab-bg-bottom: color-mix(in srgb, var(--primary) 16%, var(--card));
+  --cab-border: color-mix(in srgb, var(--primary) 38%, transparent);
+  --cab-text: var(--primary);
+  --cab-hover-text: color-mix(in srgb, white 90%, var(--primary-soft) 10%);
+  --cab-icon-bg: var(--primary);
+  --cab-icon-fg: var(--primary-foreground);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  height: 46px;
+  padding: 0 18px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1.5px solid var(--cab-border);
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, var(--cab-bg-top) 0%, var(--cab-bg-bottom) 100%);
+  color: var(--cab-text);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  /* Bỏ viền sáng bao quanh cả nút — không còn box-shadow mặc định ở đây */
+  transition: color 0.3s ease 0.15s, border-color 0.3s var(--ease-out),
+    gap 0.4s var(--ease-out), text-shadow 0.3s ease 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-add-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cta-gradient);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+  transition: transform 0.5s var(--ease-out);
+}
+
+.card-add-btn:hover::before {
+  transform: scaleX(1);
+}
+
+.card-add-btn:hover {
+  border-color: transparent;
+  color: var(--cab-hover-text);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--primary-pressed) 35%, transparent);
+  gap: 0; /* nhãn co về 0 → icon tự căn giữa */
+  /* Không còn box-shadow rộng bao quanh cả pill nữa */
+}
+
+.card-add-btn:active {
+  box-shadow: none;
+}
+
+.card-add-btn__icon,
+.card-add-btn__label,
+.card-add-btn__shine {
+  position: relative;
+  z-index: 1;
+}
+
+/* Icon chip tròn — nơi duy nhất giữ hiệu ứng phát sáng khi hover */
+.card-add-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--cab-icon-bg);
+  color: var(--cab-icon-fg);
+  transition: transform 0.4s var(--ease-out), background 0.4s ease,
+    color 0.4s ease, box-shadow 0.4s var(--ease-out);
+}
+
+.card-add-btn:hover .card-add-btn__icon {
+  background: color-mix(in srgb, var(--cab-hover-text) 24%, transparent);
+  color: var(--cab-hover-text);
+  transform: scale(1.15);
+  /* Viền sáng TRÒN quanh icon — thay cho viền vuông cũ */
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--primary-foreground) 30%, transparent),
+    0 0 22px var(--glow-primary);
+  transition: transform 0.4s var(--ease-out), background 0.3s ease 0.15s,
+    color 0.3s ease 0.15s, box-shadow 0.4s var(--ease-out) 0.1s;
+}
+
+/* Nhãn "Add to cart" — co dần về 0 và biến mất khi hover, để lại icon căn giữa */
+.card-add-btn__label {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: max-width 0.4s var(--ease-out), opacity 0.25s ease,
+    transform 0.4s var(--ease-out);
+}
+
+.card-add-btn:hover .card-add-btn__label {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(8px);
+}
+
+.card-add-btn__shine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    85deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: translateX(-175%) skewX(-14deg);
+  transition: transform 0.8s var(--ease-out), opacity 0.5s ease;
+}
+
+.card-add-btn:hover .card-add-btn__shine {
+  opacity: 1;
+  transform: translateX(345%) skewX(-14deg);
+  transition: transform 0.8s var(--ease-out) 0.15s, opacity 0.5s ease 0.15s;
+}
+
+/* Focus-visible vẫn giữ ring cho accessibility, nhưng gọn hơn quanh viền pill */
+.card-add-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+.card-add-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Trạng thái disabled (Sold Out): giữ nguyên trạng thái nghỉ,
+   không chạy hiệu ứng hover (nền gradient, label co, shine sweep). */
+.card-add-btn:disabled:hover {
+  border-color: var(--cab-border);
+  color: var(--cab-text);
+  text-shadow: none;
+  gap: 9px;
+}
+
+.card-add-btn:disabled:hover::before {
+  transform: scaleX(0);
+}
+
+.card-add-btn:disabled:hover .card-add-btn__icon {
+  background: var(--cab-icon-bg);
+  color: var(--cab-icon-fg);
+  transform: none;
+  box-shadow: none;
+}
+
+.card-add-btn:disabled:hover .card-add-btn__label {
+  max-width: 160px;
+  opacity: 1;
+  transform: none;
+}
+
+.card-add-btn:disabled:hover .card-add-btn__shine {
+  opacity: 0;
+  transform: translateX(-175%) skewX(-14deg);
+}
+
 /* Custom Select Input */
 select.input {
   appearance: none;
@@ -1741,4 +1929,3 @@ aside.lg\:sticky {
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
 }
-

@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Heart, Plus } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import type { Product } from "../../app/data/products";
@@ -465,32 +465,26 @@ export const ProductCard = memo(function ProductCard({
                   </div>
 
                   {/* Add to cart button */}
-                  <button
+                  <motion.button
                     type="button"
-                    className="add-to-cart-btn"
+                    className="card-add-btn"
                     onClick={handleAddClick}
                     aria-label={`Add ${product.name} to cart`}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 30,
+                      mass: 0.6,
+                    }}
                   >
-                    <div className="btn-text">
-                      <Plus size={14} strokeWidth={2.5} />
-                      Add to cart
-                    </div>
-                    <div className="btn-icon">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="9" cy="21" r="1" />
-                        <circle cx="20" cy="21" r="1" />
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                      </svg>
-                    </div>
-                  </button>
+                    <span className="card-add-btn__icon" aria-hidden="true">
+                      <ShoppingBag size={15} strokeWidth={2.2} />
+                    </span>
+                    <span className="card-add-btn__label">Add to cart</span>
+                    <span className="card-add-btn__shine" aria-hidden="true" />
+                  </motion.button>
                 </div>
               </motion.div>
             )}

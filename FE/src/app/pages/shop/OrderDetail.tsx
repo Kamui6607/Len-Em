@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { orderApi } from "../../../shared/api/orderService";
+import { orderService } from "../../../features/orders/services/order.service";
 import { OrderDetailCard } from "../../../shared/components/order/OrderDetailCard";
 import type { Order } from "../../../features/orders/types/order.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
@@ -22,7 +22,7 @@ export function OrderDetail() {
     if (!id) return;
     async function loadOrder() {
       try {
-        const { data } = await orderApi.getOrderById(id!);
+        const { data } = await orderService.getOrderById(id!);
         setOrder(data.order ?? null);
       } catch {
         toast.error(t("orderDetail.loadError"));
@@ -35,9 +35,9 @@ export function OrderDetail() {
 
   const handleCancel = async (orderId: string, reason: string) => {
     try {
-      await orderApi.cancelOrder(orderId, { cancelReason: reason });
+      await orderService.cancelOrder(orderId, { cancelReason: reason });
       // Refresh order data
-      const { data } = await orderApi.getOrderById(orderId);
+      const { data } = await orderService.getOrderById(orderId);
       setOrder(data.order ?? null);
       toast.success(t("orderDetail.cancelSuccess"));
     } catch {
@@ -47,7 +47,7 @@ export function OrderDetail() {
 
   const handleRetryPayment = async (orderId: string) => {
     try {
-      const { data } = await orderApi.retryPayment(orderId);
+      const { data } = await orderService.retryPayment(orderId);
       setOrder(data.order ?? null);
       // Redirect to VNPay payment URL
       if (data.payUrl) {

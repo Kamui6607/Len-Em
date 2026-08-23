@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { orderApi } from "../../../shared/api/orderService";
+import { orderService } from "../../../features/orders/services/order.service";
 import { formatPrice } from "../../../lib/formatPrice";
 import {
   ORDER_STATUS_LABELS,
@@ -48,7 +48,7 @@ export function ManageOrders() {
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await orderApi.getAllOrders({
+      const { data } = await orderService.getAllOrders({
         page,
         limit: PAGE_SIZE,
         status: statusFilter || undefined,
@@ -71,12 +71,12 @@ export function ManageOrders() {
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      await orderApi.updateOrderStatus(orderId, { orderStatus: newStatus });
+      await orderService.updateOrderStatus(orderId, { orderStatus: newStatus });
       toast.success(`Đã cập nhật trạng thái thành "${ORDER_STATUS_LABELS[newStatus]}"`);
       // Refresh list and detail if open
       loadOrders();
       if (selectedOrder?._id === orderId) {
-        const { data } = await orderApi.getOrderById(orderId);
+        const { data } = await orderService.getOrderById(orderId);
         setSelectedOrder(data.order ?? null);
       }
     } catch {

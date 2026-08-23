@@ -28,6 +28,67 @@ function getPostCreator(post: DIYPost): DIYCreator | undefined {
     : undefined;
 }
 
+// Shared page styles — per-mode pill buttons for the two feed CTAs.
+// Light mode: accent-blush fill → solid --primary on hover.
+// Dark mode: full --primary fill with indigo glow (like .add-cart-btn / .learn-enroll-btn).
+const DIY_FEED_STYLES = `
+  .diy-support-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 20px; border-radius: 999px;
+    background: var(--accent-blush);
+    color: var(--foreground);
+    border: 2px solid var(--primary);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
+    transition: all 0.2s ease;
+  }
+  .diy-support-btn:hover {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px var(--glow-primary);
+  }
+  .diy-support-btn:active { transform: translateY(0); }
+  .dark .diy-support-btn {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary), 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  .dark .diy-support-btn:hover {
+    background: var(--primary-hover);
+    color: var(--primary-foreground);
+    box-shadow: 0 0 0 1px var(--primary), 0 8px 20px var(--glow-primary);
+  }
+
+  .diy-post-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 20px; border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: 2px solid var(--primary);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
+    transition: all 0.2s ease;
+  }
+  .diy-post-btn:hover {
+    background: var(--primary-hover);
+    color: var(--primary-foreground);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px var(--glow-primary);
+  }
+  .diy-post-btn:active { transform: translateY(0); }
+  .dark .diy-post-btn {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary), 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  .dark .diy-post-btn:hover {
+    background: var(--primary-hover);
+    color: var(--primary-foreground);
+    box-shadow: 0 0 0 1px var(--primary), 0 8px 20px var(--glow-primary);
+  }
+`;
+
 export function DIYFeedPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -237,6 +298,7 @@ export function DIYFeedPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+      <style>{DIY_FEED_STYLES}</style>
       <div className="mx-auto max-w-7xl">
         {/* Hero */}
         <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
@@ -317,21 +379,18 @@ export function DIYFeedPage() {
           </Tabs>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/support-diy/new"
-              className="flex items-center gap-2.5 rounded-full border border-[var(--primary)] bg-[var(--accent-blush)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] hover:shadow-lg hover:shadow-primary/25 active:translate-y-0"
-            >
+            <Link to="/support-diy/new" className="diy-support-btn">
               <Hand className="w-5 h-5" />
               <span>Hỗ trợ DIY</span>
             </Link>
-            <Button
+            <button
               type="button"
               onClick={() => requireAuth(() => setPostOpen(true))}
-              className="gap-2 border border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--primary-hover)] hover:shadow-lg hover:shadow-primary/25 active:translate-y-0"
+              className="diy-post-btn"
             >
               <PackageOpen className="size-4" />
               Post sản phẩm
-            </Button>
+            </button>
           </div>
           <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
             <div className="w-full sm:w-auto" />

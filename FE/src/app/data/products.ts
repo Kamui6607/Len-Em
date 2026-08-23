@@ -1,32 +1,9 @@
-export interface ProductVariant {
-  id: string;
-  color?: string;
-  hexCode?: string;
-  stock: number;
-  price: number;
-  images?: string[];
-}
+import type { Product } from "../../shared/types/catalog.types";
 
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  tags: string[];
-  description: string;
-  image: string;
-  difficulty?: "beginner" | "intermediate" | "advanced";
-  materials?: string[];
-  material?: string;
-  weight?: string;
-  yardage?: number;
-  estimatedTime?: string;
-  rating: number;
-  reviewCount: number;
-  popularity: number;
-  createdAt: string;
-  linkedComboIds?: string[];
-  variants?: ProductVariant[];
-}
+// Re-export catalog types for backward compatibility — consumers that used to
+// import `Product`/`ProductVariant` from this data file can keep doing so.
+// Prefer importing directly from `shared/types/catalog.types` going forward.
+export type { Product, ProductVariant } from "../../shared/types/catalog.types";
 
 export const products: Product[] = [
   // ==================== YARN (Len) ====================
@@ -489,79 +466,3 @@ export function getDynamicFilters(products: Product[]) {
 
   return { colors, materials, weights, difficulties };
 }
-
-export interface CommunityPost {
-  id: string;
-  username: string;
-  image: string;
-  caption: string;
-  likes: number;
-  project: string;
-}
-
-export const communityPosts: CommunityPost[] = [
-  {
-    id: "1",
-    username: "thu_handmade",
-    image: "https://images.unsplash.com/photo-1586219835562-cc2cbaeb5ef0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Vừa hoàn thành chiếc chăn đầu tiên! Mất 3 tuần nhưng xứng đáng cho những buổi xem Netflix ☁️",
-    likes: 234,
-    project: "Chăn Ấm Len",
-  },
-  {
-    id: "2",
-    username: "minh_handmade",
-    image: "https://images.unsplash.com/photo-1519412849983-957822373d02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Móc giữa giờ học = giảm stress tốt nhất 💜",
-    likes: 189,
-    project: "Khăn Quàng Giải Lao",
-  },
-  {
-    id: "3",
-    username: "ngoc_tran",
-    image: "https://images.unsplash.com/photo-1628723367681-5dc96eb6f1d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Làm mấy bạn gấu nhỏ tặng bạn bè! Ai cũng yêu thích 🐻",
-    likes: 312,
-    project: "Gấu Amigurumi",
-  },
-  {
-    id: "4",
-    username: "linh_creator",
-    image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Túi tote xanh sage - mất đúng 1 tuần. Đã có thể đi chợ với thành quả 👜",
-    likes: 567,
-    project: "Túi Tote Sage",
-  },
-  {
-    id: "5",
-    username: "thu_handmade",
-    image: "https://images.unsplash.com/photo-1544816155-12df9643f363?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Set nơ tóc tặng hội chị em. Ai cũng khen xinh! 🎀",
-    likes: 178,
-    project: "Nơ Tóc Handmade",
-  },
-  {
-    id: "6",
-    username: "minh_handmade",
-    image: "https://images.unsplash.com/photo-1604709177225-055f99402ea3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Chăn ca-rô cho phòng khách. Màu sắc hợp decor quá trời! 🟦🟨",
-    likes: 890,
-    project: "Chăn Ca-rô",
-  },
-  {
-    id: "7",
-    username: "ngoc_tran",
-    image: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Cardigan cloud puff - như ôm đám mây vậy! ☁️",
-    likes: 1234,
-    project: "Cardigan Cloud",
-  },
-  {
-    id: "8",
-    username: "thu_handmade",
-    image: "https://images.unsplash.com/photo-1591561954557-26941169b49e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    caption: "Túi mini nơ coquette cho ngày hẹn hò 🎀💕",
-    likes: 456,
-    project: "Túi Mini Coquette",
-  },
-];

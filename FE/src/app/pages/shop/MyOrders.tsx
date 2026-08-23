@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Package, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { orderApi } from "../../../shared/api/orderService";
+import { orderService } from "../../../features/orders/services/order.service";
 import { formatPrice } from "../../../lib/formatPrice";
 import {
   ORDER_STATUS_LABELS,
@@ -25,7 +25,7 @@ export function MyOrders() {
   useEffect(() => {
     async function loadOrders() {
       try {
-        const { data } = await orderApi.getMyOrders();
+        const { data } = await orderService.getMyOrders();
         setOrders((data.orders ?? []).map(normalizeOrder));
       } catch {
         toast.error("Không thể tải danh sách đơn hàng");

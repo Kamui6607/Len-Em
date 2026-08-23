@@ -210,6 +210,7 @@ function Scrubber({ state }: { state: LearnState }) {
               "linear-gradient(90deg, var(--primary), var(--primary-hover))",
             borderRadius: "99px",
             transform: "translateY(-50%)",
+            boxShadow: progress > 0 ? "0 0 8px var(--glow-primary)" : "none",
           }}
         />
 
@@ -355,8 +356,12 @@ function Scrubber({ state }: { state: LearnState }) {
             borderRadius: "50%",
             background: "var(--primary)",
             border: "2.5px solid var(--background)",
-            boxShadow: "var(--shadow-sm)",
+            boxShadow:
+              progress > 0
+                ? "var(--shadow-sm), 0 0 0 4px var(--glow-primary)"
+                : "var(--shadow-sm)",
             zIndex: 15,
+            transition: "box-shadow 0.3s ease",
           }}
         />
       </div>
@@ -1224,7 +1229,9 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
             flexDirection: "column",
           }}
         >
-          <CategoryChip color="var(--accent-yellow)">{t("howItWorks.diy")}</CategoryChip>
+          <CategoryChip color="color-mix(in srgb, var(--primary) 20%, var(--surface))">
+            {t("howItWorks.diy")}
+          </CategoryChip>
           <CardTitle>{t("howItWorks.diyTitle")}</CardTitle>
           <CardSubtitle>{t("howItWorks.diySub")}</CardSubtitle>
 
@@ -1254,7 +1261,9 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
                     borderRadius: "999px",
                     background:
                       i === activeStep ? "var(--primary)" : "var(--border)",
-                    transition: "width 0.3s",
+                    boxShadow:
+                      i === activeStep ? "0 0 6px var(--glow-primary)" : "none",
+                    transition: "width 0.3s, box-shadow 0.3s",
                     flexShrink: 0,
                   }}
                 />
@@ -1312,6 +1321,9 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
 
 // ═══════════════════════════════════════════════════════════════════
 // INTERACTIVE CARD WRAPPERS  (hover / flip)
+// All three now share the same hover language: a small lift plus
+// --shadow-card-hover, which is deliberately understated in light mode
+// and a proper glow in dark mode (see theme.css .dark block).
 // ═══════════════════════════════════════════════════════════════════
 
 export function LearnCardHoverable() {
@@ -1323,8 +1335,12 @@ export function LearnCardHoverable() {
       onClick={() => setHovered((h) => !h)}
     >
       <motion.div
-        animate={{ y: hovered ? -6 : 0 }}
+        animate={{
+          y: hovered ? -6 : 0,
+          boxShadow: hovered ? "var(--shadow-card-hover)" : "var(--shadow-card)",
+        }}
         transition={{ duration: 0.35, ease: "easeOut" }}
+        style={{ borderRadius: "22px" }}
       >
         <LearnCard state={hovered ? "revealed" : "default"} />
       </motion.div>
@@ -1348,8 +1364,17 @@ export function ShopCardFlippable() {
           width: "100%",
           height: "100%",
           transformStyle: "preserve-3d",
+          borderRadius: "22px",
         }}
-        animate={reduce ? undefined : { rotateY: flipped ? 180 : 0 }}
+        animate={
+          reduce
+            ? undefined
+            : {
+                rotateY: flipped ? 180 : 0,
+                y: flipped ? -6 : 0,
+                boxShadow: flipped ? "var(--shadow-card-hover)" : "var(--shadow-card)",
+              }
+        }
         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
       >
         <div
@@ -1386,8 +1411,13 @@ export function DIYCardHoverable() {
       onClick={() => setHovered((h) => !h)}
     >
       <motion.div
-        animate={{ scale: hovered ? 1.015 : 1 }}
+        animate={{
+          scale: hovered ? 1.015 : 1,
+          y: hovered ? -6 : 0,
+          boxShadow: hovered ? "var(--shadow-card-hover)" : "var(--shadow-card)",
+        }}
         transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+        style={{ borderRadius: "22px" }}
       >
         <DIYCard state={hovered ? "revealed" : "default"} />
       </motion.div>
@@ -1432,7 +1462,8 @@ export function HowItWorksSection() {
         paddingBottom: "var(--section-py-sm)",
       }}
     >
-      {/* Ambient blobs */}
+      {/* Ambient blobs — same "glowing" language as the Hero/Learn sections,
+          so this middle section doesn't read as visually flatter than its neighbours */}
       <div
         style={{
           position: "absolute",
@@ -1440,7 +1471,32 @@ export function HowItWorksSection() {
           pointerEvents: "none",
           zIndex: 0,
         }}
-      ></div>
+      >
+        <div
+          style={{
+            position: "absolute",
+            width: "320px",
+            height: "240px",
+            top: "8%",
+            right: "12%",
+            borderRadius: "50%",
+            background: "radial-gradient(ellipse, var(--glow-primary) 0%, transparent 70%)",
+            filter: "blur(50px)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            width: "260px",
+            height: "200px",
+            bottom: "4%",
+            left: "6%",
+            borderRadius: "50%",
+            background: "radial-gradient(ellipse, var(--glow-lavender) 0%, transparent 72%)",
+            filter: "blur(46px)",
+          }}
+        />
+      </div>
 
       <div
         style={{
@@ -1459,17 +1515,29 @@ export function HowItWorksSection() {
           style={{ textAlign: "center", marginBottom: "2rem", paddingTop: "1.5rem" }}
         >
           <span
+            className="inline-flex items-center gap-1.5 rounded-full"
             style={{
-              fontFamily: "'Caveat', cursive",
-              fontSize: "0.9rem",
-              fontWeight: 500,
-              color: "var(--primary)",
-              letterSpacing: "0.05em",
-              display: "block",
-              marginBottom: "6px",
+              padding: "4px 14px",
+              background: "color-mix(in srgb, var(--primary) 10%, var(--accent-pink))",
+              border: "1px solid color-mix(in srgb, var(--primary) 28%, var(--border))",
+              boxShadow: "var(--shadow-sm), 0 0 0 4px var(--glow-primary)",
+              marginBottom: "10px",
             }}
           >
-            {t("howItWorks.eyebrow")}
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
+              <path d="M5.5 0.5L6.3 4.2L10 5L6.3 5.8L5.5 9.5L4.7 5.8L1 5L4.7 4.2Z" fill="var(--primary)" fillOpacity="0.85" />
+            </svg>
+            <span
+              style={{
+                fontFamily: "'Caveat', cursive",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                color: "var(--primary)",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {t("howItWorks.eyebrow")}
+            </span>
           </span>
           <h2
             style={{

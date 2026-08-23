@@ -16,7 +16,7 @@ import { useReviews } from "../../shared/contexts/ReviewContext";
 import { useNotifications } from "../../shared/contexts/NotificationContext";
 import { ReportButton } from "../../shared/components/ReportButton";
 import { Link, useNavigate } from "react-router";
-import { orderApi } from "../../shared/api/orderService";
+import { orderService } from "../../features/orders/services/order.service";
 import { productService } from "../../shared/api/productService";
 import { kitService } from "../../shared/api/kitService";
 import type { Order, OrderItem } from "../../features/orders/types/order.types";
@@ -57,7 +57,7 @@ export function Purchased() {
   useEffect(() => {
     async function loadOrders() {
       try {
-        const { data: response } = await orderApi.getMyOrders({
+        const { data: response } = await orderService.getMyOrders({
           page,
           limit: PAGE_SIZE,
         });
@@ -245,12 +245,12 @@ export function Purchased() {
     if (!cancelModal || !cancelModal.reason.trim()) return;
     setCancelling(true);
     try {
-      await orderApi.cancelOrder(cancelModal.orderId, {
+      await orderService.cancelOrder(cancelModal.orderId, {
         cancelReason: cancelModal.reason.trim(),
       });
       toast.success(t("purchased.cancelRequestSent"));
       setCancelModal(null);
-      const { data: response } = await orderApi.getMyOrders({
+      const { data: response } = await orderService.getMyOrders({
         page,
         limit: PAGE_SIZE,
       });
@@ -264,7 +264,7 @@ export function Purchased() {
 
   const markAsDone = async (orderId: string) => {
     try {
-      await orderApi.updateOrderStatus(orderId, { orderStatus: "DELIVERED" });
+      await orderService.updateOrderStatus(orderId, { orderStatus: "DELIVERED" });
       setOrders((prev) =>
         prev.map((o) =>
           o._id === orderId ? { ...o, orderStatus: "DELIVERED" as const } : o,
@@ -295,7 +295,7 @@ export function Purchased() {
   const handleRetryPayment = async (order: Order) => {
     setRetryingId(order._id);
     try {
-      const { data } = await orderApi.retryPayment(order._id);
+      const { data } = await orderService.retryPayment(order._id);
       if (data.payUrl) {
         const methodLabel = order.payment.method === "MOMO" ? "MoMo" : "VNPay";
         toast.success(

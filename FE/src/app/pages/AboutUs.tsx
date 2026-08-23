@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { motion, useScroll, useSpring } from "motion/react";
+import { motion, useScroll, useSpring, type MotionValue } from "motion/react";
 import { Reveal } from "../../shared/components/motion/Reveal";
 import {
   Users,
@@ -21,7 +21,7 @@ import { useLanguage } from "../../shared/contexts/LanguageContext";
    background; the page reads as one continuous seam, not five
    stacked blocks.
 ------------------------------------------------------------------- */
-function StitchThread({ progress }: { progress: any }) {
+function StitchThread({ progress }: { progress: MotionValue<number> }) {
   return (
     <div
       aria-hidden="true"
@@ -120,8 +120,8 @@ export function AboutUs() {
       title: t("about.learnTitle"),
       desc: t("about.learnDesc"),
       icon: BookOpen,
-      swatch: "var(--brand-100)",
-      ink: "var(--primary)",
+      swatch: "var(--swatch-1-bg)",
+      ink: "var(--swatch-ink)",
       rotate: "md:-rotate-2 md:hover:-rotate-1",
       offset: "md:mt-0",
     },
@@ -129,8 +129,8 @@ export function AboutUs() {
       title: t("about.shopTitle"),
       desc: t("about.shopDesc"),
       icon: ShoppingBag,
-      swatch: "var(--brand-150)",
-      ink: "var(--primary)",
+      swatch: "var(--swatch-2-bg)",
+      ink: "var(--swatch-ink)",
       rotate: "md:rotate-1 md:hover:rotate-0",
       offset: "md:mt-10",
     },
@@ -138,8 +138,8 @@ export function AboutUs() {
       title: t("about.diyTitle"),
       desc: t("about.diyDesc"),
       icon: Palette,
-      swatch: "var(--brand-100)",
-      ink: "var(--primary)",
+      swatch: "var(--swatch-3-bg)",
+      ink: "var(--swatch-ink)",
       rotate: "md:-rotate-1 md:hover:rotate-0",
       offset: "md:mt-2",
     },
@@ -400,12 +400,12 @@ export function AboutUs() {
                 <Reveal key={v.title} delay={i * 0.12}>
                   <div className={`${v.offset}`}>
                     <div
-                      className={`group relative rounded-3xl border border-[var(--border)] p-8 transition-all duration-500 ${v.rotate} hover:shadow-xl`}
-                      style={{ background: v.swatch, boxShadow: "var(--shadow-card)" }}
+                      className={`group relative rounded-3xl border border-[var(--swatch-border)] p-8 shadow-[var(--shadow-card)] transition-all duration-500 ${v.rotate} hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]`}
+                      style={{ background: v.swatch }}
                     >
                       <div
                         className="mb-5 flex size-14 items-center justify-center rounded-2xl"
-                        style={{ backgroundColor: "rgba(91,61,245,0.14)", color: v.ink }}
+                        style={{ backgroundColor: "var(--swatch-icon-bg)", color: v.ink }}
                       >
                         <Icon className="size-7" />
                       </div>
@@ -489,35 +489,54 @@ export function AboutUs() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {teamMembers.map((member, index) => {
               const Icon = member.icon;
+              const accent = member.color;
+              const num = String(index + 1).padStart(2, "0");
               return (
                 <Reveal key={member.name} delay={index * 0.08}>
                   <div
-                    className="group relative rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 pt-8 transition-all duration-300 hover:-translate-y-1"
-                    style={{ boxShadow: "var(--shadow-card)" }}
+                    className="group relative h-full overflow-hidden rounded-3xl border border-[var(--swatch-border)] bg-[var(--card)] p-6 pt-10 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1.5 hover:bg-[var(--card-hover)] hover:shadow-[var(--shadow-card-hover)]"
                   >
+                    {/* đường chỉ may màu accent của member chạy ngang mép trên — nối nhịp với sợi chỉ của cả trang */}
                     <span
-                      className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-4"
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-6 top-0 h-[2px] opacity-60 transition-opacity duration-300 group-hover:opacity-100"
                       style={{
-                        backgroundColor: member.color,
-                        // @ts-ignore css var ring color
-                        "--tw-ring-color": "var(--card)",
+                        background: `repeating-linear-gradient(90deg, ${accent} 0 5px, transparent 5px 10px)`,
                       }}
                     />
+                    {/* số thứ tự như nhãn mác quấn cuộn sợi len */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -right-2 -top-4 font-heading text-7xl font-bold leading-none"
+                      style={{ color: accent, opacity: 0.08 }}
+                    >
+                      {num}
+                    </span>
+
                     <div className="flex items-start gap-4">
                       <div
-                        className="flex size-14 shrink-0 items-center justify-center rounded-xl"
+                        className="flex size-14 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105"
                         style={{
-                          backgroundColor: `${member.color}20`,
-                          color: member.color,
+                          backgroundColor: `color-mix(in srgb, ${accent} 14%, transparent)`,
+                          color: accent,
+                          boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 26%, transparent)`,
                         }}
                       >
                         <Icon className="size-7" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="mb-1 text-base font-bold text-[var(--foreground)]">
+                        <h3 className="font-heading text-lg font-bold leading-snug text-[var(--foreground)]">
                           {member.name}
                         </h3>
-                        <p className="text-sm text-[var(--foreground-muted)]">
+                        {/* vạch chỉ nối nhỏ, giãn ra khi hover */}
+                        <span
+                          aria-hidden="true"
+                          className="mt-1.5 block h-[2px] w-10 rounded-full transition-all duration-300 group-hover:w-14"
+                          style={{
+                            background: `linear-gradient(90deg, ${accent} 0%, transparent 100%)`,
+                          }}
+                        />
+                        <p className="mt-2.5 text-sm leading-relaxed text-[var(--foreground-muted)]">
                           {member.role}
                         </p>
                       </div>

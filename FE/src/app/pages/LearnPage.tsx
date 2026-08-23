@@ -29,9 +29,9 @@ import { cn } from "../../shared/components/ui/utils";
 import { ProductSkeleton } from "../../shared/components/skeletons/ProductSkeleton";
 
 const levelStyles: Record<CourseLevel, string> = {
-  beginner: "border-green-200 bg-[var(--accent-green)] text-[var(--accent-green-text)]",
-  intermediate: "border-yellow-200 bg-[var(--accent-orange)] text-[var(--accent-orange-text)]",
-  advanced: "border-red-200 bg-[var(--accent-red)] text-[var(--accent-red-text)]",
+  beginner: "level-badge level-badge-success",
+  intermediate: "level-badge level-badge-warning",
+  advanced: "level-badge level-badge-error",
 };
 
 const LEVEL_EMOJI: Record<CourseLevel, string> = {
@@ -58,9 +58,9 @@ export function LearnPage() {
   const searchQuery = searchParams.get("search") || "";
 
   const levelLabels: Record<CourseLevel, string> = {
-    beginner: t("learn.beginner"),
-    intermediate: t("learn.intermediate"),
-    advanced: t("learn.advanced"),
+    beginner: t("beginner"),
+    intermediate: t("intermediate"),
+    advanced: t("advanced"),
   };
 
   // Get enrolled courses from user profile
@@ -319,6 +319,42 @@ export function LearnPage() {
           background: var(--primary-hover);
           box-shadow: 0 4px 12px rgba(155, 111, 214, 0.35);
         }
+
+        /* ── Course level badges (Beginner/Intermediate/Advanced) — solid,
+           saturated fills + white text so they stay crisp and readable over
+           any course image in both light and dark mode (no backdrop blur —
+           it only made the label harder to read). ── */
+        .level-badge {
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          font-size: 0.6875rem;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+        }
+        .level-badge-success {
+          background: #15803D;
+          color: #FFFFFF;
+          border-color: rgba(255, 255, 255, 0.55);
+        }
+        .level-badge-warning {
+          background: #C2410C;
+          color: #FFFFFF;
+          border-color: rgba(255, 255, 255, 0.55);
+        }
+        .level-badge-error {
+          background: #B91C1C;
+          color: #FFFFFF;
+          border-color: rgba(255, 255, 255, 0.55);
+        }
+
+        /* "Free" / duration pill — solid green + white text, readable in both modes. */
+        .badge-free {
+          background: #15803D;
+          color: #FFFFFF;
+          border-color: rgba(255, 255, 255, 0.55);
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+        }
       `}</style>
 
       <div className="mx-auto max-w-7xl">
@@ -518,7 +554,7 @@ export function LearnPage() {
                           <Badge className={cn("absolute left-3 top-3 border", levelStyles[course.level])}>
                             {levelLabels[course.level]}
                           </Badge>
-                          <Badge className="absolute right-3 top-3 border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]">
+                          <Badge className="absolute right-3 top-3 border badge-free">
                             {t("learnPage.free")}
                           </Badge>
                         </div>
@@ -592,7 +628,7 @@ export function LearnPage() {
                       <Badge className={cn("absolute left-3 top-3 border", levelStyles[video.level])}>
                         {levelLabels[video.level]}
                       </Badge>
-                      <Badge className="absolute right-3 top-3 border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)] text-[10px]">
+                      <Badge className="absolute right-3 top-3 border badge-free text-[10px]">
                         {video.duration} {t("learnPage.min")}
                       </Badge>
                     </div>

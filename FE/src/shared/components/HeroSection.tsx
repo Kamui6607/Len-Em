@@ -124,16 +124,20 @@ function EyebrowBadge() {
       <span
         className="inline-flex items-center gap-1.5 rounded-full px-4 py-1"
         style={{
-          background: "var(--color-secondary)",
-          border: "1px solid var(--color-border)",
-          boxShadow: "var(--shadow-sm)",
+          background: "color-mix(in srgb, var(--color-primary) 10%, var(--color-secondary))",
+          border: "1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border))",
+          boxShadow: "var(--shadow-sm), 0 0 0 4px var(--glow-primary)",
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-          <path d="M6 0.5 L6.8 4.8 L11 5.5 L6.8 6.2 L6 10.5 L5.2 6.2 L1 5.5 L5.2 4.8 Z" fill="var(--color-primary)" fillOpacity="0.8" />
-        </svg>
+        <motion.svg
+          width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
+          animate={{ rotate: [0, 18, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <path d="M6 0.5 L6.8 4.8 L11 5.5 L6.8 6.2 L6 10.5 L5.2 6.2 L1 5.5 L5.2 4.8 Z" fill="var(--color-primary)" fillOpacity="0.85" />
+        </motion.svg>
         <span style={{
-          fontFamily: "'Caveat', cursive", fontSize: "0.85rem", fontWeight: 500,
+          fontFamily: "'Caveat', cursive", fontSize: "0.85rem", fontWeight: 600,
           color: "var(--color-primary)", letterSpacing: "0.03em",
         }}>
           {t("hero.eyebrow")}
@@ -239,17 +243,17 @@ function HeroCTAs() {
         href="#"
         variants={ctaItem}
         className="inline-flex items-center gap-2 rounded-full"
-        whileHover={{ scale: 1.04, y: -2 }}
+        whileHover={{ scale: 1.04, y: -2, boxShadow: "var(--cta-shadow-hover)" }}
         whileTap={{ scale: 0.97 }}
         style={{
           padding: "0.75rem 1.75rem",
-          background: "var(--color-primary)",
+          background: "var(--cta-gradient)",
           color: "var(--color-primary-foreground)",
           fontFamily: "'Inter', sans-serif",
           fontSize: "0.9rem",
           fontWeight: 600,
           letterSpacing: "0.01em",
-          boxShadow: "var(--shadow-md)",
+          boxShadow: "var(--cta-shadow)",
           textDecoration: "none",
         }}
       >
@@ -267,7 +271,12 @@ function HeroCTAs() {
         href="#"
         variants={ctaItem}
         className="inline-flex items-center gap-1.5 rounded-full"
-        whileHover={{ scale: 1.04, y: -2 }}
+        whileHover={{
+          scale: 1.04,
+          y: -2,
+          backgroundColor: "color-mix(in srgb, var(--color-primary) 8%, transparent)",
+          borderColor: "var(--color-primary)",
+        }}
         whileTap={{ scale: 0.97 }}
         style={{
           padding: "0.75rem 1.75rem",
@@ -293,7 +302,7 @@ function HeroCTAs() {
         className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
         whileHover={{ scale: 1.04 }}
         style={{
-          background: "var(--color-accent)",
+          background: "color-mix(in srgb, var(--color-primary) 6%, var(--color-accent))",
           border: "1px solid var(--color-border)",
         }}
       >
@@ -335,7 +344,7 @@ function ThreeStepCard() {
         padding: "14px 16px 14px",
         background: "var(--color-background)",
         border: "1px solid var(--color-border)",
-        boxShadow: "var(--shadow-lg)",
+        boxShadow: "var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-primary) 8%, transparent) inset",
       }}
     >
       <div className="flex items-center gap-1.5 mb-3">
@@ -358,8 +367,9 @@ function ThreeStepCard() {
                 className="flex items-center justify-center rounded-full shrink-0"
                 style={{
                   width: "30px", height: "30px",
-                  background: i === 1 ? "var(--color-primary)" : "var(--color-secondary)",
-                  border: "1.5px solid var(--color-border)",
+                  background: i === 1 ? "var(--cta-gradient)" : "var(--color-secondary)",
+                  border: i === 1 ? "1.5px solid transparent" : "1.5px solid var(--color-border)",
+                  boxShadow: i === 1 ? "var(--cta-shadow)" : "none",
                 }}
               >
                 <span style={{
@@ -379,7 +389,7 @@ function ThreeStepCard() {
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div style={{ marginTop: "10px", marginLeft: "2px", marginRight: "2px", color: "var(--color-muted-foreground)", opacity: 0.5, flexShrink: 0 }}>
+              <div style={{ marginTop: "10px", marginLeft: "2px", marginRight: "2px", color: "var(--color-primary)", opacity: 0.45, flexShrink: 0 }}>
                 <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
                   <path d="M1 5H14M10 1.5L14 5L10 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -450,6 +460,7 @@ function DraggableFrontCard({
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.55}
       dragTransition={{ bounceStiffness: 300, bounceDamping: 20 }}
+      whileHover={{ boxShadow: "var(--shadow-xl), 0 0 0 3px var(--glow-primary)" }}
       whileTap={{ scale: 0.97, cursor: "grabbing" }}
       onDragStart={() => { wasDragged.current = false; }}
       onDrag={(_, info) => {
@@ -490,6 +501,45 @@ function DraggableFrontCard({
   );
 }
 
+function SwipeHint({ visible }: { visible: boolean }) {
+  const { t } = useLanguage();
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      className="absolute pointer-events-none"
+      style={{
+        left: "50%",
+        bottom: "-14px",
+        zIndex: 20,
+        translateX: "-50%",
+      }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: visible ? 1 : 0, y: visible ? 0 : 6 }}
+      transition={{ duration: 0.35, delay: visible ? 1.6 : 0, ease: "easeOut" }}
+    >
+      <motion.div
+        className="inline-flex items-center gap-1.5 rounded-full whitespace-nowrap"
+        animate={reduce ? {} : { x: [0, -3, 3, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+        style={{
+          padding: "5px 12px",
+          background: "var(--glass-bg, var(--color-background))",
+          backdropFilter: "blur(8px)",
+          border: "1px solid var(--color-border)",
+          boxShadow: "var(--shadow-md)",
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M8 2L11 6L8 10M11 6H1" stroke="var(--color-primary)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-primary)" }}>
+          {t("hero.swipeHint")}
+        </span>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function ImageStack({ mode }: ImageStackProps) {
   const [imageIndex, setImageIndex] = useState(0);
   const [hoverFan, setHoverFan] = useState(false);
@@ -515,6 +565,21 @@ function ImageStack({ mode }: ImageStackProps) {
       onMouseEnter={() => setHoverFan(true)}
       onMouseLeave={() => setHoverFan(false)}
     >
+      {/* Soft glow platform beneath the stack — grounds the cards, reads as a warm halo in both themes */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: OX - 30,
+          top: OY + 20,
+          width: CARD_W + 60,
+          height: CARD_H + 40,
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse, var(--glow-primary) 0%, transparent 72%)",
+          filter: "blur(28px)",
+          zIndex: 0,
+        }}
+      />
+
       {displayImages.map((img, i) => {
         const t = transforms[i];
         const isFront = i === frontSlotIndex;
@@ -539,13 +604,42 @@ function ImageStack({ mode }: ImageStackProps) {
             }}
           >
             {isFront ? (
-              <DraggableFrontCard img={img} onSwipe={cycleImages} disabled={!!reduce} />
+              <>
+                <DraggableFrontCard img={img} onSwipe={cycleImages} disabled={!!reduce} />
+                <SwipeHint visible={!hoverFan} />
+              </>
             ) : (
               <StaticCard img={img} />
             )}
           </motion.div>
         );
       })}
+
+      {/* Little "pin" accent on the front card — nod to the pin-and-thread craft motif */}
+      <motion.div
+        className="absolute pointer-events-none"
+        animate={{ x: transforms[frontSlotIndex].x, y: transforms[frontSlotIndex].y, rotate: transforms[frontSlotIndex].rotate }}
+        transition={{ type: "spring", stiffness: 150, damping: 24, mass: 1 }}
+        style={{
+          left: OX + CARD_W - 26,
+          top: OY - 10,
+          zIndex: (transforms[frontSlotIndex]?.zIndex ?? 3) + 1,
+        }}
+      >
+        <div
+          style={{
+            width: "26px", height: "26px", borderRadius: "50%",
+            background: "var(--cta-gradient)",
+            boxShadow: "var(--cta-shadow)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            border: "2px solid var(--color-background)",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M6 0.5 L6.8 4.8 L11 5.5 L6.8 6.2 L6 10.5 L5.2 6.2 L1 5.5 L5.2 4.8 Z" fill="var(--color-primary-foreground)" />
+          </svg>
+        </div>
+      </motion.div>
 
       {/* Floating 3-step loop card */}
       <motion.div
@@ -618,6 +712,7 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
         }}
       />
 
+      {/* Primary ambient glow — anchored near the image stack */}
       <div
         className="absolute pointer-events-none"
         style={{
@@ -626,6 +721,18 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
           borderRadius: "50%",
           background: "radial-gradient(ellipse, var(--color-primary) 0%, transparent 70%)",
           filter: "blur(55px)", zIndex: 0,
+          opacity: 0.9,
+        }}
+      />
+      {/* Secondary softer glow — balances the composition on the text side */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: "280px", height: "220px",
+          top: "62%", left: "8%",
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse, var(--glow-lavender) 0%, transparent 72%)",
+          filter: "blur(48px)", zIndex: 0,
         }}
       />
 

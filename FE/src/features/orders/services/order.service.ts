@@ -7,12 +7,15 @@ import type {
   Order,
   CreateOrderRequest,
   CancelOrderRequest,
+  CancelRequestDecision,
   UpdateOrderStatusRequest,
   AdminOrdersResponse,
   MyOrdersResponse,
   CreateOrderResponse,
   OrderApiResponse,
   GetOrderResponse,
+  ShippingFeePreviewRequest,
+  ShippingFeePreviewResponse,
 } from "../types/order.types";
 
 const ORDERS_BASE = "/orders";
@@ -74,5 +77,34 @@ export const orderService = {
     axiosClient.patch<OrderApiResponse<Order>>(
       `${ORDERS_BASE}/${orderId}/status`,
       data
+    ),
+
+  /**
+   * Preview shipping fee & totals before checkout.
+   * POST /orders/shipping-fee
+   */
+  previewShippingFee: (data: ShippingFeePreviewRequest) =>
+    axiosClient.post<ShippingFeePreviewResponse>(
+      `${ORDERS_BASE}/shipping-fee`,
+      data
+    ),
+
+  /**
+   * Admin approves or rejects a customer's cancel request.
+   * PATCH /orders/:id/cancel-request
+   */
+  cancelRequest: (orderId: string, data: CancelRequestDecision) =>
+    axiosClient.patch<GetOrderResponse>(
+      `${ORDERS_BASE}/${orderId}/cancel-request`,
+      data
+    ),
+
+  /**
+   * Retry payment for a cancelled/unpaid order (returns payUrl for VNPAY).
+   * POST /orders/:id/retry-payment
+   */
+  retryPayment: (orderId: string) =>
+    axiosClient.post<{ message: string; order: Order; payUrl: string }>(
+      `${ORDERS_BASE}/${orderId}/retry-payment`
     ),
 };

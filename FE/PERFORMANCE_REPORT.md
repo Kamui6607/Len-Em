@@ -5,6 +5,8 @@
 > **Mục tiêu**: Đánh giá khả năng mở rộng với 100K – 1M products & hàng nghìn concurrent users  
 > **Lưu ý**: Source backend **KHÔNG** nằm trong workspace (`Yarn-Shop/FE`). Backend deploy tại `https://yarn-shop-be.onrender.com`. Mọi đánh giá về backend/database đều suy luận từ API contract & response shape quan sát được từ FE. Phân loại theo: `✔️ Có sẵn` | `⚠️ Yếu/Hạn chế` | `❌ Không có/Nguy cơ` | `🔍 Need Manual Review`.
 
+> ⚠️ **CẬP NHẬT (snapshot cũ)**: Tài liệu này là **ảnh chụp tại thời điểm 08/01/2026**, dựa trên cấu trúc thư mục **cũ** (các đường dẫn bên dưới như `src/api/*`, `src/app/hooks`, `src/app/components`, `src/context`, `src/app/store` đã được **di dời về `src/shared/*`** và **không còn tồn tại**). Bên cạnh đó, khẳng định "TanStack Query không được sử dụng" ở Phần 1 **đã không còn đúng**: `App.tsx` **đã bọc `QueryClientProvider`** và `src/shared/hooks/useProductsQuery.ts` **đã gọi `useQuery`**. Trước khi sử dụng, hãy đối chiếu lại với code hiện tại.
+
 ---
 
 ## Phần 1. Phân Tích Cấu Trúc Project
@@ -16,7 +18,7 @@
 | **Frontend** | React 18.3 + Vite 6 + TypeScript 5.8 | ✔️ Hiện đại, build nhanh |
 | **Router** | React Router 7 (`react-router`) | ✔️ Code-splitting bằng `React.lazy()` |
 | **State Management** | Zustand 5 (auth, learn) + React Context (cart, favorites, theme, language, review) | ⚠️ Context dùng cho cart/favorites → re-render toàn cây khi thay đổi |
-| **Server State** | **TanStack Query 5 ĐÃ CÀI NHƯNG KHÔNG SỬ DỤNG** | ❌ **Phát hiện nghiêm trọng** — file `src/lib/queryClient.ts` tồn tại nhưng không có `QueryClientProvider` / `useQuery` / `useMutation` nào |
+| **Server State** | TanStack Query 5 (✅ ĐÃ SỬ DỤNG từ sau snapshot) | ✅ Đã có `QueryClientProvider` trong `App.tsx` + `useQuery` trong `src/shared/hooks/useProductsQuery.ts` |
 | **API Layer** | Axios + interceptor (JWT, refresh queue) | ✔️ Tốt; có dedupe 401 với refresh-queue |
 | **Backend** | Node.js + Express + **MongoDB + Mongoose** (repo riêng, host Render) | ⚠️ **Khác giả định ban đầu**: KHÔNG dùng PostgreSQL |
 | **Realtime** | Socket.IO client | ✔️ Cho notification/chat |
@@ -30,12 +32,12 @@
 | `src/app/hooks/useProducts.ts` | Logic Shop (filters, pagination, manual cache) | Chứa filter **client-side** cho color/material/weight/difficulty/price |
 | `src/app/components/ProductCard.tsx` | Product card | ✔️ React.memo; nhưng 1.225 dòng animation nặng |
 | `src/lib/axiosClient.ts` | Axios + JWT + silent refresh | ✔️ Refresh-queue chống duplicate refresh |
-| `src/lib/queryClient.ts` | QueryClient config | ❌ **Không được nối vào app** |
+| `src/lib/queryClient.ts` | QueryClient config | ✅ Đã được nối vào app qua `QueryClientProvider` (từ sau snapshot) |
 | `src/api/productService.ts` | Product API | ✔️ Clean |
 | `src/api/kitService.ts` | Kit (combo) API | ⚠️ Kit list response chứa **products được populate đầy đủ** → over-fetching |
 | `src/features/shop/services/product.service.ts` | Adapt backend → frontend Product | ✔️ Có adapter |
 | `src/routes/AppRouter.tsx` | Routing + lazy loading | ✔️ Tốt |
-| `src/app/App.tsx` | Provider tree | ❌ **Thiếu `QueryClientProvider`** |
+| `src/app/App.tsx` | Provider tree | ✅ Đã có `QueryClientProvider` (từ sau snapshot) |
 | `src/app/data/products.ts` | **Mock data** (567 dòng) | ❌ Vẫn là fallback — rủi ro nhất quán dữ liệu |
 
 ### 1.3 Database (suy luận từ API contract)

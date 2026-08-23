@@ -24,8 +24,7 @@ import { lessonService } from "../../shared/api/lessonService";
 import { kitService, type Kit } from "../../shared/api/kitService";
 import { productService, type Product } from "../../shared/api/productService";
 import { materialCombos } from "../../features/learn/data/learn.mock";
-import { useLearnStore as useFeatureLearnStore } from "../../features/learn/store/learn.store";
-import { useLearnStore } from "../../shared/store/learn.store";
+import { useLearnStore } from "../../features/learn/store/learn.store";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
@@ -121,11 +120,8 @@ export function LessonPage() {
   const ytPlayerRef = useRef<{ destroy: () => void } | null>(null);
   const completeInFlightRef = useRef<string | null>(null);
 
-  const markFeatureLessonComplete = useFeatureLearnStore(
-    (state) => state.markLessonComplete,
-  );
-  const progress = useFeatureLearnStore((state) =>
-    lessonId ? state.progress[lessonId] : undefined,
+  const progress = useLearnStore((state) =>
+    lessonId ? state.videoProgress[lessonId] : undefined,
   );
   const markLessonComplete = useLearnStore((state) => state.markLessonComplete);
 
@@ -225,7 +221,6 @@ export function LessonPage() {
 
     // Read actions from the stores without subscribing this effect to action
     // references, which prevents render/update loops when the store changes.
-    useFeatureLearnStore.getState().setCurrentLesson(lessonId);
     useLearnStore.getState().setCurrentLesson(courseId, lessonId);
   }, [courseId, lessonId]);
 
@@ -244,7 +239,6 @@ export function LessonPage() {
         const data = res.data.data;
         setCourseProgress(data);
         (data.completedLessons ?? []).forEach((id) => {
-          useFeatureLearnStore.getState().markLessonComplete(id);
           useLearnStore.getState().markLessonComplete(courseId, id);
         });
       })
@@ -267,8 +261,7 @@ export function LessonPage() {
     if (completeInFlightRef.current === lesson._id) return;
     completeInFlightRef.current = lesson._id;
 
-    // Optimistic local update (existing Zustand stores).
-    markFeatureLessonComplete(lesson._id);
+    // Optimistic local update (existing Zustand store).
     markLessonComplete(course._id, lesson._id);
 
     void courseService
@@ -280,7 +273,7 @@ export function LessonPage() {
           completeInFlightRef.current = null;
         }
       });
-  }, [course, lesson, markFeatureLessonComplete, markLessonComplete]);
+  }, [course, lesson, markLessonComplete]);
 
   // ── YouTube embed: real "video ended" detection ──────────────────────
   // Native <video> elements fire `onEnded`, but YouTube uses an <iframe>
@@ -383,9 +376,9 @@ export function LessonPage() {
     // and the store are updated from the interval callback instead.
     watchIntervalRef.current = setInterval(() => {
       const next =
-        (useFeatureLearnStore.getState().progress[lessonId]?.watchedSeconds ??
+        (useLearnStore.getState().videoProgress[lessonId]?.watchedSeconds ??
           0) + 1;
-      useFeatureLearnStore.getState().updateProgress(lessonId, next);
+      useLearnStore.getState().updateProgress(lessonId, next);
       setWatchedSeconds(next);
 
       // Fallback completion: if the user has watched the full lesson duration

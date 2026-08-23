@@ -192,38 +192,55 @@ The app will be available at **http://localhost:5000**.
 
 ```
 src/
-├── api/                 # API service layer (Axios instances, endpoints)
-├── app/                 # App-level pages & components
-│   ├── components/      # Shared app components (Navigation, etc.)
-│   └── pages/           # Feature pages organized by role
-│       ├── admin/       # Admin dashboard, management pages
-│       ├── auth/        # Login, Register, Reset Password
-│       ├── creator/     # Creator dashboard & content management
-│       ├── customer/    # Customer-specific pages
-│       ├── manage/      # Order management
-│       ├── membership/  # Membership & loyalty pages
-│       ├── shop/        # Cart, Checkout, Orders, Order Detail
-│       ├── staff/       # Staff dashboard & reports
-│       └── supportDIY/  # Support DIY creation
-├── components/          # Reusable shared components
-│   ├── auth/            # Auth guards (RequireAuth, RequireRole)
-│   ├── mobile/          # Mobile-specific (BottomNav, PullToRefresh)
-│   ├── motion/          # Animation components (Reveal, ScrollProgress, etc.)
-│   └── skeletons/       # Loading skeletons
-├── constants/           # App-wide constants
-├── context/             # React contexts
-├── data/                # Static data & mock data
-├── features/            # Feature-specific modules (e.g., orders)
-├── hooks/               # Custom React hooks
-├── lib/                 # Third-party library wrappers
-├── locales/             # i18n translation files (en.json, vi.json)
-├── pages/               # Legacy page components
-├── routes/              # Route definitions & AppRouter
-├── services/            # Business logic services
-├── shared/              # Shared utilities & types
-├── store/               # Zustand stores
-├── styles/              # Global styles, theme, fonts
-└── types/               # TypeScript type definitions
+├── main.tsx               # Entry point — imports global styles & renders <App/>
+├── app/                   # App-level composition (pages + 1 data file)
+│   ├── App.tsx            # Root component: QueryClientProvider + context provider tree + router
+│   ├── data/              # Static catalog mock data (products, helpers)
+│   └── pages/             # Feature pages, grouped by role/domain
+│       ├── admin/         # Admin dashboard & management (products, orders, users, roles, ...)
+│       ├── auth/          # Login, Register, Forgot/Reset Password
+│       ├── creator/       # Creator dashboard & content management
+│       ├── manage/        # Order management (staff/manage view)
+│       ├── membership/    # Membership & loyalty
+│       ├── shop/          # Cart, Checkout, My Orders, Order Detail, Order Success
+│       ├── staff/         # Staff dashboard & reports
+│       ├── supportDIY/    # Support DIY creation
+│       └── *.tsx          # Home, Shop, ProductDetail, kits, learn, DIY, etc.
+├── features/              # Domain modules — each owns its service + types (and store/data if needed)
+│   ├── creator/           # Creator mock data
+│   ├── diy/               # DIY (services, types)
+│   ├── learn/             # Learn (data, store, types)
+│   ├── membership/        # Membership (data, store, types)
+│   ├── orderReport/       # Order report (services, types)
+│   ├── orders/            # Orders (services, types)  ← canonical order service
+│   ├── shop/              # Shop product service (adapter + fetch)
+│   ├── supportDIY/        # Support DIY (services, types)
+│   └── users/             # Users (services)
+├── lib/                   # Framework/tool wrappers (axiosClient, queryClient, formatPrice, authUtils, roleGuard)
+├── locales/               # i18n translation files (en.json, vi.json)
+├── routes/                # Route definitions & AppRouter
+├── shared/                # Cross-cutting code reused across features
+│   ├── api/               # API services (auth, kit, course, lesson, product, ghn, ...)
+│   ├── components/        # Reusable UI & layout components
+│   │   ├── admin/         # Admin-specific shared components
+│   │   ├── auth/          # Auth guards (RequireAuth, RequireRole)
+│   │   ├── dashboard/     # Dashboard shell & sidebars
+│   │   ├── filters/       # Filter/search/sort controls
+│   │   ├── layout/        # Store layout, navigation shell
+│   │   ├── map/           # Leaflet map picker
+│   │   ├── membership/    # Membership UI components
+│   │   ├── mobile/        # Mobile-specific (BottomNav, ScrollToTop)
+│   │   ├── motion/        # Animation components (Reveal, ScrollProgress, ...)
+│   │   ├── order/         # Order UI components
+│   │   ├── search/        # Search controls
+│   │   ├── skeletons/     # Loading skeletons
+│   │   └── ui/            # Low-level primitives (shadcn/ui-style) — button, card, dialog, ...
+│   ├── contexts/          # React contexts (Cart, Favorites, Theme, Language, Admin, ...)
+│   ├── hooks/             # Custom React hooks
+│   ├── store/             # Zustand stores (auth; feature stores live under features/)
+│   └── types/             # Shared TypeScript types (auth, product, catalog, order, api, ...)
+├── constants/             # App-wide constants
+└── styles/                # Global styles, theme, fonts, page-specific css
 ```
 
 ---

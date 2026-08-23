@@ -39,20 +39,7 @@ const welcomeFeatures = [
   },
 ];
 
-const inputStyle = (hasIcon = true, hasError = false): React.CSSProperties => ({
-  width: "100%",
-  height: 46,
-  padding: hasIcon ? "0 14px 0 42px" : "0 14px",
-  border: `1.5px solid ${hasError ? "var(--destructive)" : "var(--border)"}`,
-  borderRadius: "var(--radius-lg)",
-  fontSize: 14,
-  background: "var(--input-bg)",
-  color: "var(--foreground)",
-  outline: "none",
-  fontFamily: "var(--font-body)",
-  boxSizing: "border-box",
-  transition: "all 0.3s var(--ease-out)",
-});
+/* Input styles được gộp vào CSS class .rp-input trong <style> phiên bản mới */
 
 function Field({
   label,
@@ -83,70 +70,33 @@ function Field({
   const hasError = !!fe[k];
 
   return (
-    <div style={{ marginBottom: 4 }}>
-      <label
-        style={{
-          display: "block",
-          fontSize: 12.5,
-          fontWeight: 600,
-          color: "var(--foreground)",
-          marginBottom: 5,
-        }}
-      >
+    <div className="rp-field">
+      <label className="rp-field-label">
         {label}
         {optional ? (
-          <span style={{ fontSize: 11, fontWeight: 400, color: "var(--foreground-muted)", marginLeft: 4 }}>
-            (optional)
-          </span>
+          <span className="rp-opt">(optional)</span>
         ) : (
-          <span style={{ color: "var(--destructive)", marginLeft: 2 }}>*</span>
+          <span className="rp-req">*</span>
         )}
       </label>
-      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-        {Icon && (
-          <Icon
-            size={15}
-            style={{
-              position: "absolute",
-              left: 13,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: focused ? "var(--primary)" : "var(--foreground-muted)",
-              opacity: focused ? 1 : 0.6,
-              pointerEvents: "none",
-              transition: "color 0.18s",
-            }}
-          />
-        )}
+      <div
+        className={`rp-field-wrap${focused ? " rp-focused" : ""}${hasError ? " rp-error" : ""}`}
+      >
+        {Icon && <Icon size={15} className="rp-field-icon" />}
         <input
           type={type}
           placeholder={placeholder}
           value={form[k]}
           onChange={upd(k)}
           required={!optional}
+          className={`rp-input${rightSlot ? " rp-input-right" : ""}`}
+          style={extraInputStyle}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          style={{
-            ...inputStyle(!!Icon, hasError),
-            ...(rightSlot ? { paddingRight: 44 } : {}),
-            ...(focused
-              ? {
-                  border: `1.5px solid ${hasError ? "var(--destructive)" : "var(--primary)"}`,
-                  boxShadow: hasError
-                    ? "0 0 0 3px color-mix(in srgb, var(--destructive) 15%, transparent)"
-                    : "0 0 0 3px rgba(107,63,160,0.08)",
-                }
-              : {}),
-            ...extraInputStyle,
-          }}
         />
         {rightSlot}
       </div>
-      {hasError && (
-        <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4, paddingLeft: 2 }}>
-          {fe[k]}
-        </div>
-      )}
+      {hasError && <div className="rp-err-msg">{fe[k]}</div>}
     </div>
   );
 }
@@ -309,8 +259,10 @@ export function RegisterPage() {
       <style>{`
         * { box-sizing: border-box; }
         .rp-shell {
-          min-height: 100vh;
+          height: 100vh;
+          height: 100dvh;
           display: flex;
+          overflow: hidden;
           font-family: var(--font-body);
           background: var(--background);
         }
@@ -322,8 +274,8 @@ export function RegisterPage() {
           display: none;
           position: relative;
           width: 44%;
-          min-height: 100vh;
-          padding: 56px 48px;
+          height: 100%;
+          padding: 40px 40px;
           flex-direction: column;
           justify-content: space-between;
           overflow: hidden;
@@ -414,7 +366,7 @@ export function RegisterPage() {
 
         .rp-welcome-content { position: relative; z-index: 1; }
 
-        .rp-logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 56px; }
+        .rp-logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 36px; }
         .rp-logo-mark {
           width: 42px; height: 42px; border-radius: 14px;
           background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28);
@@ -442,31 +394,27 @@ export function RegisterPage() {
 
         .rp-welcome-title {
           font-family: var(--font-heading);
-          font-size: clamp(1.9rem, 2.6vw, 2.5rem);
+          font-size: clamp(1.6rem, 2.2vw, 2.25rem);
           font-weight: 700; line-height: 1.18; letter-spacing: -0.02em;
-          max-width: 420px; margin-bottom: 16px;
+          max-width: 420px; margin-bottom: 12px;
         }
         .rp-welcome-sub {
-          font-size: 0.9375rem; line-height: 1.7; color: rgba(255,255,255,0.78);
-          max-width: 380px; margin-bottom: 40px;
+          font-size: 0.875rem; line-height: 1.6; color: rgba(255,255,255,0.78);
+          max-width: 380px; margin-bottom: 28px;
         }
 
-        /* Step progress echoed on the welcome panel */
+        /* Step progress echoed on the welcome panel — “vạch chỉ” 2 chấm */
         .rp-welcome-progress {
-          display: flex; align-items: center; gap: 8px; margin-bottom: 44px; max-width: 300px;
+          display: flex; align-items: center; gap: 8px; margin-bottom: 28px; max-width: 300px;
         }
-        .rp-welcome-progress-bar {
-          flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.22);
-          overflow: hidden;
-          transition: background 0.4s ease;
+        .rp-welcome-dots { display: flex; gap: 6px; }
+        .rp-welcome-dots span {
+          width: 26px; height: 6px; border-radius: 999px;
+          background: rgba(255,255,255,0.22);
+          transition: all 0.35s var(--ease-out);
         }
-        .dark .rp-welcome-progress-bar { background: rgba(140,123,255,0.2); }
-        .rp-welcome-progress-bar > span {
-          display: block; height: 100%; background: #fff; border-radius: 2px;
-          transition: width 0.35s var(--ease-out);
-          box-shadow: 0 0 0 rgba(140,123,255,0);
-        }
-        .dark .rp-welcome-progress-bar > span {
+        .dark .rp-welcome-dots span { background: rgba(140,123,255,0.25); }
+        .rp-welcome-dots span.is-done {
           background: #fff;
           box-shadow: 0 0 10px rgba(140,123,255,0.5);
         }
@@ -474,10 +422,10 @@ export function RegisterPage() {
           font-size: 0.75rem; color: rgba(255,255,255,0.7); white-space: nowrap; font-weight: 600;
         }
 
-        .rp-welcome-features { display: flex; flex-direction: column; gap: 20px; }
+        .rp-welcome-features { display: flex; flex-direction: column; gap: 12px; }
         .rp-welcome-feature { display: flex; align-items: flex-start; gap: 14px; }
         .rp-welcome-feature-icon {
-          flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px;
+          flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px;
           background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
           display: flex; align-items: center; justify-content: center;
           transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
@@ -491,7 +439,7 @@ export function RegisterPage() {
         .rp-welcome-feature-desc { font-size: 0.8125rem; color: rgba(255,255,255,0.65); line-height: 1.5; }
 
         .rp-quote {
-          position: relative; z-index: 1; padding-top: 28px;
+          position: relative; z-index: 1; padding-top: 16px;
           border-top: 1px dashed rgba(255,255,255,0.22);
           transition: border-color 0.4s ease;
         }
@@ -505,19 +453,19 @@ export function RegisterPage() {
         .rp-form-side {
           position: relative;
           flex: 1;
+          min-width: 0;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
+          overflow-y: auto;
+          padding: 16px;
         }
         .rp-card {
-          width: 100%;
-          max-width: 460px;
+          margin: auto;
+          width: min(100%, 460px);
           background: var(--dropdown-bg);
           border: 1px solid var(--border);
           border-radius: var(--radius-3xl);
           box-shadow: var(--shadow-float);
-          padding: 40px 36px;
+          padding: 28px 32px;
           position: relative;
           overflow: hidden;
           backdrop-filter: blur(20px) saturate(180%);
@@ -592,13 +540,186 @@ export function RegisterPage() {
           transition: all 0.3s var(--ease-out);
         }
         .rp-back:hover {
-          background: rgba(107, 63, 160, 0.06);
+          background: color-mix(in srgb, var(--primary) 8%, transparent);
           transform: translateY(-1px);
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (prefers-reduced-motion: reduce) {
           .rp-ring, .rp-ring--inner { animation: none; }
+        }
+
+        /* ── Viewport thấp: nhồi nhẹ để vừa khít, không phải cuộn ngoài ── */
+        @media (max-height: 800px) {
+          .rp-logo { margin-bottom: 24px; }
+          .rp-eyebrow { margin-bottom: 14px; }
+          .rp-welcome-features { gap: 10px; }
+          .rp-welcome-feature-icon { width: 30px; height: 30px; }
+          .rp-welcome-progress { margin-bottom: 20px; }
+          .rp-quote { padding-top: 14px; }
+          .rp-card { padding: 22px 24px; }
+        }
+        @media (max-height: 640px) {
+          .rp-welcome-title { font-size: clamp(1.45rem, 4vw, 1.8rem); margin-bottom: 8px; }
+          .rp-welcome-sub { margin-bottom: 16px; }
+          .rp-quote { display: none; }
+        }
+      /* ============================================================
+           DESIGN v7 — Register form: field/input, segmented, select,
+           steps, error banner, pw strength, divider — dark-aware
+           ============================================================ */
+
+        /* ── Field ── */
+        .rp-field { margin-bottom: 2px; }
+        .rp-field-label {
+          display: block; font-size: 12.5px; font-weight: 600;
+          color: var(--foreground); margin-bottom: 5px;
+        }
+        .rp-field-label .rp-opt {
+          font-size: 11px; font-weight: 400; color: var(--foreground-muted); margin-left: 4px;
+        }
+        .rp-field-label .rp-req { color: var(--destructive); margin-left: 2px; }
+        .rp-field-wrap { position: relative; display: flex; align-items: center; }
+        .rp-field-icon {
+          position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+          color: var(--foreground-muted); opacity: .6; pointer-events: none;
+          transition: color .2s ease, opacity .2s ease;
+        }
+        .rp-field-wrap:hover .rp-field-icon { color: var(--foreground); opacity: .8; }
+        .rp-field-wrap.rp-focused .rp-field-icon { color: var(--primary); opacity: 1; }
+        .rp-field-wrap.rp-error .rp-field-icon { color: var(--destructive); opacity: 1; }
+        .rp-input {
+          width: 100%; height: 46px; padding: 0 14px 0 42px;
+          border: 1.5px solid var(--border); border-radius: var(--radius-lg);
+          font-size: 14px; background: var(--input-bg); color: var(--foreground);
+          outline: none; font-family: var(--font-body); box-sizing: border-box;
+          transition: border-color .25s var(--ease-out), box-shadow .25s var(--ease-out);
+        }
+        .rp-input-right { padding-right: 44px; }
+        .rp-input::placeholder { color: var(--foreground-muted); opacity: .45; }
+        .rp-field-wrap:hover .rp-input:not(:focus) {
+          border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+        }
+        .rp-field-wrap .rp-input:focus,
+        .rp-field-wrap.rp-focused .rp-input {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+        }
+        .rp-field-wrap.rp-error .rp-input,
+        .rp-field-wrap.rp-error .rp-input:focus {
+          border-color: var(--destructive);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 15%, transparent);
+        }
+        .rp-err-msg { font-size: 11px; color: var(--destructive); margin-top: 4px; padding-left: 2px; }
+        .rp-eye {
+          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; cursor: pointer; padding: 4px;
+          color: var(--foreground-muted); display: flex; align-items: center; border-radius: 6px;
+          transition: all .2s ease;
+        }
+        .rp-eye:hover { color: var(--foreground); background: var(--chip-bg); }
+
+      /* ── Segmented control (Gender) ── */
+        .rp-seg-label {
+          display: block; font-size: 12.5px; font-weight: 600;
+          color: var(--foreground); margin-bottom: 8px;
+        }
+        .rp-seg { display: flex; gap: 8px; }
+        .rp-seg-btn {
+          flex: 1; height: 44px; border-radius: var(--radius-md);
+          border: 1.5px solid var(--border); background: transparent;
+          color: var(--foreground-muted); font-size: 14px; font-weight: 500;
+          cursor: pointer; font-family: var(--font-body);
+          transition: all .2s ease;
+        }
+        .rp-seg-btn:hover {
+          border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+          color: var(--foreground); transform: translateY(-1px);
+        }
+        .rp-seg-btn.is-active {
+          border-color: var(--primary);
+          background: color-mix(in srgb, var(--primary) 10%, transparent);
+          color: var(--primary); font-weight: 600;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 8%, transparent);
+        }
+
+        /* ── Select (DOB) ── */
+        .rp-select {
+          flex: 1; height: 46px; padding: 0 12px;
+          border: 1.5px solid var(--border); border-radius: var(--radius-md);
+          font-size: 14px; background: var(--input-bg); color: var(--foreground);
+          font-family: var(--font-body); cursor: pointer; outline: none;
+          appearance: none; -webkit-appearance: none;
+          transition: all .25s ease;
+          background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A1A1AA' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 12px center;
+        }
+        .rp-select.rp-empty { color: var(--foreground-muted); }
+        .rp-select:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+        .rp-select:focus {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+        }
+        .rp-select.rp-select-err { border-color: var(--destructive); }
+
+        /* ── Steps (form side) ── */
+        .rp-steps { display: flex; align-items: center; gap: 8px; margin-bottom: 28px; }
+        .rp-steps-dots { display: flex; gap: 6px; flex: 1; }
+        .rp-steps-dots span {
+          width: 28px; height: 6px; border-radius: 999px;
+          background: var(--border); transition: all .35s var(--ease-out);
+        }
+        .rp-steps-dots span.is-done {
+          background: var(--primary);
+          box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 40%, transparent);
+        }
+        .rp-steps-label {
+          font-size: 12px; color: var(--foreground-muted); font-weight: 500;
+          white-space: nowrap; margin-left: 8px;
+        }
+
+        /* ── Form header ── */
+        .rp-form-header { margin-bottom: 28px; text-align: center; }
+        .rp-form-eyebrow {
+          font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 12px;
+          display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: .04em;
+        }
+        .rp-form-title {
+          font-family: var(--font-heading); font-size: 28px; font-weight: 700;
+          color: var(--foreground); margin: 0 0 6px; line-height: 1.1; letter-spacing: -.025em;
+        }
+        .rp-form-sub { font-size: 14px; color: var(--foreground-muted); margin: 0; line-height: 1.6; }
+
+      /* ── Error banner / pw strength / divider / footer ── */
+        .rp-error-banner {
+          display: flex; align-items: flex-start; gap: 8px;
+          background: color-mix(in srgb, var(--destructive) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--destructive) 25%, transparent);
+          border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px;
+          font-size: 13px; color: var(--destructive);
+        }
+        .pw-bars { display: flex; gap: 4px; margin-top: 6px; }
+        .pw-bar { height: 3px; flex: 1; border-radius: 2px; transition: background .25s ease; }
+        .rp-divider {
+          display: flex; align-items: center; gap: 12px; margin: 24px 0 12px;
+          color: var(--foreground-muted);
+        }
+        .rp-divider::before, .rp-divider::after {
+          content: ''; flex: 1; height: 1px;
+          background: repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 9px);
+        }
+        .rp-divider-text { font-size: 13px; white-space: nowrap; font-weight: 500; }
+        .rp-signin-foot { text-align: center; font-size: 13.5px; color: var(--foreground-muted); margin: 0; }
+        .rp-signin-foot a {
+          color: var(--primary); font-weight: 600; text-decoration: none;
+          transition: color .2s ease;
+        }
+        .rp-signin-foot a:hover { color: var(--link-hover); text-decoration: underline; }
+
+        /* ── Compact viewport: form co nhịp nhẹ ── */
+        @media (max-height: 800px) {
+          .rp-steps { margin-bottom: 20px; }
+          .rp-form-header { margin-bottom: 20px; }
         }
       `}</style>
 
@@ -628,8 +749,9 @@ export function RegisterPage() {
             </p>
 
             <div className="rp-welcome-progress">
-              <div className="rp-welcome-progress-bar">
-                <span style={{ width: step === 1 ? "50%" : "100%" }} />
+              <div className="rp-welcome-dots">
+                <span className={step === 1 ? "is-done" : ""} />
+                <span className={step === 2 ? "is-done" : ""} />
               </div>
               <span className="rp-welcome-progress-label">Bước {step}/2</span>
             </div>
@@ -682,34 +804,26 @@ export function RegisterPage() {
               <span className="rp-mobile-brand-name">Len&amp;em</span>
             </div>
 
-            {/* Progress bar */}
-            <div style={{ width: "100%", marginBottom: 28 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--primary)", transition: "background 0.3s" }} />
-                <div style={{ flex: 1, height: 3, borderRadius: 2, background: step === 2 ? "var(--primary)" : "var(--border)", transition: "background 0.3s" }} />
-                <span style={{ fontSize: 12, color: "var(--foreground-muted)", whiteSpace: "nowrap", marginLeft: 8, fontWeight: 500 }}>
-                  Step {step} of 2
-                </span>
+            {/* Steps */}
+            <div className="rp-steps">
+              <div className="rp-steps-dots">
+                <span className="is-done" />
+                <span className={step === 2 ? "is-done" : ""} />
               </div>
+              <span className="rp-steps-label">Step {step} of 2</span>
             </div>
 
             <div style={{ width: "100%" }}>
               {/* Form header */}
-              <div style={{ marginBottom: 28, textAlign: "center" }}>
-                <div style={{
-                  fontSize: 13, fontWeight: 600, color: "var(--primary)", marginBottom: 8,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8, letterSpacing: "0.04em",
-                }}>
+              <div className="rp-form-header">
+                <div className="rp-form-eyebrow">
                   <Sparkles size={14} />
                   {step === 1 ? "Create account" : "Set password"}
                 </div>
-                <h1 style={{
-                  fontFamily: "var(--font-heading)", fontSize: 28, fontWeight: 700,
-                  color: "var(--foreground)", margin: "0 0 6px", lineHeight: 1.1, letterSpacing: "-0.025em",
-                }}>
+                <h1 className="rp-form-title">
                   {step === 1 ? "Tell us about you" : "Keep your account safe"}
                 </h1>
-                <p style={{ fontSize: 14, color: "var(--foreground-muted)", margin: 0, lineHeight: 1.6 }}>
+                <p className="rp-form-sub">
                   {step === 1
                     ? "We just need a few details to get you set up"
                     : "Choose a strong password you'll remember"}
@@ -718,13 +832,7 @@ export function RegisterPage() {
 
               {/* Error banner */}
               {error && (
-                <div style={{
-                  display: "flex", alignItems: "flex-start", gap: 9,
-                  background: "color-mix(in srgb, var(--destructive) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--destructive) 25%, transparent)",
-                  borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 16,
-                  fontSize: 13, color: "var(--destructive)",
-                }}>
+                <div className="rp-error-banner">
                   <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span>{error}</span>
                 </div>
@@ -736,30 +844,23 @@ export function RegisterPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <Field label="Full name" icon={UserIcon} k="fullName" placeholder="Nguyen Van A" form={form} fe={fe} upd={upd} />
                     <Field label="Username" icon={AtSign} k="username" placeholder="your_username" form={form} fe={fe} upd={upd} />
-                    <Field label="Email" icon={Mail} k="email" type="email" placeholder="you@example.com" form={form} fe={fe} upd={upd} />
+                    <Field label="Email" icon={Mail} k="email" type="email" placeholder="your@gmail.com" form={form} fe={fe} upd={upd} />
                     <Field label="Phone" icon={Phone} k="phone" type="tel" placeholder="0912 345 678" optional form={form} fe={fe} upd={upd} />
                     <Field label="Address" icon={MapPin} k="address" placeholder="123 Main Street, District 1" optional form={form} fe={fe} upd={upd} />
 
                     {/* Gender */}
                     <div style={{ marginBottom: 4 }}>
-                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
+                      <label className="rp-seg-label">
                         Gender
-                        <span style={{ fontSize: 11, fontWeight: 400, color: "var(--foreground-muted)", marginLeft: 4 }}>(optional)</span>
+                        <span className="rp-opt">(optional)</span>
                       </label>
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="rp-seg" role="group" aria-label="Gender">
                         {(["MALE","FEMALE","OTHER"] as const).map((value) => (
                           <button
                             key={value}
                             type="button"
+                            className={`rp-seg-btn ${form.gender === value ? "is-active" : ""}`}
                             onClick={() => { setForm((f) => ({ ...f, gender: value })); setFe((prev) => ({ ...prev, gender: "" })); setError(""); }}
-                            style={{
-                              flex: 1, height: 44, borderRadius: "var(--radius-md)",
-                              border: `1.5px solid ${form.gender === value ? "var(--primary)" : "var(--border)"}`,
-                              background: form.gender === value ? "rgba(107,63,160,0.06)" : "transparent",
-                              color: form.gender === value ? "var(--primary)" : "var(--foreground-muted)",
-                              fontSize: 14, fontWeight: 500, cursor: "pointer",
-                              fontFamily: "var(--font-body)", transition: "all 0.18s",
-                            }}
                           >
                             {value.charAt(0) + value.slice(1).toLowerCase()}
                           </button>
@@ -769,23 +870,32 @@ export function RegisterPage() {
 
                     {/* Date of birth */}
                     <div style={{ marginBottom: 4 }}>
-                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
+                      <label className="rp-seg-label">
                         Date of birth
-                        <span style={{ fontSize: 11, fontWeight: 400, color: "var(--foreground-muted)", marginLeft: 4 }}>(optional)</span>
+                        <span className="rp-opt">(optional)</span>
                       </label>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <select value={dobMonth} onChange={(e) => { setDobMonth(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
-                          style={{ flex: 1, height: 46, padding: "0 10px", border: `1.5px solid ${fe.dateOfBirth ? "var(--destructive)" : "var(--border)"}`, borderRadius: "var(--radius-md)", fontSize: 14, background: "var(--input-bg)", color: dobMonth ? "var(--foreground)" : "var(--foreground-muted)", fontFamily: "var(--font-body)", cursor: "pointer", outline: "none" }}>
+                        <select
+                          value={dobMonth}
+                          onChange={(e) => { setDobMonth(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
+                          className={`rp-select${!dobMonth ? " rp-empty" : ""}${fe.dateOfBirth ? " rp-select-err" : ""}`}
+                        >
                           <option value="">Month</option>
                           {Array.from({ length: 12 }, (_, i) => <option key={i+1} value={String(i+1)}>{(i+1).toString().padStart(2,"0")}</option>)}
                         </select>
-                        <select value={dobDay} onChange={(e) => { setDobDay(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
-                          style={{ flex: 1, height: 46, padding: "0 10px", border: `1.5px solid ${fe.dateOfBirth ? "var(--destructive)" : "var(--border)"}`, borderRadius: "var(--radius-md)", fontSize: 14, background: "var(--input-bg)", color: dobDay ? "var(--foreground)" : "var(--foreground-muted)", fontFamily: "var(--font-body)", cursor: "pointer", outline: "none" }}>
+                        <select
+                          value={dobDay}
+                          onChange={(e) => { setDobDay(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
+                          className={`rp-select${!dobDay ? " rp-empty" : ""}${fe.dateOfBirth ? " rp-select-err" : ""}`}
+                        >
                           <option value="">Day</option>
                           {Array.from({ length: 31 }, (_, i) => <option key={i+1} value={String(i+1)}>{(i+1).toString().padStart(2,"0")}</option>)}
                         </select>
-                        <select value={dobYear} onChange={(e) => { setDobYear(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
-                          style={{ flex: 1, height: 46, padding: "0 10px", border: `1.5px solid ${fe.dateOfBirth ? "var(--destructive)" : "var(--border)"}`, borderRadius: "var(--radius-md)", fontSize: 14, background: "var(--input-bg)", color: dobYear ? "var(--foreground)" : "var(--foreground-muted)", fontFamily: "var(--font-body)", cursor: "pointer", outline: "none" }}>
+                        <select
+                          value={dobYear}
+                          onChange={(e) => { setDobYear(e.target.value); setFe((prev) => ({ ...prev, dateOfBirth: "" })); setError(""); }}
+                          className={`rp-select${!dobYear ? " rp-empty" : ""}${fe.dateOfBirth ? " rp-select-err" : ""}`}
+                        >
                           <option value="">Year</option>
                           {Array.from({ length: 100 }, (_, i) => <option key={i} value={String(new Date().getFullYear() - i)}>{new Date().getFullYear() - i}</option>)}
                         </select>
@@ -805,11 +915,11 @@ export function RegisterPage() {
                 <form onSubmit={handleSubmit}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <div style={{ marginBottom: 4 }}>
-                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 5 }}>
-                        Password <span style={{ color: "var(--destructive)" }}>*</span>
+                      <label className="rp-field-label">
+                        Password <span className="rp-req">*</span>
                       </label>
-                      <div style={{ position: "relative" }}>
-                        <Lock size={15} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", opacity: 0.6, pointerEvents: "none" }} />
+                      <div className={`rp-field-wrap${fe.password ? " rp-error" : ""}`}>
+                        <Lock size={15} className="rp-field-icon" />
                         <input
                           type={showPw ? "text" : "password"}
                           placeholder="Create a strong password"
@@ -817,55 +927,76 @@ export function RegisterPage() {
                           onChange={upd("password")}
                           required
                           autoComplete="new-password"
-                          style={{ ...inputStyle(true, !!fe.password), paddingRight: 44, width: "100%", borderColor: fe.password ? "var(--destructive)" : "var(--border)" }}
-                          onFocus={(e) => { e.target.style.borderColor = "var(--primary)"; e.target.style.boxShadow = "0 0 0 3px rgba(107,63,160,0.08)"; }}
-                          onBlur={(e) => { e.target.style.borderColor = fe.password ? "var(--destructive)" : "var(--border)"; e.target.style.boxShadow = "none"; }}
+                          className="rp-input rp-input-right"
                         />
-                        <button type="button" onClick={() => setShowPw(!showPw)}
-                          style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--foreground-muted)", display: "flex", alignItems: "center", borderRadius: 6 }}>
+                        <button
+                          type="button"
+                          className="rp-eye"
+                          onClick={() => setShowPw(!showPw)}
+                          aria-label={showPw ? "Hide password" : "Show password"}
+                        >
                           {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
                       </div>
-                      {fe.password && <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4, paddingLeft: 2 }}>{fe.password}</div>}
+                      {fe.password && <div className="rp-err-msg">{fe.password}</div>}
                       {form.password.length > 0 && (
                         <>
-                          <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                          <div className="pw-bars">
                             {[0, 1, 2].map((i) => (
-                              <div key={i} style={{ height: 3, flex: 1, borderRadius: 2, background: i <= pwScore ? pwColor : "var(--border)", transition: "background 0.25s" }} />
+                              <span
+                                key={i}
+                                className="pw-bar"
+                                style={{ background: i <= pwScore ? pwColor : "var(--border)" }}
+                              />
                             ))}
                           </div>
                           <div style={{ fontSize: 11, color: pwColor, marginTop: 3, fontWeight: 500 }}>
-                            {pwLabel}{pwScore < 2 ? " — add numbers or uppercase" : ""}
+                            {pwLabel}
+                            {pwScore < 2 ? " — add numbers or uppercase" : ""}
                           </div>
                         </>
                       )}
                     </div>
 
                     <div style={{ marginBottom: 4 }}>
-                      <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--foreground)", marginBottom: 5 }}>
-                        Confirm password <span style={{ color: "var(--destructive)" }}>*</span>
+                      <label className="rp-field-label">
+                        Confirm password <span className="rp-req">*</span>
                       </label>
-                      <div style={{ position: "relative" }}>
-                        <Lock size={15} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--foreground-muted)", opacity: 0.6, pointerEvents: "none" }} />
+                      <div className={`rp-field-wrap${fe.confirmPassword ? " rp-error" : ""}`}>
+                        <Lock size={15} className="rp-field-icon" />
                         <input
                           type={showCp ? "text" : "password"}
                           placeholder="Repeat your password"
                           value={form.confirmPassword}
                           onChange={upd("confirmPassword")}
                           required
-                          style={{ ...inputStyle(true, !!fe.confirmPassword), paddingRight: 44, width: "100%", borderColor: fe.confirmPassword ? "var(--destructive)" : "var(--border)" }}
-                          onFocus={(e) => { e.target.style.borderColor = "var(--primary)"; e.target.style.boxShadow = "0 0 0 3px rgba(107,63,160,0.08)"; }}
-                          onBlur={(e) => { e.target.style.borderColor = fe.confirmPassword ? "var(--destructive)" : "var(--border)"; e.target.style.boxShadow = "none"; }}
+                          className="rp-input rp-input-right"
                         />
-                        <button type="button" onClick={() => setShowCp(!showCp)}
-                          style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--foreground-muted)", display: "flex", alignItems: "center", borderRadius: 6 }}>
+                        <button
+                          type="button"
+                          className="rp-eye"
+                          onClick={() => setShowCp(!showCp)}
+                          aria-label={showCp ? "Hide password" : "Show password"}
+                        >
                           {showCp ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
                       </div>
-                      {fe.confirmPassword && <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4, paddingLeft: 2 }}>{fe.confirmPassword}</div>}
+                      {fe.confirmPassword && <div className="rp-err-msg">{fe.confirmPassword}</div>}
                       {form.confirmPassword.length > 0 && !fe.confirmPassword && (
-                        <div style={{ fontSize: 11, marginTop: 3, fontWeight: 500, color: form.password === form.confirmPassword ? "var(--primary)" : "var(--foreground-muted)" }}>
-                          {form.password === form.confirmPassword ? "✓ Passwords match" : "Passwords don't match yet"}
+                        <div
+                          style={{
+                            fontSize: 11,
+                            marginTop: 3,
+                            fontWeight: 500,
+                            color:
+                              form.password === form.confirmPassword
+                                ? "var(--primary)"
+                                : "var(--foreground-muted)",
+                          }}
+                        >
+                          {form.password === form.confirmPassword
+                            ? "✓ Passwords match"
+                            : "Passwords don't match yet"}
                         </div>
                       )}
                     </div>
@@ -890,17 +1021,11 @@ export function RegisterPage() {
                 </form>
               )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 12px" }}>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                <span style={{ fontSize: 13, color: "var(--foreground-muted)", whiteSpace: "nowrap", fontWeight: 500 }}>
-                  Already have an account?
-                </span>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              <div className="rp-divider">
+                <span className="rp-divider-text">Already have an account?</span>
               </div>
-              <p style={{ textAlign: "center", fontSize: 13.5, color: "var(--foreground-muted)", margin: 0 }}>
-                <Link to="/auth/login" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
-                  Sign in here
-                </Link>{" "}
+              <p className="rp-signin-foot">
+                <Link to="/auth/login">Sign in here</Link>{" "}
                 and continue your journey ✦
               </p>
             </div>

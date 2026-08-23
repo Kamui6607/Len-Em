@@ -11,7 +11,6 @@ import { SectionDivider } from "../../shared/components/motion/SectionDivider";
 import { AnimatedBackground } from "../../shared/components/motion/AnimatedBackground";
 
 export function Home() {
-  
   return (
     <>
       <AnimatedBackground />

@@ -75,8 +75,10 @@ export function LoginPage() {
     <>
       <style>{`
         .login-shell {
-          min-height: 100vh;
+          height: 100vh;
+          height: 100dvh;
           display: flex;
+          overflow: hidden;
           background: var(--background);
         }
 
@@ -87,8 +89,8 @@ export function LoginPage() {
           display: none;
           position: relative;
           width: 44%;
-          min-height: 100vh;
-          padding: 56px 48px;
+          height: 100%;
+          padding: 40px 40px;
           flex-direction: column;
           justify-content: space-between;
           overflow: hidden;
@@ -186,7 +188,7 @@ export function LoginPage() {
           display: inline-flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 64px;
+          margin-bottom: 36px;
         }
         .welcome-logo-mark {
           position: relative;
@@ -238,25 +240,25 @@ export function LoginPage() {
 
         .welcome-title {
           font-family: var(--font-heading);
-          font-size: clamp(1.9rem, 2.6vw, 2.5rem);
+          font-size: clamp(1.6rem, 2.2vw, 2.25rem);
           font-weight: 700;
           line-height: 1.18;
           letter-spacing: -0.02em;
           max-width: 420px;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
         .welcome-sub {
-          font-size: 0.9375rem;
-          line-height: 1.7;
+          font-size: 0.875rem;
+          line-height: 1.6;
           color: rgba(255,255,255,0.78);
           max-width: 380px;
-          margin-bottom: 44px;
+          margin-bottom: 28px;
         }
 
         .welcome-features {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 12px;
         }
         .welcome-feature {
           display: flex;
@@ -265,9 +267,9 @@ export function LoginPage() {
         }
         .welcome-feature-icon {
           flex-shrink: 0;
-          width: 38px;
-          height: 38px;
-          border-radius: 12px;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
           background: rgba(255,255,255,0.12);
           border: 1px solid rgba(255,255,255,0.2);
           display: flex;
@@ -294,7 +296,7 @@ export function LoginPage() {
         .welcome-quote {
           position: relative;
           z-index: 1;
-          padding-top: 28px;
+          padding-top: 16px;
           border-top: 1px dashed rgba(255,255,255,0.22);
           transition: border-color 0.4s ease;
         }
@@ -303,10 +305,10 @@ export function LoginPage() {
         }
         .welcome-quote-text {
           font-family: var(--font-script);
-          font-size: 1.5rem;
-          line-height: 1.4;
+          font-size: 1.3rem;
+          line-height: 1.35;
           color: #fff;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
         }
         .welcome-quote-by {
           font-size: 0.75rem;
@@ -320,19 +322,23 @@ export function LoginPage() {
         .login-form-side {
           position: relative;
           flex: 1;
+          min-width: 0;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
+          overflow-y: auto;
+          padding: 16px;
         }
         .login-card {
-          width: 100%;
-          max-width: 400px;
+          margin: auto;
+          width: min(100%, 440px);
           background: var(--dropdown-bg);
           border: 1px solid var(--border);
           border-radius: var(--radius-3xl);
           box-shadow: var(--shadow-float);
-          padding: 40px 36px;
+          padding: 30px 34px;
+          min-height: min(520px, calc(100dvh - 32px));
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
           position: relative;
           overflow: hidden;
           backdrop-filter: blur(20px) saturate(180%);
@@ -353,7 +359,7 @@ export function LoginPage() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         }
         .mobile-brand-mark {
           width: 34px;
@@ -378,7 +384,7 @@ export function LoginPage() {
         }
         .form-header {
           text-align: center;
-          margin-bottom: 32px;
+          margin-bottom: 20px;
         }
         .form-eyebrow {
           font-family: 'Inter', sans-serif;
@@ -394,12 +400,12 @@ export function LoginPage() {
         }
         .form-title {
           font-family: var(--font-heading);
-          font-size: var(--text-3xl);
+          font-size: var(--text-2xl);
           font-weight: 700;
           color: var(--foreground);
           letter-spacing: -0.025em;
           line-height: 1.1;
-          margin-bottom: 8px;
+          margin-bottom: 4px;
         }
         .form-sub {
           font-size: var(--text-sm);
@@ -407,7 +413,7 @@ export function LoginPage() {
           line-height: 1.6;
         }
         .field {
-          margin-bottom: 20px;
+          margin-bottom: 12px;
         }
         .field-label {
           display: block;
@@ -435,7 +441,7 @@ export function LoginPage() {
         }
         .field-input {
           width: 100%;
-          padding: 14px 14px 14px 44px;
+          padding: 12px 14px 12px 42px;
           background: var(--input-bg);
           color: var(--foreground);
           border: 1.5px solid var(--input-border);
@@ -458,7 +464,7 @@ export function LoginPage() {
           box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
         }
         .field-input-pr {
-          padding-right: 44px;
+          padding-right: 40px;
         }
         .eye-btn {
           position: absolute;
@@ -483,7 +489,7 @@ export function LoginPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 24px;
+          margin-bottom: 12px;
         }
         .remember {
           display: flex;
@@ -565,8 +571,8 @@ export function LoginPage() {
         .divider {
           display: flex;
           align-items: center;
-          gap: 16px;
-          margin: 24px 0;
+          gap: 12px;
+          margin: 14px 0;
         }
         .divider-line {
           flex: 1;
@@ -595,7 +601,7 @@ export function LoginPage() {
         .sep {
           height: 1px;
           background: var(--border-subtle);
-          margin: 24px 0;
+          margin: 14px 0;
         }
         .demo-box {
           background: var(--surface-secondary);
@@ -659,6 +665,27 @@ export function LoginPage() {
 
         @media (prefers-reduced-motion: reduce) {
           .welcome-stitch-ring, .welcome-stitch-ring--inner { animation: none; }
+        }
+
+        /* ── Viewport thấp: nhồi nhẹ thêm để luôn vừa khít, không phải cuộn ── */
+        @media (max-height: 800px) {
+          .welcome-logo { margin-bottom: 24px; }
+          .welcome-eyebrow { margin-bottom: 14px; }
+          .welcome-features { gap: 10px; }
+          .welcome-feature-icon { width: 30px; height: 30px; }
+          .welcome-quote { padding-top: 14px; }
+          .login-card { min-height: auto; padding: 22px 24px; }
+          .form-header { margin-bottom: 16px; }
+          .field { margin-bottom: 10px; }
+          .form-row { margin-bottom: 10px; }
+          .divider { margin: 10px 0; }
+          .submit-btn { padding: 12px; }
+        }
+        @media (max-height: 640px) {
+          .welcome-title { font-size: clamp(1.45rem, 4vw, 1.8rem); margin-bottom: 8px; }
+          .welcome-sub { margin-bottom: 16px; }
+          .welcome-quote { display: none; }
+          .mobile-brand { margin-bottom: 10px; }
         }
       `}</style>
 
@@ -763,7 +790,7 @@ export function LoginPage() {
                   <input
                     type="text"
                     className="field-input"
-                    placeholder="you@gmail.com"
+                    placeholder="your@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

@@ -573,44 +573,192 @@ export function RibbonTestimonialCard() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ANIMATED STITCH ROW  — fills icons on viewport enter with stagger
+// ANIMATED STITCH ROW — fills icons on viewport enter with stagger
+// Redesigned: embroidery-hoop rings + a "thread" that stitches through
+// each step, using --cta-gradient / --cta-shadow / --glow-primary so
+// the glow automatically reads right in both light and dark mode.
 // ═══════════════════════════════════════════════════════════════════
 
-function ViewFillIcon({ Comp, label, delay }: { Comp: React.ComponentType<StitchIconProps>; label: string; delay: number }) {
-  const [filled, setFilled] = useState(false);
+function ViewFillIcon({
+  Comp,
+  label,
+  delay,
+  index,
+  filled,
+  onFill,
+}: {
+  Comp: React.ComponentType<StitchIconProps>;
+  label: string;
+  delay: number;
+  index: number;
+  filled: boolean;
+  onFill: () => void;
+}) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+    <motion.div
+      onViewportEnter={() => setTimeout(onFill, delay * 1000)}
+      viewport={{ once: true, amount: 0.6 }}
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: delay * 0.5 }}
+      whileHover={{ y: -3 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "8px",
+        position: "relative",
+      }}
+    >
+      {/* Step badge — number while unfilled, check once stitched */}
       <motion.div
-        onViewportEnter={() => setTimeout(() => setFilled(true), delay * 1000)}
-        viewport={{ once: true, amount: 0.6 }}
+        animate={{
+          backgroundColor: filled ? "var(--primary)" : "var(--surface)",
+          scale: filled ? 1 : 0.9,
+        }}
+        transition={{ type: "spring", stiffness: 320, damping: 18 }}
         style={{
-          width: "60px", height: "60px", borderRadius: "14px",
-          background: filled ? "var(--primary)" : "var(--surface)",
-          border: `1.5px solid ${filled ? "var(--primary-hover)" : "var(--border)"}`,
-          boxShadow: filled ? "var(--shadow-md)" : "var(--shadow-sm)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+          position: "absolute",
+          top: "-4px",
+          right: "0px",
+          zIndex: 2,
+          width: "20px",
+          height: "20px",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: `1.5px solid ${filled ? "var(--primary)" : "var(--border)"}`,
+          boxShadow: filled ? "var(--shadow-sm)" : "none",
         }}
       >
-        <Comp filled={filled} size={44} />
+        {filled ? (
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden>
+            <path d="M1 4L3.5 6.5L9 1" stroke="var(--primary-foreground)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.7rem", fontWeight: 700, color: "var(--foreground-muted)" }}>
+            {index + 1}
+          </span>
+        )}
       </motion.div>
-      <span style={{
-        fontFamily: "'Caveat', cursive", fontSize: "0.72rem",
-        color: filled ? "var(--primary)" : "var(--foreground-muted)",
-      }}>
+
+      {/* Dashed "embroidery hoop" ring around the icon */}
+      <div
+        style={{
+          padding: "5px",
+          borderRadius: "50%",
+          border: `1.5px dashed ${filled ? "var(--primary)" : "color-mix(in srgb, var(--primary) 32%, var(--border))"}`,
+          transition: "border-color 0.4s var(--ease-out)",
+        }}
+      >
+        <motion.div
+          animate={{
+            scale: filled ? [1, 1.12, 1] : 1,
+            rotate: filled ? [0, -6, 0] : 0,
+          }}
+          transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+          style={{
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            background: filled ? "var(--cta-gradient)" : "var(--card)",
+            boxShadow: filled ? "var(--cta-shadow)" : "var(--shadow-sm)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Comp filled={filled} size={40} />
+        </motion.div>
+      </div>
+
+      <span
+        style={{
+          fontFamily: "'Caveat', cursive",
+          fontSize: "0.74rem",
+          fontWeight: filled ? 600 : 400,
+          color: filled ? "var(--primary)" : "var(--foreground-muted)",
+          transition: "color 0.3s ease",
+        }}
+      >
         {label}
       </span>
-    </div>
+    </motion.div>
   );
 }
 
 function AnimatedStitchRow() {
   const { t } = useLanguage();
+  const [filledMap, setFilledMap] = useState<boolean[]>(() => ALL_STITCH_ICONS.map(() => false));
+
+  const filledCount = filledMap.filter(Boolean).length;
+  const progress = (filledCount / ALL_STITCH_ICONS.length) * 100;
+
+  const markFilled = (i: number) =>
+    setFilledMap((prev) => {
+      if (prev[i]) return prev;
+      const next = [...prev];
+      next[i] = true;
+      return next;
+    });
+
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "28px", flexWrap: "wrap" as const }}>
-      {ALL_STITCH_ICONS.map(({ key, labelKey, Comp }, i) => (
-        <ViewFillIcon key={key} Comp={Comp} label={t(labelKey)} delay={i * 0.1} />
-      ))}
+    <div style={{ position: "relative" }}>
+      {/* Dashed thread connecting every stitch — hidden once icons wrap on small screens */}
+      <div
+        aria-hidden
+        className="hidden sm:block"
+        style={{
+          position: "absolute",
+          top: "36px",
+          left: "6%",
+          right: "6%",
+          height: "2px",
+          backgroundImage: "linear-gradient(to right, var(--border) 50%, transparent 50%)",
+          backgroundSize: "8px 2px",
+          zIndex: 0,
+        }}
+      />
+      <motion.div
+        aria-hidden
+        className="hidden sm:block"
+        animate={{ width: `${progress}%` }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        style={{
+          position: "absolute",
+          top: "36px",
+          left: "6%",
+          height: "2px",
+          background: "var(--cta-gradient)",
+          boxShadow: "0 0 8px var(--glow-primary)",
+          zIndex: 0,
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          gap: "28px",
+          flexWrap: "wrap" as const,
+        }}
+      >
+        {ALL_STITCH_ICONS.map(({ key, labelKey, Comp }, i) => (
+          <ViewFillIcon
+            key={key}
+            index={i}
+            Comp={Comp}
+            label={t(labelKey)}
+            delay={i * 0.12}
+            filled={filledMap[i]}
+            onFill={() => markFilled(i)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

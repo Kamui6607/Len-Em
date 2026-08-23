@@ -102,74 +102,7 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 }
 
 // ============================================================
-// 3. Admin CRUD operations
-// ============================================================
-
-export interface CreateProductData {
-  name: string;
-  description: string;
-  category: string;
-  image: string;
-  tags?: string[];
-  variants: {
-    color: string;
-    hexCode: string;
-    price: number;
-    stock: number;
-    image: string;
-  }[];
-  isActive?: boolean;
-}
-
-export interface UpdateProductData {
-  name?: string;
-  description?: string;
-  category?: string;
-  image?: string;
-  tags?: string[];
-  variants?: {
-    color: string;
-    hexCode: string;
-    price: number;
-    stock: number;
-    image: string;
-  }[];
-  isActive?: boolean;
-}
-
-/**
- * Create a new product (Admin only)
- */
-export async function createProduct(data: CreateProductData): Promise<BackendSingleProduct> {
-  const { data: response } = await axiosClient.post("/products", data);
-  return response.data;
-}
-
-/**
- * Update an existing product (Admin only)
- */
-export async function updateProduct(id: string, data: UpdateProductData): Promise<BackendSingleProduct> {
-  const { data: response } = await axiosClient.put(`/products/${id}`, data);
-  return response.data;
-}
-
-/**
- * Soft delete a product (Admin only) — sets isActive = false
- */
-export async function deleteProduct(id: string): Promise<void> {
-  await axiosClient.delete(`/products/${id}`);
-}
-
-/**
- * Restore a soft-deleted product (Admin only) — sets isActive = true
- */
-export async function restoreProduct(id: string): Promise<BackendSingleProduct> {
-  const { data: response } = await axiosClient.patch(`/products/${id}`);
-  return response.data;
-}
-
-// ============================================================
-// 5. Export
+// Export
 // ============================================================
 
 export type { Product };

@@ -575,7 +575,7 @@ export function CourseDetailPage() {
                   alt={course.title}
                   className="absolute inset-0 h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/75 via-black/10 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
                   <Badge
                     className={cn("mb-4 border", levelStyles[course.level])}
@@ -783,13 +783,24 @@ export function CourseDetailPage() {
                         }}
                       >
                         <img
-                          src={kit.thumbnail}
+                          src={
+                            kit.thumbnail ||
+                            kit.products?.[0]?.productId?.image ||
+                            kit.products?.[0]?.productId?.variants?.[0]?.image
+                          }
                           alt={kit.name}
                           style={{
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
                             display: "block",
+                          }}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallback) {
+                              target.dataset.fallback = "true";
+                              target.src = `https://picsum.photos/seed/${kit._id}/800/450`;
+                            }
                           }}
                         />
                         <div
