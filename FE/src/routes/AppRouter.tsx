@@ -5,6 +5,7 @@ import { RequireAuth } from "../shared/components/auth/RequireAuth";
 import { RequireRole } from "../shared/components/auth/RequireRole";
 import { StoreLayout } from "../shared/components/layout/StoreLayout";
 import { LoadingFallback } from "../shared/components/LoadingFallback";
+import { ErrorBoundary } from "../shared/components/ErrorBoundary";
 
 // Lazy-loaded pages
 const Home = lazy(() =>
@@ -135,9 +136,11 @@ const ChatBotPage = lazy(() =>
 function StoreOutlet() {
   return (
     <StoreLayout>
-      <Suspense fallback={<LoadingFallback />}>
-        <Outlet />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
+          <Outlet />
+        </Suspense>
+      </ErrorBoundary>
     </StoreLayout>
   );
 }
@@ -343,17 +346,21 @@ export function AppRouter() {
       <Route
         path="auth/login"
         element={
-          <Suspense fallback={<LoadingFallback />}>
-            <LoginPage />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingFallback />}>
+              <LoginPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
       <Route
         path="auth/register"
         element={
-          <Suspense fallback={<LoadingFallback />}>
-            <RegisterPage />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingFallback />}>
+              <RegisterPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
 
@@ -361,25 +368,31 @@ export function AppRouter() {
       <Route
         path="reset-password"
         element={
-          <Suspense fallback={<LoadingFallback />}>
-            <ResetPasswordPage />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingFallback />}>
+              <ResetPasswordPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
       <Route
         path="auth/forgot-password"
         element={
-          <Suspense fallback={<LoadingFallback />}>
-            <ForgotPasswordPage />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingFallback />}>
+              <ForgotPasswordPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
       <Route
         path="auth/reset-password"
         element={
-          <Suspense fallback={<LoadingFallback />}>
-            <ResetPasswordPage />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingFallback />}>
+              <ResetPasswordPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
 
@@ -388,9 +401,11 @@ export function AppRouter() {
         path="creator/*"
         element={
           <RequireRole allowedRoles={["creator"]}>
-            <Suspense fallback={<LoadingFallback fullPage />}>
-              <Profile />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <Profile />
+              </Suspense>
+            </ErrorBoundary>
           </RequireRole>
         }
       />
@@ -400,9 +415,11 @@ export function AppRouter() {
         path="admin/*"
         element={
           <RequireRole allowedRoles={["admin", "staff"]}>
-            <Suspense fallback={<LoadingFallback fullPage />}>
-              <AdminPage />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <AdminPage />
+              </Suspense>
+            </ErrorBoundary>
           </RequireRole>
         }
       />
@@ -412,9 +429,11 @@ export function AppRouter() {
         path="staff"
         element={
           <RequireRole allowedRoles={["staff"]}>
-            <Suspense fallback={<LoadingFallback fullPage />}>
-              <StaffPage />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <StaffPage />
+              </Suspense>
+            </ErrorBoundary>
           </RequireRole>
         }
       />
@@ -422,9 +441,11 @@ export function AppRouter() {
         path="staff/diy"
         element={
           <RequireRole allowedRoles={["staff"]}>
-            <Suspense fallback={<LoadingFallback fullPage />}>
-              <AdminPage />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <AdminPage />
+              </Suspense>
+            </ErrorBoundary>
           </RequireRole>
         }
       />
@@ -432,9 +453,11 @@ export function AppRouter() {
         path="staff/reports"
         element={
           <RequireRole allowedRoles={["staff"]}>
-            <Suspense fallback={<LoadingFallback fullPage />}>
-              <AdminPage />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <AdminPage />
+              </Suspense>
+            </ErrorBoundary>
           </RequireRole>
         }
       />
@@ -444,9 +467,11 @@ export function AppRouter() {
         path="manage/orders"
         element={
           <RequireRole allowedRoles={["admin", "staff"]}>
-            <Suspense fallback={<LoadingFallback fullPage />}>
-              <ManageOrders />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <ManageOrders />
+              </Suspense>
+            </ErrorBoundary>
           </RequireRole>
         }
       />

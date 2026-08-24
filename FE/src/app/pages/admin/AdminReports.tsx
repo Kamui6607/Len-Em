@@ -5,7 +5,8 @@ import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDelet
 import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
-import { userService } from "../../../features/users/services/user.service";
+import { userService, type UserRoleRef } from "../../../features/users/services/user.service";
+import { roleService, normalizeRoles } from "../../../shared/api/roleService";
 import type { OrderReport } from "../../../features/orderReport/types/orderReport.types";
 import type { UsersListResponse } from "../../../features/users/services/user.service";
 import { useAuth } from "../../../shared/hooks/useAuth";
@@ -62,26 +63,85 @@ export function AdminReports() {
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
   useEffect(() => {
-    // Fetch all users and filter client-side by roleName === "Staff"
-    const timer = setTimeout(() => {
-      userService.getAllUsers({ page: 1, limit: 50 })
-        .then((response) => {
-          const users = response.data?.data?.result?.users || [];
-          setApiUsers(users);
-        })
-        .catch((error) => {
-          console.warn("Failed to load users for staff assignment:", error);
-          setApiUsers([]);
-        });
-    }, 100); // Small delay to ensure auth is ready
-    
-    return () => clearTimeout(timer);
-  }, []);
+    // Staff assignment is Admin-only, and the /users endpoint is admin-only
+    // too — loading it for a staff member triggers a 400/403.
+    if (!isAdmin) {
+      setApiUsers([]);
+      return;
+    }
 
-  const staffUsers = apiUsers.filter((u) => {
-    const roleStr = typeof u.roleId === "object" ? u.roleId?.roleName : String(u.roleId);
-    return roleStr === "Staff";
-  });
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void (async () => {
+        const collected: ApiUser[] = [];
+        const seen = new Set<string>();
+        try {
+          // 1) Find the "Staff" role so we can filter server-side.
+          const { data: rolesResponse } = await roleService.getAll({ limit: 100 });
+          const roles = normalizeRoles(rolesResponse.data?.data?.roles ?? []);
+          const staffRole = roles.find((role) => role.roleName === "Staff");
+
+          // 2) Fetch staff users — the backend caps `limit` (the official admin
+          //    hook uses 20), so page through with a safe page size.
+          const pageSize = 20;
+          const maxPages = 5;
+
+          for (let p = 1; p <= maxPages; p++) {
+            const { data: response } = await userService.getAllUsers({
+              page: p,
+              limit: pageSize,
+              roleId: staffRole?._id ?? undefined,
+            });
+            const users = response.data?.result?.users ?? [];
+            for (const user of users) {
+              if (!user.userId || seen.has(user.userId)) continue;
+              seen.add(user.userId);
+              collected.push(user);
+            }
+            const totalPages = response.data?.result?.totalPages ?? 1;
+            if (p >= totalPages) break;
+          }
+
+          // 3) If server-side filtering returned nothing (role unknown or a
+          //    roleId mismatch), fall back to a client-side filter by name.
+          let staff = collected.filter((user) => {
+            const roleId =
+              typeof user.roleId === "string"
+                ? user.roleId
+                : (user.roleId as UserRoleRef | undefined)?._id ?? "";
+            return roleId === staffRole?._id;
+          });
+          if (staff.length === 0) {
+            staff = collected.filter((user) => {
+              const roleName =
+                typeof user.roleId === "string"
+                  ? user.roleId
+                  : (user.roleId as UserRoleRef | undefined)?.roleName ?? "";
+              return roleName === "Staff";
+            });
+          }
+
+          if (!cancelled) setApiUsers(staff.length > 0 ? staff : collected);
+        } catch (error) {
+          if (cancelled) return;
+          // Keep whatever we already collected before the failure.
+          if (collected.length > 0) {
+            setApiUsers(collected);
+          } else {
+            console.warn("Failed to load staff users for assignment:", error);
+            setApiUsers([]);
+          }
+        }
+      })();
+    }, 100); // Small delay to ensure auth is ready
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isAdmin]);
+
+  const staffUsers = apiUsers;
 
   const handleUpdateStatus = async (id: string, status: string) => {
     setStatusUpdating(true);
@@ -401,12 +461,14 @@ export function AdminReports() {
                     </button>
                   </>
                 )}
-                <button
-                  onClick={() => setAssignModal(selectedReport._id)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-card border border-border hover:bg-muted"
-                >
-                  {selectedReport.assignedStaff ? "Reassign" : "Assign Staff"}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setAssignModal(selectedReport._id)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-card border border-border hover:bg-muted"
+                  >
+                    {selectedReport.assignedStaff ? "Reassign" : "Assign Staff"}
+                  </button>
+                )}
               </div>
             </div>
           </div>

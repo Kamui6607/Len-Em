@@ -122,7 +122,7 @@ export function useNotificationSocket() {
 
       // Stop the Socket.IO manager before disconnecting; otherwise it can
       // schedule another attempt with the same expired token.
-      console.warn("[NotificationSocket] Authentication failed; disabling reconnect");
+      console.info("[NotificationSocket] Authentication failed; disabling reconnect");
       clearTimeout(connectTimeout);
             socket.io.opts.reconnection = false;
       socket.removeAllListeners();

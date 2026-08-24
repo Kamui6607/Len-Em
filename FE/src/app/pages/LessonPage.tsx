@@ -230,7 +230,10 @@ export function LessonPage() {
   // Completed lesson IDs are also synced back into the local stores so the
   // lesson UI reflects the server truth immediately.
   useEffect(() => {
-    if (!courseId) return;
+    if (!courseId || !isAuthenticated) {
+      setCourseProgress(null);
+      return;
+    }
     let active = true;
     courseService
       .getProgress(courseId)
@@ -248,7 +251,7 @@ export function LessonPage() {
     return () => {
       active = false;
     };
-  }, [courseId]);
+  }, [courseId, isAuthenticated]);
 
   // ── Persist lesson completion to the server ──────────────────────────
   // Shared by all completion paths (native <video> onEnded, YouTube API
