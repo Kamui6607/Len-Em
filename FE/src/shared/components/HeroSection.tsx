@@ -508,7 +508,7 @@ function SwipeHint({ visible }: { visible: boolean }) {
     <motion.div
       className="absolute pointer-events-none"
       style={{
-        left: "50%",
+        left: "70%",
         bottom: "-14px",
         zIndex: 20,
         translateX: "-50%",

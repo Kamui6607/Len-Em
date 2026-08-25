@@ -20,14 +20,9 @@ export default defineConfig({
   appType: 'spa',
 
   server: {
-    port: 5000,
-    host: 'localhost',
+    port: 5173,
+    strictPort: true,
     allowedHosts: true,
-    hmr: {
-      host: 'localhost',
-      port: 5000,
-      protocol: 'ws',
-    },
     proxy: {
       '/api': {
         target: 'https://yarn-shop-be.onrender.com',
@@ -143,10 +138,8 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 300,
-    minify: 'esbuild',
     sourcemap: false,
     cssCodeSplit: true,
-    cssMinify: 'esbuild',
   },
 
   optimizeDeps: {
