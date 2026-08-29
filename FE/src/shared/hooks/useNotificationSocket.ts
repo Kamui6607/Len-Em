@@ -6,6 +6,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { notificationService } from "../api/notificationService";
 import type { ApiNotification } from "../api/notificationService";
 import type { Notification } from "../types/notification.types";
+import { isReportNotification } from "../types/notification.types";
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.startsWith("/")
@@ -33,6 +34,7 @@ export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const isAdmin = useAuthStore((s) => s.user?.roleId === "admin");
   const { setNotifications, addNotification } = useNotifications();
 
   // Fetch notifications from API on mount
@@ -43,7 +45,10 @@ export function useNotificationSocket() {
       try {
         const { data } = await notificationService.getAll({ page: 1, limit: 50 });
         const apiNotifs = data.data.notifications;
-        const mapped = apiNotifs.map(mapApiNotification);
+        const mapped = apiNotifs
+          .map(mapApiNotification)
+          // Admin chỉ nhận Report — lọc bỏ các loại tin nhắn khác
+          .filter((n) => (isAdmin ? isReportNotification(n.type) : true));
         setNotifications(mapped);
       } catch {
         // Silent fail - fall back to local storage
@@ -51,7 +56,7 @@ export function useNotificationSocket() {
     };
 
     fetchNotifications();
-  }, [isAuthenticated, setNotifications]);
+  }, [isAuthenticated, setNotifications, isAdmin]);
 
   // Socket.IO connection for real-time
   useEffect(() => {
@@ -91,6 +96,10 @@ export function useNotificationSocket() {
 
     socket.on("new_notification", (apiNotif: ApiNotification) => {
       const mapped = mapApiNotification(apiNotif);
+
+      // Admin chỉ nhận Report — bỏ qua các loại tin nhắn khác
+      if (isAdmin && !isReportNotification(mapped.type)) return;
+
       addNotification(mapped);
 
       // Show toast notification immediately with icon emoji
@@ -98,6 +107,8 @@ export function useNotificationSocket() {
         : apiNotif.type === "order_status_change" ? "📦"
         : apiNotif.type === "support_diy_update" ? "🛠️"
         : apiNotif.type === "report_update" ? "🚩"
+        : apiNotif.type === "new_report" ? "🚩"
+        : apiNotif.type === "report_assigned" ? "🚩"
         : "🔔";
       toast.info(`${icon} ${apiNotif.title}`, {
         description: apiNotif.message,
@@ -138,7 +149,7 @@ export function useNotificationSocket() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [isAuthenticated, accessToken, addNotification]);
+  }, [isAuthenticated, accessToken, addNotification, isAdmin]);
 
   return socketRef;
 }

@@ -16,6 +16,13 @@ export const authService = {
   login: (credentials: LoginRequest) =>
     axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/login`, credentials),
 
+  /** POST /auth/google  -> same response shape as /auth/login.
+   *  Body: { token } = the Google access_token from useGoogleLogin().
+   *  Handles BOTH login and signup (BE auto-creates the account when the
+   *  email has never been seen). */
+  googleLogin: (token: string) =>
+    axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/google`, { token }),
+
   /** POST /auth/signup  â†’ { status, data: { username, email, ... } }  (no tokens) */
   register: (data: RegisterRequest) =>
     axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/signup`, data),

@@ -98,6 +98,10 @@ export function UserMenu({
   const isStaff = user.roleId === "staff";
   const isDashboardUser = isAdmin || isStaff;
 
+  // Admin có trang notifications riêng trong admin panel (chỉ nhận Report),
+  // KHÔNG chuyển sang trang notifications của user.
+  const notificationsPath = isAdmin ? "/admin/notifications" : "/notifications";
+
   const roleLabel = isAdmin
     ? "Administrator"
     : isStaff
@@ -194,7 +198,7 @@ export function UserMenu({
 
           {/* ── Notifications Link ── */}
           <Link
-            to="/notifications"
+            to={notificationsPath}
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group no-underline"
             style={{

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { toast } from "sonner";
+import { GoogleAuthButton } from "../../../shared/components/auth/GoogleAuthButton";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 
 const welcomeFeatures = [
@@ -907,6 +908,12 @@ export function RegisterPage() {
                       Continue <ArrowRight size={16} />
                     </button>
                   </div>
+
+                  <div className="rp-divider">
+                    <span className="rp-divider-text">or sign up with</span>
+                  </div>
+
+                  <GoogleAuthButton onError={setError} />
                 </form>
               )}
 

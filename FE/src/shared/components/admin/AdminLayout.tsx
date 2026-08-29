@@ -13,6 +13,7 @@ import {
   Video,
   RotateCcw,
   Hand,
+  Bell,
 } from "lucide-react";
 import { DashboardShell } from "../dashboard/DashboardShell";
 import type { NavItem } from "../dashboard/Sidebar";
@@ -68,6 +69,7 @@ const navItems: NavItem[] = [
     highlighted: true,
     children: [
       { path: "/admin/reports", label: "Reports", icon: Flag },
+      { path: "/admin/notifications", label: "Notifications", icon: Bell },
       { path: "/admin/activity", label: "Activity Logs", icon: Activity },
     ],
   },

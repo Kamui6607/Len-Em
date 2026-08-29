@@ -14,6 +14,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { useAuthStore } from "../../../shared/store/auth.store";
+import { GoogleAuthButton } from "../../../shared/components/auth/GoogleAuthButton";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 
 const welcomeFeatures = [
@@ -846,6 +847,14 @@ export function LoginPage() {
                 )}
               </button>
             </form>
+
+            <div className="divider">
+              <div className="divider-line" />
+              <span>or continue with</span>
+              <div className="divider-line" />
+            </div>
+
+            <GoogleAuthButton onError={setError} />
 
             <div className="divider">
               <div className="divider-line" />

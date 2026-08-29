@@ -116,7 +116,12 @@ axiosClient.interceptors.response.use(
     }
 
     const requestUrl = original.url ?? "";
-    if (requestUrl.includes("/auth/login")) {
+    // Skip for login + Google auth — the callers (LoginPage / RegisterPage /
+    // GoogleAuthButton) display those errors themselves
+    if (
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/google")
+    ) {
       return handleAxiosError(error);
     }
 

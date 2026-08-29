@@ -10,7 +10,6 @@ import { Link } from "react-router";
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ThemeToggle } from "../ThemeToggle";
-import { LanguageToggle } from "../LanguageToggle";
 import { UserMenu } from "../UserMenu";
 import { cn } from "../ui/utils";
 import {
@@ -260,13 +259,6 @@ export function NavigationDesktop(props: NavigationDesktopProps) {
             aria-hidden="true"
           />
 
-          <motion.div
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.95 }}
-            className="nav-icon-btn"
-          >
-            <LanguageToggle />
-          </motion.div>
           <motion.div
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.95 }}

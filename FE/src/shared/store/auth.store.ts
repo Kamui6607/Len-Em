@@ -92,6 +92,39 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  // Google OAuth: same flow as login() — /auth/google returns the exact same
+  // shape as /auth/login and also auto-signs-up brand-new users.
+  googleLogin: async (googleToken: string) => {
+    set({ isLoading: true });
+    try {
+      const { data } = await authService.googleLogin(googleToken);
+      const { accessToken, refreshToken } = data.data;
+
+      // Google sessions behave like a checked "Remember me"
+      tokenStorage.setRememberMe(true);
+      tokenStorage.setAccess(accessToken);
+      tokenStorage.setRefresh(refreshToken);
+
+      // Mark initialized so if App re-renders and calls initialize(), it's a no-op
+      _initialized = true;
+
+      // Fetch full user profile and normalize backend role object for app routing
+      const profileRes = await authService.getCurrentUser();
+      const user = normalizeApiUserProfile(profileRes.data.data.userProfile);
+
+      set({
+        user,
+        accessToken,
+        refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
+    }
+  },
+
   register: async (data: RegisterRequest) => {
     set({ isLoading: true });
     try {

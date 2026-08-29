@@ -3,7 +3,6 @@ import {
   Users,
   Package,
   ShoppingCart,
-  Activity,
   TrendingUp,
   DollarSign,
 } from "lucide-react";
@@ -14,14 +13,12 @@ import { productService } from "../../../shared/api/productService";
 import { products as staticProducts } from "../../data/products";
 import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
-import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminStatCard, AdminStatGrid, type AdminStatCardData } from "../../../shared/components/admin/AdminStatCard";
 import { AdminPanel, AdminPanelHeader, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
 
 export function AdminDashboard() {
-  const { activities } = useAdmin();
   const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -119,8 +116,6 @@ export function AdminDashboard() {
     },
   ];
 
-  const recentActivities = activities.slice(0, 8);
-
   const orderBreakdown = [
     { label: t("admin.dashboard.orderBreakdown.delivered"), value: confirmedOrders, color: "var(--success-text)" },
     { label: t("admin.dashboard.orderBreakdown.pending"), value: pendingOrders, color: "var(--warning-text)" },
@@ -138,75 +133,44 @@ export function AdminDashboard() {
         ))}
       </AdminStatGrid>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <AdminPanel>
-          <AdminPanelHeader icon={<Activity className="w-4.5 h-4.5" />} title={t("admin.dashboard.recentActivity")} />
-          <AdminPanelBody>
-            {recentActivities.length > 0 ? (
-              <ul className="space-y-4">
-                {recentActivities.map((a) => (
-                  <li key={a.id} className="admin-activity-item flex items-start gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
-                    <span
-                      className="admin-activity-dot mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                      style={{ background: "var(--primary)" }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground">{a.description}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {new Date(a.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                {t("admin.dashboard.noRecentActivity")}
-              </p>
-            )}
-          </AdminPanelBody>
-        </AdminPanel>
+      {/* Order Statistics */}
+      <AdminPanel>
+        <AdminPanelHeader icon={<TrendingUp className="w-4.5 h-4.5" />} title={t("admin.dashboard.orderStatistics")} />
+        <AdminPanelBody className="space-y-5">
+          {/* Proportion bar */}
+          <div className="admin-breakdown-track flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
+            {orderBreakdown.map((o) => (
+              <div
+                key={o.label}
+                className="admin-breakdown-segment"
+                style={{
+                  width: `${(o.value / breakdownTotal) * 100}%`,
+                  background: o.color,
+                }}
+              />
+            ))}
+          </div>
 
-        {/* Order Statistics */}
-        <AdminPanel>
-          <AdminPanelHeader icon={<TrendingUp className="w-4.5 h-4.5" />} title={t("admin.dashboard.orderStatistics")} />
-          <AdminPanelBody className="space-y-5">
-            {/* Proportion bar */}
-            <div className="admin-breakdown-track flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
-              {orderBreakdown.map((o) => (
-                <div
-                  key={o.label}
-                  className="admin-breakdown-segment"
-                  style={{
-                    width: `${(o.value / breakdownTotal) * 100}%`,
-                    background: o.color,
-                  }}
-                />
-              ))}
-            </div>
+          <div className="space-y-3">
+            {orderBreakdown.map((o) => (
+              <div key={o.label} className="admin-breakdown-row flex items-center justify-between">
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="admin-breakdown-dot h-2 w-2 rounded-full" style={{ background: o.color, color: o.color }} />
+                  {o.label}
+                </span>
+                <span className="text-sm font-semibold text-foreground">{o.value}</span>
+              </div>
+            ))}
+          </div>
 
-            <div className="space-y-3">
-              {orderBreakdown.map((o) => (
-                <div key={o.label} className="admin-breakdown-row flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="admin-breakdown-dot h-2 w-2 rounded-full" style={{ background: o.color, color: o.color }} />
-                    {o.label}
-                  </span>
-                  <span className="text-sm font-semibold text-foreground">{o.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: "var(--border)" }}>
-              <span className="text-sm font-medium text-foreground">{t("admin.dashboard.totalRevenue")}</span>
-              <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
-                {formatPrice(totalRevenue)}
-              </span>
-            </div>
-          </AdminPanelBody>
-        </AdminPanel>
-      </div>
+          <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: "var(--border)" }}>
+            <span className="text-sm font-medium text-foreground">{t("admin.dashboard.totalRevenue")}</span>
+            <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
+              {formatPrice(totalRevenue)}
+            </span>
+          </div>
+        </AdminPanelBody>
+      </AdminPanel>
     </div>
   );
 }

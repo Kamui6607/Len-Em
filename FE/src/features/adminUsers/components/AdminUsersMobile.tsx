@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Eye, Edit3, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, Edit3, Users } from "lucide-react";
 import type { ApiUser, UserStatus } from "../../users/services/user.service";
 import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
 
@@ -136,41 +136,47 @@ export function AdminUsersMobile({
                 <>
                   <label className="text-xs text-muted-foreground">
                     Role
-                    <select
-                      value={
-                        typeof user.roleId === "string"
-                          ? user.roleId
-                          : user.roleId?._id
-                      }
-                      onChange={(event) =>
-                        onRoleChange(user, event.target.value)
-                      }
-                      className="input mt-1 min-h-11 w-full px-2 text-sm"
-                      aria-label={`Role for ${user.fullName}`}
-                    >
-                      {roleOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        value={
+                          typeof user.roleId === "string"
+                            ? user.roleId
+                            : user.roleId?._id
+                        }
+                        onChange={(event) =>
+                          onRoleChange(user, event.target.value)
+                        }
+                        className="input min-h-11 w-full appearance-none bg-none pr-9 px-3 text-sm"
+                        aria-label={`Role for ${user.fullName}`}
+                      >
+                        {roleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    </div>
                   </label>
                   <label className="text-xs text-muted-foreground">
                     Status
-                    <select
-                      value={status}
-                      onChange={(event) =>
-                        onStatusChange(user, event.target.value as UserStatus)
-                      }
-                      className="input mt-1 min-h-11 w-full px-2 text-sm"
-                      aria-label={`Status for ${user.fullName}`}
-                    >
-                      {statusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        value={status}
+                        onChange={(event) =>
+                          onStatusChange(user, event.target.value as UserStatus)
+                        }
+                        className="input min-h-11 w-full appearance-none bg-none pr-9 px-3 text-sm"
+                        aria-label={`Status for ${user.fullName}`}
+                      >
+                        {statusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    </div>
                   </label>
                 </>
               ) : (

@@ -118,26 +118,35 @@ export function ProductManagement() {
     return variants.map((v) => ({ ...v, price }));
   };
 
-  const openEdit = (product: Product) => {
-    const firstPrice = product.variants[0]?.price ?? 0;
+  const openEdit = async (product: Product) => {
+    // List API (getAll) đôi khi không trả đủ description/variants —
+    // fetch chi tiết bằng getById để điền đầy đủ khi mở modal edit.
     setEditingId(product._id);
+    let full: Product = product;
+    try {
+      const res = await productService.getById(product._id);
+      if (res.data.data?.product) full = res.data.data.product;
+    } catch {
+      // fallback: dùng dữ liệu từ list nếu fetch chi tiết lỗi
+    }
+    const firstPrice = full.variants[0]?.price ?? 0;
     setForm({
-      name: product.name,
-      description: product.description,
-      category: product.category,
-      image: product.image,
-      tags: product.tags?.join(", ") ?? "",
+      name: full.name ?? "",
+      description: full.description ?? "",
+      category: full.category ?? "",
+      image: full.image ?? "",
+      tags: full.tags?.join(", ") ?? "",
       imageFile: null,
       price: firstPrice,
-      variants: (product.variants ?? []).map((v) => ({
-        color: v.color,
-        hexCode: v.hexCode,
-        price: v.price,
-        stock: v.stock,
+      variants: (full.variants ?? []).map((v) => ({
+        color: v.color ?? "",
+        hexCode: v.hexCode ?? "",
+        price: v.price ?? 0,
+        stock: v.stock ?? 0,
         image: v.image ?? "",
         imageFile: null,
       })),
-      isActive: product.isActive,
+      isActive: full.isActive,
     });
     setShowModal(true);
   };
@@ -183,21 +192,21 @@ export function ProductManagement() {
     setSaving(true);
     try {
       const payload = {
-        name: form.name.trim(),
-        description: form.description.trim(),
+        name: (form.name ?? "").trim(),
+        description: (form.description ?? "").trim(),
         category: form.category,
-        image: form.image.trim() || undefined,
+        image: (form.image ?? "").trim() || undefined,
         imageFile: form.imageFile,
-        tags: form.tags
+        tags: (form.tags ?? "")
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
         variants: form.variants.map((v) => ({
-          color: v.color.trim(),
-          hexCode: v.hexCode,
-          price: v.price,
-          stock: v.stock,
-          image: v.image.trim() || undefined,
+          color: (v.color ?? "").trim(),
+          hexCode: v.hexCode ?? "",
+          price: v.price ?? 0,
+          stock: v.stock ?? 0,
+          image: (v.image ?? "").trim() || undefined,
           imageFile: v.imageFile ?? null,
         })),
         isActive: form.isActive,

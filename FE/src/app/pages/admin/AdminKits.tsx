@@ -4,7 +4,6 @@
 // ============================================================
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Plus,
@@ -15,6 +14,7 @@ import {
   Package,
   X,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { kitService, type Kit, type KitProductInput } from "../../../shared/api/kitService";
@@ -48,6 +48,7 @@ export function AdminKits() {
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingKit, setEditingKit] = useState<Kit | null>(null);
+  const [detailKit, setDetailKit] = useState<Kit | null>(null);
 
   const fetchKits = async (page: number) => {
     setLoading(true);
@@ -121,8 +122,8 @@ export function AdminKits() {
           className="admin-toolbar p-6 border-b border-border"
           style={{ background: "var(--surface)" }}
         >
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
-            <div className="admin-search-wrap relative flex-1">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="admin-search-wrap relative flex-1 min-w-0">
               <Search
                 size={18}
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -136,20 +137,26 @@ export function AdminKits() {
                 style={{ paddingLeft: "3rem" }}
               />
             </div>
-            <select
-              value={levelFilter}
-              onChange={(e) => {
-                setLevelFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="input sm:w-56"
-            >
-              {LEVEL_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative sm:w-44 w-full">
+              <select
+                value={levelFilter}
+                onChange={(e) => {
+                  setLevelFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="input w-full appearance-none bg-none pr-10"
+              >
+                {LEVEL_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+            </div>
           </form>
         </div>
 
@@ -221,13 +228,13 @@ export function AdminKits() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/kits/${kit._id}`}
+                        <button
+                          onClick={() => setDetailKit(kit)}
                           className="admin-action-btn view"
                           title={t("admin.kits.view")}
                         >
                           <Eye size={16} />
-                        </Link>
+                        </button>
                         <button
                           onClick={() => setEditingKit(kit)}
                           className="admin-action-btn edit"
@@ -292,6 +299,13 @@ export function AdminKits() {
           />
         )}
       </AnimatePresence>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {detailKit && (
+          <KitDetailModal kit={detailKit} onClose={() => setDetailKit(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -349,7 +363,7 @@ function KitFormModal({
     }
   };
 
-  // Auto-calculate price based on products
+  // Auto-calculate price based on selected products (giá luôn tự cộng)
   useEffect(() => {
     if (products.length > 0 && formData.products.length > 0) {
       const total = formData.products.reduce((sum, kitProduct) => {
@@ -480,11 +494,11 @@ function KitFormModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  {t("admin.kits.level")} <span className="text-destructive">*</span>
-                </label>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                {t("admin.kits.level")} <span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
                 <select
                   value={formData.level}
                   onChange={(e) =>
@@ -496,32 +510,36 @@ function KitFormModal({
                         | "advanced",
                     })
                   }
-                  className="input w-full"
+                  className="input w-full appearance-none bg-none pr-10"
                 >
                   <option value="beginner">{t("admin.kits.beginner")}</option>
                   <option value="intermediate">{t("admin.kits.intermediate")}</option>
                   <option value="advanced">{t("admin.kits.advanced")}</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                  {t("admin.kits.price")} <span className="text-destructive">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      price: Number(e.target.value),
-                    })
-                  }
-                  className="input w-full"
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                 />
               </div>
+            </div>
+
+            {/* Giá tự động cộng — hiển thị read-only, không nhập tay */}
+            <div
+              className="flex items-center justify-between p-4 rounded-xl"
+              style={{ background: "var(--muted)" }}
+            >
+              <div>
+                <span className="text-xs text-muted-foreground">
+                  {t("admin.kits.totalPrice")}
+                </span>
+                <div
+                  className="text-2xl font-bold mt-0.5"
+                  style={{ color: "var(--primary)" }}
+                >
+                  {formatPrice(formData.price)}
+                </div>
+              </div>
+              <Package className="size-7 text-muted-foreground/50" />
             </div>
 
             {/* Thumbnail Upload */}
@@ -712,3 +730,124 @@ function KitFormModal({
     </motion.div>
   );
 }
+
+// Kit Detail Modal Component — popup xem chi tiết (không nhảy sang trang user)
+function KitDetailModal({
+  kit,
+  onClose,
+}: {
+  kit: Kit;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="admin-dialog-overlay"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.96, opacity: 0, y: 10 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="admin-dialog-content max-w-2xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="admin-dialog-header relative">
+          <h3 className="text-base font-semibold">{kit.name}</h3>
+          <button
+            onClick={onClose}
+            style={{ color: "var(--foreground-muted)" }}
+            className="admin-action-btn absolute top-4 right-4"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="admin-dialog-body space-y-5">
+          {/* Thumbnail */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <img
+              src={kit.thumbnail}
+              alt={kit.name}
+              className="w-full sm:w-40 aspect-square rounded-xl object-cover bg-muted"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.fallback) {
+                  target.dataset.fallback = "true";
+                  target.src = `https://picsum.photos/seed/${kit._id}/200/200`;
+                }
+              }}
+            />
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`badge capitalize ${LEVEL_BADGE_CLASS[kit.level] ?? "badge-gray"}`}>
+                  {kit.level}
+                </span>
+                <span className={`badge ${kit.isActive ? "badge-green" : "badge-red"}`}>
+                  {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {kit.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Price */}
+          <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "var(--muted)" }}>
+            <span className="text-sm text-muted-foreground">
+              {t("admin.kits.totalPrice")}
+            </span>
+            <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>
+              {formatPrice(kit.price)}
+            </span>
+          </div>
+
+          {/* Products */}
+          <div>
+            <p className="text-sm font-medium mb-2">
+              {t("admin.kits.productsInKit")} ({(kit.products || []).length})
+            </p>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {(kit.products || []).map((p) => (
+                <div
+                  key={p.productId._id}
+                  className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: "var(--muted)" }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{p.productId.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatPrice(p.productId.variants[0]?.price || 0)}
+                    </div>
+                  </div>
+                  <span className="text-sm text-muted-foreground shrink-0">
+                    × {p.quantity}
+                  </span>
+                </div>
+              ))}
+              {(kit.products || []).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t("admin.kits.noProductsFound")}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-dialog-footer">
+          <button type="button" onClick={onClose} className="btn-modal-cancel">
+            {t("admin.kits.cancelButton")}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+

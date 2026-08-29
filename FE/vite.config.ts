@@ -2,11 +2,57 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      // Không tự inject script đăng ký - tự đăng ký trong main.tsx
+      // có kiểm tra để BỎ QUA khi đang chạy bên trong app Tauri (desktop/mobile)
+      injectRegister: false,
+      includeAssets: ['icons/apple-touch-icon.png'],
+      manifest: {
+        name: 'Len&Em',
+        short_name: 'Len&Em',
+        description: 'Len&Em - Outfit & Yarn shop',
+        lang: 'vi',
+        start_url: '/',
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#ffffff',
+        theme_color: '#ffffff',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        // App có dữ liệu realtime từ API - chỉ cache shell tĩnh của bundler, không cache API
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        navigateFallback: '/index.html',
+        // Không cache các request /api và /socket.io (dữ liệu động)
+        navigateFallbackDenylist: [/^\/api/, /^\/socket.io/, /^\/notifications/],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'google-fonts' },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'google-fonts' },
+          },
+        ],
+      },
+      devOptions: {
+        enabled: false, // không bật SW ở môi trường dev
+      },
+    }),
   ],
   resolve: {
     alias: {

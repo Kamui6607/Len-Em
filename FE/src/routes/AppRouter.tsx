@@ -410,11 +410,11 @@ export function AppRouter() {
         }
       />
 
-      {/* ===== Admin dashboard (Admin = full CRUD, Staff = read-only via component logic) ===== */}
+      {/* ===== Admin dashboard (Admin only — Staff dùng StaffPage riêng) ===== */}
       <Route
         path="admin/*"
         element={
-          <RequireRole allowedRoles={["admin", "staff"]}>
+          <RequireRole allowedRoles={["admin"]}>
             <ErrorBoundary>
               <Suspense fallback={<LoadingFallback fullPage />}>
                 <AdminPage />
@@ -424,11 +424,11 @@ export function AppRouter() {
         }
       />
 
-      {/* ===== Staff dashboard ===== */}
+      {/* ===== Staff dashboard (Staff xử lý Pending Orders, xem Users, xử lý Reports) ===== */}
       <Route
         path="staff"
         element={
-          <RequireRole allowedRoles={["staff"]}>
+          <RequireRole allowedRoles={["staff", "admin"]}>
             <ErrorBoundary>
               <Suspense fallback={<LoadingFallback fullPage />}>
                 <StaffPage />
@@ -438,12 +438,24 @@ export function AppRouter() {
         }
       />
       <Route
-        path="staff/diy"
+        path="staff/orders"
         element={
-          <RequireRole allowedRoles={["staff"]}>
+          <RequireRole allowedRoles={["staff", "admin"]}>
             <ErrorBoundary>
               <Suspense fallback={<LoadingFallback fullPage />}>
-                <AdminPage />
+                <StaffPage />
+              </Suspense>
+            </ErrorBoundary>
+          </RequireRole>
+        }
+      />
+      <Route
+        path="staff/users"
+        element={
+          <RequireRole allowedRoles={["staff", "admin"]}>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback fullPage />}>
+                <StaffPage />
               </Suspense>
             </ErrorBoundary>
           </RequireRole>
@@ -452,12 +464,21 @@ export function AppRouter() {
       <Route
         path="staff/reports"
         element={
-          <RequireRole allowedRoles={["staff"]}>
+          <RequireRole allowedRoles={["staff", "admin"]}>
             <ErrorBoundary>
               <Suspense fallback={<LoadingFallback fullPage />}>
-                <AdminPage />
+                <StaffPage />
               </Suspense>
             </ErrorBoundary>
+          </RequireRole>
+        }
+      />
+      {/* Staff không dùng AdminPage nữa — DIY quản lý chỉ dành cho Admin */}
+      <Route
+        path="staff/diy"
+        element={
+          <RequireRole allowedRoles={["staff", "admin"]}>
+            <Navigate to="/admin/diy-posts" replace />
           </RequireRole>
         }
       />

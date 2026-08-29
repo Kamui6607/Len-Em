@@ -3,6 +3,8 @@ import { useAdminUsers } from "../hooks/useAdminUsers";
 import { AdminUsersDesktop } from "./AdminUsersDesktop";
 import { AdminUsersMobile } from "./AdminUsersMobile";
 import { AdminUsersDialogs } from "./AdminUsersDialogs";
+import { ChevronDown } from "lucide-react";
+import { AdminSearchInput } from "../../../shared/components/admin/AdminDataTable";
 
 export function AdminUsers() {
   const isMobile = useIsMobile();
@@ -42,53 +44,58 @@ export function AdminUsers() {
           className="space-y-3 border-b p-4"
           style={{ background: "var(--surface)" }}
         >
-          <input
+          <AdminSearchInput
             value={controller.searchTerm}
-            onChange={(event) => controller.setSearchTerm(event.target.value)}
+            onChange={controller.setSearchTerm}
             placeholder={controller.t("admin.users.searchPlaceholder")}
-            className="input min-h-11 w-full"
           />
           <div className="grid grid-cols-2 gap-2">
-            <select
-              className="input min-h-11"
-              value={controller.statusFilter}
-              onChange={(event) =>
-                controller.setStatusFilter(
-                  event.target.value as
-                    | "all"
-                    | "ACTIVE"
-                    | "INACTIVE"
-                    | "LOCKED",
-                )
-              }
-            >
-              <option value="all">
-                {controller.t("admin.users.allStatuses")}
-              </option>
-              {mobileStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+            <div className="relative">
+              <select
+                className="input min-h-11 w-full appearance-none bg-none pr-9"
+                value={controller.statusFilter}
+                onChange={(event) =>
+                  controller.setStatusFilter(
+                    event.target.value as
+                      | "all"
+                      | "ACTIVE"
+                      | "INACTIVE"
+                      | "LOCKED",
+                  )
+                }
+              >
+                <option value="all">
+                  {controller.t("admin.users.allStatuses")}
                 </option>
-              ))}
-            </select>
-            <select
-              className="input min-h-11"
-              value={controller.roleFilter || "all"}
-              onChange={(event) =>
-                controller.setRoleFilter(
-                  event.target.value === "all" ? "" : event.target.value,
-                )
-              }
-            >
-              <option value="all">
-                {controller.t("admin.users.allRoles")}
-              </option>
-              {controller.roleDropdownOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+                {mobileStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+            <div className="relative">
+              <select
+                className="input min-h-11 w-full appearance-none bg-none pr-9"
+                value={controller.roleFilter || "all"}
+                onChange={(event) =>
+                  controller.setRoleFilter(
+                    event.target.value === "all" ? "" : event.target.value,
+                  )
+                }
+              >
+                <option value="all">
+                  {controller.t("admin.users.allRoles")}
                 </option>
-              ))}
-            </select>
+                {controller.roleDropdownOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
           </div>
         </div>
         <AdminUsersMobile

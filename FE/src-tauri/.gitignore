@@ -2,3 +2,8 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Keystore signing (chứa password - KHÔNG commit)
+gen/android/keystore.properties
+*.jks
+*.keystore

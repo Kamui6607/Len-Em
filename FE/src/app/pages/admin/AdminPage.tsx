@@ -18,6 +18,8 @@ import { AdminDIYPosts } from "./AdminDIYPosts";
 import { DIYFormPage } from "./DIYFormPage";
 import { AdminSupportDIYPosts } from "./AdminSupportDIYPosts";
 import { AdminKits } from "./AdminKits";
+import { AdminNotifications } from "./AdminNotifications";
+import { AdminActivity } from "./AdminActivity";
 
 export function AdminPage() {
   return (
@@ -29,6 +31,7 @@ export function AdminPage() {
         <Route path="products/:productId" element={<ProductDetail />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="reports" element={<AdminReports />} />
+        <Route path="notifications" element={<AdminNotifications />} />
         <Route path="refunds" element={<AdminRefunds />} />
         <Route path="diy-posts" element={<AdminDIYPosts />} />
         <Route path="diy-posts/new" element={<DIYFormPage />} />
@@ -36,7 +39,7 @@ export function AdminPage() {
         <Route path="permissions" element={<Permissions />} />
         <Route path="roles" element={<Roles />} />
         <Route path="roles/:roleId" element={<RoleDetail />} />
-        <Route path="activity" element={<AdminDashboard />} />
+        <Route path="activity" element={<AdminActivity />} />
         {/* Course Management */}
         <Route path="courses" element={<AdminCourses />} />
         <Route path="courses/new" element={<CourseFormPage />} />

@@ -1,0 +1,159 @@
+name: Release Desktop App
+
+# Build & publish installers whenever you push a tag like `app-v0.1.0`
+on:
+  push:
+    tags:
+      - 'app-v*'
+  workflow_dispatch: # allow manual trigger from Actions tab
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest' # Apple Silicon (M1/M2/M3/M4)
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest' # Intel Macs
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: FE/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux dependencies (webkit2gtk etc.)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libayatana-appindicator3-dev
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './FE/src-tauri -> target'
+
+      - name: Sync node modules
+        working-directory: FE
+        run: npm ci
+
+      - name: Build & release the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Frontend env baked into the bundle at build time
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+        with:
+          projectPath: FE
+          tagName: app-v__VERSION__
+          releaseName: 'Len-Em Desktop v__VERSION__'
+          releaseBody: 'Tải bản cài đặt phù hợp với hệ điều hành của bạn bên dưới.'
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: FE/package-lock.json
+
+      - name: Install Java (for Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Rust stable with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './FE/src-tauri -> target'
+
+      - name: Cache Android debug keystore (giữ chữ ký ổn định giữa các bản phát hành)
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore
+
+      - name: Setup Android SDK components
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0" "ndk;27.0.12077973"
+
+      - name: Install node modules
+        working-directory: FE
+        run: npm ci
+
+      - name: Setup Android signing (dùng secrets nếu có, không thì fallback bản debug)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: FE/src-tauri/gen/android
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+            printf 'storeFile=%s/release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$RUNNER_TEMP" "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > keystore.properties
+            echo "APK_OUT=universal/release/app-universal-release.apk" >> "$GITHUB_ENV"
+            echo "BUILD_MODE=release" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Chưa set secrets ký số - sẽ build bản DEBUG (dung lượng lớn)"
+            echo "APK_OUT=universal/debug/app-universal-debug.apk" >> "$GITHUB_ENV"
+            echo "BUILD_MODE=debug" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Android APK
+        working-directory: FE
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          if [ "$BUILD_MODE" = "release" ]; then
+            npx tauri android build --apk
+          else
+            npx tauri android build --debug --apk
+          fi
+
+      - name: Resolve release tag from app version
+        id: ver
+        run: echo "tag=app-v$(jq -r '.version' FE/src-tauri/tauri.conf.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Attach APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          files: FE/src-tauri/gen/android/app/build/outputs/apk/universal/${{ env.APK_OUT }}
+

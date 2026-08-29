@@ -1,7 +1,8 @@
-import { BarChart3, ChevronDown, ChevronUp, Edit3, Eye, Plus, Search, SlidersHorizontal, Users } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, Edit3, Eye, Plus, SlidersHorizontal, Users } from "lucide-react";
 import type { ApiUser, UserStatus } from "../../users/services/user.service";
 import type { AdminUsersController } from "../hooks/useAdminUsers";
 import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { AdminSearchInput } from "../../../shared/components/admin/AdminDataTable";
 
 function roleName(user: ApiUser, map: Record<string, string>) {
   return typeof user.roleId === "string" ? map[user.roleId] ?? "User" : user.roleId?.roleName ?? "User";
@@ -64,15 +65,20 @@ export function AdminUsersDesktop({ controller }: { controller: AdminUsersContro
       <section className="admin-panel-glow overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border)" }}>
         <div className="space-y-3 border-b p-6" style={{ background: "var(--surface)" }}>
           <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <input value={controller.searchTerm} onChange={(event) => controller.setSearchTerm(event.target.value)} placeholder={t("admin.users.searchPlaceholder")} className="input w-full pl-12" />
+            <div className="flex-1">
+              <AdminSearchInput value={controller.searchTerm} onChange={controller.setSearchTerm} placeholder={t("admin.users.searchPlaceholder")} />
             </div>
-            {controller.hasActiveFilters && <button type="button" onClick={controller.handleResetFilters} className="admin-action-btn" aria-label={t("admin.users.clearFilters")}><SlidersHorizontal className="h-4 w-4" /></button>}
+            {controller.hasActiveFilters && <button type="button" onClick={controller.handleResetFilters} className="admin-action-btn shrink-0" aria-label={t("admin.users.clearFilters")}><SlidersHorizontal className="h-4 w-4" /></button>}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <select className="input min-h-11" value={controller.statusFilter} onChange={(event) => controller.setStatusFilter(event.target.value as "all" | UserStatus)}>{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-            <select className="input min-h-11" value={controller.roleFilter || "all"} onChange={(event) => controller.setRoleFilter(event.target.value === "all" ? "" : event.target.value)}><option value="all">{t("admin.users.allRoles")}</option>{controller.roleDropdownOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+            <div className="relative">
+              <select className="input w-full appearance-none bg-none pr-10" value={controller.statusFilter} onChange={(event) => controller.setStatusFilter(event.target.value as "all" | UserStatus)}>{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+            <div className="relative">
+              <select className="input w-full appearance-none bg-none pr-10" value={controller.roleFilter || "all"} onChange={(event) => controller.setRoleFilter(event.target.value === "all" ? "" : event.target.value)}><option value="all">{t("admin.users.allRoles")}</option>{controller.roleDropdownOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
           </div>
         </div>
 
@@ -83,8 +89,8 @@ export function AdminUsersDesktop({ controller }: { controller: AdminUsersContro
               {controller.loading ? <tr><td colSpan={6} className="py-16 text-center text-muted-foreground">Loading...</td></tr> : controller.users.length === 0 ? <tr><td colSpan={6} className="py-16 text-center"><Users className="mx-auto mb-2 h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">{t("admin.users.noUsersFound")}</p>{controller.hasActiveFilters && <button type="button" onClick={controller.handleResetFilters} className="mt-2 text-xs text-primary">{t("admin.users.clearFilters")}</button>}</td></tr> : controller.users.map((user) => <tr key={user.userId} className="border-b border-border">
                 <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{initials(user.fullName || user.username || "?")}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{user.fullName}</p><p className="truncate text-xs text-muted-foreground">@{user.username}</p></div></div></td>
                 <td className="max-w-48 truncate px-6 py-4 text-sm text-muted-foreground">{user.email}</td><td className="px-6 py-4 text-sm text-muted-foreground">{user.phone || "—"}</td>
-                <td className="px-6 py-4">{controller.isAdmin ? <select className="input min-h-10" value={typeof user.roleId === "string" ? user.roleId : user.roleId?._id} onChange={(event) => controller.handleRoleChange(user, event.target.value)}>{controller.roleDropdownOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : roleName(user, controller.roleNameMap)}</td>
-                <td className="px-6 py-4">{controller.isAdmin ? <select className="input min-h-10" value={user.status ?? "ACTIVE"} onChange={(event) => controller.handleStatusChange(user, event.target.value as UserStatus)}>{statusOptions.slice(1).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : user.status ?? "ACTIVE"}</td>
+                <td className="px-6 py-4">{controller.isAdmin ? <div className="relative"><select className="input min-h-10 w-full appearance-none bg-none pr-9" value={typeof user.roleId === "string" ? user.roleId : user.roleId?._id} onChange={(event) => controller.handleRoleChange(user, event.target.value)}>{controller.roleDropdownOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /></div> : roleName(user, controller.roleNameMap)}</td>
+                <td className="px-6 py-4">{controller.isAdmin ? <div className="relative"><select className="input min-h-10 w-full appearance-none bg-none pr-9" value={user.status ?? "ACTIVE"} onChange={(event) => controller.handleStatusChange(user, event.target.value as UserStatus)}>{statusOptions.slice(1).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /></div> : user.status ?? "ACTIVE"}</td>
                 <td className="px-6 py-4"><div className="flex justify-end gap-2">{controller.isAdmin ? <><button type="button" className="admin-action-btn min-h-10 min-w-10" onClick={() => controller.handleViewUser(user)} aria-label={t("admin.users.viewDetail")}><Eye className="h-4 w-4" /></button><button type="button" className="admin-action-btn min-h-10 min-w-10" onClick={() => controller.setUserToUpdate(user)} aria-label={t("admin.users.update")}><Edit3 className="h-4 w-4" /></button><HoldToDeleteButton onDelete={() => controller.confirmDeleteUser(user)} title={t("admin.users.holdToDelete")} /></> : <span className="text-xs text-muted-foreground">{t("admin.users.viewOnly")}</span>}</div></td>
               </tr>)}
             </tbody>

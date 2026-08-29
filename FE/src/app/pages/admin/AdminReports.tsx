@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
-import { Eye, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, ChevronUp, ChevronDown, Search, X } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { userService, type UserRoleRef } from "../../../features/users/services/user.service";
@@ -240,24 +240,43 @@ export function AdminReports() {
       {/* Search & Filter */}
       <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>
         <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
-          <div className="flex flex-wrap gap-3">
-            <input
-              type="text"
-              placeholder="Search by report ID or title..."
-              value={inputValue}
-              onChange={(e) => { setInputValue(e.target.value); setPage(1); }}
-              className="input px-4 py-2 w-64"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-              className="input px-4 py-2"
-            >
-              <option value="">All Status</option>
-              {STATUS_OPTIONS.filter(Boolean).map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[240px] flex-1 sm:max-w-md">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="text"
+                placeholder="Search by report ID or title..."
+                value={inputValue}
+                onChange={(e) => { setInputValue(e.target.value); setPage(1); }}
+                className="input w-full pl-12 pr-10 py-2.5"
+              />
+              {inputValue && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => { setInputValue(""); setPage(1); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex size-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="relative w-44">
+              <select
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                className="input w-full appearance-none bg-none pr-10 py-2.5"
+              >
+                <option value="">All Status</option>
+                {STATUS_OPTIONS.filter(Boolean).map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
           </div>
         </div>
       </div>

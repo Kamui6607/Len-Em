@@ -13,7 +13,6 @@ import { Link } from "react-router";
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { BottomNav } from "./BottomNav";
-import { LanguageToggle } from "../LanguageToggle";
 import { ThemeToggle } from "../ThemeToggle";
 import { Button } from "../ui/button";
 import { cn } from "../ui/utils";
@@ -342,10 +341,9 @@ export function NavigationMobile(props: NavigationMobileProps) {
               <div className="shrink-0 border-t border-[var(--border-light)] px-5 py-4 space-y-3">
                 <div className="flex items-center justify-between rounded-2xl border border-[var(--border-light)] px-4 py-3">
                   <span className="text-sm font-bold text-[var(--foreground-muted)]">
-                    Ngôn ngữ & Giao diện
+                    Giao diện
                   </span>
                   <div className="flex items-center gap-2">
-                    <LanguageToggle />
                     <ThemeToggle />
                   </div>
                 </div>
