@@ -86,24 +86,27 @@ export function LearnPage() {
     [courses],
   );
 
-  const filteredCourses = courses.filter((course) => {
-    const matchesLevel =
-      selectedLevels.length === 0 || selectedLevels.includes(course.level);
-    const matchesTags =
-      selectedTags.length === 0 || selectedTags.some((tag) => course.tags.includes(tag));
-    
-    // Search filter
-    const matchesSearch = !searchQuery.trim() || 
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    return matchesLevel && matchesTags && matchesSearch;
-  });
+  const filteredCourses = useMemo(
+    () =>
+      courses.filter((course) => {
+        const matchesLevel =
+          selectedLevels.length === 0 || selectedLevels.includes(course.level);
+        const matchesTags =
+          selectedTags.length === 0 ||
+          selectedTags.some((tag) => course.tags.includes(tag));
 
-  // Debug: log search state
-  useEffect(() => {
-    console.log("LearnPage - searchQuery:", searchQuery, "filteredCourses:", filteredCourses.length);
-  }, [searchQuery, filteredCourses]);
+        // Search filter
+        const matchesSearch =
+          !searchQuery.trim() ||
+          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.tags.some((tag) =>
+            tag.toLowerCase().includes(searchQuery.toLowerCase()),
+          );
+
+        return matchesLevel && matchesTags && matchesSearch;
+      }),
+    [courses, selectedLevels, selectedTags, searchQuery],
+  );
 
   const toggleValue = <T extends string>(
     value: T,
@@ -538,7 +541,7 @@ export function LearnPage() {
                   )}
                 </div>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 animate-fade-in-soft">
                   {filteredCourses.map((course) => {
                     const isEnrolled = enrolledCourses.includes(course._id);
                     const isEnrolling = enrollingCourseId === course._id;
@@ -570,7 +573,7 @@ export function LearnPage() {
                           <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} {t("learnPage.lessons")}</span>
                             <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} {t("learnPage.min")}</span>
-                            <span className="flex items-center gap-1.5"><Star className="size-4 fill-yellow-400 text-yellow-400" />{course.rating}</span>
+                            <span className="flex items-center gap-1.5"><Star className="size-4 fill-[var(--rating-star)] text-[var(--rating-star)]" />{course.rating}</span>
                             <span className="flex items-center gap-1.5"><Users className="size-4" />{course.enrolledCount.toLocaleString()}</span>
                           </div>
                           <button

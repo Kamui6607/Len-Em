@@ -6,7 +6,7 @@ function ShimmerBlock({ className }: { className?: string }) {
       className={cn(
         "relative overflow-hidden rounded-xl bg-muted/60",
         "before:absolute before:inset-0 before:-translate-x-full",
-        "before:animate-[shimmer_1.5s_infinite]",
+        "before:animate-[shimmer_2.2s_infinite]",
         "before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent",
         className
       )}

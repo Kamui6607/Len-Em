@@ -596,7 +596,7 @@ export function CourseDetailPage() {
                   <Stat
                     icon={Star}
                     label={`${course.rating} rating`}
-                    className="text-yellow-500"
+                    className="text-[var(--rating-star)]"
                   />
                   <Stat icon={Clock} label={`${course.totalDuration} min`} />
                   <Stat

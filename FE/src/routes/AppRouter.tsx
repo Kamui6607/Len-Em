@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router";
 import { AnimatedBackground } from "../shared/components/motion/AnimatedBackground";
 import { RequireAuth } from "../shared/components/auth/RequireAuth";
@@ -145,7 +145,39 @@ function StoreOutlet() {
   );
 }
 
+// ── Idle prefetch: tải sẵn chunk của các trang chính sau khi app đã render ──
+// Nhờ vậy lần đầu điều hướng (ví dụ bấm Start ở mobile nav) chuyển trang gần
+// như tức thì thay vì: exit animation → màn trắng → chờ chunk → fade in.
+const MAIN_ROUTE_CHUNKS: Array<() => Promise<unknown>> = [
+  () => import("../app/pages/Shop"),
+  () => import("../app/pages/LearnPage"),
+  () => import("../app/pages/DIYFeedPage"),
+  () => import("../app/pages/KitsPage"),
+  () => import("../app/pages/ProductDetail"),
+  () => import("../app/pages/CourseDetailPage"),
+];
+
+function prefetchMainRoutes() {
+  const loadAll = () =>
+    MAIN_ROUTE_CHUNKS.forEach((load) => {
+      load().catch(() => {
+        /* prefetch lỗi thì bỏ qua — sẽ tải lại khi điều hướng thật */
+      });
+    });
+
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(loadAll, { timeout: 2500 });
+  } else {
+    window.setTimeout(loadAll, 1200);
+  }
+}
+
 export function AppRouter() {
+  // Prefetch chunk các trang chính khi browser idle (chạy 1 lần)
+  useEffect(() => {
+    prefetchMainRoutes();
+  }, []);
+
   return (
     <>
       {/* Global background — applies to all pages, theme-aware */}

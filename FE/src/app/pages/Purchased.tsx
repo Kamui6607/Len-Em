@@ -491,7 +491,7 @@ export function Purchased() {
                                               "DELIVERED" &&
                                               reviewed && (
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
+                                                  <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />{" "}
                                                   {t("purchased.reviewedLabel")}
                                                 </span>
                                               )}
@@ -566,7 +566,7 @@ export function Purchased() {
                                     {order.orderStatus === "DELIVERED" &&
                                       reviewed && (
                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />{" "}
+                                          <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />{" "}
                                           {t("purchased.reviewedLabel")}
                                         </span>
                                       )}
@@ -773,7 +773,7 @@ export function Purchased() {
                   className="p-1 transition-transform hover:scale-110"
                 >
                   <Star
-                    className={`w-8 h-8 ${i < rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                    className={`w-8 h-8 ${i < rating ? "fill-[var(--rating-star)] text-[var(--rating-star)]" : "text-muted-foreground/30"}`}
                   />
                 </button>
               ))}

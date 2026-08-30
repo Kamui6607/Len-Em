@@ -34,7 +34,6 @@ import { kitService, type Kit } from "../../shared/api/kitService";
 import { cn } from "../../shared/components/ui/utils";
 import {
   ProductSkeleton,
-  ProductGridSkeleton,
 } from "../../shared/components/skeletons/ProductSkeleton";
 
 const CATEGORY_META: Record<
@@ -1209,10 +1208,14 @@ export function Shop() {
                 )}
               </AnimatePresence>
               {isLoading ? (
-                <ProductGridSkeleton count={8} columns={4} />
+                <div className="product-grid" aria-hidden="true">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <ProductSkeleton key={i} />
+                  ))}
+                </div>
               ) : displayedProducts.length > 0 ? (
                 <>
-                  <div className="product-grid">
+                  <div className="product-grid animate-fade-in-soft">
                     {displayedProducts.map((product) => (
                       <ProductCard
                         key={product.id}
@@ -1391,7 +1394,7 @@ export function Shop() {
                   )}
                 </div>
               ) : (
-                <div className="combo-grid">
+                <div className="combo-grid animate-fade-in-soft">
                   {filteredKits.map((kit) => {
                     const isFavorite = isFavoriteKit(kit._id);
 
@@ -1481,9 +1484,9 @@ export function Shop() {
                                     className={cn(
                                       "w-3.5 h-3.5",
                                       i < Math.floor(kit.averageRating)
-                                        ? "fill-amber-400 text-amber-400"
+                                        ? "fill-[var(--rating-star)] text-[var(--rating-star)]"
                                         : i < kit.averageRating
-                                          ? "fill-amber-400/50 text-amber-400"
+                                          ? "fill-[var(--rating-star-half)] text-[var(--rating-star)]"
                                           : "fill-muted-foreground/20 text-muted-foreground/30",
                                     )}
                                   />

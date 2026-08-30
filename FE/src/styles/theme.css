@@ -126,7 +126,8 @@
   --accent-blue:         #E7EEFC;
   --accent-blue-text:    #2A56C6;
 
-  --rating-star:         var(--brand-600);   /* sao đánh giá = Indigo, không dùng vàng lạ */
+  --rating-star:         #E8A317;            /* sao đánh giá = VÀNG KIM (gold) — đồng bộ toàn app, cả light & dark */
+  --rating-star-half:    rgba(232, 163, 23, 0.45);  /* vàng kim 45% cho sao lẻ (phần nửa sao) */
   --decor-heart:         #E23E6B;            /* tim yêu thích — đỏ hồng rõ ràng, KHÁC biệt có chủ đích để không lẫn với brand, dễ nhận biết trạng thái */
   --decor-heart-soft:    #F293AC;
 
@@ -417,7 +418,8 @@
   --accent-blue:         rgba(90,140,240,0.16);
   --accent-blue-text:    #9DB8F5;
 
-  --rating-star:         #A294FF;
+  --rating-star:         #F5C542;
+  --rating-star-half:    rgba(245, 197, 66, 0.45);
   --decor-heart:         #F4879F;
   --decor-heart-soft:    #F9B6C4;
 

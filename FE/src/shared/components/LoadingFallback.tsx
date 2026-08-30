@@ -5,22 +5,34 @@ interface LoadingFallbackProps {
   message?: string;
 }
 
+/**
+ * Route-level loading fallback.
+ * - Fade-in nhanh (0.18s) để không nhấp nháy khi chunk tải cực nhanh.
+ * - Spinner nhỏ gọn + không pulse text (bớt chuyển động = mượt hơn,
+ *   đặc biệt trên mobile).
+ * - fullPage dùng 100dvh để ổn định chiều cao trên mobile browser bars.
+ */
 export function LoadingFallback({
   fullPage = false,
-  message = "Loading...",
+  message,
 }: LoadingFallbackProps) {
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={cn(
-        "flex flex-col items-center justify-center gap-4",
-        fullPage ? "min-h-screen" : "min-h-[60vh]"
+        "flex flex-col items-center justify-center gap-3 animate-fade-in",
+        fullPage ? "min-h-[100dvh]" : "min-h-[60vh]"
       )}
+      style={{ animationDuration: "0.3s" }}
     >
-      <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-4 border-muted" />
-        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin" />
+      <div className="relative size-10">
+        <div className="absolute inset-0 rounded-full border-[3px] border-muted" />
+        <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-primary animate-spin [animation-duration:1.4s]" />
       </div>
-      <p className="text-sm text-muted-foreground animate-pulse">{message}</p>
+      {message && (
+        <p className="text-sm text-muted-foreground">{message}</p>
+      )}
     </div>
   );
 }

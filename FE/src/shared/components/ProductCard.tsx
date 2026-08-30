@@ -1,14 +1,13 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import { Link, useNavigate } from "react-router";
 import { Heart, ShoppingBag } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import type { Product } from "../../app/data/products";
 import { getBasePrice } from "../../app/data/products";
 import { useFavorites } from "../contexts/FavoritesContext";
 import { useAuth } from "../hooks/useAuth";
 import { useCart } from "../contexts/CartContext";
-import { useMediaQuery } from "../hooks/useMediaQuery";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "./ui/ResponsiveImage";
@@ -46,13 +45,6 @@ export const ProductCard = memo(function ProductCard({
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
-  const [isHovered, setIsHovered] = useState(false);
-
-  // Thiết bị có chuột thật (desktop) mới dùng cơ chế hover-to-reveal.
-  // Trên mobile/tablet cảm ứng, luôn hiện sẵn phần Add to cart + rating
-  // vì không có sự kiện hover nào từng xảy ra.
-  const supportsHover = useMediaQuery("(hover: hover) and (pointer: fine)");
-  const showReveal = supportsHover ? isHovered : true;
 
   const prices = product.variants?.map((variant) => variant.price) ?? [
     getBasePrice(product),
@@ -101,41 +93,25 @@ export const ProductCard = memo(function ProductCard({
 
   return (
     // NOTE ON LAYOUT STABILITY (no gaps in sibling cards on hover):
-    // 1. The lift/scale effect below is done with `transform` (translateY +
-    //    scale) and a bumped `z-index`, never with width/height/margin, so
-    //    the CSS Grid track this card lives in never resizes.
-    // 2. `isolation: isolate` + `contain: layout` scope the raised z-index
-    //    and repaint to this card only.
-    // 3. The rating + "Add to cart" row has a height-animated wrapper that
-    //    only affects this card's own box (grid uses align-items: start).
-    <motion.article
-      initial={{ opacity: 1, y: 0 }}
-      animate={{
-        opacity: 1,
-        y: isHovered ? -6 : 0,
-        scale: isHovered ? 1.02 : 1,
-      }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-      }}
+    // 1. Lift/scale on hover chạy bằng `transform` qua CSS thuần
+    //    (.product-card:hover trong globals.css — chỉ trên thiết bị có chuột),
+    //    không đụng width/height/margin → grid track không đổi kích thước.
+    // 2. `isolation: isolate` + `contain: layout` scope z-index & repaint
+    //    vào đúng card này.
+    // 3. Rating + "Add to cart" hiển thị MỌI LÚC (đã bỏ hover-to-reveal) —
+    //    mọi card cùng chiều cao, grid dùng align-items: start.
+    <article
+      className="product-card"
       style={{
         display: "flex",
         flexDirection: "column",
         background: "var(--card)",
         borderRadius: "24px",
         overflow: "hidden",
-        boxShadow: isHovered
-          ? "var(--shadow-card-hover)"
-          : "var(--shadow-card)",
-        transition: "box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         position: "relative",
         isolation: "isolate",
         contain: "layout",
-        zIndex: isHovered ? 10 : 1,
         transformOrigin: "center bottom",
-        willChange: "transform",
       }}
     >
       {/* ── Image area ── */}
@@ -154,9 +130,8 @@ export const ProductCard = memo(function ProductCard({
             flexShrink: 0,
           }}
         >
-          <motion.div
-            animate={{ scale: isHovered ? 1.08 : 1 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          <div
+            className="product-card__img"
             style={{ width: "100%", height: "100%" }}
           >
             <ResponsiveImage
@@ -170,7 +145,7 @@ export const ProductCard = memo(function ProductCard({
                 transition: "filter 0.4s ease",
               }}
             />
-          </motion.div>
+          </div>
 
           {/* Ambient image vignette — subtle, keeps top badges legible */}
           <div
@@ -182,15 +157,10 @@ export const ProductCard = memo(function ProductCard({
             }}
           />
 
-          {/* Single soft glow sweep on hover — the one decorative flourish we keep */}
-          <motion.div
+          {/* Soft glow sweep on hover — CSS-only, không tốn JS mỗi frame */}
+          <div
             aria-hidden
-            initial={{ opacity: 0, x: "-120%" }}
-            animate={{
-              x: isHovered ? "120%" : "-120%",
-              opacity: isHovered ? 0.35 : 0,
-            }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="product-card__sweep"
             style={{
               position: "absolute",
               top: 0,
@@ -199,9 +169,10 @@ export const ProductCard = memo(function ProductCard({
               height: "100%",
               pointerEvents: "none",
               zIndex: 1,
+              opacity: 0,
               background:
                 "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)",
-              transform: "skewX(-12deg)",
+              transform: "translateX(-120%) skewX(-12deg)",
             }}
           />
 
@@ -341,9 +312,7 @@ export const ProductCard = memo(function ProductCard({
             {product.category}
           </div>
 
-          <motion.div
-            animate={{ scale: isHovered ? 1.06 : 1 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          <div
             style={{
               fontFamily: "'Playfair Display', serif",
               fontSize: "1.15rem",
@@ -351,11 +320,10 @@ export const ProductCard = memo(function ProductCard({
               color: "var(--primary)",
               letterSpacing: "-0.02em",
               lineHeight: 1,
-              transformOrigin: "right center",
             }}
           >
             {formattedPrice}
-          </motion.div>
+          </div>
         </div>
 
         <Link
@@ -365,18 +333,18 @@ export const ProductCard = memo(function ProductCard({
         >
           {/* Product name */}
           <div
+            className="product-card__name"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: "1.05rem",
               fontWeight: 600,
-              color: isHovered ? "var(--primary)" : "var(--foreground)",
+              color: "var(--foreground)",
               letterSpacing: "-0.015em",
               lineHeight: 1.2,
               marginBottom: "4px",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              transition: "color 0.25s ease",
             }}
           >
             {product.name}
@@ -427,70 +395,53 @@ export const ProductCard = memo(function ProductCard({
           ))}
         </div>
 
-        {/* ── Rating + Add to cart zone ──
-            Compact by default — only reveals content (and only grows its own
-            height) when THIS card is hovered/touched. Because the parent
-            grid uses align-items: start, this never disturbs sibling rows. */}
-        <div style={{ marginTop: showReveal ? "2px" : "0" }}>
-          <AnimatePresence initial={false}>
-            {showReveal && (
-              <motion.div
-                key="reveal"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                style={{ overflow: "hidden" }}
-              >
-                <div style={{ paddingTop: "2px" }}>
-                  {/* Rating */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    <Stars value={product.rating} />
-                    <span
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: "0.68rem",
-                        color: "var(--foreground-muted)",
-                      }}
-                    >
-                      {product.rating.toFixed(1)} ({product.reviewCount})
-                    </span>
-                  </div>
+        {/* ── Rating + Add to cart — hiển thị MỌI LÚC trên mọi thiết bị ──
+            Đã bỏ cơ chế hover-to-reveal: rating và nút luôn nằm trong card,
+            không còn animation height/opacity khi hover. */}
+        <div style={{ marginTop: "2px" }}>
+          {/* Rating */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginBottom: "10px",
+            }}
+          >
+            <Stars value={product.rating} />
+            <span
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "0.68rem",
+                color: "var(--foreground-muted)",
+              }}
+            >
+              {product.rating.toFixed(1)} ({product.reviewCount})
+            </span>
+          </div>
 
-                  {/* Add to cart button */}
-                  <motion.button
-                    type="button"
-                    className="card-add-btn"
-                    onClick={handleAddClick}
-                    aria-label={`Add ${product.name} to cart`}
-                    whileHover={{ scale: 1.015 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 380,
-                      damping: 30,
-                      mass: 0.6,
-                    }}
-                  >
-                    <span className="card-add-btn__icon" aria-hidden="true">
-                      <ShoppingBag size={15} strokeWidth={2.2} />
-                    </span>
-                    <span className="card-add-btn__label">Add to cart</span>
-                    <span className="card-add-btn__shine" aria-hidden="true" />
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Add to cart button */}
+          <motion.button
+            type="button"
+            className="card-add-btn"
+            onClick={handleAddClick}
+            aria-label={`Add ${product.name} to cart`}
+            whileTap={{ scale: 0.97 }}
+            transition={{
+              type: "spring",
+              stiffness: 380,
+              damping: 30,
+              mass: 0.6,
+            }}
+          >
+            <span className="card-add-btn__icon" aria-hidden="true">
+              <ShoppingBag size={15} strokeWidth={2.2} />
+            </span>
+            <span className="card-add-btn__label">Add to cart</span>
+            <span className="card-add-btn__shine" aria-hidden="true" />
+          </motion.button>
         </div>
       </div>
-    </motion.article>
+    </article>
   );
 });

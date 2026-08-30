@@ -88,7 +88,6 @@ export function useProducts() {
   }, [debouncedSearch, searchParams, setSearchParams]);
 
   // ---- Async data ----
-  const [isLoading, setIsLoading] = useState(false);
   const [paginatedResult, setPaginatedResult] = useState<PaginatedResponse<Product> | null>(null);
 
     
@@ -111,7 +110,7 @@ export function useProducts() {
     [filters.category, filters.search, filters.sort, filters.page, filters.color, filters.minPrice, filters.maxPrice],
   );
 
-    const { data: productsPage, isFetching, isError } = useProductsQuery(queryParams);
+    const { data: productsPage, isPending, isError } = useProductsQuery(queryParams);
 
     // Build filter options from the full catalog, not the current paginated
   // result. Selecting a category must not make other filter groups disappear.
@@ -159,10 +158,12 @@ export function useProducts() {
     return Array.from(tagSet);
   }, []);
 
-  // isLoading giữ nguyên interface: bật skeleton khi đang fetch (kể cả khi đổi filter)
-  useEffect(() => {
-    setIsLoading(isFetching);
-  }, [isFetching]);
+  // isLoading (giữ nguyên interface) = isPending: CHỈ skeleton ở lần tải đầu
+  // (chưa có dữ liệu nào). Khi đổi filter/page, keepPreviousData giữ dữ liệu
+  // cũ trên grid → không còn nháy skeleton toàn trang (mượt hơn hẳn).
+  // Trước đây: state+effect sync isFetching gây lệch 1 frame + skeleton nháy
+  // mỗi lần fetch.
+  const isLoading = isPending;
 
   // Server-side filtering — the backend already applies color/price filters.
   // We only need to set the paginated result directly from the server response.

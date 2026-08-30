@@ -1057,6 +1057,21 @@ export function DIYSection({ hoveredIndex = -1 }: { hoveredIndex?: number }) {
             filter: "blur(60px)",
           }}
         />
+        {/* Second glow — lavender accent, same recipe used across
+            How It Works/Learn/Shop for a consistent ambient background */}
+        <div
+          style={{
+            position: "absolute",
+            width: "260px",
+            height: "200px",
+            top: "10%",
+            right: "8%",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(ellipse, var(--glow-lavender) 0%, transparent 72%)",
+            filter: "blur(46px)",
+          }}
+        />
         {/* Fiber texture */}
         <div
           style={{

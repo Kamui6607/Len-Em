@@ -800,6 +800,9 @@ export function LearnSection() {
       {/* Background ambient glows */}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         <div style={{ position: "absolute", width: "340px", height: "260px", top: "40%", left: "38%", borderRadius: "50%", background: "radial-gradient(ellipse, var(--glow-primary) 0%, transparent 70%)", filter: "blur(52px)" }} />
+        {/* Second glow — same lavender accent used across How It Works/Shop/DIY
+            so every section reads from the same ambient-glow "recipe" */}
+        <div style={{ position: "absolute", width: "260px", height: "200px", bottom: "8%", right: "8%", borderRadius: "50%", background: "radial-gradient(ellipse, var(--glow-lavender) 0%, transparent 72%)", filter: "blur(46px)" }} />
         {/* Fiber texture */}
         <div style={{ position: "absolute", inset: 0, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.028'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.022'/%3E%3C/svg%3E")` }} />
       </div>

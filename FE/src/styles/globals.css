@@ -3,6 +3,36 @@
    Premium minimal reset + core utilities
    ============================================================ */
 
+/* ============================================================
+   MOBILE FIT — trang luôn fit chiều ngang màn hình
+   - overflow-x: clip: chặn mọi tràn ngang (element rộng hơn màn
+     hình bị cắt, không tạo vùng kéo ngang → hết phải pinch/kéo
+     2 ngón để canh trang). `clip` KHÔNG tạo scroll container nên
+     không phá position: sticky (navbar) như overflow: hidden.
+   - text-size-adjust: chặn browser mobile tự phóng chữ.
+   ============================================================ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
+body {
+  overflow-x: clip;
+}
+
+/* iOS Safari TỰ ZOOM-TOÀN-TRANG khi focus vào input có font-size < 16px,
+   và mức zoom đó giữ nguyên sau khi blur → trang "bị phóng to", người dùng
+   phải pinch mới về lại vừa màn hình. Ép 16px cho input trên mobile để
+   chặn tận gốc hiện tượng này (16px là ngưỡng Safari không còn auto-zoom). */
+@media (max-width: 767.98px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Smooth theme transitions — only on elements that need it, NOT global * */
 /* Use .theme-transition class on specific containers that need theme-aware transitions */
 .theme-transition, 
@@ -271,6 +301,19 @@ a.nav-icon-btn:hover {
 /* Fade in utility */
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Soft fade-in cho nội dung thay thế skeleton — đủ chậm để mắt không
+   bị "giật" khi data về, không quá chậm gây ức chế người dùng */
+@keyframes fade-in-soft {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-soft {
+  animation: fade-in-soft 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-soft { animation: none; }
+}
 
 /* Scale in utility */
 @keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -797,6 +840,61 @@ a.nav-icon-btn:hover {
 .card-add-btn:disabled:hover .card-add-btn__shine {
   opacity: 0;
   transform: translateX(-175%) skewX(-14deg);
+}
+
+/* ============================================================
+   PRODUCT CARD — always-visible body + CSS-only hover lift
+   Thay cho motion hover cũ (JS mỗi frame trên từng card) bằng
+   transition CSS: nhẹ hơn hẳn khi scroll grid trên mobile.
+   Chỉ thiết bị có chuột thật (hover: hover) mới chạy hiệu ứng.
+   ============================================================ */
+.product-card {
+  box-shadow: var(--shadow-card);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-card__img {
+  transform: scale(1);
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-card__sweep {
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.4s ease;
+}
+
+.product-card__name {
+  transition: color 0.25s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .product-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: var(--shadow-card-hover);
+    z-index: 10;
+  }
+
+  .product-card:hover .product-card__img {
+    transform: scale(1.08);
+  }
+
+  .product-card:hover .product-card__sweep {
+    opacity: 0.35;
+    transform: translateX(120%) skewX(-12deg);
+  }
+
+  .product-card:hover .product-card__name {
+    color: var(--primary);
+  }
+}
+
+/* Thiết bị cảm ứng: phản hồi chạm nhẹ (không hover-lift) */
+@media (hover: none) {
+  .product-card:active {
+    transform: scale(0.985);
+    transition-duration: 0.15s;
+  }
 }
 
 /* Custom Select Input */

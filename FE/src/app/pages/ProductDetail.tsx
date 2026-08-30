@@ -43,9 +43,9 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
             className={cn(
               "w-4 h-4",
               i < Math.floor(rating)
-                ? "fill-amber-400 text-amber-400"
+                ? "fill-[var(--rating-star)] text-[var(--rating-star)]"
                 : i < rating
-                  ? "fill-amber-400/50 text-amber-400"
+                  ? "fill-[var(--rating-star-half)] text-[var(--rating-star)]"
                   : "fill-muted-foreground/20 text-muted-foreground/30",
             )}
           />
@@ -910,7 +910,9 @@ export function ProductDetail() {
                 .slice(0, 4)
                 .map((related) => {
                   const relatedPrice =
-                    related.variants?.[0]?.price ?? (related as any).price ?? 0;
+                    related.variants?.[0]?.price ??
+                    (related as { price?: number }).price ??
+                    0;
                   return (
                     <Link
                       key={related.id}

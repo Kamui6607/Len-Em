@@ -89,9 +89,52 @@ export function ShopSection() {
   return (
     <section
       className="px-4 sm:px-8"
-      style={{ paddingTop: "var(--section-py-md)", paddingBottom: "var(--section-py-md)" }}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        paddingTop: "var(--section-py-md)",
+        paddingBottom: "var(--section-py-md)",
+      }}
     >
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+      {/* Ambient background — same recipe (2 glow blobs + fiber texture)
+          used across How It Works / Learn / DIY, so every section on the
+          page reads as one consistent visual system rather than each
+          being decorated on its own */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div
+          style={{
+            position: "absolute",
+            width: "320px",
+            height: "240px",
+            top: "10%",
+            left: "8%",
+            borderRadius: "50%",
+            background: "radial-gradient(ellipse, var(--glow-primary) 0%, transparent 70%)",
+            filter: "blur(50px)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            width: "260px",
+            height: "200px",
+            bottom: "6%",
+            right: "10%",
+            borderRadius: "50%",
+            background: "radial-gradient(ellipse, var(--glow-lavender) 0%, transparent 72%)",
+            filter: "blur(46px)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.026'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.021'/%3E%3C/svg%3E")`,
+          }}
+        />
+      </div>
+
+      <div style={{ position: "relative", zIndex: 1, maxWidth: "1200px", margin: "0 auto" }}>
         {/* Heading */}
         <ShopHeading />
 
