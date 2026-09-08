@@ -167,7 +167,7 @@ export function AboutUs() {
   ];
 
   return (
-    <div ref={pageRef} className="relative">
+    <div ref={pageRef} className="relative pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       <StitchThread progress={thread} />
 
       {/* ================= HERO ================= */}

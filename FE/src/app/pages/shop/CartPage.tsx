@@ -1023,7 +1023,7 @@ export function CartPage() {
   const isEmpty = cartItems.length === 0 && cartKits.length === 0;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--background)", position: "relative" as const }}>
+    <div style={{ minHeight: "100vh", background: "var(--background)", position: "relative" as const }} className="pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       {/* Ambient texture + soft corner glows */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
         <div

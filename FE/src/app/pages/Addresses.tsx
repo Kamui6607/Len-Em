@@ -317,7 +317,7 @@ export function Addresses() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
+    <div className="min-h-screen bg-background pt-8 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

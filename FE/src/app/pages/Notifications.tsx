@@ -134,7 +134,7 @@ export function NotificationsPage() {
   let cardIndex = 0;
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
       {/* Back button sits outside the panel */}
       <button
         onClick={() => navigate(-1)}

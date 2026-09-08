@@ -41,6 +41,7 @@ export function Home() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
+        className="pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0"
         style={{ position: "relative", zIndex: 1 }}
       >
         {/* ── Hero ── */}

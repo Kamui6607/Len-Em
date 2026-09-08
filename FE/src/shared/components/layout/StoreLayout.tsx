@@ -35,9 +35,7 @@ export function StoreLayout({ children }: StoreLayoutProps) {
       <div style={{ position: "relative", zIndex: 1 }}>
         {!hideNav && <Navigation cartCount={cartCount} />}
 
-        <div
-          className={`main-content flex-1 ${!hideNav ? "pb-20 md:pb-0" : ""}`}
-        >
+        <div className="main-content flex-1">
           {/* Page fade-in theo route — CHỈ opacity (KHÔNG transform để tránh
               bóp position:fixed của nền, KHÔNG AnimatePresence mode="wait"
               vì exit có thể bị treo với lazy/Suspense khiến trang mới không

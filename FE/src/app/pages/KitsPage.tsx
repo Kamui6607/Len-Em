@@ -98,7 +98,7 @@ export function KitsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:py-12">
+    <div className="min-h-screen bg-background pt-8 px-4 sm:pt-12 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-12">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
