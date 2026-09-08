@@ -104,6 +104,8 @@ export interface CreateCourseRequest {
   description?: string;
   thumbnail?: string;
   level: CourseLevel;
+  /** Course price in VND — omit or 0 for a free course. */
+  price?: number;
   linkedLessons?: string[];
   tags?: string[];
   linkedCombo?: string[];
@@ -115,6 +117,8 @@ export interface UpdateCourseRequest {
   description?: string;
   thumbnail?: string;
   level?: CourseLevel;
+  /** Course price in VND — omit or 0 for a free course. */
+  price?: number;
   linkedLessons?: string[];
   tags?: string[];
   linkedCombo?: string[];
@@ -146,6 +150,8 @@ export interface CourseFormData {
   description: string;
   thumbnail: string;
   level: CourseLevel;
+  /** Course price in VND — 0 = free course. */
+  price: number;
   tags: string[];
   linkedLessons: string[];
   linkedCombo: string[];

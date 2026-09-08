@@ -5,6 +5,7 @@ import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDelet
 import { toast } from "sonner";
 import { Badge } from "../../../shared/components/ui/badge";
 import { Button } from "../../../shared/components/ui/button";
+import { formatPrice } from "../../../lib/formatPrice";
 import { courseService } from "../../../shared/api/courseService";
 import type { Course, CourseLevel } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
@@ -21,7 +22,7 @@ import {
   AdminPageLoading,
 } from "../../../shared/components/admin/AdminDataTable";
 
-type SortField = "title" | "level" | "lessons" | "duration" | "status";
+type SortField = "title" | "level" | "lessons" | "duration" | "status" | "price";
 type SortDirection = "asc" | "desc";
 
 const levelLabels: Record<CourseLevel, string> = {
@@ -73,6 +74,7 @@ export function AdminCourses() {
         case "lessons": return course.totalLessons;
         case "duration": return course.totalDuration;
         case "status": return course.isPublished ? "published" : "draft";
+        case "price": return course.price ?? 0;
       }
     };
     const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
@@ -117,6 +119,7 @@ export function AdminCourses() {
               <AdminSortableHeader label={t("admin.courses.level")} field="level" activeField={sortField} direction={sortDirection} onSort={handleSort} />
               <AdminSortableHeader label={t("admin.courses.lessons")} field="lessons" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
               <AdminSortableHeader label={t("admin.courses.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
+              <AdminSortableHeader label="Price" field="price" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
               <AdminSortableHeader label={t("admin.courses.status")} field="status" activeField={sortField} direction={sortDirection} onSort={handleSort} />
               <AdminTableHeaderCell label={t("admin.courses.actions")} align="right" />
             </tr>
@@ -148,6 +151,9 @@ export function AdminCourses() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{course.totalDuration} min</td>
+                  <td className="px-6 py-4 text-sm text-right">
+                    {(course.price ?? 0) > 0 ? formatPrice(course.price ?? 0) : "Free"}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
                       {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
@@ -182,7 +188,7 @@ export function AdminCourses() {
                 </tr>
               ))
             ) : (
-              <AdminTableEmptyRow colSpan={6} message={t("admin.courses.noCourses")} />
+              <AdminTableEmptyRow colSpan={7} message={t("admin.courses.noCourses")} />
             )}
           </tbody>
         </AdminTableScroll>

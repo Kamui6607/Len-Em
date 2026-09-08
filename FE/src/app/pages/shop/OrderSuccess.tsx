@@ -3,6 +3,7 @@ import { ArrowRight, ShoppingBag } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useCart } from "../../../shared/contexts/CartContext";
+import { useAuthStore } from "../../../shared/store/auth.store";
 
 // ═══════════════════════════════════════════════════════════════════
 // LARGE GIFT BOX SVG — celebratory, bow-tied, with sparkles
@@ -504,6 +505,8 @@ function ConfettiLayer() {
 export function OrderSuccess() {
   const { t } = useLanguage();
   const { clearCart } = useCart();
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [searchParams] = useSearchParams();
   // VNPAY returns orderId as "orderId" param for direct navigations,
   // or as "vnp_TxnRef" when redirected back from VNPAY gateway.
@@ -523,6 +526,16 @@ export function OrderSuccess() {
   useEffect(() => {
     clearCart();
   }, [clearCart]);
+
+  // After payment the backend webhook may have granted course purchases
+  // (purchasedCourses) — re-fetch the profile so the Buy-Now button turns
+  // into the Enroll button on course pages.
+  useEffect(() => {
+    if (isAuthenticated) {
+      void refreshProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
   return (
     <div
       style={{

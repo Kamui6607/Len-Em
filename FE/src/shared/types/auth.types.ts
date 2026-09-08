@@ -27,6 +27,8 @@ export interface ApiUserProfile {
   createdAt?: string;
   updatedAt?: string;
   enrolled?: string[];
+  /** Course IDs the user has purchased (paid courses). */
+  purchasedCourses?: string[];
 }
 
 export interface User {
@@ -45,6 +47,8 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   enrolled?: string[];
+  /** Course IDs the user has purchased (paid courses). */
+  purchasedCourses?: string[];
 }
 
 export interface AuthTokens { accessToken: string; refreshToken: string; }
@@ -117,6 +121,7 @@ export function normalizeApiUserProfile(profile: ApiUserProfile): User {
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
     enrolled: profile.enrolled || [],
+    purchasedCourses: profile.purchasedCourses || [],
   };
 }
 
@@ -150,4 +155,7 @@ export interface AuthState {
   logout: () => void;
   setUser: (user: User) => void;
   setTokens: (tokens: AuthTokens) => void;
+  /** Re-fetch the current user profile from the backend (e.g. after a payment
+   *  webhook updated purchasedCourses/enrolled) and update the store. */
+  refreshProfile: () => Promise<void>;
 }

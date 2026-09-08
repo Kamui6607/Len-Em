@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Package,
   Calendar,
@@ -20,7 +20,7 @@ import { orderService } from "../../features/orders/services/order.service";
 import { productService } from "../../shared/api/productService";
 import { kitService } from "../../shared/api/kitService";
 import type { Order, OrderItem } from "../../features/orders/types/order.types";
-import { normalizeOrder } from "../../features/orders/types/order.types";
+import { normalizeOrder, isCourseItem } from "../../features/orders/types/order.types";
 import { getOrderStatusBadgeClass } from "../../constants/orderStatus";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 
@@ -28,7 +28,7 @@ const PAGE_SIZE = 10;
 
 export function Purchased() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { addReview, hasReviewed } = useReviews();
   const { addNotification } = useNotifications();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -53,6 +53,16 @@ export function Purchased() {
   const [kitNamesLoaded, setKitNamesLoaded] = useState(false);
   const { addToCart, addKitToCart } = useCart();
   const navigate = useNavigate();
+
+  // After paying, the backend webhook may have granted course purchases.
+  // Refresh the profile once per page visit so purchasedCourses/enrolled stay
+  // up to date. (useAuth user is recreated on each setUser, so guard with a ref.)
+  const refreshedOnce = useRef(false);
+  useEffect(() => {
+    if (!user || refreshedOnce.current) return;
+    refreshedOnce.current = true;
+    void refreshProfile();
+  }, [user, refreshProfile]);
 
   useEffect(() => {
     async function loadOrders() {
@@ -219,6 +229,8 @@ export function Purchased() {
 
     // Reorder standalone products
     standalone.forEach((item) => {
+      // Course purchases are digital — they cannot be re-added to the cart
+      if (isCourseItem(item)) return;
       addToCart(
         {
           productId: item.productId,
@@ -468,7 +480,8 @@ export function Purchased() {
                                           <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                                             {order.orderStatus ===
                                               "DELIVERED" &&
-                                              !reviewed && (
+                                              !reviewed &&
+                                              !isCourseItem(item) && (
                                                 <button
                                                   onClick={(e) => {
                                                     e.preventDefault();
@@ -489,7 +502,8 @@ export function Purchased() {
                                               )}
                                             {order.orderStatus ===
                                               "DELIVERED" &&
-                                              reviewed && (
+                                              reviewed &&
+                                              !isCourseItem(item) && (
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                   <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />{" "}
                                                   {t("purchased.reviewedLabel")}
@@ -545,7 +559,8 @@ export function Purchased() {
                                   </div>
                                   <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                                     {order.orderStatus === "DELIVERED" &&
-                                      !reviewed && (
+                                      !reviewed &&
+                                      !isCourseItem(item) && (
                                         <button
                                           onClick={(e) => {
                                             e.preventDefault();
@@ -564,7 +579,8 @@ export function Purchased() {
                                         </button>
                                       )}
                                     {order.orderStatus === "DELIVERED" &&
-                                      reviewed && (
+                                      reviewed &&
+                                      !isCourseItem(item) && (
                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                                           <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />{" "}
                                           {t("purchased.reviewedLabel")}

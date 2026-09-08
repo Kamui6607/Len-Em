@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { orderService } from "../../../features/orders/services/order.service";
 import { OrderDetailCard } from "../../../shared/components/order/OrderDetailCard";
 import type { Order } from "../../../features/orders/types/order.types";
+import { useAuthStore } from "../../../shared/store/auth.store";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 export function OrderDetail() {
@@ -17,6 +18,16 @@ export function OrderDetail() {
   const { t } = useLanguage();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Re-fetch the user profile when opening an order — after a VNPAY payment
+  // the backend webhook may have just granted course purchases.
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  useEffect(() => {
+    if (isAuthenticated) {
+      void refreshProfile();
+    }
+  }, [isAuthenticated, t, refreshProfile]);
 
   useEffect(() => {
     if (!id) return;

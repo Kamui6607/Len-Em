@@ -63,5 +63,6 @@ export function useAuth() {
     logout: store.logout,
     initialize: store.initialize,
     setUser: store.setUser,
+    refreshProfile: store.refreshProfile,
   };
 }

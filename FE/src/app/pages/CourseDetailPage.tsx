@@ -24,6 +24,8 @@ import { courseService } from "../../shared/api/courseService";
 import { lessonService } from "../../shared/api/lessonService";
 import { kitService, type Kit } from "../../shared/api/kitService";
 import { productService, type Product } from "../../shared/api/productService";
+import { orderService } from "../../features/orders/services/order.service";
+import type { CreateOrderRequest } from "../../features/orders/types/order.types";
 import { materialCombos } from "../../features/learn/data/learn.mock";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
@@ -162,13 +164,18 @@ export function CourseDetailPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [buying, setBuying] = useState(false);
   const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
 
-  // Get enrolled courses from user profile
-  const enrolledCourses = user?.enrolled || [];
+  // Get enrolled / purchased courses from user profile
+  const enrolledCourses = useMemo(() => user?.enrolled || [], [user]);
+  const purchasedCourses = useMemo(() => user?.purchasedCourses || [], [user]);
 
-  // Check if current course is enrolled
+  // Check if current course is enrolled / purchased
   const isEnrolled = courseId ? enrolledCourses.includes(courseId) : false;
+  const isPurchased = courseId ? purchasedCourses.includes(courseId) : false;
+  // Free course when price is missing or 0
+  const isFree = course ? (course.price ?? 0) === 0 : true;
 
   // Fetch the user's server-side course progress so the detail page shows
   // real completion state (and the certificate when the course is finished).
@@ -374,6 +381,73 @@ export function CourseDetailPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  /** Buy Now — create a direct digital-order for a premium course (bypasses cart). */
+  const handleBuyNow = useCallback(async () => {
+    if (!isAuthenticated || !course || !courseId) {
+      navigate("/auth/login");
+      return;
+    }
+
+    setBuying(true);
+    try {
+      const price = course.price ?? 0;
+      const payload: CreateOrderRequest = {
+        items: [
+          {
+            course: courseId,
+            itemType: "Course",
+            name: course.title,
+            image: course.thumbnail,
+            price,
+            quantity: 1,
+          },
+        ],
+        // Digital course — no physical delivery, shipping fee is 0. The address
+        // is still required by the order schema, so we seed it from the profile.
+        shippingAddress: {
+          fullName: user?.fullName || "Course Purchase",
+          phone: user?.phone || "",
+          address: user?.address || "Digital course — no shipping required",
+          provinceName: "",
+          districtName: "",
+          wardName: "",
+        },
+        paymentMethod: "VNPAY",
+        itemsPrice: price,
+        shippingFee: 0,
+        totalPrice: price,
+      };
+
+      const response = await orderService.createOrder(payload);
+      const result = response.data;
+
+      // VNPAY gateway redirect — same flow as the normal checkout.
+      if (result.payUrl) {
+        window.location.href = result.payUrl;
+        return;
+      }
+
+      toast.success("Order created! Complete payment to start the course.");
+      navigate(`/order/success?orderId=${result.order?._id ?? ""}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        err?.response?.data?.message ||
+          "Failed to create the order. Please try again.",
+      );
+    } finally {
+      setBuying(false);
+    }
+  }, [
+    isAuthenticated,
+    course,
+    courseId,
+    navigate,
+    user?.fullName,
+    user?.phone,
+    user?.address,
+  ]);
+
   const handleEnrollAndStart = useCallback(
     async (event: React.MouseEvent) => {
       if (!isAuthenticated) {
@@ -392,6 +466,14 @@ export function CourseDetailPage() {
       }
 
       event.preventDefault();
+
+      // Premium course the user hasn't bought yet → Buy Now checkout
+      if (!isFree && !isPurchased) {
+        await handleBuyNow();
+        return;
+      }
+
+      // Free course (or already purchased) → enroll directly
       try {
         setEnrolling(true);
         const res = await courseService.enroll(courseId);
@@ -417,13 +499,20 @@ export function CourseDetailPage() {
         }
       } catch (error) {
         // Check if already enrolled from error response
-        const err = error as { response?: { data?: { message?: string } } };
+        const err = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
         if (err?.response?.data?.message === "Already enrolled") {
           // Still navigate to course to sync with backend
           const fl = lessons[0];
           if (fl) {
             navigate(`/learn/${courseId}/lesson/${fl._id}`);
           }
+        } else if (err?.response?.status === 403) {
+          // Backend rejects enrolling in a paid course that wasn't purchased
+          toast.error(
+            "This is a paid course. Please purchase it first.",
+          );
         } else {
           toast.error("Failed to enroll");
         }
@@ -434,6 +523,8 @@ export function CourseDetailPage() {
     [
       isAuthenticated,
       isEnrolled,
+      isPurchased,
+      isFree,
       courseId,
       navigate,
       lessons,
@@ -441,6 +532,7 @@ export function CourseDetailPage() {
       user,
       enrolledCourses,
       setUser,
+      handleBuyNow,
     ],
   );
 
@@ -617,19 +709,35 @@ export function CourseDetailPage() {
                   ))}
                 </div>
 
+                {!isFree && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <Badge variant="outline">Premium</Badge>
+                    <span
+                      className="text-xl font-bold"
+                      style={{ color: "var(--primary)" }}
+                    >
+                      {formatPrice(course.price ?? 0)}
+                    </span>
+                  </div>
+                )}
+
                 {firstLesson && (
                   <button
                     type="button"
-                    disabled={enrolling}
+                    disabled={enrolling || buying}
                     onClick={(e) => handleEnrollAndStart(e)}
                     className="learn-start-btn inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold transition-all"
                   >
                     <Play className="size-4" />
-                    {enrolling
-                      ? "Enrolling..."
-                      : isEnrolled
-                        ? "Start"
-                        : "Bắt đầu học"}
+                    {buying
+                      ? "Redirecting to payment..."
+                      : enrolling
+                        ? "Enrolling..."
+                        : isEnrolled
+                          ? "Start"
+                          : isFree || isPurchased
+                            ? "Enroll"
+                            : `Buy Now ${formatPrice(course.price ?? 0)}`}
                   </button>
                 )}
               </div>
@@ -1087,11 +1195,15 @@ export function CourseDetailPage() {
                 onClick={handleEnrollAndStart}
                 className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm text-center"
               >
-                {enrolling
-                  ? "Enrolling..."
-                  : isEnrolled
-                    ? "Start →"
-                    : "Bắt đầu học →"}
+                {buying
+                  ? "Redirecting to payment..."
+                  : enrolling
+                    ? "Enrolling..."
+                    : isEnrolled
+                      ? "Start →"
+                      : isFree || isPurchased
+                        ? "Enroll →"
+                        : "Buy Now →"}
               </Link>
             )}
           </div>

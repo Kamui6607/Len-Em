@@ -913,7 +913,7 @@ export function RegisterPage() {
                     <span className="rp-divider-text">or sign up with</span>
                   </div>
 
-                  <GoogleAuthButton onError={setError} />
+                  <GoogleAuthButton label="Sign up with Google" onError={setError} />
                 </form>
               )}
 

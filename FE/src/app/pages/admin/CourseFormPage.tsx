@@ -47,6 +47,7 @@ export function CourseFormPage() {
     description: "",
     thumbnail: "",
     level: "beginner",
+    price: 0,
     tags: [],
     linkedLessons: [],
     linkedCombo: [],
@@ -82,6 +83,7 @@ export function CourseFormPage() {
           description: course.description || "",
           thumbnail: course.thumbnail || "",
           level: course.level,
+          price: course.price ?? 0,
           tags: course.tags || [],
           linkedLessons: course.linkedLessons ?? [],
           linkedCombo: (course.linkedCombo || []).map((c) => c.comboId),
@@ -132,6 +134,7 @@ export function CourseFormPage() {
           description: form.description,
           thumbnail: form.thumbnail,
           level: form.level,
+          price: form.price,
           tags: form.tags,
           linkedLessons: form.linkedLessons,
           linkedCombo: form.linkedCombo,
@@ -144,6 +147,7 @@ export function CourseFormPage() {
           description: form.description,
           thumbnail: form.thumbnail,
           level: form.level,
+          price: form.price,
           tags: form.tags,
           linkedLessons: form.linkedLessons,
           linkedCombo: form.linkedCombo,
@@ -272,6 +276,29 @@ export function CourseFormPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="price">Price (VND)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={form.price > 0 ? String(form.price) : ""}
+                  placeholder="0 = Free course"
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setForm((prev) => ({
+                      ...prev,
+                      price: Number.isNaN(next) || next < 0 ? 0 : Math.round(next),
+                    }));
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Set 0 for a free course. Enter an amount (e.g. 500000) to sell
+                  this course as a premium course (Buy Now).
+                </p>
               </div>
 
               <div>

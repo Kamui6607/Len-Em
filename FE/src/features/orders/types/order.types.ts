@@ -53,6 +53,10 @@ export interface OrderItem {
     image?: string;
   };
   productId: string;
+  /** Course ID when this line item is a digital course purchase ("itemType": "Course"). */
+  course?: string;
+  /** Line-item kind — "Course" for premium course purchases. */
+  itemType?: string;
   quantity: number;
   color?: string;
   hexCode?: string;
@@ -93,12 +97,25 @@ export interface Order {
   updatedAt?: string;
 }
 
+/** One line item when creating an order. Physical products use
+ *  productId+variantId; premium course purchases use `course` +
+ *  itemType: "Course" (no variantId). */
+export interface CreateOrderItem {
+  productId?: string;
+  variantId?: string;
+  /** Course ID for digital course purchases. */
+  course?: string;
+  /** "Course" for premium course purchases (exact casing from backend guide). */
+  itemType?: "Course" | "Product" | "Kit" | string;
+  name?: string;
+  image?: string;
+  price?: number;
+  quantity: number;
+}
+
 export interface CreateOrderRequest {
-  items: {
-    productId: string;
-    variantId: string;
-    quantity: number;
-  }[];
+  user?: string;
+  items: CreateOrderItem[];
   /** Kits to order — server will expand each kit into product items */
   kits?: {
     kitId: string;
@@ -108,6 +125,18 @@ export interface CreateOrderRequest {
   paymentMethod: PaymentMethod;
   note?: string;
   coinUsed?: number;
+  /** Totals can be provided explicitly (e.g. digital course orders) or
+   *  computed server-side from items. */
+  itemsPrice?: number;
+  shippingFee?: number;
+  totalPrice?: number;
+}
+
+/** True when a line item represents a digital course purchase. */
+export function isCourseItem(
+  item: OrderItem | CreateOrderItem,
+): boolean {
+  return item.itemType === "Course" || Boolean(item.course);
 }
 
 export interface CancelOrderRequest {
@@ -196,6 +225,8 @@ export function normalizeOrder(order: Order): Order {
     items: order.items.map((item) => ({
       ...item,
       productId: item.productId || item.product?._id || item._id || "",
+      course: item.course,
+      itemType: item.itemType,
       productName: item.productName || item.name || item.product?.name || "Product",
       image: item.image || item.product?.image,
       kitId: item.kitId,

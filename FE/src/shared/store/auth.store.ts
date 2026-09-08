@@ -157,6 +157,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user });
   },
 
+  refreshProfile: async () => {
+    try {
+      const [response] = await Promise.all([
+        authService.getCurrentUser(),
+        // Small delay keeps the UI from feeling like a hard refresh
+        new Promise((r) => setTimeout(r, 100)),
+      ]);
+      const user = normalizeApiUserProfile(response.data.data.userProfile);
+      set({ user, isAuthenticated: true });
+    } catch {
+      // Best-effort refresh — the axios 401-refresh interceptor handles
+      // expired tokens, so a failed profile fetch should not log the user out.
+    }
+  },
+
   setTokens: (tokens) => {
     tokenStorage.setAccess(tokens.accessToken);
     tokenStorage.setRefresh(tokens.refreshToken);

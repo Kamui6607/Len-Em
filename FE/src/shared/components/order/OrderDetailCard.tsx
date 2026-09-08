@@ -27,7 +27,7 @@ import {
   VALID_TRANSITIONS,
 } from "../../../constants/orderStatus";
 import type { Order, OrderStatus } from "../../../features/orders/types/order.types";
-import { normalizeOrder } from "../../../features/orders/types/order.types";
+import { normalizeOrder, isCourseItem } from "../../../features/orders/types/order.types";
 import { ReportButton } from "../ReportButton";
 import { kitService } from "../../api/kitService";
 import { productService } from "../../api/productService";
@@ -427,7 +427,7 @@ export function OrderDetailCard({
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {canRate && !reviewed && (
+                        {canRate && !reviewed && !isCourseItem(item) && (
                           <button
                             onClick={() => setRatingModal({
                               itemId: item.productId,
@@ -439,7 +439,7 @@ export function OrderDetailCard({
                             Đánh giá
                           </button>
                         )}
-                        {canRate && reviewed && (
+                        {canRate && reviewed && !isCourseItem(item) && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
                             Đã đánh giá
