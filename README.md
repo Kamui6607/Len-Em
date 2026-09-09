@@ -1,14 +1,15 @@
 <div align="center">
-  <img src="https://yarn-shop-be.onrender.com/api/v1/logo" alt="Len Em Logo" width="120" height="120" style="border-radius: 20px;"/>
+  <img src="FE/public/yarn-shop-2-removebg-preview.svg" alt="Len&Em Logo" width="130" height="130" />
   
   <h1 align="center" style="font-size: 2.5rem; font-weight: 700; margin-top: 0.5rem; background: linear-gradient(135deg, #f472b6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-    🧶 Len Em
+    🧶 Len&Em
   </h1>
 
-  <p align="center" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
-    <strong>Learn it, shop it, make it — all in one place.</strong><br />
-    A modern e-commerce platform for yarn craft enthusiasts. Browse kits, yarns & tools, 
-    enroll in crochet courses, and share your DIY creations with the community.
+  <p align="center" style="font-size: 1.1rem; max-width: 640px; margin: 0 auto;">
+    <strong>Learn it. Shop it. Make it — all in one place.</strong><br />
+    Len&Em is a full-stack crochet universe: a real online store for yarn, hooks & kits,
+    a structured learning academy, and a community where makers share their creations —
+    wrapped in one fast, real-time, installable app.
   </p>
 
   <br />
@@ -22,10 +23,10 @@
       <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
     </a>
     <a href="https://tailwindcss.com/" target="_blank">
-      <img src="https://img.shields.io/badge/Tailwind_CSS-4.1-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+      <img src="https://img.shields.io/badge/Tailwind_CSS-4.3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
     </a>
     <a href="https://vitejs.dev/" target="_blank">
-      <img src="https://img.shields.io/badge/Vite-6.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+      <img src="https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
     </a>
     <br />
     <a href="https://tanstack.com/query/latest" target="_blank">
@@ -44,10 +45,11 @@
 
   <p>
     <a href="#-features">Features</a> •
+    <a href="#-how-it-works">How It Works</a> •
     <a href="#-tech-stack">Tech Stack</a> •
     <a href="#-getting-started">Getting Started</a> •
     <a href="#-project-structure">Structure</a> •
-    <a href="#-environment-variables">Environment</a> •
+    <a href="#-deployment">Deployment</a> •
     <a href="#-contributing">Contributing</a>
   </p>
 
@@ -55,6 +57,21 @@
   <hr />
   <br />
 </div>
+
+---
+
+## 🌟 Why Len&Em?
+
+Most craft shops stop at a product page. **Len&Em is a complete ecosystem**, built with the care of a production-grade platform:
+
+| | |
+|---|---|
+| 🛍️ **A real store** | Product variants & colors, curated kit bundles, live stock, GHN shipping, VNPAY / MoMo / COD checkout |
+| 🎓 **A real academy** | Structured crochet courses, lesson-by-lesson progress tracking, and premium "Buy Now" courses |
+| 🎨 **A real community** | A living DIY feed where makers share creations and cheer each other on |
+| ⚡ **Real-time everywhere** | Orders, statuses & notifications pushed live over Socket.IO |
+| 📱 **Runs anywhere** | Responsive web, installable PWA, plus Tauri desktop & Android apps |
+| 🔐 **Built like a product** | JWT + Google sign-in, RBAC dashboards for User / Creator / Staff / Admin |
 
 ---
 
@@ -76,6 +93,7 @@
 | **Crochet Courses** | Structured courses sorted by skill level (Beginner → Advanced) |
 | **Video Lessons** | Free quick tutorials with no login required |
 | **Course Enrollment** | Enroll & track progress through lessons |
+| **Premium Courses** | Love a paid course? One "Buy Now" with VNPAY — access unlocks after payment |
 | **Material Tagging** | Every course tags exact yarn, tools & kits used |
 
 ### 🎨 Community (DIY)
@@ -89,6 +107,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Authentication** | JWT-based login/register with password reset & OTP |
+| **Google Sign-In** | One-tap Google OAuth login & registration |
 | **Role-based Access** | User, Creator, Staff, Admin — each with tailored dashboards |
 | **Profile Management** | Edit profile, manage addresses, view purchase history |
 | **Membership Ranks** | Tiered loyalty system with perks & rewards |
@@ -106,13 +125,46 @@
 ### 🎯 Additional
 | Feature | Description |
 |---------|-------------|
-| **🌐 i18n** | English & Vietnamese (fully localized) |
+| **🌐 Localization** | Vietnamese-first UI with a translation-ready `LanguageContext` |
 | **🌙 Dark Mode** | Theme toggle with smooth transitions |
 | **🤖 ChatBot** | AI-powered customer support assistant |
-| **🔔 Real-time** | Notifications & messaging via Socket.IO |
-| **📱 Responsive** | Mobile-first design with bottom nav & pull-to-refresh |
+| **🔔 Real-time** | Live order & notification updates via Socket.IO |
+| **📱 Responsive** | Mobile-first design with floating bottom nav & pull-to-refresh |
+| **📲 PWA & Desktop** | Installable PWA + Tauri apps for Windows, macOS, Linux & Android |
 | **🎬 Animations** | 3D scenes (Three.js) & scroll-triggered motion effects |
 | **🗺️ Map Picker** | Leaflet-based address picker for checkout |
+
+---
+
+## 🎬 How It Works
+
+### 🛍️ As a shopper
+> Discover yarns, hooks & ready-to-go kits → filter by color, price & tags → pick your
+> exact variant → fill the cart → pin your address on a live map → GHN calculates real
+> shipping fees → pay with **VNPAY, MoMo or COD** → watch your order travel through
+> every stage with real-time notifications.
+
+### 🎓 As a learner
+> Start with **free video lessons** — no account needed → enroll in structured courses →
+> fall in love with a premium course? One **"Buy Now"** and it's yours → every completed
+> lesson is saved to your progress → finish strong with a certificate.
+
+### 🎨 As a maker
+> Post your latest creation with photos & material tags → publish it to the community
+> feed → get support from fellow makers → curated by admins to keep the feed inspiring.
+
+### ⚙️ Under the hood
+
+```mermaid
+flowchart LR
+    U(("🧶 You")) -->|HTTPS| APP["Len&Em App — React SPA + PWA"]
+    APP -->|REST API| API["Node.js + Express Backend"]
+    APP <-.->|Socket.IO| RT["Live Updates"]
+    API --> DB[("MongoDB")]
+    API --> PAY["Payments — VNPAY / MoMo / COD"]
+    API --> SHIP["Shipping — GHN"]
+    RT -->|orders & notifications| U
+```
 
 ---
 
@@ -123,7 +175,7 @@
 |------------|---------|
 | **React 18** | UI library with functional components & hooks |
 | **TypeScript 5.8** | Type-safe development experience |
-| **Vite 6** | Fast build tool & dev server with HMR |
+| **Vite 8** | Fast build tool & dev server with HMR |
 | **Tailwind CSS 4** | Utility-first CSS framework |
 | **TanStack Query 5** | Server state management & caching |
 | **Zustand 5** | Lightweight client state management |
@@ -140,6 +192,8 @@
 | **Radix UI** | Accessible, unstyled UI primitives |
 | **Sonner** | Toast notifications |
 | **date-fns** | Date formatting & manipulation |
+| **vite-plugin-pwa** | PWA support — manifest, service worker, offline app shell |
+| **Tauri 2** | Desktop (Windows/macOS/Linux) & Android packaging |
 
 ### Backend (separate repository)
 - **Node.js + Express** — RESTful API
@@ -147,35 +201,31 @@
 - **JWT** — Authentication & authorization
 - **Socket.IO** — Real-time events
 - **GHN API** — Shipping integration
-- Hosted at: `https://yarn-shop-be.onrender.com`
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js** >= 18.x
-- **npm** >= 9.x (or **pnpm** / **yarn**)
+- **Node.js** >= 20.19 (22 LTS recommended — required by Vite 8)
+- **npm** >= 9.x
 
-### Installation
+### Run it locally
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Kamui6607/Len-Em.git
-cd Len-Em
+cd Len-Em/FE
 
 # 2. Install dependencies
 npm install
 
-# 3. Set up environment variables
-cp .env.example .env
-# For production: cp .env.example .env.production
-
-# 4. Start the development server
+# 3. Start the development server
 npm run dev
 ```
 
-The app will be available at **http://localhost:5000**.
+Open **http://localhost:5173** and start stitching! 🧶
+The Vite dev server proxies `/api/*` and `/socket.io/*` to the backend, so the full experience works out of the box.
 
 ### Available Scripts
 
@@ -185,6 +235,7 @@ The app will be available at **http://localhost:5000**.
 | `npm run build` | Type-check & build for production |
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Run ESLint across the codebase |
+| `npm run tauri` | Run / build the Tauri desktop & Android apps |
 
 ---
 
@@ -217,7 +268,7 @@ src/
 │   ├── supportDIY/        # Support DIY (services, types)
 │   └── users/             # Users (services)
 ├── lib/                   # Framework/tool wrappers (axiosClient, queryClient, formatPrice, authUtils, roleGuard)
-├── locales/               # i18n translation files (en.json, vi.json)
+├── locales/               # i18n dictionary (vi.json) — Vietnamese-first, translation-ready
 ├── routes/                # Route definitions & AppRouter
 ├── shared/                # Cross-cutting code reused across features
 │   ├── api/               # API services (auth, kit, course, lesson, product, ghn, ...)
@@ -243,20 +294,26 @@ src/
 └── styles/                # Global styles, theme, fonts, page-specific css
 ```
 
----
+Outside `src/`:
 
-## 🌱 Environment Variables
-
-Create a `.env` file (or `.env.production` for builds) in the project root:
-
-```env
-# API Base URL
-# Development: Vite proxies /api to the backend, so you can leave this empty
-# Production: set to your backend URL
-VITE_API_BASE_URL=https://yarn-shop-be.onrender.com/api/v1
+```
+FE/
+├── src-tauri/             # Tauri 2 shell — desktop (Windows/macOS/Linux) & Android
+├── public/                # Static assets & PWA icons
+├── vercel.json            # SPA rewrite for Vercel
+└── vite.config.ts         # Dev proxy, PWA manifest & smart chunk-splitting
 ```
 
-> **Note:** During development, the Vite dev server proxies `/api/*` requests to `https://yarn-shop-be.onrender.com` (configured in `vite.config.ts`), so no `.env` file is strictly required for local development.
+---
+
+## 🚢 Deployment
+
+| Target | How |
+|--------|-----|
+| **Web (PWA)** | Production build is served as a static SPA — `vercel.json` rewrites every route to `index.html`. |
+| **Desktop & Android** | GitHub Actions builds Tauri installers + APK and attaches them to a GitHub Release on every `app-v*` tag. |
+
+> 🔐 **Security & privacy:** all sensitive configuration lives in gitignored environment files provisioned at deploy time — no credentials, keys, or private endpoints are stored in this repository.
 
 ---
 
@@ -290,7 +347,7 @@ This project is developed for educational purposes as part of the **EXE101** cou
 <div align="center">
   <br />
   <p>
-    Made with ❤️ and 🧶 by the Len Em Team
+    Made with ❤️ and 🧶 by the Len&Em Team
   </p>
   <p>
     <a href="https://github.com/Kamui6607/Len-Em" target="_blank">
