@@ -22,7 +22,8 @@ import type {
 import { MapPicker } from "../../../shared/components/map/MapPicker";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../../../shared/components/ui/ColorSwatch";
-import { CoinUsage } from "../../../shared/components/membership/CoinUsage";
+// 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
+// import { CoinUsage } from "../../../shared/components/membership/CoinUsage";
 import type { CreateOrderRequest } from "../../../features/orders/types/order.types";
 import type { GHNProvince, GHNDistrict, GHNWard } from "../../../shared/types/ghn.types";
 import type { ReverseGeocodeResult } from "../../../shared/types/address.types";
@@ -69,7 +70,8 @@ export function Checkout() {
   const user = useAuthStore((s) => s.user);
   const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "MOMO" | "COD">("VNPAY");
   const [submitting, setSubmitting] = useState(false);
-  const [coinDiscount, setCoinDiscount] = useState(0);
+  // 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
+  // const [coinDiscount, setCoinDiscount] = useState(0);
   const [calculatingFee, setCalculatingFee] = useState(false);
 
   // GHN address data
@@ -92,7 +94,9 @@ export function Checkout() {
 
   const subtotal = totalPrice;
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const grandTotal = Math.max(0, subtotal + (deliveryFee ?? 0) - coinDiscount);
+  // 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
+  // const grandTotal = Math.max(0, subtotal + (deliveryFee ?? 0) - coinDiscount);
+  const grandTotal = Math.max(0, subtotal + (deliveryFee ?? 0));
 
   const {
     register,
@@ -396,7 +400,8 @@ export function Checkout() {
             : {}),
         },
         paymentMethod,
-        ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
+        // 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
+        // ...(coinDiscount > 0 ? { coinUsed: coinDiscount } : {}),
       };
 
       const response = await orderService.createOrder(payload);
@@ -763,7 +768,7 @@ export function Checkout() {
                 </div>
               </div>
 
-              {/* Coin Usage */}
+              {/* 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
               <div>
                 <CoinUsage
                   orderTotal={subtotal}
@@ -771,6 +776,7 @@ export function Checkout() {
                   onCoinRemoved={() => setCoinDiscount(0)}
                 />
               </div>
+              */}
             </div>
 
             {/* ── Right: Order Summary ── */}
@@ -879,12 +885,14 @@ export function Checkout() {
                         : "Chưa tính"}
                     </span>
                   </div>
+                  {/* 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
                   {coinDiscount > 0 && (
                     <div className="flex justify-between text-sm text-primary">
                       <span>Giảm giá Coin</span>
                       <span>-{formatPrice(coinDiscount)}</span>
                     </div>
                   )}
+                  */}
                   <div className="flex justify-between font-semibold text-lg pt-3 mt-1 border-t border-border">
                     <span>Tổng cộng</span>
                     <span className="text-primary">

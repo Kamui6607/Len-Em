@@ -7,9 +7,9 @@
 // endpoint (auto-creates the account when the email has never been seen),
 // so the same button is reused on LoginPage and RegisterPage.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useGoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin, useGoogleOAuth } from "@react-oauth/google";
 import { Loader as Loader2 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 
@@ -61,6 +61,22 @@ export function GoogleAuthButton({
   const googleLogin = useAuthStore((s) => s.googleLogin);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Guard: when VITE_GOOGLE_CLIENT_ID is missing in the deployment environment
+  // (e.g. not set on Vercel before redeploying), Google's popup fails with the
+  // cryptic "Missing required parameter client_id" error. Surface it clearly
+  // instead — disable the button and log exactly what to fix.
+  const { clientId } = useGoogleOAuth();
+  const isConfigured = Boolean(clientId);
+
+  useEffect(() => {
+    if (!clientId) {
+      console.error(
+        "[GoogleAuthButton] VITE_GOOGLE_CLIENT_ID is not set in this environment. " +
+          "Set it in your hosting provider (Vercel → Settings → Environment Variables) and redeploy.",
+      );
+    }
+  }, [clientId]);
+
   const exchangeToken = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setIsSubmitting(true);
@@ -78,13 +94,35 @@ export function GoogleAuthButton({
         else navigate("/shop");
       } catch (err: unknown) {
         const axiosError = err as {
-          response?: { data?: { message?: string } };
+          response?: { status?: number; data?: { message?: string } };
+          code?: string;
+          message?: string;
         };
-        console.error("Google auth failed:", err);
-        onError?.(
-          axiosError?.response?.data?.message ||
-            "Google sign-in failed. Please try again.",
+        console.error(
+          "Google auth failed:",
+          axiosError?.response?.status ?? axiosError?.code,
+          err,
         );
+
+        // Friendly, actionable messages for the two common failure modes:
+        // 1) free-tier backend cold start exceeding the request timeout
+        // 2) backend rejecting the Google token (401 — usually a backend
+        //    Google Client ID mismatch, not a FE problem)
+        let message =
+          axiosError?.response?.data?.message ||
+          "Google sign-in failed. Please try again.";
+        if (
+          axiosError?.code === "ECONNABORTED" ||
+          /timeout/i.test(axiosError?.message ?? "")
+        ) {
+          message =
+            "Server is waking up (free hosting cold start). Please wait a few seconds and try again.";
+        } else if (axiosError?.response?.status === 401) {
+          message =
+            axiosError?.response?.data?.message ||
+            "Google token was rejected by the server (401). Please verify the backend's Google Client ID configuration.";
+        }
+        onError?.(message);
       } finally {
         setIsSubmitting(false);
       }
@@ -134,6 +172,13 @@ export function GoogleAuthButton({
         type="button"
         className="gauth-btn"
         onClick={() => {
+          if (!isConfigured) {
+            const msg =
+              "Google Sign-In is not configured in this deployment (missing VITE_GOOGLE_CLIENT_ID).";
+            console.error(`[GoogleAuthButton] ${msg}`);
+            onError?.(msg);
+            return;
+          }
           // DX hint: warn devs before Google rejects the request with
           // `400: origin_mismatch` when the page is served from an origin
           // that is not in the Client ID's Authorized JavaScript origins.
@@ -147,7 +192,12 @@ export function GoogleAuthButton({
           }
           exchangeToken();
         }}
-        disabled={isSubmitting}
+        disabled={isSubmitting || !isConfigured}
+        title={
+          isConfigured
+            ? undefined
+            : "Google Sign-In is not configured on this deployment (missing VITE_GOOGLE_CLIENT_ID)"
+        }
       >
         {isSubmitting ? (
           <>

@@ -11,21 +11,32 @@ import type {
 
 const AUTH_BASE = "/auth";
 
+// Auth endpoints hit the auth server directly. On free-tier hosting (Render)
+// the instance can sleep and take 30-60s to cold-start, which exceeds the
+// global 15s axios timeout — so auth calls get a longer window.
+const AUTH_TIMEOUT = 60_000;
+
 export const authService = {
   /** POST /auth/login  â†’ { status, data: { accessToken, refreshToken, subscription?, user? } } */
   login: (credentials: LoginRequest) =>
-    axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/login`, credentials),
+    axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/login`, credentials, {
+      timeout: AUTH_TIMEOUT,
+    }),
 
   /** POST /auth/google  -> same response shape as /auth/login.
    *  Body: { token } = the Google access_token from useGoogleLogin().
    *  Handles BOTH login and signup (BE auto-creates the account when the
    *  email has never been seen). */
   googleLogin: (token: string) =>
-    axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/google`, { token }),
+    axiosClient.post<ApiResponse<LoginResponseData>>(`${AUTH_BASE}/google`, { token }, {
+      timeout: AUTH_TIMEOUT,
+    }),
 
   /** POST /auth/signup  â†’ { status, data: { username, email, ... } }  (no tokens) */
   register: (data: RegisterRequest) =>
-    axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/signup`, data),
+    axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/signup`, data, {
+      timeout: AUTH_TIMEOUT,
+    }),
 
   /** POST /auth/register  â†’ { status, data: { userId, username, email, subscription } } (Admin only) */
   adminRegister: (data: RegisterRequest & { roleId: string }) =>
@@ -34,7 +45,9 @@ export const authService = {
   /** POST /auth/refresh-token  â†’ { status, data: { accessToken, refreshToken } }
    *  Body: { oldRefreshToken } â€” token rotation (old one revoked) */
   refreshToken: (oldRefreshToken: string) =>
-    axiosClient.post<ApiResponse<AuthTokens>>(`${AUTH_BASE}/refresh-token`, { oldRefreshToken }),
+    axiosClient.post<ApiResponse<AuthTokens>>(`${AUTH_BASE}/refresh-token`, { oldRefreshToken }, {
+      timeout: AUTH_TIMEOUT,
+    }),
 
   /** GET /users/me  â†’ { status, data: { userProfile: ApiUserProfile } } */
   getCurrentUser: () =>

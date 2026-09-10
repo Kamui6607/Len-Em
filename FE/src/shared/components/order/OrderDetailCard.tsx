@@ -524,12 +524,14 @@ export function OrderDetailCard({
               <span>-{formatPrice(normalized.discount)}</span>
             </div>
           )}
+          {/* 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
           {normalized.coinUsed != null && normalized.coinUsed > 0 && (
             <div className="flex justify-between text-blue-600">
               <span>Xu đã dùng</span>
               <span>-{formatPrice(normalized.coinUsed)}</span>
             </div>
           )}
+          */}
           <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border">
             <span>Tổng cộng</span>
             <span className="text-primary">{formatPrice(normalized.totalPrice)}</span>

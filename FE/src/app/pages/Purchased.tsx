@@ -23,6 +23,7 @@ import type { Order, OrderItem } from "../../features/orders/types/order.types";
 import { normalizeOrder, isCourseItem } from "../../features/orders/types/order.types";
 import { getOrderStatusBadgeClass } from "../../constants/orderStatus";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
+import "../../styles/purchased.css";
 
 const PAGE_SIZE = 10;
 
@@ -180,7 +181,7 @@ export function Purchased() {
 
   const handleReorder = async (order: Order) => {
     const { kitGroups, standalone } = groupItemsByKit(order.items);
-    
+
     // Reorder kits - add entire kit back to cart
     for (const group of kitGroups) {
       try {
@@ -343,6 +344,121 @@ export function Purchased() {
     }
   };
 
+  /** Map order status -> màu vòng tròn icon (dùng token success/warning/error/info sẵn có) */
+  const getStatusIconClass = (status: string) => {
+    switch (status) {
+      case "DELIVERED":
+        return "is-success";
+      case "CONFIRMED":
+      case "PREPARING":
+      case "SHIPPING":
+        return "is-info";
+      case "PENDING":
+        return "is-warning";
+      case "CANCELLED":
+        return "is-error";
+      default:
+        return "is-neutral";
+    }
+  };
+
+  /** 1 dòng sản phẩm dùng chung cho cả hàng trong kit lẫn hàng standalone */
+  const renderItemRow = (
+    item: OrderItem,
+    order: Order,
+    idx: number | string,
+  ) => {
+    const reviewed = hasReviewed(order._id, item.productId);
+    const lineTotal = (item.price ?? 0) * item.quantity;
+
+    return (
+      <div key={idx} className="purchased-item-row">
+        <div className="purchased-item-thumb">
+          {item.image ? (
+            <img
+              src={item.image}
+              alt={item.productName || "Product"}
+              loading="lazy"
+            />
+          ) : (
+            <Package className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+
+        <div className="purchased-item-info">
+          <p className="purchased-item-name">
+            {item.productName || `Product ${item.productId}`}
+          </p>
+          <div className="purchased-item-meta">
+            <span className="purchased-qty-chip">x{item.quantity}</span>
+            {item.color && (
+              <span>
+                {item.hexCode && (
+                  <span
+                    className="purchased-color-dot"
+                    style={{ backgroundColor: item.hexCode }}
+                  />
+                )}
+                {item.color}
+              </span>
+            )}
+          </div>
+          {(order.orderStatus === "DELIVERED" && !isCourseItem(item)) && (
+            <div className="purchased-item-review-row">
+              {!reviewed ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setReviewModal({
+                      orderId: order._id,
+                      productId: item.productId,
+                      productName: item.productName || "Product",
+                    });
+                  }}
+                  className="purchased-review-btn"
+                >
+                  <Star className="w-3 h-3" /> {t("purchased.reviewButton")}
+                </button>
+              ) : (
+                <span className="purchased-reviewed-label">
+                  <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
+                  {t("purchased.reviewedLabel")}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="purchased-item-price">
+          {item.price != null ? (
+            <>
+              <span className="line-total">{formatPrice(lineTotal)}</span>
+              {item.quantity > 1 && (
+                <span className="unit-price">
+                  {formatPrice(item.price)} / 1
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="line-total">—</span>
+          )}
+        </div>
+
+        <div
+          className="purchased-report-cell"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ReportButton
+            targetType="purchased_order"
+            targetId={order._id}
+            targetTitle={`Order ${order._id}`}
+          />
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -390,20 +506,22 @@ export function Purchased() {
                 <Link
                   to={`/purchased/${order._id}`}
                   key={order._id}
-                  className="block bg-card rounded-2xl p-6 border border-border hover:border-primary/30 transition-all hover:shadow-sm"
+                  className="purchased-card block bg-card rounded-2xl border border-border overflow-hidden"
                 >
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">
+                  <div className="purchased-card-header">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`purchased-status-icon ${getStatusIconClass(order.orderStatus)}`}
+                      >
                         {getStatusIcon(order.orderStatus)}
                       </span>
-                      <div>
-                        <h3 className="font-semibold">
+                      <div className="min-w-0">
+                        <h3 className="purchased-order-id font-semibold truncate">
                           {t("purchased.orderNumber", undefined, {
                             id: order._id.slice(-8).toUpperCase(),
                           })}
                         </h3>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                           <Calendar className="w-3 h-3" />
                           {new Date(order.createdAt).toLocaleDateString(
                             "vi-VN",
@@ -411,24 +529,26 @@ export function Purchased() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-primary text-xl">
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-primary text-xl leading-tight">
                         {formatPrice(order.totalPrice)}
                       </p>
-                      <span
-                        className={`badge ${getOrderStatusBadgeClass(order.orderStatus)}`}
-                      >
-                        {order.orderStatus}
-                      </span>
-                      {order.payment.status === "PAID" && (
-                        <span className="badge badge-green text-[10px] mt-1">
-                          {t("purchased.paid")}
+                      <div className="flex items-center justify-end gap-1.5 mt-1.5 flex-wrap">
+                        <span
+                          className={`badge ${getOrderStatusBadgeClass(order.orderStatus)}`}
+                        >
+                          {order.orderStatus}
                         </span>
-                      )}
+                        {order.payment.status === "PAID" && (
+                          <span className="badge badge-green text-[10px]">
+                            {t("purchased.paid")}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="border-t border-border pt-4">
+                  <div className="purchased-card-body">
                     <div className="space-y-3">
                       {(() => {
                         const { kitGroups, standalone } = groupItemsByKit(
@@ -444,163 +564,33 @@ export function Purchased() {
                                 return (
                                   <div
                                     key={group.kitId}
-                                    className="border border-primary/20 rounded-xl p-3 bg-primary/5"
+                                    className="purchased-kit-group"
                                   >
-                                    <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
-                                      🎁 {kitName}
-                                    </p>
-                                    {group.items.map((item, idx) => {
-                                      const reviewed = hasReviewed(
-                                        order._id,
-                                        item.productId,
-                                      );
-                                      return (
-                                        <div
-                                          key={idx}
-                                          className="flex items-center justify-between py-1.5"
-                                        >
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">
-                                              {item.productName ||
-                                                `Product ${item.productId}`}
-                                            </p>
-                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                              <span>x{item.quantity}</span>
-                                              {item.color && (
-                                                <span>
-                                                  {t(
-                                                    "purchased.colorLabel",
-                                                    undefined,
-                                                    { color: item.color },
-                                                  )}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                                            {order.orderStatus ===
-                                              "DELIVERED" &&
-                                              !reviewed &&
-                                              !isCourseItem(item) && (
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setReviewModal({
-                                                      orderId: order._id,
-                                                      productId: item.productId,
-                                                      productName:
-                                                        item.productName ||
-                                                        "Product",
-                                                    });
-                                                  }}
-                                                  className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                                                >
-                                                  <Star className="w-3 h-3 inline mr-1" />{" "}
-                                                  {t("purchased.reviewButton")}
-                                                </button>
-                                              )}
-                                            {order.orderStatus ===
-                                              "DELIVERED" &&
-                                              reviewed &&
-                                              !isCourseItem(item) && (
-                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                  <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />{" "}
-                                                  {t("purchased.reviewedLabel")}
-                                                </span>
-                                              )}
-                                            <ReportButton
-                                              targetType="purchased_order"
-                                              targetId={order._id}
-                                              targetTitle={`Order ${order._id}`}
-                                            />
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
+                                    <div className="purchased-kit-header">
+                                      <span className="purchased-kit-icon">
+                                        🎁
+                                      </span>
+                                      <p className="purchased-kit-title">
+                                        {kitName}
+                                      </p>
+                                    </div>
+                                    {group.items.map((item, idx) =>
+                                      renderItemRow(item, order, `${group.kitId}-${idx}`),
+                                    )}
                                   </div>
                                 );
                               })}
-                            {/* Standalone items (no kitId) - show only variant info */}
-                            {standalone.map((item, idx) => {
-                              const reviewed = hasReviewed(
-                                order._id,
-                                item.productId,
-                              );
-                              return (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">
-                                      {item.productName ||
-                                        `Product ${item.productId}`}
-                                    </p>
-                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                      <span>x{item.quantity}</span>
-                                      {item.color && (
-                                        <span className="flex items-center gap-1">
-                                          {item.hexCode && (
-                                            <span
-                                              className="inline-block w-3 h-3 rounded-full border border-border"
-                                              style={{
-                                                backgroundColor: item.hexCode,
-                                              }}
-                                            />
-                                          )}
-                                          {item.color}
-                                        </span>
-                                      )}
-                                      {item.price && (
-                                        <span>{formatPrice(item.price)}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                                    {order.orderStatus === "DELIVERED" &&
-                                      !reviewed &&
-                                      !isCourseItem(item) && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setReviewModal({
-                                              orderId: order._id,
-                                              productId: item.productId,
-                                              productName:
-                                                item.productName || "Product",
-                                            });
-                                          }}
-                                          className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                                        >
-                                          <Star className="w-3 h-3 inline mr-1" />{" "}
-                                          {t("purchased.reviewButton")}
-                                        </button>
-                                      )}
-                                    {order.orderStatus === "DELIVERED" &&
-                                      reviewed &&
-                                      !isCourseItem(item) && (
-                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                          <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />{" "}
-                                          {t("purchased.reviewedLabel")}
-                                        </span>
-                                      )}
-                                    <ReportButton
-                                      targetType="purchased_order"
-                                      targetId={order._id}
-                                      targetTitle={`Order ${order._id}`}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
+                            {/* Standalone items (no kitId) */}
+                            {standalone.map((item, idx) =>
+                              renderItemRow(item, order, idx),
+                            )}
                           </>
                         );
                       })()}
                     </div>
+                  </div>
 
-                    <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="purchased-card-footer">
                       {/* ── Retry payment for PENDING + unpaid orders (VNPAY / MOMO) ── */}
                       {order.orderStatus === "PENDING" &&
                         order.payment.status === "PENDING" &&
@@ -612,7 +602,7 @@ export function Purchased() {
                               await handleRetryPayment(order);
                             }}
                             disabled={retryingId === order._id}
-                            className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                            className="purchased-action-btn text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90"
                           >
                             {retryingId === order._id
                               ? "..."
@@ -632,7 +622,7 @@ export function Purchased() {
                                 reason: "",
                               });
                             }}
-                            className="text-xs bg-destructive/10 text-destructive px-4 py-2 rounded-full hover:bg-destructive/20 transition-colors"
+                            className="purchased-action-btn text-xs bg-destructive/10 text-destructive px-4 py-2 rounded-full hover:bg-destructive/20"
                           >
                             <XCircle className="w-3 h-3 inline mr-1" />{" "}
                             {t("purchased.cancelOrder")}
@@ -651,7 +641,7 @@ export function Purchased() {
                             e.stopPropagation();
                             markAsDone(order._id);
                           }}
-                          className="text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90 transition-colors"
+                          className="purchased-action-btn text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90"
                         >
                           ✅ {t("purchased.markAsDone")}
                         </button>
@@ -668,7 +658,7 @@ export function Purchased() {
                               await handleRetryPayment(order);
                             }}
                             disabled={retryingId === order._id}
-                            className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                            className="purchased-action-btn text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90"
                           >
                             {retryingId === order._id
                               ? "..."
@@ -681,12 +671,11 @@ export function Purchased() {
                           e.stopPropagation();
                           handleReorder(order);
                         }}
-                        className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                        className="purchased-action-btn text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90"
                       >
                         <ShoppingCart className="w-3 h-3 inline mr-1" />{" "}
                         {t("purchased.reorderButton")}
                       </button>
-                    </div>
                   </div>
                 </Link>
               ))}
@@ -696,7 +685,7 @@ export function Purchased() {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
-                    className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="purchased-page-btn flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     {t("purchased.previousButton")}
@@ -707,7 +696,7 @@ export function Purchased() {
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
-                    className="flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="purchased-page-btn flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {t("purchased.nextButton")}
                     <ChevronRight className="w-4 h-4" />

@@ -618,12 +618,14 @@ export function AdminOrders() {
                         <span>Shipping Fee</span>
                         <span>{formatPrice(selectedOrder.shippingFee)}</span>
                       </div>
+                      {/* 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
                       {selectedOrder.coinUsed && selectedOrder.coinUsed > 0 && (
                         <div className="flex justify-between text-sm text-primary">
                           <span>Coin Discount</span>
                           <span>-{formatPrice(selectedOrder.coinUsed)}</span>
                         </div>
                       )}
+                      */}
                       {selectedOrder.discount && selectedOrder.discount > 0 && (
                         <div className="flex justify-between text-sm text-primary">
                           <span>Discount</span>

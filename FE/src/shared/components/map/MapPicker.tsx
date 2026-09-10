@@ -344,7 +344,10 @@ export function MapPicker({
           max-height: none !important;
         }
       `}</style>
-      <div className="checkout-map relative min-w-0 overflow-hidden rounded-2xl border-2 border-border">
+      {/* `isolate` = isolation: isolate — creates a stacking context so Leaflet's
+          high internal z-indexes (panes 400, controls 1000) can never escape and
+          paint above the sticky navigation (z-50) when the page scrolls. */}
+      <div className="checkout-map relative isolate min-w-0 overflow-hidden rounded-2xl border-2 border-border">
         <div
           ref={mapContainerRef}
           className="h-[220px] min-w-0 w-full sm:h-[260px] md:h-[280px]"
