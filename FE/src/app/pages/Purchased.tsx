@@ -304,13 +304,13 @@ export function Purchased() {
     }
   };
 
-  /** Shared retry payment handler — works for VNPAY & MOMO */
+  /** Shared retry payment handler — works for MOMO */
   const handleRetryPayment = async (order: Order) => {
     setRetryingId(order._id);
     try {
       const { data } = await orderService.retryPayment(order._id);
       if (data.payUrl) {
-        const methodLabel = order.payment.method === "MOMO" ? "MoMo" : "VNPay";
+        const methodLabel = "MoMo";
         toast.success(
           t("purchased.retryPaymentRedirect", { method: methodLabel }),
         );
@@ -591,7 +591,7 @@ export function Purchased() {
                   </div>
 
                   <div className="purchased-card-footer">
-                      {/* ── Retry payment for PENDING + unpaid orders (VNPAY / MOMO) ── */}
+                      {/* ── Retry payment for PENDING + unpaid orders (MOMO) ── */}
                       {order.orderStatus === "PENDING" &&
                         order.payment.status === "PENDING" &&
                         !order.isCancelRequested && (
@@ -609,7 +609,7 @@ export function Purchased() {
                               : `${t("purchased.retryPayment")}`}
                           </button>
                         )}
-                      {/* ── Cancel button for PENDING orders (only if not unpaid VNPAY/MOMO) ── */}
+                      {/* ── Cancel button for PENDING orders (only if not unpaid MOMO) ── */}
                       {order.orderStatus === "PENDING" &&
                         !order.isCancelRequested &&
                         order.payment.status !== "PENDING" && (
@@ -646,10 +646,9 @@ export function Purchased() {
                           ✅ {t("purchased.markAsDone")}
                         </button>
                       )}
-                      {/* ── Retry payment for CANCELLED orders (VNPAY / MOMO) ── */}
+                      {/* ── Retry payment for CANCELLED orders (MOMO) ── */}
                       {order.orderStatus === "CANCELLED" &&
-                        (order.payment.method === "VNPAY" ||
-                          order.payment.method === "MOMO") &&
+                        order.payment.method === "MOMO" &&
                         order.payment.status !== "PAID" && (
                           <button
                             onClick={async (e) => {

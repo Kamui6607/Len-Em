@@ -16,6 +16,8 @@ import type {
   GetOrderResponse,
   ShippingFeePreviewRequest,
   ShippingFeePreviewResponse,
+  MomoPaymentRequest,
+  MomoPaymentResponse,
 } from "../types/order.types";
 
 const ORDERS_BASE = "/orders";
@@ -28,6 +30,15 @@ export const orderService = {
    */
   createOrder: (data: CreateOrderRequest) =>
     axiosClient.post<CreateOrderResponse>(ORDERS_BASE, data),
+
+  /**
+   * Create a MoMo payment link for an order (customer).
+   * POST /payment/momo-payment
+   * Body: { amount, orderInfo }
+   * Response: { message, payUrl } — redirect the user to payUrl.
+   */
+  createMomoPaymentLink: (data: MomoPaymentRequest) =>
+    axiosClient.post<MomoPaymentResponse>("/payment/momo-payment", data),
 
   /**
    * 2c. Get my orders (customer).
@@ -100,7 +111,7 @@ export const orderService = {
     ),
 
   /**
-   * Retry payment for a cancelled/unpaid order (returns payUrl for VNPAY).
+   * Retry payment for a cancelled/unpaid order (returns payUrl for MOMO).
    * POST /orders/:id/retry-payment
    */
   retryPayment: (orderId: string) =>

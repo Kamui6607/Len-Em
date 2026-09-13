@@ -50,12 +50,6 @@ const PAYMENT_METHODS = [
     description: "Thanh toán khi nhận hàng (COD)",
   },
   {
-    value: "VNPAY" as const,
-    label: "VNPAY",
-    icon: QrCode,
-    description: "Thanh toán qua VNPAY",
-  },
-  {
     value: "MOMO" as const,
     label: "MoMo",
     icon: QrCode,
@@ -68,7 +62,7 @@ export function Checkout() {
   const navigate = useNavigate();
   const { cartItems, cartKits, totalItems, totalPrice } = useCart();
   const user = useAuthStore((s) => s.user);
-  const [paymentMethod, setPaymentMethod] = useState<"VNPAY" | "MOMO" | "COD">("VNPAY");
+  const [paymentMethod, setPaymentMethod] = useState<"MOMO" | "COD">("COD");
   const [submitting, setSubmitting] = useState(false);
   // 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
   // const [coinDiscount, setCoinDiscount] = useState(0);
@@ -407,15 +401,27 @@ export function Checkout() {
       const response = await orderService.createOrder(payload);
       const result = response.data;
 
-      // NOTE: Do NOT clear cart here! For VNPAY/MOMO, the user is redirected
+      // NOTE: Do NOT clear cart here! For MOMO, the user is redirected
       // to the payment gateway. If they press Back or payment fails, the cart
       // must still be intact. The cart is cleared on /order/success only after
       // payment is confirmed (or for COD, when the order is created successfully).
 
-      if (result.payUrl) {
-        // VNPAY/MOMO: redirect to payment gateway
-        window.location.href = result.payUrl;
-        return;
+      // MOMO: create the MoMo payment link via POST /payment/momo-payment,
+      // then redirect the user to the MoMo payment page.
+      if (paymentMethod === "MOMO") {
+        const orderId = result.order?._id ?? "";
+        const momoRes = await orderService.createMomoPaymentLink({
+          amount: Math.round(grandTotal),
+          orderInfo: orderId
+            ? `Yarn Shop order payment #${orderId}`
+            : "Yarn Shop order payment",
+        });
+        if (momoRes.data.payUrl) {
+          window.location.href = momoRes.data.payUrl;
+          return;
+        }
+        // No payUrl → treat as a failure so we don't land on the success page.
+        throw new Error("MoMo did not return a payment URL");
       }
 
       // For COD: navigate to /order/success so the cart is cleared

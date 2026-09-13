@@ -19,7 +19,7 @@ export function OrderDetail() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Re-fetch the user profile when opening an order — after a VNPAY payment
+  // Re-fetch the user profile when opening an order — after a MoMo payment
   // the backend webhook may have just granted course purchases.
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -60,10 +60,10 @@ export function OrderDetail() {
     try {
       const { data } = await orderService.retryPayment(orderId);
       setOrder(data.order ?? null);
-      // Redirect to VNPay payment URL
+      // Redirect to MoMo payment URL
       if (data.payUrl) {
         // Use setTimeout to avoid toast blocking the redirect
-        toast.success("Đang chuyển đến cổng thanh toán VNPay...");
+        toast.success("Đang chuyển đến cổng thanh toán MoMo...");
         setTimeout(() => {
           window.location.href = data.payUrl;
         }, 500);

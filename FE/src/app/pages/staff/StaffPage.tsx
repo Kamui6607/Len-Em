@@ -118,7 +118,7 @@ function PendingOrdersContent() {
                 <div className="text-right">
                   <p className="font-bold text-primary text-xl">{formatPrice(order.totalPrice)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {order.payment.method === "VNPAY" ? "Online Payment" : "Payment"}
+                    {order.payment.method === "MOMO" ? "Online Payment" : "Payment"}
                   </p>
                 </div>
               </div>

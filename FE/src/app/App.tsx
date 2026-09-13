@@ -37,41 +37,51 @@ export default function App() {
     }
   }, [isAuthenticated, initializeMembership]);
 
-  // Google OAuth Client ID from FE/.env (on Vercel: set it as a project env var)
-  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+  // Google OAuth Client ID from FE/.env (on Vercel: set it as a project env var).
+  // Only mount GoogleOAuthProvider when a Client ID is actually configured.
+  // Mounting it with an empty clientId makes @react-oauth/google's useGoogleLogin
+  // throw inside initTokenClient({ client_id: "" }), which the route ErrorBoundary
+  // catches and turns into a blank "We couldn't load this page" screen on
+  // deployments where the env var is missing (e.g. Vercel without it set).
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? "";
+  const isGoogleConfigured = Boolean(GOOGLE_CLIENT_ID);
 
-  return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+  const app = (
     <QueryClientProvider client={queryClient}>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    <LanguageProvider>
-      <ThemeProvider>
-        <AdminProvider>
-          <ReportProvider>
-            <NotificationProvider>
-              <NotificationInit />
-              <ReviewProvider>
-                <FavoritesProvider>
-                  <CartProvider>
-                    <Toaster
-                      position="top-right"
-                      richColors
-                      visibleToasts={5}
-                      gap={8}
-                      offset={{ right: 16, top: 16 }}
-                    />
-                    <BrowserRouter>
-                      <AppRouter />
-                    </BrowserRouter>
-                  </CartProvider>
-                </FavoritesProvider>
-              </ReviewProvider>
-            </NotificationProvider>
-          </ReportProvider>
-        </AdminProvider>
-      </ThemeProvider>
-    </LanguageProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <AdminProvider>
+            <ReportProvider>
+              <NotificationProvider>
+                <NotificationInit />
+                <ReviewProvider>
+                  <FavoritesProvider>
+                    <CartProvider>
+                      <Toaster
+                        position="top-right"
+                        richColors
+                        visibleToasts={5}
+                        gap={8}
+                        offset={{ right: 16, top: 16 }}
+                      />
+                      <BrowserRouter>
+                        <AppRouter />
+                      </BrowserRouter>
+                    </CartProvider>
+                  </FavoritesProvider>
+                </ReviewProvider>
+              </NotificationProvider>
+            </ReportProvider>
+          </AdminProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </QueryClientProvider>
-    </GoogleOAuthProvider>
+  );
+
+  return isGoogleConfigured ? (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{app}</GoogleOAuthProvider>
+  ) : (
+    app
   );
 }

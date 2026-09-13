@@ -412,7 +412,7 @@ export function CourseDetailPage() {
           districtName: "",
           wardName: "",
         },
-        paymentMethod: "VNPAY",
+        paymentMethod: "MOMO",
         itemsPrice: price,
         shippingFee: 0,
         totalPrice: price,
@@ -421,9 +421,17 @@ export function CourseDetailPage() {
       const response = await orderService.createOrder(payload);
       const result = response.data;
 
-      // VNPAY gateway redirect — same flow as the normal checkout.
-      if (result.payUrl) {
-        window.location.href = result.payUrl;
+      // MOMO: create the MoMo payment link via POST /payment/momo-payment,
+      // then redirect the user to the MoMo payment page.
+      const orderId = result.order?._id ?? "";
+      const momoRes = await orderService.createMomoPaymentLink({
+        amount: Math.round(price),
+        orderInfo: orderId
+          ? `Yarn Shop course purchase #${orderId}`
+          : "Yarn Shop course purchase",
+      });
+      if (momoRes.data.payUrl) {
+        window.location.href = momoRes.data.payUrl;
         return;
       }
 

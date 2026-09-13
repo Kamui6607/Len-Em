@@ -508,10 +508,9 @@ export function OrderSuccess() {
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [searchParams] = useSearchParams();
-  // VNPAY returns orderId as "orderId" param for direct navigations,
-  // or as "vnp_TxnRef" when redirected back from VNPAY gateway.
-  const orderId =
-    searchParams.get("orderId") || searchParams.get("vnp_TxnRef") || "";
+  // After paying, the payment gateway (MoMo) redirects back here with the
+  // orderId query param.
+  const orderId = searchParams.get("orderId") || "";
   const date =
     searchParams.get("date") ||
     new Date().toLocaleDateString("en-GB", {
@@ -521,7 +520,7 @@ export function OrderSuccess() {
     });
 
   // Clear the cart ONLY when the order is confirmed on this success page.
-  // This ensures that if the user presses Back on the VNPAY/MOMO gateway
+  // This ensures that if the user presses Back on the MoMo gateway
   // or payment fails, their cart is still intact.
   useEffect(() => {
     clearCart();

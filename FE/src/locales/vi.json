@@ -902,9 +902,7 @@
     "subtotalLabel2": "Tạm tính ({count} sản phẩm)",
     "title": "Thanh toán",
     "total": "Tổng thanh toán",
-    "totalLabel": "Tổng thanh toán",
-    "vnpayDesc": "Thanh toán qua VNPAY",
-    "vnpayDescription": "Thanh toán qua VNPAY"
+    "totalLabel": "Tổng thanh toán"
   },
   "common": {
     "ability": "Khả năng",

@@ -8,7 +8,7 @@ export type { OrderStatus };
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type PaymentMethod = "VNPAY" | "MOMO" | "COD";
+export type PaymentMethod = "MOMO" | "COD";
 
 export interface OrderUser {
   _id: string;
@@ -74,7 +74,6 @@ export interface PaymentInfo {
   transactionNo?: string;
   transactionId?: string;
   paidAt?: string;
-  vnpayUrl?: string;
 }
 
 export interface Order {
@@ -172,6 +171,20 @@ export interface CreateOrderResponse {
   message: string;
   order: Order;
   payUrl?: string;
+}
+
+// ── MoMo payment link (POST /payment/momo-payment) ──
+
+export interface MomoPaymentRequest {
+  /** Total amount to pay (VND). */
+  amount: number;
+  /** Order description shown on the MoMo page. */
+  orderInfo: string;
+}
+
+export interface MomoPaymentResponse {
+  message: string;
+  payUrl: string;
 }
 
 // ── Shipping fee preview (Step 1) ──

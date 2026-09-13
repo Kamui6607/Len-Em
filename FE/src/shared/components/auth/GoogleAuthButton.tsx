@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useGoogleLogin, useGoogleOAuth } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 import { Loader as Loader2 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 
@@ -48,34 +48,85 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleAuthButton({
-  label = "Continue with Google",
-  onError,
-}: {
+const GAUTH_STYLE = `
+  .gauth-btn {
+    width: 100%;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 12px);
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  }
+  .gauth-btn:hover:not(:disabled) {
+    background: var(--surface-secondary);
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  }
+  .gauth-btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .gauth-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  @keyframes gauth-spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+export interface GoogleAuthButtonProps {
   /** Button text — e.g. "Continue with Google" / "Sign up with Google" */
   label?: string;
   /** Optional callback so the hosting page can render its own error banner */
   onError?: (message: string) => void;
-}) {
+}
+
+/**
+ * Rendered when VITE_GOOGLE_CLIENT_ID is missing. Renders a disabled button
+ * (no Google hooks/context, so it can never crash the page) and logs a hint
+ * telling the developer exactly where to set the env var.
+ */
+function GoogleAuthButtonDisabled({ label = "Continue with Google" }: GoogleAuthButtonProps) {
+  useEffect(() => {
+    console.warn(
+      "[GoogleAuthButton] VITE_GOOGLE_CLIENT_ID is not set in this environment. " +
+        "Google sign-in is disabled. Set it in your hosting provider " +
+        "(Vercel → Settings → Environment Variables) and redeploy to enable it.",
+    );
+  }, []);
+
+  return (
+    <>
+      <style>{GAUTH_STYLE}</style>
+      <button
+        type="button"
+        className="gauth-btn"
+        disabled
+        title="Google Sign-In is not configured on this deployment (missing VITE_GOOGLE_CLIENT_ID)"
+      >
+        <GoogleIcon />
+        {label}
+      </button>
+    </>
+  );
+}
+
+/** Full implementation — only rendered when GoogleOAuthProvider is mounted. */
+function GoogleAuthButtonInner({
+  label = "Continue with Google",
+  onError,
+}: GoogleAuthButtonProps) {
   const navigate = useNavigate();
   const googleLogin = useAuthStore((s) => s.googleLogin);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Guard: when VITE_GOOGLE_CLIENT_ID is missing in the deployment environment
-  // (e.g. not set on Vercel before redeploying), Google's popup fails with the
-  // cryptic "Missing required parameter client_id" error. Surface it clearly
-  // instead — disable the button and log exactly what to fix.
-  const { clientId } = useGoogleOAuth();
-  const isConfigured = Boolean(clientId);
-
-  useEffect(() => {
-    if (!clientId) {
-      console.error(
-        "[GoogleAuthButton] VITE_GOOGLE_CLIENT_ID is not set in this environment. " +
-          "Set it in your hosting provider (Vercel → Settings → Environment Variables) and redeploy.",
-      );
-    }
-  }, [clientId]);
 
   const exchangeToken = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -135,50 +186,11 @@ export function GoogleAuthButton({
 
   return (
     <>
-      <style>{`
-        .gauth-btn {
-          width: 100%;
-          height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-lg, 12px);
-          background: var(--background);
-          color: var(--foreground);
-          font-family: var(--font-body);
-          font-size: 0.875rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
-        }
-        .gauth-btn:hover:not(:disabled) {
-          background: var(--surface-secondary);
-          border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
-        }
-        .gauth-btn:active:not(:disabled) {
-          transform: scale(0.98);
-        }
-        .gauth-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        @keyframes gauth-spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <style>{GAUTH_STYLE}</style>
       <button
         type="button"
         className="gauth-btn"
         onClick={() => {
-          if (!isConfigured) {
-            const msg =
-              "Google Sign-In is not configured in this deployment (missing VITE_GOOGLE_CLIENT_ID).";
-            console.error(`[GoogleAuthButton] ${msg}`);
-            onError?.(msg);
-            return;
-          }
           // DX hint: warn devs before Google rejects the request with
           // `400: origin_mismatch` when the page is served from an origin
           // that is not in the Client ID's Authorized JavaScript origins.
@@ -192,12 +204,7 @@ export function GoogleAuthButton({
           }
           exchangeToken();
         }}
-        disabled={isSubmitting || !isConfigured}
-        title={
-          isConfigured
-            ? undefined
-            : "Google Sign-In is not configured on this deployment (missing VITE_GOOGLE_CLIENT_ID)"
-        }
+        disabled={isSubmitting}
       >
         {isSubmitting ? (
           <>
@@ -215,5 +222,19 @@ export function GoogleAuthButton({
         )}
       </button>
     </>
+  );
+}
+
+export function GoogleAuthButton(props: GoogleAuthButtonProps) {
+  // Read the env var directly (build-time constant) so we decide BEFORE any
+  // Google hook/context access. When missing, we render the disabled variant
+  // and the Google library is never initialised — no more blank ErrorBoundary
+  // page on deployments without VITE_GOOGLE_CLIENT_ID (e.g. Vercel).
+  const isConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim());
+
+  return isConfigured ? (
+    <GoogleAuthButtonInner {...props} />
+  ) : (
+    <GoogleAuthButtonDisabled {...props} />
   );
 }
