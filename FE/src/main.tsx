@@ -17,6 +17,19 @@ if (!RUNNING_IN_TAURI && import.meta.env.PROD) {
   });
 }
 
+// Auto-reload ONCE when a dynamically imported chunk fails to load.
+// This usually happens when a PWA service worker is still serving an OLD
+// cached index.html that points to chunk files deleted by the newest deploy
+// (e.g. users who still have `index-CcfloYvt.js` from an old build). Reloading
+// pulls the fresh index.html + assets so users aren't stuck on a stale build.
+// The sessionStorage guard prevents an infinite reload loop.
+window.addEventListener("vite:preloadError", () => {
+  if (sessionStorage.getItem("lenEm_preloadReloaded") !== "1") {
+    sessionStorage.setItem("lenEm_preloadReloaded", "1");
+    window.location.reload();
+  }
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
