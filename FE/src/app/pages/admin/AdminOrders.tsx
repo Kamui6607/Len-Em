@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   ChevronUp,
@@ -17,6 +17,7 @@ import type {
 } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 
 type OrderFilter = "all" | OrderStatus;
 
@@ -31,10 +32,16 @@ const ORDER_STATUSES: OrderStatus[] = [
 type SortField = "order" | "customer" | "date" | "total" | "status";
 type SortDirection = "asc" | "desc";
 
+/** Records per page — every admin list uses the same page size. */
+const PAGE_SIZE = 10;
+
 export function AdminOrders() {
   const { logActivity } = useAdmin();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<OrderFilter>("all");
   const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -42,22 +49,35 @@ export function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  useEffect(() => {
-    async function loadOrders() {
-      try {
-        const { data: response } = await orderService.getAllOrders({
-          page: 1,
-          limit: 20,
-        });
-        setOrders(response.orders.map(normalizeOrder));
-      } catch {
-        // API unavailable — show empty state (demo mode / offline)
-      } finally {
-        setLoading(false);
-      }
+  // Server-side pagination: /orders already supports page/limit/status/search,
+  // so the pager reflects the whole result set instead of one fixed page.
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: response } = await orderService.getAllOrders({
+        page,
+        limit: PAGE_SIZE,
+        status: filter === "all" ? undefined : filter,
+        search: debouncedSearchTerm || undefined,
+      });
+      setOrders((response.orders ?? []).map(normalizeOrder));
+      setTotal(response.total ?? 0);
+      setTotalPages(response.totalPages ?? 1);
+    } catch {
+      // API unavailable — show empty state (demo mode / offline)
+    } finally {
+      setLoading(false);
     }
+  }, [page, filter, debouncedSearchTerm]);
+
+  useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
+
+  // New search / filter means a new result set: go back to page 1.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm, filter]);
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -148,17 +168,18 @@ export function AdminOrders() {
   }: {
     label: string;
     field: SortField;
-    align?: "left" | "right";
+    align?: "left" | "right" | "center";
   }) {
     const active = sortField === field;
     return (
       <th
-        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}
+        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`}
+        style={{ textAlign: align }}
       >
         <button
           type="button"
           onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
@@ -263,8 +284,8 @@ export function AdminOrders() {
                 <SortableHeader label="Order" field="order" />
                 <SortableHeader label="Customer" field="customer" />
                 <SortableHeader label="Date" field="date" />
-                <SortableHeader label="Total" field="total" align="right" />
-                <SortableHeader label="Status" field="status" />
+                <SortableHeader label="Total" field="total" align="center" />
+                <SortableHeader label="Status" field="status" align="center" />
                 {sortedOrders.some((order) => {
                   const isPendingPaid =
                     order.orderStatus === "PENDING" &&
@@ -276,7 +297,10 @@ export function AdminOrders() {
                     isPendingPaid || isConfirmed || isPreparing || isShipping
                   );
                 }) && (
-                  <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground">
+                  <th
+                    className="px-6 py-4 text-center text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     Actions
                   </th>
                 )}
@@ -325,12 +349,12 @@ export function AdminOrders() {
                         {new Date(order.createdAt).toLocaleDateString("vi-VN")}
                       </td>
                       <td
-                        className="px-6 py-4 text-sm font-semibold"
+                        className="px-6 py-4 text-center text-sm font-semibold"
                         style={{ color: "var(--primary)" }}
                       >
                         {formatPrice(order.totalPrice)}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <span
                           className={`badge ${
                             order.orderStatus === "DELIVERED"
@@ -350,8 +374,8 @@ export function AdminOrders() {
                         </span>
                       </td>
                       {hasActions ? (
-                        <td className="px-6 py-4 text-left">
-                          <div className="flex items-center justify-start gap-1.5">
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             {order.orderStatus === "PENDING" && order.payment.status !== "PENDING" && (
                               <button
                                 onClick={(e) => {
@@ -435,6 +459,15 @@ export function AdminOrders() {
             </tbody>
           </table>
         </div>
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={total}
+          pageSize={PAGE_SIZE}
+          disabled={loading}
+          className="border-t p-4"
+        />
       </div>
 
       {/* Order Detail Dialog */}

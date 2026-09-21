@@ -84,6 +84,8 @@ export function Navigation({ cartCount }: { cartCount: number }) {
     }
     const params = new URLSearchParams(location.search);
     params.set("search", q);
+    // Search mới = tập kết quả mới → luôn về trang 1
+    params.delete("page");
     navigate(`${location.pathname}?${params.toString()}`);
     // Keep the search bar open so the user can see the query.
   };

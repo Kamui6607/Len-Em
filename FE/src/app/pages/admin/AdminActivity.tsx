@@ -1,10 +1,21 @@
+import { useState } from "react";
 import { Activity } from "lucide-react";
 import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel, AdminPanelHeader, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+
+/** Records per page — every admin list uses the same page size. */
+const PAGE_SIZE = 10;
 
 export function AdminActivity() {
   const { activities } = useAdmin();
+  const [page, setPage] = useState(1);
+
+  // Activity logs live in memory (AdminContext) — page them here.
+  const totalPages = Math.max(1, Math.ceil(activities.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedActivities = activities.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -18,7 +29,7 @@ export function AdminActivity() {
         <AdminPanelBody>
           {activities.length > 0 ? (
             <ul className="space-y-4">
-              {activities.slice(0, 50).map((a) => (
+              {pagedActivities.map((a) => (
                 <li key={a.id} className="admin-activity-item flex items-start gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
                   <span
                     className="admin-activity-dot mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full"
@@ -40,6 +51,14 @@ export function AdminActivity() {
           )}
         </AdminPanelBody>
       </AdminPanel>
+
+      <AdminPagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={activities.length}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

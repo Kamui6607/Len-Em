@@ -444,18 +444,31 @@ export function KitDetail() {
               </div>
             </div>
 
-            {/* Add All to Cart Button */}
-            <button
+            {/* Add All to Cart Button — đồng bộ design "card-add-btn" với Product */}
+            <motion.button
+              type="button"
               onClick={handleAddAllToCart}
-              className="w-full bg-primary text-primary-foreground py-4 rounded-full hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-lg font-medium flex items-center justify-center gap-2"
+              className="card-add-btn"
+              aria-label="Add kit to cart"
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{
+                type: "spring",
+                stiffness: 380,
+                damping: 30,
+                mass: 0.6,
+              }}
               style={{
                 touchAction: "manipulation",
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <ShoppingCart className="w-5 h-5" />
-              Add to Cart
-            </button>
+              <span className="card-add-btn__icon" aria-hidden="true">
+                <ShoppingCart size={15} strokeWidth={2.2} />
+              </span>
+              <span className="card-add-btn__label">Add to Cart</span>
+              <span className="card-add-btn__shine" aria-hidden="true" />
+            </motion.button>
 
             {/* Trust badges */}
             <div className="pt-4 border-t border-border grid grid-cols-3 gap-4">

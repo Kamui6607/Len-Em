@@ -1,3 +1,11 @@
+// ============================================================
+// DEPRECATED — no longer used by the admin UI.
+// ============================================================
+// The admin pages switched from "hold 2s to delete" to a click + confirmation
+// dialog: see shared/components/admin/ConfirmDeleteButton.tsx.
+// Kept for reference in case the hold gesture is wanted again on some screen.
+// ============================================================
+
 import { Trash2 } from "lucide-react";
 import { useHoldToDelete } from "../../hooks/useHoldToDelete";
 
@@ -23,6 +31,9 @@ export function HoldToDeleteButton({
 
   return (
     <button
+      type="button"
+      disabled={disabled}
+      aria-disabled={disabled}
       onPointerDown={(e) => {
         if (disabled) return;
         e.stopPropagation();

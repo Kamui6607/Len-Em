@@ -8,7 +8,7 @@ import { Card, CardContent } from "../../shared/components/ui/card";
 import { Input } from "../../shared/components/ui/input";
 import { Label } from "../../shared/components/ui/label";
 import { Textarea } from "../../shared/components/ui/textarea";
-import { products } from "../data/products";
+import { useProductsQuery } from "../../shared/hooks/useProductsQuery";
 import { formatPrice } from "../../lib/formatPrice";
 import { diyService } from "../../features/diy/services/diy.service";
 import type { CreateDIYPostDTO } from "../../features/diy/types/diy.types";
@@ -16,6 +16,7 @@ import { useDebouncedSearch } from "../../shared/hooks/useDebouncedSearch";
 
 interface ComboItem {
   productId: string;
+  variantId: string;
   name: string;
   thumbnail: string;
   price: number;
@@ -33,25 +34,26 @@ export function DIYCreatePage() {
   const { inputValue: productSearch, debouncedValue: debouncedProductSearch, setInputValue: setProductSearch } = useDebouncedSearch({ delay: 300, minChars: 0 });
   const [loading, setLoading] = useState(false);
 
-  const searchableProducts = useMemo(() => {
-    const search = debouncedProductSearch.trim().toLowerCase();
-    return products
-      .map((product) => ({
-        productId: product.id,
-        name: product.name,
-        thumbnail: product.image,
-        price: product.variants?.[0]?.price ?? 0,
-        tags: product.tags,
-      }))
-      .filter((product) => {
-        if (!search) return true;
-        return (
-          product.name.toLowerCase().includes(search) ||
-          product.tags.some((tag) => tag.toLowerCase().includes(search))
-        );
-      })
-      .slice(0, 8);
-  }, [debouncedProductSearch]);
+  // Products thật từ backend (GET /products) — productId/variantId là ObjectId
+  // thật mà API POST /diy-posts yêu cầu trong linkedProduct (mock data sẽ bị từ chối).
+  const productsQuery = useProductsQuery({
+    search: debouncedProductSearch.trim() || undefined,
+    limit: 8,
+  });
+
+  const searchableProducts = useMemo(
+    () =>
+      (productsQuery.data?.data ?? [])
+        .map((product) => ({
+          productId: product.id,
+          variantId: product.variants?.[0]?.id ?? "",
+          name: product.name,
+          thumbnail: product.image,
+          price: product.variants?.[0]?.price ?? 0,
+        }))
+        .slice(0, 8),
+    [productsQuery.data],
+  );
 
   const comboTotal = comboItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -78,7 +80,12 @@ export function DIYCreatePage() {
         title: title.trim(),
         description: description.trim(),
         tags: tags.length > 0 ? tags : undefined,
-        linkedProduct: comboItems.map((item) => ({ productId: item.productId })),
+        linkedProduct: comboItems.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+        price: comboTotal,
       };
       await diyService.createPost(data, selectedFiles);
       toast.success("DIY post submitted successfully");
@@ -225,18 +232,24 @@ export function DIYCreatePage() {
                   <Input value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Search yarn, hooks, scissors..." className="pl-9" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {searchableProducts.map((product) => (
-                    <div key={product.productId} className="flex gap-3 rounded-xl border p-3">
-                      <img src={product.thumbnail} alt={product.name} className="size-14 rounded-lg object-cover" />
-                      <div className="min-w-0 flex-1">
-                        <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{formatPrice(product.price)}</p>
+                  {productsQuery.isLoading ? (
+                    <p className="text-sm text-muted-foreground sm:col-span-2">Loading products...</p>
+                  ) : searchableProducts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground sm:col-span-2">No products found</p>
+                  ) : (
+                    searchableProducts.map((product) => (
+                      <div key={product.productId} className="flex gap-3 rounded-xl border p-3">
+                        <img src={product.thumbnail} alt={product.name} className="size-14 rounded-lg object-cover" />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="line-clamp-2 text-sm font-medium">{product.name}</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">{formatPrice(product.price)}</p>
+                        </div>
+                        <Button type="button" size="sm" variant="outline" onClick={() => addProductToCombo(product)}>
+                          <Plus className="size-4" />
+                        </Button>
                       </div>
-                      <Button type="button" size="sm" variant="outline" onClick={() => addProductToCombo(product)}>
-                        <Plus className="size-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

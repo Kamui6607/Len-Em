@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Search,
-  Plus,
   Edit3,
   X,
   Shield,
@@ -9,10 +8,13 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../../shared/hooks/useAuth";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { permissionService } from "../../../shared/api/permissionService";
 import type { Permission } from "../../../shared/types/permission";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
@@ -184,6 +186,7 @@ function PermissionModal({
 // ─── Main Component ──────────────────────────────────────
 
 export function Permissions() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
@@ -194,7 +197,7 @@ export function Permissions() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 20;
+  const limit = 10;
 
   // ── Filter state ──
   const [searchName, setSearchName] = useState("");
@@ -215,7 +218,7 @@ export function Permissions() {
     try {
       const params: Record<string, string | number> = {};
       if (page > 1) params.page = page;
-      if (limit !== 20) params.limit = limit;
+      if (limit !== 10) params.limit = limit;
       if (searchName.trim()) params.name = searchName.trim();
       if (filterResource) params.resource = filterResource;
 
@@ -339,14 +342,14 @@ export function Permissions() {
     }
   };
 
-  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
+  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" | "center" }) {
     const active = sortField === field;
     return (
-      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`} style={{ textAlign: align }}>
         <button
           type="button"
           onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
@@ -391,14 +394,11 @@ export function Permissions() {
           </p>
         </div>
         {isAdmin && (
-           <button
-             onClick={openCreate}
-             className="btn-create"
-           >
-            <Plus size={16} />
-            create
-           </button>
-         )}
+          <CreateButton
+            label={t("admin.permissions.createPermission")}
+            onClick={openCreate}
+          />
+        )}
       </div>
 
       {/* Table */}
@@ -446,10 +446,13 @@ export function Permissions() {
               <thead className="bg-muted">
                 <tr>
                   <SortableHeader label="Permission Name" field="name" />
-                  <SortableHeader label="Resource" field="resource" />
-                  <SortableHeader label="Action" field="name" />
-                  <SortableHeader label="Created" field="created" />
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">
+                  <SortableHeader label="Resource" field="resource" align="center" />
+                  <SortableHeader label="Action" field="name" align="center" />
+                  <SortableHeader label="Created" field="created" align="center" />
+                  <th
+                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]"
+                    style={{ textAlign: "center" }}
+                  >
                     Actions
                   </th>
                 </tr>
@@ -468,19 +471,19 @@ export function Permissions() {
                         </p>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className="text-sm">{permission.resource}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className="badge badge-blue">
                         {permission.action}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground whitespace-nowrap">
                       {formatDate(permission.createdAt)}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => navigate(`/admin/permissions/${permission._id}`)}
                           className="admin-action-btn view"
@@ -497,7 +500,7 @@ export function Permissions() {
                             >
                               <Edit3 size={16} />
                             </button>
-                            <HoldToDeleteButton
+                            <ConfirmDeleteButton
                               onDelete={async () => {
                                 try {
                                   await permissionService.delete(permission._id);
@@ -514,7 +517,7 @@ export function Permissions() {
                                   }
                                 }
                               }}
-                              title="Hold 2s to delete"
+                              itemName={permission.name}
                             />
                           </>
                         )}
@@ -528,28 +531,13 @@ export function Permissions() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="btn-secondary"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="btn-secondary"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={total}
+        pageSize={10}
+      />
 
       {/* Create / Edit Modal */}
       <PermissionModal

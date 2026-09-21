@@ -111,8 +111,21 @@ export function DIYFeedPage() {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await diyService.getAllPosts({ page: 1, limit: 20 });
-      setPosts(data.data.posts);
+      // Feed công khai chỉ hiển thị bài đã được admin duyệt (status = "Done").
+      // Backend DIY chỉ có 2 trạng thái: "Pending" (chờ duyệt) và "Done" —
+      // xem AdminDIYPosts (STATUS_OPTIONS, updatePostStatus). Truyền status cho
+      // BE lọc phía server; filter client-side (case-insensitive) là lớp chặn
+      // cuối đề phòng backend bỏ qua query param.
+      const { data } = await diyService.getAllPosts({
+        page: 1,
+        limit: 20,
+        status: "Done",
+      });
+      setPosts(
+        data.data.posts.filter(
+          (post) => (post.status || "").toLowerCase() === "done",
+        ),
+      );
 
       // Creator info is now populated by the backend on each post, so no
       // extra per-creator requests or client-side ID mapping are needed.
@@ -166,7 +179,6 @@ export function DIYFeedPage() {
             .map((tag) => tag.trim())
             .filter(Boolean),
           price: postPrice ? Math.max(0, Number(postPrice)) : undefined,
-          status: "pending",
         },
         postImages,
       );
@@ -224,7 +236,9 @@ export function DIYFeedPage() {
   };
 
   const approvedPosts = useMemo(
-    () => posts.filter((p) => p.status !== "pending"),
+    // Backend trả "Pending"/"Done" (viết hoa) — so sánh case-insensitive
+    // để chắc chắn bài chờ duyệt không bao giờ lọt qua render layer.
+    () => posts.filter((p) => (p.status || "").toLowerCase() !== "pending"),
     [posts],
   );
 

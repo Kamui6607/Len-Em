@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router";
 import { toast } from "sonner";
 import { diyService } from "../../../features/diy/services/diy.service";
 import type { DIYPost } from "../../../features/diy/types/diy.types";
@@ -9,12 +8,13 @@ import {
   ChevronUp,
   ChevronDown,
   Check,
-  Plus,
   Edit3,
   X,
 } from "lucide-react";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { ReportButton } from "../../../shared/components/ReportButton";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 const STATUS_OPTIONS = ["", "Pending", "Done"];
@@ -132,17 +132,18 @@ export function AdminDIYPosts() {
   }: {
     label: string;
     field: SortField;
-    align?: "left" | "right";
+    align?: "left" | "right" | "center";
   }) {
     const active = sortField === field;
     return (
       <th
-        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}
+        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`}
+        style={{ textAlign: align }}
       >
         <button
           type="button"
           onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
@@ -195,10 +196,7 @@ export function AdminDIYPosts() {
             {t("admin.diyPosts.subtitle")}
           </p>
         </div>
-        <Link to="/admin/diy-posts/new" className="btn-create">
-          <Plus size={18} />
-          create
-        </Link>
+        <CreateButton to="/admin/diy-posts/new" label={t("admin.diyPosts.createPost")} />
       </div>
 
       <div
@@ -310,9 +308,12 @@ export function AdminDIYPosts() {
                   <tr>
                     <SortableHeader label={t("admin.diyPosts.postId")} field="id" />
                     <SortableHeader label={t("admin.diyPosts.postTitle")} field="title" />
-                    <SortableHeader label={t("admin.diyPosts.status")} field="status" />
+                    <SortableHeader label={t("admin.diyPosts.status")} field="status" align="center" />
                     <SortableHeader label={t("admin.diyPosts.date")} field="date" />
-                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[200px]">
+                    <th
+                      className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[200px]"
+                      style={{ textAlign: "center" }}
+                    >
                       Actions
                     </th>
                   </tr>
@@ -329,7 +330,7 @@ export function AdminDIYPosts() {
                       <td className="px-6 py-4 max-w-[200px] truncate text-sm">
                         {post.title}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <span
                           className={`badge ${isPending(post) ? "badge-orange" : "badge-green"}`}
                         >
@@ -339,35 +340,37 @@ export function AdminDIYPosts() {
                       <td className="px-6 py-4 text-sm text-muted-foreground">
                         {(() => { try { return new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); } catch { return "—"; } })()}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Order mirrors the other admin tables: view → edit →
+                              approve (pending only) → delete. */}
+                          <button
+                            onClick={() => setSelectedPost(post)}
+                            className="admin-action-btn view"
+                            title={t("admin.diyPosts.view")}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(post)}
+                            className="admin-action-btn edit"
+                            title={t("admin.diyPosts.edit")}
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
                           {isPending(post) && (
                             <button
                               onClick={() => handleConfirmPost(post._id)}
                               disabled={statusUpdating}
-                              className="admin-action-btn edit"
-                                title={t("admin.diyPosts.confirm")}
+                              className="admin-action-btn success"
+                              title={t("admin.diyPosts.confirm")}
                             >
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
-                          <button
-                            onClick={() => openEditModal(post)}
-                            className="admin-action-btn edit"
-                                title={t("admin.diyPosts.edit")}
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setSelectedPost(post)}
-                            className="admin-action-btn view"
-                                title={t("admin.diyPosts.view")}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <HoldToDeleteButton
+                          <ConfirmDeleteButton
                             onDelete={() => handleDelete(post)}
-                            title={t("admin.diyPosts.holdToDelete")}
+                            itemName={post.title}
                           />
                         </div>
                       </td>
@@ -408,27 +411,13 @@ export function AdminDIYPosts() {
                 </div>
               ))}
             </div>
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-4 p-4">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="btn-secondary"
-                >
-                  Prev
-                </button>
-                <span className="text-sm text-muted-foreground self-center">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="btn-secondary"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <AdminPagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              pageSize={10}
+              className="mt-4 p-4"
+            />
           </>
         )}
       </div>

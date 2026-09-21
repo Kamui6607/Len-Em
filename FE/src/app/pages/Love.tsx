@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { motion } from "motion/react";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
@@ -237,7 +238,8 @@ export function Love() {
                        {(kit.products || []).length} products included
                      </p>
                      {/* Add to cart button */}
-                      <button
+                      <motion.button
+                        type="button"
                         onClick={() => {
                           const products = (kit.products || []).map((kitProduct) => {
                            const product = kitProduct.productId;
@@ -259,28 +261,17 @@ export function Love() {
                          });
                          toast.success(t("love.addedComboToCart", { name: kit.name }));
                        }}
-                      className="add-to-cart-btn mt-3"
+                      className="card-add-btn mt-3"
+                      aria-label={`Add ${kit.name} to cart`}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
                     >
-                      <div className="btn-text">
-                        <ShoppingCart className="w-4 h-4" />
-                        {t("love.addToCart")}
-                      </div>
-                      <div className="btn-icon">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="9" cy="21" r="1" />
-                          <circle cx="20" cy="21" r="1" />
-                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                        </svg>
-                      </div>
-                    </button>
+                      <span className="card-add-btn__icon" aria-hidden="true">
+                        <ShoppingCart size={15} strokeWidth={2.2} />
+                      </span>
+                      <span className="card-add-btn__label">{t("love.addToCart")}</span>
+                      <span className="card-add-btn__shine" aria-hidden="true" />
+                    </motion.button>
                   </div>
                 </div>
               ))}
@@ -297,30 +288,20 @@ export function Love() {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{t("love.wishlist")}</p>
               <p className="text-base font-bold text-primary">{resolvedProducts.length} {t("love.items")}</p>
             </div>
-             <button
+             <motion.button
+               type="button"
                onClick={addAllToCart}
-               className="add-to-cart-btn"
+               className="card-add-btn"
+               aria-label="Add all favorites to cart"
+               whileTap={{ scale: 0.97 }}
+               transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
              >
-                <div className="btn-text">
-                  <ShoppingCart className="size-4" />
-                  {t("love.addToCart")}
-                </div>
-               <div className="btn-icon">
-                 <svg
-                   xmlns="http://www.w3.org/2000/svg"
-                   viewBox="0 0 24 24"
-                   fill="none"
-                   stroke="currentColor"
-                   strokeWidth="2.5"
-                   strokeLinecap="round"
-                   strokeLinejoin="round"
-                 >
-                   <circle cx="9" cy="21" r="1" />
-                   <circle cx="20" cy="21" r="1" />
-                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                 </svg>
-               </div>
-             </button>
+                <span className="card-add-btn__icon" aria-hidden="true">
+                  <ShoppingCart size={15} strokeWidth={2.2} />
+                </span>
+                <span className="card-add-btn__label">{t("love.addToCart")}</span>
+                <span className="card-add-btn__shine" aria-hidden="true" />
+             </motion.button>
           </div>
         </div>
       )}

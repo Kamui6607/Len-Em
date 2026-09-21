@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
-import { Edit, Eye, Plus, BookOpen } from "lucide-react";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { Edit, Eye, BookOpen } from "lucide-react";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { toast } from "sonner";
 import { Badge } from "../../../shared/components/ui/badge";
 import { Button } from "../../../shared/components/ui/button";
@@ -37,10 +39,14 @@ const levelStyles: Record<CourseLevel, string> = {
   advanced: "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
 };
 
+/** Records per page — every admin list uses the same page size. */
+const PAGE_SIZE = 10;
+
 export function AdminCourses() {
   const { t } = useLanguage();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
@@ -81,6 +87,16 @@ export function AdminCourses() {
     return sortDirection === "asc" ? cmp : -cmp;
   });
 
+  // The API returns the whole catalogue in one go, so paging happens here.
+  const totalPages = Math.max(1, Math.ceil(sortedCourses.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedCourses = sortedCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // A new search narrows the list — jump back to page 1.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -100,10 +116,7 @@ export function AdminCourses() {
         title={t("admin.courses.title")}
         subtitle={t("admin.courses.subtitle")}
         actions={
-          <Link to="/admin/courses/new" className="btn-create">
-            <Plus size={18} />
-            {t("admin.courses.create")}
-          </Link>
+          <CreateButton to="/admin/courses/new" label={t("admin.courses.create")} />
         }
       />
 
@@ -126,7 +139,7 @@ export function AdminCourses() {
           </thead>
           <tbody>
             {sortedCourses.length > 0 ? (
-              sortedCourses.map((course) => (
+              pagedCourses.map((course) => (
                 <tr key={course._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -171,7 +184,7 @@ export function AdminCourses() {
                           <Edit className="size-4" />
                         </Link>
                       </Button>
-                      <HoldToDeleteButton
+                      <ConfirmDeleteButton
                         onDelete={async () => {
                           try {
                             await courseService.delete(course._id);
@@ -181,7 +194,7 @@ export function AdminCourses() {
                             toast.error(t("admin.courses.deleteError"));
                           }
                         }}
-                        title={t("admin.courses.holdToDelete")}
+                        itemName={course.title}
                       />
                     </div>
                   </td>
@@ -193,6 +206,14 @@ export function AdminCourses() {
           </tbody>
         </AdminTableScroll>
       </AdminPanel>
+
+      <AdminPagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={sortedCourses.length}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

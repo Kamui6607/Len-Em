@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { toast } from "sonner";
+import { parseApiError } from "../../../lib/apiError";
 import { GoogleAuthButton } from "../../../shared/components/auth/GoogleAuthButton";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 
@@ -137,6 +138,9 @@ export function RegisterPage() {
     setError("");
   };
 
+  /** Backend expects a bare 10-digit number: /^0[0-9]{9}$/ */
+  const normalizePhone = (value: string) => value.replace(/[\s.\-()]/g, "");
+
   const v1 = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (!form.fullName.trim()) errors.fullName = "Please enter your full name.";
@@ -146,8 +150,10 @@ export function RegisterPage() {
     if (!form.email.trim()) errors.email = "Please enter your email.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errors.email = "Please enter a valid email address.";
-    if (form.phone && !/^[0-9]{10,11}$/.test(form.phone.replace(/\s/g, "")))
-      errors.phone = "Enter a valid 10-11 digit phone number.";
+    if (!form.phone.trim()) errors.phone = "Please enter your phone number.";
+    else if (!/^0[0-9]{9}$/.test(normalizePhone(form.phone)))
+      errors.phone = "Phone must be 10 digits and start with 0 (e.g. 0912345678).";
+    if (!form.address.trim()) errors.address = "Please enter your address.";
     if (form.dateOfBirth) {
       const dobRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
       if (!dobRegex.test(form.dateOfBirth)) {
@@ -205,7 +211,7 @@ export function RegisterPage() {
         fullName: form.fullName,
         username: form.username,
         email: form.email,
-        phone: form.phone || "",
+        phone: normalizePhone(form.phone),
         password: form.password,
         address: form.address,
         gender: form.gender as "MALE" | "FEMALE" | "OTHER",
@@ -214,33 +220,38 @@ export function RegisterPage() {
       toast.success("Account created! Please sign in.");
       navigate("/auth/login");
     } catch (err: unknown) {
-      const ax = err as {
-        response?: {
-          status?: number;
-          data?: { message?: string; errors?: Record<string, string[]> };
-        };
-      };
-      const status = ax?.response?.status;
-      const data = ax?.response?.data;
-      if (status === 400 && data?.errors) {
-        const fieldErrors: Record<string, string> = {};
-        Object.entries(data.errors).forEach(([f, ms]) => {
-          fieldErrors[f] = Array.isArray(ms) ? ms[0] : String(ms);
-        });
-        setFe(fieldErrors);
-        setError("Please fix the errors below.");
+      const { status, message, fieldErrors } = parseApiError(err);
+      // Backend validation can also reject step-1 fields (duplicate username,
+      // bad phone, missing address…) — jump back so the user can fix them.
+      const stepOneFields = [
+        "fullName",
+        "username",
+        "email",
+        "phone",
+        "address",
+        "gender",
+        "dateOfBirth",
+      ];
+      const invalidStepOne = Object.keys(fieldErrors).some((field) => stepOneFields.includes(field));
+      setFe(fieldErrors);
+      if (invalidStepOne) setStep(1);
+
+      const firstField = Object.keys(fieldErrors)[0];
+      if (firstField) {
+        // Banner repeats the first problem so it is visible even when the
+        // offending input is scrolled out of view.
+        setError(fieldErrors[firstField]);
         return;
       }
       if (status === 409) {
-        const message = data?.message || "User already exists";
         const lower = message.toLowerCase();
         if (lower.includes("email")) setFe({ email: message });
         else if (lower.includes("username")) setFe({ username: message });
         else if (lower.includes("phone")) setFe({ phone: message });
-        else setError(message);
+        else setError(message || "User already exists");
         return;
       }
-      setError(data?.message || "Registration failed. Please try again.");
+      setError(message || "Registration failed. Please try again.");
     }
   };
 
@@ -846,8 +857,8 @@ export function RegisterPage() {
                     <Field label="Full name" icon={UserIcon} k="fullName" placeholder="Nguyen Van A" form={form} fe={fe} upd={upd} />
                     <Field label="Username" icon={AtSign} k="username" placeholder="your_username" form={form} fe={fe} upd={upd} />
                     <Field label="Email" icon={Mail} k="email" type="email" placeholder="your@gmail.com" form={form} fe={fe} upd={upd} />
-                    <Field label="Phone" icon={Phone} k="phone" type="tel" placeholder="0912 345 678" optional form={form} fe={fe} upd={upd} />
-                    <Field label="Address" icon={MapPin} k="address" placeholder="123 Main Street, District 1" optional form={form} fe={fe} upd={upd} />
+                    <Field label="Phone" icon={Phone} k="phone" type="tel" placeholder="0912345678" form={form} fe={fe} upd={upd} />
+                    <Field label="Address" icon={MapPin} k="address" placeholder="123 Main Street, District 1" form={form} fe={fe} upd={upd} />
 
                     {/* Gender */}
                     <div style={{ marginBottom: 4 }}>
@@ -901,6 +912,7 @@ export function RegisterPage() {
                           {Array.from({ length: 100 }, (_, i) => <option key={i} value={String(new Date().getFullYear() - i)}>{new Date().getFullYear() - i}</option>)}
                         </select>
                       </div>
+                      {fe.dateOfBirth && <div className="rp-err-msg">{fe.dateOfBirth}</div>}
                     </div>
                   </div>
                   <div style={{ marginTop: 24 }}>

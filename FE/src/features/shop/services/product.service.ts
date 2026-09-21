@@ -72,6 +72,36 @@ export async function fetchProducts(
     if (params.minPrice !== undefined) queryParams.minPrice = params.minPrice;
   if (params.maxPrice !== undefined) queryParams.maxPrice = params.maxPrice;
 
+  // ── Substring search (FE-side) ──────────────────────────────
+  // Backend search chỉ khớp NGUYÊN TỪ ("hand" không ra "Handmade" — đã xác
+  // minh trực tiếp trên API). Khi có query (không rỗng), ta tự lấy danh sách
+  // sản phẩm từ server (vẫn giữ các filter khác phía server: category, màu,
+  // giá, sort) rồi lọc substring trên name + tags ở FE để gõ một phần từ
+  // vẫn ra sản phẩm liên quan. BE cap limit=100 → 1 request là đủ.
+  const search = params.search?.trim() ?? "";
+  if (search.length >= 1) {
+    const { data: allResponse } = await axiosClient.get("/products", {
+      params: { ...queryParams, search: undefined, page: undefined, limit: 100 },
+    });
+    const allData: BackendPaginatedProducts = allResponse.data;
+    const q = search.toLowerCase();
+    const matched = allData.products
+      .map(adaptBackendProduct)
+      .filter(
+        (product) =>
+          product.name.toLowerCase().includes(q) ||
+          product.tags.some((tag) => tag.toLowerCase().includes(q)),
+      );
+    // Tất cả kết quả khớp trả về trong 1 trang — khi đang search, BE không
+    // còn tham gia pagination.
+    return {
+      data: matched,
+      page: 1,
+      totalPages: 1,
+      totalItems: matched.length,
+    };
+  }
+
   const { data: response } = await axiosClient.get("/products", {
     params: queryParams,
   });

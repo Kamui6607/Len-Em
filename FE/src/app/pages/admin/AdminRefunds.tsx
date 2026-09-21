@@ -16,6 +16,7 @@ import { formatPrice } from "../../../lib/formatPrice";
 import { refundService, type RefundInvoice } from "../../../shared/api/refundService";
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -304,7 +305,7 @@ export function AdminRefunds() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 20;
+  const limit = 10;
   const { inputValue: searchInput, debouncedValue: debouncedSearch, setInputValue: setSearchInput } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   // Detail & process dialog state
@@ -467,20 +468,32 @@ export function AdminRefunds() {
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                     Customer
                   </th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                  <th
+                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     Amount
                   </th>
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                     Reason
                   </th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground">
+                  <th
+                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     Status
                   </th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground">
+                  <th
+                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     Date
                   </th>
                   {isAdmin && (
-                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[180px]">
+                    <th
+                      className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[180px]"
+                      style={{ textAlign: "center" }}
+                    >
                       Actions
                     </th>
                   )}
@@ -519,7 +532,7 @@ export function AdminRefunds() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-center">
                       <span className="font-semibold text-sm">
                         {formatPrice(inv.amount)}
                       </span>
@@ -549,8 +562,8 @@ export function AdminRefunds() {
                       {formatDate(inv.createdAt)}
                     </td>
                     {isAdmin && (
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           {inv.status === "PENDING" ? (
                             <>
                               <button
@@ -596,28 +609,13 @@ export function AdminRefunds() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="btn-secondary"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </button>
-          <span className="admin-pagination-info">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="btn-secondary"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={total}
+        pageSize={10}
+      />
 
       {/* Detail Modal */}
       {detailInvoice && (

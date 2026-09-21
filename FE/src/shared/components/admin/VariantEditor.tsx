@@ -19,6 +19,11 @@ interface VariantEditorProps {
   onChange: (variants: VariantData[]) => void;
   errors?: Record<string, string>[];
   hidePrice?: boolean;
+  /**
+   * Giá mặc định cho variant mới thêm. Dùng khi giá được nhập 1 lần ở cấp
+   * sản phẩm (hidePrice=true) để tránh variant mới có price = 0.
+   */
+  defaultPrice?: number;
 }
 
 const emptyVariant = (): VariantData => ({
@@ -35,9 +40,10 @@ export function VariantEditor({
   onChange,
   errors,
   hidePrice,
+  defaultPrice,
 }: VariantEditorProps) {
   const addVariant = () => {
-    onChange([...variants, emptyVariant()]);
+    onChange([...variants, { ...emptyVariant(), price: defaultPrice ?? 0 }]);
   };
 
   const removeVariant = (index: number) => {
@@ -211,14 +217,20 @@ export function VariantEditor({
 
 /**
  * Validate variant data and return per-index error objects.
+ *
+ * @param options.requirePrice – đặt `false` khi giá được nhập 1 lần ở cấp sản
+ *   phẩm (VariantEditor dùng hidePrice). Khi đó field giá của variant không
+ *   được render nên không thể yêu cầu người dùng sửa lỗi `price`.
  */
 export function validateVariants(
   variants: VariantData[],
+  options?: { requirePrice?: boolean },
 ): Record<string, string>[] {
+  const requirePrice = options?.requirePrice !== false;
   return variants.map((v) => {
     const err: Record<string, string> = {};
     if (!v.color.trim()) err.color = "Required";
-    if (v.price <= 0) err.price = "Must be > 0";
+    if (requirePrice && !(v.price > 0)) err.price = "Must be > 0";
     if (v.stock < 0) err.stock = "Must be >= 0";
     return err;
   });

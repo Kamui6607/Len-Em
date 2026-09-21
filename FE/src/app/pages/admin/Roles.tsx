@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Search,
-  Plus,
   Edit3,
   X,
   Shield,
@@ -9,10 +8,13 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../../shared/hooks/useAuth";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { roleService, normalizeRoles } from "../../../shared/api/roleService";
 import type { Role } from "../../../shared/types/role";
 import { permissionService } from "../../../shared/api/permissionService";
@@ -188,6 +190,7 @@ function RoleModal({
 // ─── Main Component ──────────────────────────────────────
 
 export function Roles() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
@@ -199,7 +202,7 @@ export function Roles() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 20;
+  const limit = 10;
 
   // ── Filter state ──
   const [searchName, setSearchName] = useState("");
@@ -233,7 +236,7 @@ export function Roles() {
     try {
       const params: Record<string, string | number> = {};
       if (page > 1) params.page = page;
-      if (limit !== 20) params.limit = limit;
+      if (limit !== 10) params.limit = limit;
       if (searchName.trim()) params.name = searchName.trim();
       if (filterActive !== null)
         params.isActive = filterActive ? "true" : "false";
@@ -354,14 +357,14 @@ export function Roles() {
     }
   };
 
-  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
+  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" | "center" }) {
     const active = sortField === field;
     return (
-      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`} style={{ textAlign: align }}>
         <button
           type="button"
           onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
@@ -404,14 +407,8 @@ export function Roles() {
           </p>
         </div>
         {isAdmin && (
-           <button
-             onClick={openCreate}
-             className="btn-create"
-           >
-            <Plus size={16} />
-            create
-           </button>
-         )}
+          <CreateButton label={t("admin.roles.createRole")} onClick={openCreate} />
+        )}
       </div>
 
       {/* Table */}
@@ -462,10 +459,13 @@ export function Roles() {
               <thead className="bg-muted">
                 <tr>
                   <SortableHeader label="Role Name" field="name" />
-                  <SortableHeader label="Permissions" field="permissions" align="right" />
-                  <SortableHeader label="Status" field="status" />
-                  <SortableHeader label="Created" field="created" />
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]">
+                  <SortableHeader label="Permissions" field="permissions" align="center" />
+                  <SortableHeader label="Status" field="status" align="center" />
+                  <SortableHeader label="Created" field="created" align="center" />
+                  <th
+                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[140px]"
+                    style={{ textAlign: "center" }}
+                  >
                     Actions
                   </th>
                 </tr>
@@ -484,12 +484,12 @@ export function Roles() {
                         </p>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className="text-sm">
                         {role.permissions?.length ?? 0} permissions
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span
                         className={`badge ${
                           role.isActive ? "badge-green" : "badge-red"
@@ -501,11 +501,11 @@ export function Roles() {
                         {role.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground whitespace-nowrap">
                       {formatDate(role.createdAt)}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => navigate(`/admin/roles/${role._id}`)}
                           className="admin-action-btn view"
@@ -522,7 +522,7 @@ export function Roles() {
                             >
                               <Edit3 size={16} />
                             </button>
-                            <HoldToDeleteButton
+                            <ConfirmDeleteButton
                               onDelete={async () => {
                                 try {
                                   await roleService.delete(role._id);
@@ -539,7 +539,7 @@ export function Roles() {
                                   }
                                 }
                               }}
-                              title="Hold 2s to delete"
+                              itemName={role.name}
                             />
                           </>
                         )}
@@ -553,28 +553,13 @@ export function Roles() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="btn-secondary"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="btn-secondary"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={total}
+        pageSize={10}
+      />
 
       {/* Create / Edit Modal */}
       <RoleModal

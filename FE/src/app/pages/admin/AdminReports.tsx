@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { Eye, ChevronUp, ChevronDown, Search, X } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
@@ -194,14 +195,14 @@ export function AdminReports() {
     }
   };
 
-  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" }) {
+  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" | "center" }) {
     const active = sortField === field;
     return (
-      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`} style={{ textAlign: align }}>
         <button
           type="button"
           onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
@@ -301,9 +302,14 @@ export function AdminReports() {
                   <SortableHeader label="ID" field="id" />
                   <SortableHeader label="Title" field="title" />
                   <SortableHeader label="Order ID" field="orderId" />
-                  <SortableHeader label="Status" field="status" />
+                  <SortableHeader label="Status" field="status" align="center" />
                   <SortableHeader label="Date" field="date" />
-                  <th className="px-6 py-4 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                  <th
+                    className="px-6 py-4 text-center text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -312,7 +318,7 @@ export function AdminReports() {
                     <td className="px-6 py-4 font-mono text-xs">{report._id.slice(-8)}</td>
                     <td className="px-6 py-4 max-w-[200px] truncate text-sm">{report.title}</td>
                     <td className="px-6 py-4 font-mono text-xs">{report.orderId.slice(-8)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                        <span className={`badge ${
                          report.status === "PENDING" ? "badge-orange" :
                          report.status === "DONE" ? "badge-green" :
@@ -322,8 +328,9 @@ export function AdminReports() {
                        </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{format(new Date(report.createdAt), "MMM dd, yyyy")}</td>
-                    <td className="px-6 py-4 text-left">
-                      <button
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
                         onClick={() => setSelectedReport(report)}
                         className="admin-action-btn view text-xs"
                         title="View details"
@@ -331,19 +338,20 @@ export function AdminReports() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {isAdmin && (
-                        <HoldToDeleteButton
-                          onDelete={async () => {
-                            try {
-                              await orderReportService.delete(report._id);
-                              toast.success("Report deleted successfully");
-                              fetchReports();
-                            } catch {
-                              toast.error("Failed to delete report");
-                            }
-                          }}
-                          title="Hold 2s to delete report"
-                        />
+                          <ConfirmDeleteButton
+                            onDelete={async () => {
+                              try {
+                                await orderReportService.delete(report._id);
+                                toast.success("Report deleted successfully");
+                                fetchReports();
+                              } catch {
+                                toast.error("Failed to delete report");
+                              }
+                            }}
+                            itemName={report.title}
+                          />
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -369,28 +377,13 @@ export function AdminReports() {
             ))}
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-4 p-4">
-              <button
-                onClick={() => setPage(p => Math.max(1, p-1))}
-                disabled={page <= 1}
-                className="btn-secondary"
-              >
-                Prev
-              </button>
-              <span className="text-sm text-muted-foreground self-center">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p+1))}
-                disabled={page >= totalPages}
-                className="btn-secondary"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            pageSize={10}
+            className="mt-4 p-4"
+          />
         </>
       )}
 

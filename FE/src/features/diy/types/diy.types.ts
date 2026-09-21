@@ -24,7 +24,8 @@ export interface DIYPost {
   saveCount?: number;
   purchaseCount: number;
   price?: number;
-  status: "pending" | "approved" | "rejected";
+  /** Backend chỉ có 2 trạng thái: "Pending" (chờ duyệt) và "Done" (đã duyệt). */
+  status: "Pending" | "Done";
   createdAt: string;
   updatedAt: string;
 }
@@ -34,19 +35,23 @@ export interface DIYPostFormData {
   description: string;
   images: File[];
   tags: string[];
-  linkedProduct?: { productId: string }[];
+  linkedProduct?: { productId: string; variantId: string; quantity: number }[];
   linkedCombo?: { comboId: string }[];
   price?: number;
 }
 
+/**
+ * Body gửi lên POST /diy-posts (bên trong FormData field `data`).
+ * Shape khớp schema backend: linkedProduct items yêu cầu đủ
+ * { productId, variantId, quantity }; price là tổng giá combo.
+ */
 export interface CreateDIYPostDTO {
   title: string;
   description: string;
   tags?: string[];
-  linkedProduct?: { productId: string }[];
+  linkedProduct?: { productId: string; variantId: string; quantity: number }[];
   linkedCombo?: { comboId: string }[];
   price?: number;
-  status?: "pending" | "approved" | "rejected";
 }
 
 export interface DIYCombo {

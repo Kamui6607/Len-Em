@@ -1,17 +1,22 @@
 import { useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router";
-import { Check, ImagePlus, Plus, Search, Send } from "lucide-react";
+import { ImagePlus, Send } from "lucide-react";
 import { toast } from "sonner";
-import { products } from "../../data/products";
+import { useProductsQuery } from "../../../shared/hooks/useProductsQuery";
 import { formatPrice } from "../../../lib/formatPrice";
 import { diyService } from "../../../features/diy/services/diy.service";
 import type { CreateDIYPostDTO } from "../../../features/diy/types/diy.types";
 import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
 import { AdminPanel, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import {
+  ProductSelectDropdown,
+  type ProductSelectOption,
+} from "../../../shared/components/ProductSelectDropdown";
 
 interface ComboItem {
   productId: string;
+  variantId: string;
   name: string;
   thumbnail: string;
   price: number;
@@ -26,29 +31,27 @@ export function DIYFormPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [productSearch, setProductSearch] = useState("");
   const [comboItems, setComboItems] = useState<ComboItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const searchableProducts = useMemo(() => {
-    const search = productSearch.trim().toLowerCase();
-    return products
-      .map((product) => ({
-        productId: product.id,
-        name: product.name,
-        thumbnail: product.image,
-        price: product.variants?.[0]?.price ?? 0,
-        tags: product.tags,
-      }))
-      .filter((product) => {
-        if (!search) return true;
-        return (
-          product.name.toLowerCase().includes(search) ||
-          product.tags.some((tag) => tag.toLowerCase().includes(search))
-        );
-      })
-      .slice(0, 8);
-  }, [productSearch]);
+  // Products thật từ backend (GET /products) — productId/variantId là ObjectId
+  // thật mà API POST /diy-posts yêu cầu trong linkedProduct (mock data sẽ bị từ chối).
+  // BE cap limit=100 → lấy 1 lần rồi cho CHỌN TỪ DANH SÁCH (không cần gõ search).
+  const productsQuery = useProductsQuery({ limit: 100 });
+
+  const productOptions: ProductSelectOption[] = useMemo(
+    () =>
+      (productsQuery.data?.data ?? [])
+        .map((product) => ({
+          productId: product.id,
+          variantId: product.variants?.[0]?.id ?? "",
+          name: product.name,
+          thumbnail: product.image,
+          price: product.variants?.[0]?.price ?? 0,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [productsQuery.data],
+  );
 
   const comboTotal = comboItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -81,7 +84,12 @@ export function DIYFormPage() {
         title: title.trim(),
         description: description.trim(),
         tags: tags.length > 0 ? tags : undefined,
-        linkedProduct: comboItems.map((item) => ({ productId: item.productId })),
+        linkedProduct: comboItems.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+        price: comboTotal,
       };
       await diyService.createPost(data, selectedFiles);
       toast.success("DIY post created successfully");
@@ -155,38 +163,26 @@ export function DIYFormPage() {
               <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
                 Materials <span className="text-destructive">*</span>
               </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--foreground-muted)" }} />
-                <input type="text" value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="input w-full pl-9" placeholder="Search products to add..." />
-              </div>
-              {productSearch && (
-                <div className="rounded-xl border overflow-hidden" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-                  {searchableProducts.length === 0 ? (
-                    <p className="p-4 text-sm text-center" style={{ color: "var(--foreground-muted)" }}>No products found</p>
-                  ) : (
-                    searchableProducts.map((product) => {
-                      const alreadyAdded = comboItems.some((item) => item.productId === product.productId);
-                      return (
-                        <button
-                          key={product.productId}
-                          type="button"
-                          disabled={alreadyAdded}
-                          onClick={() => { if (alreadyAdded) return; setComboItems((prev) => [...prev, { ...product, quantity: 1 }]); setProductSearch(""); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-secondary)] disabled:opacity-40"
-                          style={{ borderBottom: "1px solid var(--border)" }}
-                        >
-                          <img src={product.thumbnail} alt={product.name} className="w-10 h-10 rounded-lg object-cover" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{product.name}</p>
-                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>{formatPrice(product.price)}</p>
-                          </div>
-                          {alreadyAdded ? <Check className="w-4 h-4" style={{ color: "var(--primary)" }} /> : <Plus className="w-4 h-4" style={{ color: "var(--foreground-muted)" }} />}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
+              {/* Chọn nguyên liệu từ danh sách (select) thay vì gõ search */}
+              <ProductSelectDropdown
+                options={productOptions}
+                selectedIds={comboItems.map((item) => item.productId)}
+                isLoading={productsQuery.isLoading}
+                placeholder="Chọn nguyên liệu cho bài viết..."
+                onSelect={(option) =>
+                  setComboItems((prev) => [
+                    ...prev,
+                    {
+                      productId: option.productId,
+                      variantId: option.variantId ?? "",
+                      name: option.name,
+                      thumbnail: option.thumbnail,
+                      price: option.price,
+                      quantity: 1,
+                    },
+                  ])
+                }
+              />
               {comboItems.length > 0 && (
                 <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: "var(--border)" }}>
                   <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--foreground-muted)" }}>Selected Materials ({comboItems.length})</p>

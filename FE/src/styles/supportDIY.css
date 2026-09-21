@@ -334,13 +334,31 @@
 .diy-combo-row {
   transition: transform 0.12s ease-out;
 }
-.diy-remove-link {
-  transition: opacity 0.15s ease-out;
-  opacity: 0.75;
+/* Nút bỏ chọn 1 sản phẩm khỏi danh sách đã chọn — icon thùng rác, gọn trong 1 hàng
+   (trước đây là link chữ "Bỏ chọn"). */
+.diy-remove-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1.5px solid color-mix(in srgb, var(--destructive) 35%, var(--border)) !important;
+  background: color-mix(in srgb, var(--destructive) 8%, var(--card, var(--surface))) !important;
+  color: var(--destructive) !important;
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, transform 0.1s ease-out;
 }
-.diy-remove-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+.diy-remove-btn:hover {
+  background: color-mix(in srgb, var(--destructive) 18%, var(--card, var(--surface))) !important;
+  border-color: color-mix(in srgb, var(--destructive) 60%, var(--border)) !important;
+}
+.diy-remove-btn:active {
+  transform: scale(0.92);
+}
+.diy-remove-btn:focus-visible {
+  outline: 2px solid var(--destructive);
+  outline-offset: 1px;
 }
 
 /* Trạng thái rỗng của cột phải: căn giữa để card không nhìn trống trải */

@@ -4,7 +4,7 @@
 // Admin CHỈ xem/dùng notification Report.
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, CheckCheck, Flag, Trash2, CalendarClock } from "lucide-react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { useHoldToDelete } from "../../../shared/hooks/useHoldToDelete";
 import { isReportNotification } from "../../../shared/types/notification.types";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 
 function getDateGroup(date: Date): string {
   const now = new Date();
@@ -40,6 +41,9 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 const GROUP_ORDER = ["Today", "Yesterday", "This week", "Earlier"];
+
+/** Records per page — every admin list uses the same page size. */
+const PAGE_SIZE = 10;
 
 function DeleteButton({
   notificationId,
@@ -88,6 +92,12 @@ export function AdminNotifications() {
     clearAllNotifications,
   } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [page, setPage] = useState(1);
+
+  // Switching between "All" / "Unread" changes the result set — back to page 1.
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   const reportNotifications = useMemo(
     () => notifications.filter((n) => isReportNotification(n.type)),
@@ -98,15 +108,24 @@ export function AdminNotifications() {
     filter === "unread" ? !n.read : true,
   );
 
+  // Notifications are grouped by day, so page the flat list first and only
+  // group what belongs to the current page.
+  const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedNotifications = filteredNotifications.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
+
   const groupedNotifications = useMemo(() => {
     const groups: Record<string, typeof filteredNotifications> = {};
-    for (const notif of filteredNotifications) {
+    for (const notif of pagedNotifications) {
       const group = getDateGroup(new Date(notif.createdAt));
       if (!groups[group]) groups[group] = [];
       groups[group].push(notif);
     }
     return groups;
-  }, [filteredNotifications]);
+  }, [pagedNotifications]);
 
   const handleNotificationClick = (notificationId: string, targetPath?: string) => {
     markAsRead(notificationId);
@@ -287,6 +306,14 @@ export function AdminNotifications() {
           )}
         </AdminPanelBody>
       </AdminPanel>
+
+      <AdminPagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={filteredNotifications.length}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

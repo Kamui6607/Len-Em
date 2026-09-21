@@ -89,7 +89,55 @@ export const kitService = {
     level?: string;
     page?: number;
     limit?: number;
+    /**
+     * BE (kit.service.js -> getKits) chi hieu dung 2 trang thai:
+     * - khong truyen (hoac `true`) -> chi kit dang ban
+     * - `false`                    -> chi kit da an
+     * Moi gia tri khac 'true' deu bi BE coi la `false` -> KHONG co cach lay
+     * "ca hai" trong 1 request (xem `getAllStatuses`).
+     */
+    isActive?: boolean;
   }) => axiosClient.get<ApiResponse<RawKitListResponse>>(KITS_BASE, { params }),
+
+  /**
+   * Lay TAT CA kit (dang ban + da an) - dung cho bo loc "Tat ca" o trang admin.
+   *
+   * BE khong tra ve ca hai loai trong 1 request (`isActive=all` cung bi coi la
+   * false -> chi ra kit da an), nen phai goi 2 lan roi gop o FE. So request =
+   * totalPages(dang ban) + totalPages(da an), moi trang toi da 100 kit.
+   */
+  getAllStatuses: async (params?: { level?: string }): Promise<Kit[]> => {
+    const PAGE_LIMIT = 100;
+
+    const fetchAllPages = async (isActive: boolean): Promise<Kit[]> => {
+      const fetchPage = (page: number) =>
+        kitService.getAll({ ...params, page, limit: PAGE_LIMIT, isActive });
+
+      const first = await fetchPage(1);
+      const firstData = first.data.data;
+      const all: Kit[] = [...(firstData?.kits ?? [])];
+      const pages = firstData?.totalPages ?? 1;
+
+      if (pages > 1) {
+        const rest = await Promise.all(
+          Array.from({ length: pages - 1 }, (_, i) => fetchPage(i + 2)),
+        );
+        rest.forEach((res) => all.push(...(res.data.data?.kits ?? [])));
+      }
+      return all;
+    };
+
+    const [active, hidden] = await Promise.all([
+      fetchAllPages(true),
+      fetchAllPages(false),
+    ]);
+
+    // Gop roi sap moi nhat truoc, giong sort mac dinh cua BE (createdAt: -1)
+    return [...active, ...hidden].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  },
+
 
   /** GET /kits/{id} â€” Get kit by ID */
   getById: (id: string) =>

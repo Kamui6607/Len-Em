@@ -2,14 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { userService, type ApiUser, type UserStatus, type UserStatistics } from "../../users/services/user.service";
 import { authService } from "../../../shared/api/authService";
+import { extractApiErrorMessage, extractFieldErrors } from "../../../lib/apiError";
 import { roleService, normalizeRoles } from "../../../shared/api/roleService";
 import type { Role } from "../../../shared/types/role";
 import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import type { AdminUsersSortDirection, AdminUsersSortField } from "../types/adminUsers.types";
+import { isInactiveStatus } from "../types/adminUsers.types";
 
-export const ADMIN_USERS_PAGE_SIZE = 20;
+export const ADMIN_USERS_PAGE_SIZE = 10;
 
 export interface AdminUserOption {
   value: string;
@@ -52,12 +54,15 @@ export function useAdminUsers() {
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
   const [roleFilter, setRoleFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [totalUsersEstimate, setTotalUsersEstimate] = useState(0);
   const [sortField, setSortField] = useState<AdminUsersSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<AdminUsersSortDirection>("asc");
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
   const [userToUpdate, setUserToUpdate] = useState<ApiUser | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFieldErrors, setCreateFieldErrors] = useState<Record<string, string>>({});
+  const [updateFieldErrors, setUpdateFieldErrors] = useState<Record<string, string>>({});
   const [updating, setUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [apiRoles, setApiRoles] = useState<Role[]>([]);
@@ -87,13 +92,32 @@ export function useAdminUsers() {
         limit: ADMIN_USERS_PAGE_SIZE,
         status: statusFilter === "all" ? undefined : statusFilter,
         roleId: roleFilter || undefined,
-        // @ts-expect-error Backend search support is retained from the existing implementation.
         search: debouncedSearch || undefined,
       });
       const fetchedUsers = response.data.result.users || [];
       setUsers(fetchedUsers);
-      const total = (response.data.result as { total?: number }).total;
-      setTotalUsersEstimate(total ?? (page - 1) * ADMIN_USERS_PAGE_SIZE + fetchedUsers.length);
+      // The API reports both `totalUsers` and `totalPages` inside `result`
+      // (older builds only sent `total`). Reading the wrong key used to make a
+      // full first page look like the whole list — and the remains of the list
+      // became unreachable because no second page was offered.
+      const result = response.data.result as {
+        totalUsers?: number;
+        total?: number;
+        totalPages?: number;
+      };
+      const total = result.totalUsers ?? result.total;
+      const fetchedCount = fetchedUsers.length;
+      setTotalUsersEstimate(total ?? (page - 1) * ADMIN_USERS_PAGE_SIZE + fetchedCount);
+      setTotalPages(
+        result.totalPages ??
+          (total !== undefined
+            ? Math.max(1, Math.ceil(total / ADMIN_USERS_PAGE_SIZE))
+            // No count at all: a full page means there is very likely more, so
+            // still offer the next one instead of hiding the rest.
+            : fetchedCount === ADMIN_USERS_PAGE_SIZE
+              ? page + 1
+              : page),
+      );
     } catch {
       setUsers([]);
       setError(true);
@@ -179,6 +203,12 @@ export function useAdminUsers() {
   };
 
   const confirmDeleteUser = async (user: ApiUser) => {
+    // Guard: an INACTIVE user is already soft-deleted, and the row's delete
+    // button is disabled — this covers a stale list (status changed elsewhere).
+    if (isInactiveStatus(user.status)) {
+      toast.error(t("admin.users.deleteDisabledError"));
+      return;
+    }
     try {
       await userService.deleteUser(user.userId);
       setUsers((current) => current.map((item) => item.userId === user.userId ? { ...item, status: "INACTIVE" } : item));
@@ -191,35 +221,88 @@ export function useAdminUsers() {
     if (!isAdmin) return;
     try {
       setUpdating(true);
+      setUpdateFieldErrors({});
       const { data: response } = await userService.adminUpdateUser(userId, data);
       const updatedUser = response.data.updatedResult;
       setUsers((current) => current.map((item) => item.userId === userId ? { ...item, ...updatedUser } : item));
       logActivity({ type: "user_created", userId: "admin", userName: "Admin", description: `Updated user: ${updatedUser.fullName || userId}` });
       toast.success(t("admin.users.updateSuccess"));
       setUserToUpdate(null);
-    } catch { toast.error(t("admin.users.updateError")); }
+    } catch (error) {
+      // Same treatment as the create form: field-scoped validation errors are
+      // rendered inline, everything else uses the backend wording.
+      const fieldErrors = extractFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setUpdateFieldErrors(fieldErrors);
+      } else {
+        const message = extractApiErrorMessage(error);
+        toast.error(message || t("admin.users.updateError"));
+      }
+    }
     finally { setUpdating(false); }
   };
+
+  const clearUpdateFieldError = useCallback((field: string) => {
+    setUpdateFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const openUpdateModal = useCallback((user: ApiUser) => {
+    setUpdateFieldErrors({});
+    setUserToUpdate(user);
+  }, []);
 
   const handleCreateUser = async (data: Record<string, unknown>) => {
     if (!isAdmin) return;
     try {
       setCreating(true);
+      setCreateFieldErrors({});
       await authService.adminRegister(data as unknown as Parameters<typeof authService.adminRegister>[0]);
       logActivity({ type: "user_created", userId: "admin", userName: "Admin", description: `Created new user: ${String(data.fullName)} (${String(data.username)})` });
       toast.success(t("admin.users.createSuccess"));
       setShowCreateModal(false);
       await loadUsers();
-    } catch { toast.error(t("admin.users.createError")); }
-    finally { setCreating(false); }
+    } catch (error) {
+      // Field-scoped validation errors (duplicate email/username, bad phone…)
+      // are rendered inline next to the matching input; everything else is
+      // reported with the backend's own wording.
+      const fieldErrors = extractFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setCreateFieldErrors(fieldErrors);
+      } else {
+        const message = extractApiErrorMessage(error);
+        toast.error(message || t("admin.users.createError"));
+      }
+    } finally { setCreating(false); }
   };
+
+  const openCreateModal = useCallback(() => {
+    setCreateFieldErrors({});
+    setShowCreateModal(true);
+  }, []);
+
+  const clearCreateFieldError = useCallback((field: string) => {
+    setCreateFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   return {
     t, isAdmin, users: sortedUsers, rawUsers: users, loading, error, searchTerm, setSearchTerm,
     statusFilter, setStatusFilter, roleFilter, setRoleFilter, page, setPage,
-    totalUsersEstimate, stats, statsLoading, hasActiveFilters, apiRoles, roleNameMap,
+    totalUsersEstimate, totalPages, stats, statsLoading, hasActiveFilters, apiRoles, roleNameMap,
     roleDropdownOptions, updating, creating, selectedUser, setSelectedUser,
     userToUpdate, setUserToUpdate, showCreateModal, setShowCreateModal,
+    sortField, sortDirection,
+    createFieldErrors, openCreateModal, clearCreateFieldError,
+    updateFieldErrors, openUpdateModal, clearUpdateFieldError,
     handleSort, handleResetFilters, handleViewUser, handleStatusChange, handleRoleChange,
     confirmDeleteUser, handleUpdateUser, handleCreateUser, refresh: loadUsers,
   };

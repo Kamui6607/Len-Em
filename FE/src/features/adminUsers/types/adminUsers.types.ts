@@ -4,6 +4,14 @@ import type { Role } from "../../../shared/types/role";
 export type AdminUsersSortField = "name" | "email" | "phone" | "role" | "status";
 export type AdminUsersSortDirection = "asc" | "desc";
 
+/**
+ * A user that is already INACTIVE has been soft-deleted already, so the delete
+ * action must stay disabled for that row (deleting it again is a no-op).
+ */
+export function isInactiveStatus(status?: string | null): boolean {
+  return (status ?? "ACTIVE").toUpperCase() === "INACTIVE";
+}
+
 export interface AdminUsersState {
   users: ApiUser[];
   loading: boolean;

@@ -1,10 +1,12 @@
 import { useIsMobile } from "../../../shared/hooks/useMediaQuery";
 import { useAdminUsers } from "../hooks/useAdminUsers";
+import { ADMIN_USERS_PAGE_SIZE } from "../hooks/useAdminUsers";
 import { AdminUsersDesktop } from "./AdminUsersDesktop";
 import { AdminUsersMobile } from "./AdminUsersMobile";
 import { AdminUsersDialogs } from "./AdminUsersDialogs";
 import { ChevronDown } from "lucide-react";
 import { AdminSearchInput } from "../../../shared/components/admin/AdminDataTable";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
 
 export function AdminUsers() {
   const isMobile = useIsMobile();
@@ -12,7 +14,6 @@ export function AdminUsers() {
   const mobileStatusOptions = [
     { value: "ACTIVE", label: controller.t("admin.users.active") },
     { value: "INACTIVE", label: controller.t("admin.users.inactive") },
-    { value: "LOCKED", label: controller.t("admin.users.locked") },
   ];
 
   const content = isMobile ? (
@@ -27,13 +28,10 @@ export function AdminUsers() {
           </p>
         </div>
         {controller.isAdmin && (
-          <button
-            type="button"
-            onClick={() => controller.setShowCreateModal(true)}
-            className="btn-create"
-          >
-            {controller.t("admin.users.createUser")}
-          </button>
+          <CreateButton
+            label={controller.t("admin.users.createUser")}
+            onClick={controller.openCreateModal}
+          />
         )}
       </div>
       <section
@@ -53,14 +51,11 @@ export function AdminUsers() {
             <div className="relative">
               <select
                 className="input min-h-11 w-full appearance-none bg-none pr-9"
+                style={{ backgroundImage: "none" }}
                 value={controller.statusFilter}
                 onChange={(event) =>
                   controller.setStatusFilter(
-                    event.target.value as
-                      | "all"
-                      | "ACTIVE"
-                      | "INACTIVE"
-                      | "LOCKED",
+                    event.target.value as "all" | "ACTIVE" | "INACTIVE",
                   )
                 }
               >
@@ -78,6 +73,7 @@ export function AdminUsers() {
             <div className="relative">
               <select
                 className="input min-h-11 w-full appearance-none bg-none pr-9"
+                style={{ backgroundImage: "none" }}
                 value={controller.roleFilter || "all"}
                 onChange={(event) =>
                   controller.setRoleFilter(
@@ -106,14 +102,15 @@ export function AdminUsers() {
           roleOptions={controller.roleDropdownOptions}
           statusOptions={mobileStatusOptions}
           onViewUser={controller.handleViewUser}
-          onEditUser={controller.setUserToUpdate}
+          onEditUser={controller.openUpdateModal}
           onDeleteUser={controller.confirmDeleteUser}
           onRoleChange={controller.handleRoleChange}
           onStatusChange={controller.handleStatusChange}
           onResetFilters={controller.handleResetFilters}
           page={controller.page}
-          pageSize={20}
+          pageSize={ADMIN_USERS_PAGE_SIZE}
           totalItems={controller.totalUsersEstimate}
+          totalPages={controller.totalPages}
           onPageChange={controller.setPage}
           getRoleName={(roleId) =>
             typeof roleId === "string"

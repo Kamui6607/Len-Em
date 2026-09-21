@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
-import { Edit, Plus, Video } from "lucide-react";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { Edit, Video } from "lucide-react";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { toast } from "sonner";
 import { Button } from "../../../shared/components/ui/button";
 import { lessonService } from "../../../shared/api/lessonService";
@@ -23,10 +25,14 @@ import {
 type SortField = "title" | "order" | "duration" | "products" | "preview";
 type SortDirection = "asc" | "desc";
 
+/** Records per page — every admin list uses the same page size. */
+const PAGE_SIZE = 10;
+
 export function AdminLessons() {
   const { t } = useLanguage();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
@@ -71,6 +77,16 @@ export function AdminLessons() {
     return sortDirection === "asc" ? cmp : -cmp;
   });
 
+  // The API returns every lesson at once, so paging happens here.
+  const totalPages = Math.max(1, Math.ceil(sortedLessons.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedLessons = sortedLessons.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // A new search narrows the list — jump back to page 1.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -90,10 +106,7 @@ export function AdminLessons() {
         title={t("admin.lessons.title")}
         subtitle={t("admin.lessons.subtitle")}
         actions={
-          <Link to="/admin/lessons/new" className="btn-create">
-            <Plus size={18} />
-            {t("admin.lessons.create")}
-          </Link>
+          <CreateButton to="/admin/lessons/new" label={t("admin.lessons.create")} />
         }
       />
 
@@ -115,7 +128,7 @@ export function AdminLessons() {
           </thead>
           <tbody>
             {sortedLessons.length > 0 ? (
-              sortedLessons.map((lesson) => (
+              pagedLessons.map((lesson) => (
                 <tr
                   key={lesson._id}
                   className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
@@ -163,7 +176,7 @@ export function AdminLessons() {
                           <Edit className="size-4" />
                         </Link>
                       </Button>
-                      <HoldToDeleteButton
+                      <ConfirmDeleteButton
                         onDelete={async () => {
                           try {
                             await lessonService.delete(lesson._id);
@@ -173,7 +186,7 @@ export function AdminLessons() {
                             toast.error(t("admin.lessons.deleteError"));
                           }
                         }}
-                        title={t("admin.lessons.holdToDelete")}
+                        itemName={lesson.title}
                       />
                     </div>
                   </td>
@@ -185,6 +198,14 @@ export function AdminLessons() {
           </tbody>
         </AdminTableScroll>
       </AdminPanel>
+
+      <AdminPagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={sortedLessons.length}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

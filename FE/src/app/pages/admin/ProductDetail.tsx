@@ -170,10 +170,16 @@ export function ProductDetail() {
                 <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
                   Color
                 </th>
-                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                <th
+                  className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
+                  style={{ textAlign: "center" }}
+                >
                   Price
                 </th>
-                <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                <th
+                  className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
+                  style={{ textAlign: "center" }}
+                >
                   Stock
                 </th>
               </tr>
@@ -203,10 +209,10 @@ export function ProductDetail() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right font-semibold text-primary">
+                  <td className="px-6 py-4 text-center font-semibold text-primary">
                     {formatPrice(variant.price)}
                   </td>
-                  <td className="px-6 py-4 text-right">{variant.stock}</td>
+                  <td className="px-6 py-4 text-center">{variant.stock}</td>
                 </tr>
               ))}
             </tbody>

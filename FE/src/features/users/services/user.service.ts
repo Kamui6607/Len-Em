@@ -83,8 +83,14 @@ export interface UserStatistics {
 
 export const userService = {
   /** GET /users — Get all users with pagination & filters (Admin only) */
-  getAllUsers: (params?: { page?: number; limit?: number; status?: UserStatus; roleId?: string }) =>
-    axiosClient.get<ApiResponse<UsersListResponse>>(USERS_BASE, { params }),
+  getAllUsers: (params?: {
+    page?: number;
+    limit?: number;
+    status?: UserStatus;
+    roleId?: string;
+    /** Free-text search (name/username/email/phone) — sent to the backend. */
+    search?: string;
+  }) => axiosClient.get<ApiResponse<UsersListResponse>>(USERS_BASE, { params }),
 
   /** GET /users/{userId} — Get user by ID (Admin only) */
   getUserById: (userId: string) =>

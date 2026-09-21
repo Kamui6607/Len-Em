@@ -25,6 +25,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { error };
   }
 
+  // `_info` (React component stack) is intentionally unused — eslint needs the
+  // underscore convention spelled out to ignore it.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   componentDidCatch(error: Error, _info: ErrorInfo) {
     console.error("[ErrorBoundary] Caught error:", error);
   }

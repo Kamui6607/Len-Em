@@ -13,7 +13,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { ReportButton } from "../../../shared/components/ReportButton";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 const STATUS_OPTIONS = ["", "Pending", "Done", "Cancel"];
@@ -153,17 +154,18 @@ export function AdminSupportDIYPosts() {
   }: {
     label: string;
     field: SortField;
-    align?: "left" | "right";
+    align?: "left" | "right" | "center";
   }) {
     const active = sortField === field;
     return (
       <th
-        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}
+        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`}
+        style={{ textAlign: align }}
       >
         <button
           type="button"
           onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : ""}`}
+          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
         >
           {label}
           <span className="flex flex-col items-center justify-center -space-y-[3px]">
@@ -330,9 +332,12 @@ export function AdminSupportDIYPosts() {
                   <tr>
                     <SortableHeader label="ID" field="id" />
                     <SortableHeader label="Title" field="title" />
-                    <SortableHeader label="Status" field="status" />
-                    <SortableHeader label="Date" field="date" />
-                    <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[240px]">
+                    <SortableHeader label="Status" field="status" align="center" />
+                    <SortableHeader label="Date" field="date" align="center" />
+                    <th
+                      className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[240px]"
+                      style={{ textAlign: "center" }}
+                    >
                       Actions
                     </th>
                   </tr>
@@ -349,14 +354,14 @@ export function AdminSupportDIYPosts() {
                       <td className="px-6 py-4 max-w-[200px] truncate text-sm">
                         {post.title}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <span
                           className={`badge ${getStatusBadgeClass(post.status)}`}
                         >
                           {displayStatus(post)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-6 py-4 text-center text-sm text-muted-foreground">
                         {(() => {
                           try {
                             return new Date(post.createdAt).toLocaleDateString(
@@ -372,8 +377,8 @@ export function AdminSupportDIYPosts() {
                           }
                         })()}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
                           {post.status === "Pending" && (
                             <>
                               <button
@@ -408,9 +413,9 @@ export function AdminSupportDIYPosts() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <HoldToDeleteButton
+                          <ConfirmDeleteButton
                             onDelete={() => handleDelete(post)}
-                            title="Hold 2s to delete"
+                            itemName={post.title}
                           />
                         </div>
                       </td>
@@ -460,27 +465,13 @@ export function AdminSupportDIYPosts() {
                 </div>
               ))}
             </div>
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-4 p-4">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="btn-secondary"
-                >
-                  Prev
-                </button>
-                <span className="text-sm text-muted-foreground self-center">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="btn-secondary"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            <AdminPagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              pageSize={10}
+              className="mt-4 p-4"
+            />
           </>
         )}
       </div>

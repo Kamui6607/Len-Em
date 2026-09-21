@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, ImagePlus, Plus, Search, Check, Send, X, HelpCircle, Tag, ShoppingBag, Wallet } from "lucide-react";
+import { ArrowLeft, ImagePlus, Plus, Send, Trash2, X, HelpCircle, Tag, ShoppingBag, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { products } from "../../data/products";
-import { formatPrice } from "../../../lib/formatPrice";
 import { supportDIYService } from "../../../features/supportDIY/services/supportDIY.service";
 import type { CreateSupportDIYDTO } from "../../../features/supportDIY/types/supportDIY.types";
+import { useProductsQuery } from "../../../shared/hooks/useProductsQuery";
+import {
+  ProductSelectDropdown,
+  type ProductSelectOption,
+} from "../../../shared/components/ProductSelectDropdown";
 import "../../../styles/supportDIY.css";
 
 interface ComboItem {
@@ -25,30 +28,28 @@ export function SupportDIYCreatePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [productSearch, setProductSearch] = useState("");
   const [comboItems, setComboItems] = useState<ComboItem[]>([]);
   const [price, setPrice] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const searchableProducts = useMemo(() => {
-    const search = productSearch.trim().toLowerCase();
-    return products
-      .map((product) => ({
-        productId: product.id,
-        name: product.name,
-        thumbnail: product.image,
-        price: product.variants?.[0]?.price ?? 0,
-        tags: product.tags,
-      }))
-      .filter((product) => {
-        if (!search) return true;
-        return (
-          product.name.toLowerCase().includes(search) ||
-          product.tags.some((tag) => tag.toLowerCase().includes(search))
-        );
-      })
-      .slice(0, 8);
-  }, [productSearch]);
+  // Sản phẩm liên quan lấy từ API thật (GET /products) rồi cho CHỌN TỪ DANH SÁCH
+  // (select) thay vì gõ search. Trước đây dùng mock data → productId không phải
+  // ObjectId nên linkedProduct gửi lên BE không dùng được.
+  // BE cap limit=100 → 1 request là đủ cho danh sách chọn.
+  const productsQuery = useProductsQuery({ limit: 100 });
+
+  const productOptions: ProductSelectOption[] = useMemo(
+    () =>
+      (productsQuery.data?.data ?? [])
+        .map((product) => ({
+          productId: product.id,
+          name: product.name,
+          thumbnail: product.image,
+          price: product.variants?.[0]?.price ?? 0,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [productsQuery.data],
+  );
 
   // Lightweight progress signal — encodes how much of the request is filled in.
   const stepsDone = useMemo(() => {
@@ -293,55 +294,26 @@ export function SupportDIYCreatePage() {
               <div className="diy-side-card-body">
                 {/* Wrapper keeps the dropdown as a floating overlay instead of pushing layout down */}
                 <div className="diy-search-wrapper">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--foreground-muted)" }} />
-                    <input
-                      type="text"
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      className="diy-input w-full pl-9"
-                      placeholder="Tìm sản phẩm..."
-                    />
-                  </div>
-                  {productSearch && (
-                    <div className="diy-fade-in diy-results rounded-xl border overflow-hidden">
-                      {searchableProducts.length === 0 ? (
-                        <p className="p-4 text-sm text-center" style={{ color: "var(--foreground-muted)" }}>
-                          Không tìm thấy sản phẩm phù hợp
-                        </p>
-                      ) : (
-                        searchableProducts.map((product) => {
-                          const alreadyAdded = comboItems.some((item) => item.productId === product.productId);
-                          return (
-                            <button
-                              key={product.productId}
-                              type="button"
-                              disabled={alreadyAdded}
-                              onClick={() => {
-                                if (alreadyAdded) return;
-                                setComboItems((prev) => [...prev, { ...product, quantity: 1 }]);
-                                setProductSearch("");
-                              }}
-                              className="diy-result-row w-full flex items-center gap-3 px-4 py-3 text-left disabled:opacity-40"
-                            >
-                              <img src={product.thumbnail} alt={product.name} className="w-10 h-10 rounded-lg object-cover" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{product.name}</p>
-                                <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
-                                  {formatPrice(product.price)}
-                                </p>
-                              </div>
-                              {alreadyAdded ? (
-                                <Check className="w-4 h-4" style={{ color: "var(--primary)" }} />
-                              ) : (
-                                <Plus className="w-4 h-4 diy-result-plus" style={{ color: "var(--foreground-muted)" }} />
-                              )}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
+                  {/* Chọn sản phẩm liên quan từ danh sách (select), không cần gõ search */}
+                  <ProductSelectDropdown
+                    triggerClassName="diy-input w-full"
+                    options={productOptions}
+                    selectedIds={comboItems.map((item) => item.productId)}
+                    isLoading={productsQuery.isLoading}
+                    placeholder="Chọn sản phẩm liên quan..."
+                    onSelect={(option) =>
+                      setComboItems((prev) => [
+                        ...prev,
+                        {
+                          productId: option.productId,
+                          name: option.name,
+                          thumbnail: option.thumbnail,
+                          price: option.price,
+                          quantity: 1,
+                        },
+                      ])
+                    }
+                  />
                 </div>
 
                 {comboItems.length > 0 ? (
@@ -357,22 +329,22 @@ export function SupportDIYCreatePage() {
                           <button
                             type="button"
                             onClick={() => setComboItems((prev) => prev.filter((i) => i.productId !== item.productId))}
-                            className="diy-remove-link text-xs text-destructive"
+                            className="diy-remove-btn"
+                            title="Bỏ chọn"
+                            aria-label={`Bỏ chọn ${item.name}`}
                           >
-                            Bỏ chọn
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  !productSearch && (
-                    <div className="diy-side-empty">
-                      <p className="text-xs italic" style={{ color: "var(--foreground-muted)" }}>
-                        Chưa chọn sản phẩm nào — bỏ qua cũng không sao.
-                      </p>
-                    </div>
-                  )
+                  <div className="diy-side-empty">
+                    <p className="text-xs italic" style={{ color: "var(--foreground-muted)" }}>
+                      Chưa chọn sản phẩm nào — bỏ qua cũng không sao.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

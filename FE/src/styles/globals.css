@@ -153,6 +153,7 @@ a.nav-icon-btn:hover {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   text-align: left;
+  vertical-align: middle;
   padding: 14px 16px;
   border-bottom: 1px solid var(--table-border);
   position: sticky;
@@ -173,6 +174,7 @@ a.nav-icon-btn:hover {
   border-bottom: 1px solid var(--table-border);
   color: var(--foreground-secondary);
   font-size: 0.875rem;
+  vertical-align: middle;
 }
 .admin-table tbody tr:last-child td { border-bottom: none; }
 
@@ -211,6 +213,21 @@ a.nav-icon-btn:hover {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Modifier: two-column form layout (create / update dialogs).
+   It has to be declared here: this file is unlayered while Tailwind's `grid`
+   utilities live in @layer utilities, and unlayered rules always win — putting
+   `grid sm:grid-cols-2` straight on .admin-dialog-body would be ignored. */
+.admin-dialog-body.admin-dialog-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+@media (min-width: 640px) {
+  .admin-dialog-body.admin-dialog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .admin-dialog-footer {
   padding: 16px 24px;
@@ -289,6 +306,22 @@ a.nav-icon-btn:hover {
   border-color: var(--action-destructive-text);
   color: var(--action-destructive-text);
   box-shadow: 0 0 12px var(--action-destructive-glow);
+}
+
+/* Positive action (approve / confirm) — matches the green semantic tokens so a
+   "duyệt" button never looks like the amber edit button next to it. */
+.admin-action-btn.success {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: var(--success-bg);
+  border: 1px solid color-mix(in srgb, var(--success-text) 45%, transparent);
+  color: var(--success-text);
+}
+.admin-action-btn.success:hover {
+  background: color-mix(in srgb, var(--success-text) 22%, transparent);
+  border-color: var(--success-text);
+  color: var(--success-text);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success-text) 45%, transparent);
 }
 
 /* Skeleton shimmer */
@@ -492,6 +525,70 @@ a.nav-icon-btn:hover {
 }
 .badge-trigger:hover { transform: translateY(-1px); filter: brightness(1.08); }
 .dark .badge-trigger:hover { filter: brightness(1.18); }
+
+/* --- Badge select: <select> rendered as a colored pill (role / status
+   inside the admin users table). The native indicator is removed so a lucide
+   chevron can be centered in its own reserved slot — using `.badge` directly
+   on a <select> does not work because its `padding: 2px 12px` (unlayered,
+   globals.css) beats Tailwind's `pr-8`, pushing the arrow on top of the text. --- */
+.badge-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.badge-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 32px 0 14px; /* right padding reserves the chevron slot */
+  /* Only the width/style are set here: the border colour must keep coming from
+     the .badge-* colour class, so setting the `border` shorthand (which resets
+     border-color) would strip the tinted outline. */
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: filter 0.2s var(--ease-out), transform 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+}
+.badge-select:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.badge-select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.badge-select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.75;
+  transition: transform 0.2s var(--ease-out), opacity 0.2s var(--ease-out);
+}
+.badge-select-wrap:hover .badge-select-arrow {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.12);
+}
+/* Tint the chevron with the pill's own text colour so the arrow looks like
+   part of the badge instead of a grey glyph floating on a coloured pill.
+   (:has() is progressive — unsupported browsers fall back to inherited colour.) */
+.badge-select-wrap:has(.badge-green) .badge-select-arrow { color: var(--success-text); }
+.badge-select-wrap:has(.badge-blue) .badge-select-arrow { color: var(--info-text); }
+.badge-select-wrap:has(.badge-red) .badge-select-arrow { color: var(--error-text); }
+.badge-select-wrap:has(.badge-orange) .badge-select-arrow { color: var(--warning-text); }
+.badge-select-wrap:has(.badge-gray) .badge-select-arrow { color: var(--accent-gray-text); }
 
 /* Status LED dot */
 .led-dot {
@@ -920,12 +1017,16 @@ select.input {
 select.input:hover {
   border-color: var(--input-hover-border);
   box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.1);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
 }
 
 select.input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.15), 0 0 0 1px var(--primary);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
 }
 
 select.input option {
@@ -936,6 +1037,15 @@ select.input option {
 
 .dark select.input {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237C63FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+}
+
+select.input.bg-none,
+select.input[class*="bg-none"],
+.dark select.input.bg-none,
+.dark select.input[class*="bg-none"] {
+  background-image: none !important;
 }
 
 
@@ -1134,6 +1244,91 @@ select.input option {
   box-shadow: none;
 }
 
+/* ----------------------------------------------------------------
+   "+ Create" CTA (roles / permissions headers)
+   Pill shape, icon in its own frosted chip and a soft shine that sweeps
+   across on hover. Same tokens as .btn-create so the palette stays in sync.
+   ---------------------------------------------------------------- */
+.btn-create-cta {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 20px 0 8px;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--primary-foreground);
+  background: var(--cta-gradient);
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  box-shadow: var(--cta-shadow);
+  cursor: pointer;
+  transition:
+    transform 0.18s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    filter 0.2s var(--ease-out);
+}
+.btn-create-cta:hover {
+  transform: translateY(-1.5px);
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.04);
+}
+.btn-create-cta:active {
+  transform: translateY(0);
+  filter: brightness(0.97);
+  box-shadow: 0 2px 10px var(--glow-primary);
+}
+.btn-create-cta:focus-visible {
+  outline: none;
+  box-shadow: var(--cta-shadow), var(--focus-ring);
+}
+.btn-create-cta__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+  transition: transform 0.25s var(--ease-spring);
+}
+.btn-create-cta__icon svg {
+  width: 16px;
+  height: 16px;
+}
+.btn-create-cta:hover .btn-create-cta__icon {
+  transform: rotate(90deg) scale(1.05);
+}
+.btn-create-cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.55s var(--ease-out);
+  pointer-events: none;
+}
+.btn-create-cta:hover::after {
+  left: 120%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-create-cta::after {
+    display: none;
+  }
+  .btn-create-cta:hover .btn-create-cta__icon {
+    transform: none;
+  }
+}
+
 /* Secondary — viền lilac nhẹ, nền gần trong suốt; dark = viền phát sáng nhẹ khi hover */
 .btn-secondary,
 .btn-modal-cancel {
@@ -1251,7 +1446,7 @@ select.input option {
   font-family: var(--font-body);
   font-size: 0.875rem;
   color: var(--foreground);
-  background: var(--input-bg);
+  background-color: var(--input-bg);
   border: 1.5px solid var(--input-border);
   border-radius: var(--input-radius);
   padding: 0.65rem 1rem;
@@ -1265,7 +1460,7 @@ select.input option {
 }
 .input:hover {
   border-color: var(--input-hover-border);
-  background: var(--input-hover-bg);
+  background-color: var(--input-hover-bg);
 }
 .input:focus {
   outline: none;

@@ -184,7 +184,7 @@ export function NavigationDesktop(props: NavigationDesktopProps) {
                         value={props.searchQuery}
                         onChange={(e) => props.onSearchChange(e.target.value)}
                         placeholder={props.searchPlaceholder}
-                        className="w-full h-[42px] pl-9 pr-8 rounded-full border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:shadow-[var(--input-focus-shadow)] transition-colors"
+                        className="w-full h-[42px] pl-9 pr-8 rounded-full border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--primary)_10%,transparent)] transition-colors"
                       />
                       {props.searchQuery && (
                         <button

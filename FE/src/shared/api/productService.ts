@@ -7,6 +7,9 @@ import type { ApiResponse } from "../types/auth.types";
 
 const PRODUCTS_BASE = "/products";
 
+// BE chặn `limit > 100` (productQuerySchema) → dùng 100 khi cần gom toàn bộ.
+const MAX_PAGE_LIMIT = 100;
+
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ProductVariant {
@@ -77,7 +80,10 @@ export interface UpdateProductRequest {
 function buildProductFormData(data: CreateProductRequest): FormData {
   const formData = new FormData();
   const { imageFile, variants, ...productData } = data;
-  const variantsWithoutFiles = variants.map(({ imageFile: _imageFile, ...variant }) => variant);
+  const variantsWithoutFiles = variants.map(({ imageFile, ...variant }) => {
+    void imageFile; // file gửi riêng qua field `variantImage_{index}`
+    return variant;
+  });
 
   formData.append("data", JSON.stringify({
     ...productData,
@@ -115,6 +121,41 @@ export const productService = {
   /** GET /products/{productId} â€” Get product by ID (public) */
   getById: (productId: string) =>
     axiosClient.get<ApiResponse<{ product: Product }>>(`${PRODUCTS_BASE}/${productId}`),
+
+  /**
+   * GET /products (gom nhiều trang) — CHỈ trả về sản phẩm đã ẩn (`isActive === false`).
+   *
+   * BE không có tham số lọc `isActive=false`: chỉ có `includeInactive=true`
+   * (trả về CẢ đang bán + đã ẩn, và chỉ áp dụng cho role Admin — xem
+   * product.controller.js). Vì vậy phải gom toàn bộ các trang rồi lọc ở FE.
+   * Số request = totalPages (limit tối đa 100/trang).
+   */
+  getHidden: async (params?: {
+    category?: string;
+    tag?: string;
+    search?: string;
+  }): Promise<Product[]> => {
+    const fetchPage = async (page: number): Promise<ProductsListResponse | undefined> => {
+      const { data } = await axiosClient.get<ApiResponse<ProductsListResponse>>(
+        PRODUCTS_BASE,
+        { params: { ...params, page, limit: MAX_PAGE_LIMIT, includeInactive: true } },
+      );
+      return data.data;
+    };
+
+    const first = await fetchPage(1);
+    const all: Product[] = [...(first?.products ?? [])];
+    const totalPages = first?.totalPages ?? 1;
+
+    if (totalPages > 1) {
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 2)),
+      );
+      rest.forEach((pageData) => all.push(...(pageData?.products ?? [])));
+    }
+
+    return all.filter((product) => !product.isActive);
+  },
 
   /** POST /products â€” Create a new product (Admin & Staff) */
     create: (data: CreateProductRequest) =>

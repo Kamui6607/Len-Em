@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Search,
-  Plus,
   Edit3,
   X,
   RotateCcw,
@@ -9,8 +8,10 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
-import { useNavigate } from "react-router";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { ProductDetailModal } from "./ProductDetailModal";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { formatPrice } from "../../../lib/formatPrice";
 import { productService, type Product } from "../../../shared/api/productService";
 import {
@@ -37,6 +38,15 @@ interface ProductFormData {
   isActive: boolean;
 }
 
+/**
+ * Bộ lọc trạng thái ở đầu bảng:
+ * - "active": chỉ sản phẩm đang bán (isActive = true)
+ * - "hidden": chỉ sản phẩm đã ẩn (isActive = false — do admin bỏ tick
+ *   "Đang bán" khi cập nhật, hoặc do xoá mềm)
+ * - "all": cả hai loại
+ */
+type ProductStatusFilter = "active" | "hidden" | "all";
+
 const emptyForm: ProductFormData = {
   name: "",
   description: "",
@@ -51,30 +61,65 @@ const emptyForm: ProductFormData = {
 
 const CATEGORY_OPTIONS = ["yarn", "hook", "needle", "accessory", "kit"];
 
+// Giá được nhập MỘT LẦN ở cấp sản phẩm (VariantEditor render với hidePrice),
+// nên khi validate KHÔNG được yêu cầu giá riêng cho từng variant — nếu không
+// variant nào có price = 0 sẽ báo lỗi "fixVariantErrors" mà user không thấy
+// field giá của variant ở đâu để sửa.
+const VARIANT_PRICE_IS_SHARED = true;
+
+const newVariantRow = (price: number): VariantData => ({
+  color: "",
+  hexCode: "#000000",
+  price,
+  stock: 0,
+  image: "",
+  imageFile: null,
+});
+
+const createEmptyForm = (): ProductFormData => ({
+  ...emptyForm,
+  variants: [newVariantRow(0)],
+});
+
+// ─── Hiển thị sản phẩm đã ẩn ─────────────────────────────
+// Logic "gom hết sản phẩm kèm cả đã ẩn rồi lọc isActive = false" nằm trong
+// `productService.getHidden` (BE không có tham số lọc isActive=false, chỉ có
+// includeInactive=true trả về cả hai loại và chỉ áp dụng cho Admin).
+
 // ─── Confirm Dialog ──────────────────────────────────────
 
-// Removed — replaced by HoldToDeleteButton
+// Removed — deletion now uses <ConfirmDeleteButton /> (click → confirm dialog)
 
 // ─── Main Component ──────────────────────────────────────
 
 export function ProductManagement() {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const { hasRole } = useAuth();
-  const isAdminOrStaff = hasRole("admin") || hasRole("staff");
+  const isAdmin = hasRole("admin");
+  const isAdminOrStaff = isAdmin || hasRole("staff");
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [showInactive, setShowInactive] = useState(false);
+  // Lọc theo trạng thái: đang bán / đã ẩn / tất cả.
+  // "Đã ẩn" = isActive = false. BE chỉ trả về sản phẩm đã ẩn khi gửi kèm
+  // `includeInactive=true` VÀ request có token của Admin (xem product.controller.js
+  // + middleware optionalAuthentication trong route GET /products).
+  const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>("active");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Read-only detail popup opened by the list's "view" action.
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [form, setForm] = useState<ProductFormData>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
+  // Lỗi theo từng variant (index → field → message) để hiển thị inline
+  // trong VariantEditor thay vì chỉ báo toast chung.
+  const [variantErrors, setVariantErrors] = useState<Record<string, string>[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 50;
+  const limit = 10;
 
   // ─── Fetch products ───────────────────────────────────
 
@@ -83,7 +128,22 @@ export function ProductManagement() {
     try {
       const params: Record<string, string | number | boolean> = { page, limit };
       if (searchTerm.trim()) params.search = searchTerm.trim();
-      if (showInactive) params.includeInactive = true;
+
+      if (statusFilter === "hidden") {
+        // Chỉ sản phẩm đã ẩn: BE không có tham số lọc `isActive=false`, chỉ có
+        // includeInactive=true (trả cả 2 loại) nên phải gom hết rồi lọc ở FE
+        // → hiện đủ mọi sản phẩm đã ẩn trong 1 trang, không cần phân trang.
+        const hidden = await productService.getHidden({
+          search: searchTerm.trim() || undefined,
+        });
+        setProducts(hidden);
+        setTotal(hidden.length);
+        setTotalPages(1);
+        return;
+      }
+
+      // "Tất cả" = đang bán + đã ẩn (BE phân trang trên cả 2 loại).
+      if (statusFilter === "all") params.includeInactive = true;
 
       const { data: response } = await productService.getAll(params);
       const apiData = response.data;
@@ -95,7 +155,7 @@ export function ProductManagement() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, showInactive, t]);
+  }, [page, searchTerm, statusFilter, t]);
 
   useEffect(() => {
     fetchProducts();
@@ -110,7 +170,8 @@ export function ProductManagement() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ ...emptyForm });
+    setForm(createEmptyForm());
+    setVariantErrors([]);
     setShowModal(true);
   };
 
@@ -148,13 +209,37 @@ export function ProductManagement() {
       })),
       isActive: full.isActive,
     });
+    setVariantErrors([]);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setForm({ ...emptyForm });
+    setForm(createEmptyForm());
+    setVariantErrors([]);
+  };
+
+  // ─── Read-only detail popup ───────────────────────────
+
+  const openDetail = async (product: Product) => {
+    // Show the row data immediately, then replace it with the full detail
+    // (the list API sometimes omits description/variants).
+    setDetailProduct(product);
+    setDetailLoading(true);
+    try {
+      const res = await productService.getById(product._id);
+      if (res.data.data?.product) setDetailProduct(res.data.data.product);
+    } catch {
+      // keep the row data — the popup still shows name/category/price
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setDetailProduct(null);
+    setDetailLoading(false);
   };
 
   // ─── Validate ─────────────────────────────────────────
@@ -176,7 +261,17 @@ export function ProductManagement() {
       toast.error(t("admin.products.variantRequired"));
       return false;
     }
-    const vErrors = validateVariants(form.variants);
+    // Giá được nhập ở cấp sản phẩm (variant không có field giá riêng),
+    // nên phải kiểm tra giá ở đây — không thể để validateVariants báo lỗi
+    // trên một field đang bị ẩn.
+    if (VARIANT_PRICE_IS_SHARED && !(form.price > 0)) {
+      toast.error(t("admin.products.priceRequired"));
+      return false;
+    }
+    const vErrors = validateVariants(form.variants, {
+      requirePrice: !VARIANT_PRICE_IS_SHARED,
+    });
+    setVariantErrors(vErrors);
     if (hasVariantErrors(vErrors)) {
       toast.error(t("admin.products.fixVariantErrors"));
       return false;
@@ -204,7 +299,9 @@ export function ProductManagement() {
         variants: form.variants.map((v) => ({
           color: (v.color ?? "").trim(),
           hexCode: v.hexCode ?? "",
-          price: v.price ?? 0,
+          // Variant không có field giá riêng → luôn gửi kèm giá sản phẩm
+          // để BE không nhận price = 0.
+          price: v.price > 0 ? v.price : form.price,
           stock: v.stock ?? 0,
           image: (v.image ?? "").trim() || undefined,
           imageFile: v.imageFile ?? null,
@@ -280,13 +377,7 @@ export function ProductManagement() {
           </p>
         </div>
         {isAdminOrStaff && (
-          <button
-            onClick={openCreate}
-            className="btn-create"
-          >
-            <Plus size={18} />
-            {t("admin.products.create")}
-          </button>
+          <CreateButton label={t("admin.products.create")} onClick={openCreate} />
         )}
       </div>
 
@@ -305,20 +396,42 @@ export function ProductManagement() {
               style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
             />
           </div>
-          <div className="mt-3">
-            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => {
-                  setShowInactive(e.target.checked);
+          {isAdmin && (
+            <div className="mt-3 max-w-xs">
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--foreground-muted)" }}
+              >
+                {t("admin.products.status")}
+              </label>
+              {/* Sản phẩm "đã ẩn" chỉ lấy được khi request có token Admin
+                  (BE chặn includeInactive với role khác) → ẩn filter với Staff. */}
+              <AdminSelect
+                value={statusFilter}
+                options={[
+                  {
+                    value: "active",
+                    label: t("admin.products.active"),
+                    dotClassName: "bg-emerald-500",
+                  },
+                  {
+                    value: "hidden",
+                    label: t("admin.products.inactive"),
+                    dotClassName: "bg-rose-500",
+                  },
+                  {
+                    value: "all",
+                    label: t("admin.products.all"),
+                    dotClassName: "bg-slate-400",
+                  },
+                ]}
+                onChange={(value) => {
+                  setStatusFilter(value as ProductStatusFilter);
                   setPage(1);
                 }}
-                className="rounded border-border"
               />
-              {t("admin.products.showInactive")}
-            </label>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Table Body */}
@@ -329,7 +442,11 @@ export function ProductManagement() {
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Package size={40} className="mx-auto mb-3 opacity-40" />
-            <p>{t("admin.products.noProducts")}</p>
+            <p>
+              {statusFilter === "hidden"
+                ? t("admin.products.noHiddenProducts")
+                : t("admin.products.noProducts")}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
@@ -339,16 +456,31 @@ export function ProductManagement() {
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">
                     {t("admin.products.product")}
                   </th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                  {/* Căn lề bằng inline style: rule `.admin-table thead th`
+                      (CSS unlayered) đè utility text-right / text-center
+                      của Tailwind nên header không thẳng cột với body. */}
+                  <th
+                    className="px-6 py-4 text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     {t("admin.products.price")}
                   </th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
+                  <th
+                    className="px-6 py-4 text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     {t("admin.products.totalStock")}
                   </th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground">
+                  <th
+                    className="px-6 py-4 text-sm font-medium text-muted-foreground"
+                    style={{ textAlign: "center" }}
+                  >
                     {t("admin.products.status")}
                   </th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[120px]">
+                  <th
+                    className="px-6 py-4 text-sm font-medium text-muted-foreground w-[120px]"
+                    style={{ textAlign: "center" }}
+                  >
                     {t("admin.products.actions")}
                   </th>
                 </tr>
@@ -373,29 +505,44 @@ export function ProductManagement() {
                             className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                           />
                           <div className="min-w-0">
-                            <span className="font-medium block truncate">
+                            <span
+                              className="font-medium block truncate"
+                              style={{ color: "var(--foreground)" }}
+                            >
                               {product.name}
                             </span>
                             {product.tags && product.tags.length > 0 && (
-                              <span className="text-xs text-muted-foreground truncate block mt-0.5">
+                              <span
+                                className="text-xs truncate block mt-0.5"
+                                style={{ color: "var(--foreground-muted)" }}
+                              >
                                 {product.tags.slice(0, 3).join(", ")}
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right text-sm font-semibold text-primary">
+                      {/* Inline style cho màu: `.admin-table tbody td`
+                          (CSS unlayered) đè utility text-* của Tailwind. */}
+                      <td
+                        className="px-6 py-4 text-center text-sm font-semibold tabular-nums"
+                        style={{ color: "var(--primary)" }}
+                      >
                         {min === max
                           ? formatPrice(min)
                           : `${formatPrice(min)} – ${formatPrice(max)}`}
                       </td>
-                      <td className="px-6 py-4 text-right text-sm">
+                      <td className="px-6 py-4 text-center text-sm">
                         <span
-                          className={
-                            totalStock < 10
-                              ? "text-accent-red font-semibold"
-                              : "text-secondary"
-                          }
+                          className={`tabular-nums ${
+                            totalStock < 10 ? "font-semibold" : ""
+                          }`}
+                          style={{
+                            color:
+                              totalStock < 10
+                                ? "var(--accent-red-text)"
+                                : "var(--foreground)",
+                          }}
                         >
                           {totalStock}
                         </span>
@@ -412,12 +559,10 @@ export function ProductManagement() {
                           {product.isActive ? t("admin.products.active") : t("admin.products.inactive")}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() =>
-                              navigate(`/admin/products/${product._id}`)
-                            }
+                            onClick={() => void openDetail(product)}
                             className="admin-action-btn view"
                             title={t("admin.products.viewDetails")}
                           >
@@ -431,7 +576,7 @@ export function ProductManagement() {
                             <Edit3 size={16} />
                           </button>
                           {product.isActive ? (
-                            <HoldToDeleteButton
+                            <ConfirmDeleteButton
                               onDelete={async () => {
                                 try {
                                   await productService.delete(product._id);
@@ -446,7 +591,7 @@ export function ProductManagement() {
                                   }
                                 }
                               }}
-                              title={t("admin.products.holdToDelete")}
+                              itemName={product.name}
                             />
                           ) : (
                             <button
@@ -468,28 +613,12 @@ export function ProductManagement() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="btn-secondary"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            {t("admin.products.previous")}
-          </button>
-          <span className="text-sm">
-            {t("admin.products.page", { page, total: totalPages })}
-          </span>
-          <button
-            className="btn-secondary"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            {t("admin.products.next")}
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={10}
+      />
 
       {/* Modal */}
       {showModal && (
@@ -623,8 +752,19 @@ export function ProductManagement() {
                   </div>
                   <VariantEditor
                     variants={form.variants}
-                    onChange={(variants) => setForm({ ...form, variants })}
-                    hidePrice
+                    onChange={(variants) => {
+                      setForm({ ...form, variants });
+                      // Tính lỗi ngay khi user sửa: thông báo inline tự mất
+                      // khi field đã hợp lệ.
+                      setVariantErrors(
+                        validateVariants(variants, {
+                          requirePrice: !VARIANT_PRICE_IS_SHARED,
+                        }),
+                      );
+                    }}
+                    errors={variantErrors}
+                    hidePrice={VARIANT_PRICE_IS_SHARED}
+                    defaultPrice={form.price}
                   />
                 </div>
 
@@ -666,6 +806,16 @@ export function ProductManagement() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Read-only detail popup — viewing a product no longer leaves the list */}
+      {detailProduct && (
+        <ProductDetailModal
+          key={detailProduct._id}
+          product={detailProduct}
+          loading={detailLoading}
+          onClose={closeDetail}
+        />
       )}
 
     </div>

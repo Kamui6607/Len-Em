@@ -6,10 +6,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Plus,
   Search,
   Edit2,
-  Trash2,
   Eye,
   Package,
   X,
@@ -23,6 +21,20 @@ import { formatPrice } from "../../../lib/formatPrice";
 import type { BackendProduct } from "../../../shared/types/product.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+
+/**
+ * Bộ lọc trạng thái kit (giống /admin/products):
+ * - "active": chỉ kit đang bán
+ * - "hidden": chỉ kit đã ẩn (isActive = false)
+ * - "all": cả hai loại (FE gộp vì BE không trả cả hai trong 1 request)
+ */
+type KitStatusFilter = "active" | "hidden" | "all";
+
+const KITS_PAGE_SIZE = 10;
 
 const LEVEL_OPTIONS = [
   { value: "all", label: "All Levels" },
@@ -41,8 +53,12 @@ const LEVEL_BADGE_CLASS: Record<string, string> = {
 export function AdminKits() {
   const { t } = useLanguage();
   const [kits, setKits] = useState<Kit[]>([]);
+  // Kit của chế độ "Tất cả" (đang bán + đã ẩn): BE không trả cả hai loại trong
+  // 1 request nên FE gộp rồi tự phân trang. null = đang dùng dữ liệu của BE.
+  const [allKits, setAllKits] = useState<Kit[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<KitStatusFilter>("active");
   const { inputValue: searchQuery, debouncedValue: debouncedSearchQuery, setInputValue: setSearchQuery } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -53,11 +69,25 @@ export function AdminKits() {
   const fetchKits = async (page: number) => {
     setLoading(true);
     try {
+      const level = levelFilter === "all" ? undefined : levelFilter;
+
+      if (statusFilter === "all") {
+        // Gọi cả kit đang bán + đã ẩn rồi gộp, phân trang ở FE (getAllStatuses)
+        const merged = await kitService.getAllStatuses({ level });
+        setAllKits(merged);
+        setKits([]);
+        setTotalPages(Math.max(1, Math.ceil(merged.length / KITS_PAGE_SIZE)));
+        return;
+      }
+
       const res = await kitService.getAll({
         page,
-        limit: 20,
-        level: levelFilter === "all" ? undefined : levelFilter,
+        limit: KITS_PAGE_SIZE,
+        level,
+        // "đã ẩn" -> isActive=false; "đang bán" -> không truyền (BE mặc định true)
+        isActive: statusFilter === "hidden" ? false : undefined,
       });
+      setAllKits(null);
       setKits(res.data.data?.kits || []);
       setTotalPages(res.data.data?.totalPages || 1);
     } catch {
@@ -69,7 +99,7 @@ export function AdminKits() {
 
   useEffect(() => {
     fetchKits(currentPage);
-  }, [currentPage, levelFilter]);
+  }, [currentPage, levelFilter, statusFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +107,7 @@ export function AdminKits() {
   };
 
   const handleDelete = async (kitId: string) => {
-    if (!confirm(t("admin.kits.deleteConfirm"))) return;
-
+    // Confirmation now lives in <ConfirmDeleteButton /> (click → dialog).
     try {
       await kitService.delete(kitId);
       toast.success(t("admin.kits.deleteSuccess"));
@@ -88,7 +117,12 @@ export function AdminKits() {
     }
   };
 
-  const filteredKits = kits.filter((kit) => {
+  // Chế độ "Tất cả": cắt trang ở FE; các chế độ khác BE đã trả sẵn 1 trang.
+  const visibleKits = allKits
+    ? allKits.slice((currentPage - 1) * KITS_PAGE_SIZE, currentPage * KITS_PAGE_SIZE)
+    : kits;
+
+  const filteredKits = visibleKits.filter((kit) => {
     if (!debouncedSearchQuery) return true;
     return (
       kit.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
@@ -106,10 +140,10 @@ export function AdminKits() {
             {t("admin.kits.subtitle")}
           </p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="btn-create">
-          <Plus size={18} />
-          {t("admin.kits.createKit")}
-        </button>
+        <CreateButton
+          label={t("admin.kits.createKit")}
+          onClick={() => setShowCreateModal(true)}
+        />
       </div>
 
       {/* Filters + Table */}
@@ -157,6 +191,33 @@ export function AdminKits() {
                 className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
             </div>
+            {/* Lọc trạng thái — giống /admin/products. BE cho phép lấy kit đã ẩn
+                qua ?isActive=false (không đòi quyền Admin như products). */}
+            <AdminSelect
+              className="sm:w-44 w-full"
+              value={statusFilter}
+              options={[
+                {
+                  value: "active",
+                  label: t("admin.kits.active"),
+                  dotClassName: "bg-emerald-500",
+                },
+                {
+                  value: "hidden",
+                  label: t("admin.kits.inactive"),
+                  dotClassName: "bg-rose-500",
+                },
+                {
+                  value: "all",
+                  label: t("admin.kits.all"),
+                  dotClassName: "bg-slate-400",
+                },
+              ]}
+              onChange={(value) => {
+                setStatusFilter(value as KitStatusFilter);
+                setCurrentPage(1);
+              }}
+            />
           </form>
         </div>
 
@@ -171,7 +232,11 @@ export function AdminKits() {
         ) : filteredKits.length === 0 ? (
           <div className="admin-empty-state" style={{ background: "var(--card)" }}>
             <Package size={48} />
-            <p>{t("admin.kits.noKitsFound")}</p>
+            <p>
+              {statusFilter === "hidden"
+                ? t("admin.kits.noHiddenKits")
+                : t("admin.kits.noKitsFound")}
+            </p>
             <p className="text-sm">{t("admin.kits.noKitsHint")}</p>
           </div>
         ) : (
@@ -180,11 +245,11 @@ export function AdminKits() {
               <thead className="bg-muted">
                 <tr>
                   <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.kit")}</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.level")}</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.price")}</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.products")}</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.status")}</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground w-[130px]">{t("admin.kits.actions")}</th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.level")}</th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.price")}</th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.products")}</th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.status")}</th>
+                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[130px]" style={{ textAlign: "center" }}>{t("admin.kits.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,24 +275,24 @@ export function AdminKits() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className={`badge capitalize ${LEVEL_BADGE_CLASS[kit.level] ?? "badge-gray"}`}>
                         {kit.level}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold" style={{ color: "var(--primary)" }}>
+                    <td className="px-6 py-4 text-center text-sm font-semibold" style={{ color: "var(--primary)" }}>
                       {formatPrice(kit.price)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">
                       {(kit.products || []).length} {t("admin.kits.items")}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                       <span className={`badge ${kit.isActive ? "badge-green" : "badge-red"}`}>
                         {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => setDetailKit(kit)}
                           className="admin-action-btn view"
@@ -242,13 +307,12 @@ export function AdminKits() {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button
-                          onClick={() => handleDelete(kit._id)}
-                          className="admin-action-btn delete"
-                          title={t("admin.kits.delete")}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <ConfirmDeleteButton
+                          onDelete={() => handleDelete(kit._id)}
+                          itemName={kit.name}
+                          disabled={!kit.isActive}
+                          disabledTitle={t("admin.kits.deleteInactiveHint")}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -259,28 +323,12 @@ export function AdminKits() {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="btn-secondary"
-          >
-            {t("admin.kits.previousPage")}
-          </button>
-          <span className="admin-pagination-info">
-            {t("admin.kits.pageInfo", { page: currentPage, totalPages })}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="btn-secondary"
-          >
-            {t("admin.kits.nextPage")}
-          </button>
-        </div>
-      )}
+      <AdminPagination
+        page={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        pageSize={KITS_PAGE_SIZE}
+      />
 
       {/* Create/Edit Modal */}
       <AnimatePresence>

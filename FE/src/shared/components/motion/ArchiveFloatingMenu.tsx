@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
 
 export function ArchiveFloatingMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,23 +16,23 @@ export function ArchiveFloatingMenu() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const handleMessagesClick = () => {
-    navigate("/messages");
-    setIsOpen(false);
-  };
-
   const handleChatbotClick = () => {
     navigate("/chatbot");
     setIsOpen(false);
   };
 
-  const handleHomeClick = () => {
-    navigate("/");
+  const handleFavoriteClick = () => {
+    navigate("/love");
     setIsOpen(false);
   };
 
-  const handleDemoClick = (demoName: string) => {
-    toast.info(`${demoName} clicked! (Demo only)`);
+  const handleCartClick = () => {
+    navigate("/cart");
+    setIsOpen(false);
+  };
+
+  const handleHomeClick = () => {
+    navigate("/");
     setIsOpen(false);
   };
 
@@ -46,9 +45,9 @@ export function ArchiveFloatingMenu() {
   // theo chiều kim đồng hồ (qua 3h rồi về lại 6h) nhờ công thức bên dưới.
   const arcButtons = [
     { id: "back-to-top", icon: "back-to-top", onClick: scrollToTop, label: "Về đầu trang" },
-    { id: "messages", icon: "messages", onClick: handleMessagesClick, label: "Tin nhắn" },
     { id: "chatbot", icon: "chatbot", onClick: handleChatbotClick, label: "Chatbot" },
-    { id: "demo2", icon: "demo2", onClick: () => handleDemoClick("Demo Button 2"), label: "Demo 2" },
+    { id: "favorite", icon: "favorite", onClick: handleFavoriteClick, label: "Favorite" },
+    { id: "cart", icon: "cart", onClick: handleCartClick, label: "Cart" },
     { id: "home", icon: "home", onClick: handleHomeClick, label: "Về trang chủ" },
   ];
 
@@ -76,10 +75,10 @@ export function ArchiveFloatingMenu() {
             <path d="M6 12L10 7L14 12" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </svg>
         );
-      case "messages":
+      case "favorite":
         return (
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <path d="M3 4C3 3.44772 3.44772 3 4 3H16C16.5523 3 17 3.44772 17 4V14C17 14.5523 16.5523 15 16 15H8L4 18V15H4C3.44772 15 3 14.5523 3 14V4Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M17.37 3.84a4.58 4.58 0 0 0-6.48 0L10 4.72l-.88-.88a4.58 4.58 0 0 0-6.48 6.48l.88.88L10 17.69l6.48-6.48.88-.88a4.58 4.58 0 0 0 0-6.48z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </svg>
         );
       case "chatbot":
@@ -91,10 +90,12 @@ export function ArchiveFloatingMenu() {
             <circle cx="13" cy="9" r="1" fill="white"/>
           </svg>
         );
-      case "demo2":
+      case "cart":
         return (
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <rect x="6" y="6" width="8" height="8" rx="2" fill="white" />
+            <path d="M2.5 3.5h1.8l2.1 9.8a1.7 1.7 0 0 0 1.7 1.3h7.7a1.7 1.7 0 0 0 1.7-1.3l1.3-6H5.1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            <circle cx="8" cy="16.7" r="1.2" fill="white" />
+            <circle cx="15.8" cy="16.7" r="1.2" fill="white" />
           </svg>
         );
       case "home":

@@ -6,6 +6,7 @@
 
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
+import { extractApiErrorMessage } from "./apiError";
 
 // ─── API Base URL ────────────────────────────────────────
 // VITE_API_BASE_URL (from .env) is NOT committed to git, so on Vercel/many
@@ -208,6 +209,12 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     if (status === 404 && url.includes("/kits/")) {
       return Promise.reject(error);
     }
+    // Sign-up / admin create-user forms print the backend validation errors
+    // inline next to the offending field, so keep the global toast out of the
+    // way to avoid double-reporting the same problem.
+    if (url.includes("/auth/signup") || url.includes("/auth/register")) {
+      return Promise.reject(error);
+    }
     const mapped: Record<number, string> = {
       400: "Invalid input. Please check your data.",
       403: "You don't have permission to do that.",
@@ -216,7 +223,13 @@ function handleAxiosError(error: AxiosError): Promise<never> {
       429: "Too many requests. Please slow down.",
       500: "Server error. Please try again later.",
     };
-    toast.error(mapped[status] ?? message);
+    // Prefer the backend's own wording (e.g. '"phone" is required',
+    // "Email already exists", the Vietnamese rate-limit notice) over the
+    // generic status text. 5xx keeps the mapping so internal errors are not
+    // surfaced to users.
+    const fallback = mapped[status] ?? message;
+    const readable = extractApiErrorMessage(error);
+    toast.error(status >= 500 ? fallback : readable || fallback);
   }
 
   return Promise.reject(error);

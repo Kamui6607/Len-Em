@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, Edit3, Users } from "lucide-react";
 import type { ApiUser, UserStatus } from "../../users/services/user.service";
-import { HoldToDeleteButton } from "../../../shared/components/admin/HoldToDeleteButton";
+import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { isInactiveStatus } from "../types/adminUsers.types";
+import { getRoleBadgeClass, getStatusBadgeClass, initialsOf } from "../utils/adminUsersFormat";
 
 interface AdminUsersMobileProps {
   users: ApiUser[];
@@ -18,18 +20,10 @@ interface AdminUsersMobileProps {
   page: number;
   pageSize: number;
   totalItems: number;
+  /** Authoritative page count from the API (falls back to totalItems/pageSize). */
+  totalPages?: number;
   onPageChange: (page: number) => void;
   getRoleName: (roleId: ApiUser["roleId"]) => string;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 }
 
 export function AdminUsersMobile({
@@ -48,9 +42,12 @@ export function AdminUsersMobile({
   page,
   pageSize,
   totalItems,
+  totalPages,
   onPageChange,
   getRoleName,
 }: AdminUsersMobileProps) {
+  const pageCount = totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
+
   if (loading) {
     return (
       <div className="space-y-3 p-4" aria-label="Loading users">
@@ -115,7 +112,7 @@ export function AdminUsersMobile({
                 }}
                 aria-hidden="true"
               >
-                {getInitials(user.fullName || user.username || "?")}
+                {initialsOf(user.fullName || user.username || "?")}
               </div>
 
               <div className="min-w-0 flex-1">
@@ -136,7 +133,7 @@ export function AdminUsersMobile({
                 <>
                   <label className="text-xs text-muted-foreground">
                     Role
-                    <div className="relative mt-1">
+                    <div className="badge-select-wrap mt-1 w-full">
                       <select
                         value={
                           typeof user.roleId === "string"
@@ -146,48 +143,64 @@ export function AdminUsersMobile({
                         onChange={(event) =>
                           onRoleChange(user, event.target.value)
                         }
-                        className="input min-h-11 w-full appearance-none bg-none pr-9 px-3 text-sm"
+                        className={`badge-select min-h-10 w-full ${getRoleBadgeClass(roleName)}`}
                         aria-label={`Role for ${user.fullName}`}
                       >
                         {roleOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
+                          <option
+                            key={option.value}
+                            value={option.value}
+                            style={{ background: "var(--dropdown-bg)", color: "var(--foreground)" }}
+                          >
                             {option.label}
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <ChevronDown className="badge-select-arrow text-current" />
                     </div>
                   </label>
                   <label className="text-xs text-muted-foreground">
                     Status
-                    <div className="relative mt-1">
-                      <select
-                        value={status}
-                        onChange={(event) =>
-                          onStatusChange(user, event.target.value as UserStatus)
-                        }
-                        className="input min-h-11 w-full appearance-none bg-none pr-9 px-3 text-sm"
-                        aria-label={`Status for ${user.fullName}`}
-                      >
-                        {statusOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <div className="badge-select-wrap mt-1 w-full">
+                      {/* LOCKED is a legacy status (no longer selectable): show a
+                          read-only badge instead of a select without that option. */}
+                      {status !== "LOCKED" ? (
+                        <select
+                          value={status}
+                          onChange={(event) =>
+                            onStatusChange(user, event.target.value as UserStatus)
+                          }
+                          className={`badge-select min-h-10 w-full ${getStatusBadgeClass(status)}`}
+                          aria-label={`Status for ${user.fullName}`}
+                        >
+                          {statusOptions.map((option) => (
+                            <option
+                              key={option.value}
+                              value={option.value}
+                              style={{ background: "var(--dropdown-bg)", color: "var(--foreground)" }}
+                            >
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`badge ${getStatusBadgeClass(status)}`}>
+                          {status}
+                        </span>
+                      )}
+                      {status !== "LOCKED" && <ChevronDown className="badge-select-arrow text-current" />}
                     </div>
                   </label>
                 </>
               ) : (
                 <>
                   <div>
-                    <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="mt-1 text-sm font-medium">{roleName}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Role</p>
+                    <span className={`badge ${getRoleBadgeClass(roleName)}`}>{roleName}</span>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Status</p>
-                    <p className="mt-1 text-sm font-medium">{status}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Status</p>
+                    <span className={`badge ${getStatusBadgeClass(status)}`}>{status}</span>
                   </div>
                 </>
               )}
@@ -199,7 +212,7 @@ export function AdminUsersMobile({
                   <button
                     type="button"
                     onClick={() => onViewUser(user)}
-                    className="admin-action-btn min-h-11 min-w-11"
+                    className="admin-action-btn view min-h-11 min-w-11"
                     aria-label={`View ${user.fullName}`}
                   >
                     <Eye className="h-4 w-4" />
@@ -207,14 +220,17 @@ export function AdminUsersMobile({
                   <button
                     type="button"
                     onClick={() => onEditUser(user)}
-                    className="admin-action-btn min-h-11 min-w-11"
+                    className="admin-action-btn edit min-h-11 min-w-11"
                     aria-label={`Edit ${user.fullName}`}
                   >
                     <Edit3 className="h-4 w-4" />
                   </button>
-                  <HoldToDeleteButton
+                  <ConfirmDeleteButton
                     onDelete={() => onDeleteUser(user)}
-                    title="Hold to delete"
+                    itemName={user.fullName}
+                    disabled={isInactiveStatus(status)}
+                    disabledTitle="Already inactive — cannot delete"
+                    className="min-h-11 min-w-11"
                   />
                 </>
               ) : (
@@ -225,7 +241,7 @@ export function AdminUsersMobile({
         );
       })}
 
-      {totalItems > pageSize && (
+      {pageCount > 1 && (
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <button
             type="button"
@@ -237,14 +253,12 @@ export function AdminUsersMobile({
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="text-xs text-muted-foreground">
-            Page {page} of {Math.max(1, Math.ceil(totalItems / pageSize))}
+            Page {page} of {pageCount}
           </span>
           <button
             type="button"
-            onClick={() =>
-              onPageChange(Math.min(Math.ceil(totalItems / pageSize), page + 1))
-            }
-            disabled={page >= Math.ceil(totalItems / pageSize)}
+            onClick={() => onPageChange(Math.min(pageCount, page + 1))}
+            disabled={page >= pageCount}
             className="admin-action-btn min-h-11 min-w-11"
             aria-label="Next page"
           >
