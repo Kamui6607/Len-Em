@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { diyService } from "../../../features/diy/services/diy.service";
 import type { DIYPost } from "../../../features/diy/types/diy.types";

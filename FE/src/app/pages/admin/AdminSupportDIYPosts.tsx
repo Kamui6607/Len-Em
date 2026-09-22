@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supportDIYService } from "../../../features/supportDIY/services/supportDIY.service";
 import type { SupportDIYPost } from "../../../features/supportDIY/types/supportDIY.types";
@@ -15,10 +15,6 @@ import {
 import { ReportButton } from "../../../shared/components/ReportButton";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
-import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-} from "../../../shared/components/admin/AdminSearch";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import {
   AdminListSkeleton,
@@ -45,14 +41,11 @@ export function AdminSupportDIYPosts() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Tìm kiếm: gõ phản hồi ngay, gọi API sau 400ms ngừng gõ.
-  const {
-    inputValue: searchInput,
-    debouncedValue: debouncedSearch,
-    setInputValue: setSearchInput,
-    isWaiting: searchIsWaiting,
-    clear: clearSearch,
-  } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  // Tìm kiếm: chỉ cần giá trị đã debounce (gọi API sau 400ms ngừng gõ).
+  const { debouncedValue: debouncedSearch } = useDebouncedSearch({
+    delay: 400,
+    minChars: 0,
+  });
   const isSearching = debouncedSearch.trim().length > 0;
 
   // Edit modal state
