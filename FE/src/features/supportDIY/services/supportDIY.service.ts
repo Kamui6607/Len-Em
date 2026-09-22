@@ -2,7 +2,7 @@ import axiosClient from "../../../lib/axiosClient";
 import type { CreateSupportDIYDTO, SupportDIYPost, SupportDIYPostsResponse } from "../types/supportDIY.types";
 
 export const supportDIYService = {
-  getAllPosts: (params?: { page?: number; limit?: number; status?: string; creatorId?: string; linkedComboId?: string; linkedProductId?: string }) =>
+  getAllPosts: (params?: { page?: number; limit?: number; status?: string; search?: string; creatorId?: string; linkedComboId?: string; linkedProductId?: string }) =>
     axiosClient.get<{ status: string; data: SupportDIYPostsResponse }>("/support-diy", { params }),
 
   getPostById: (id: string) =>

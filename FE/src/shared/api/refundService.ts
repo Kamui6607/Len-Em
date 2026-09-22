@@ -54,6 +54,7 @@ export const refundService = {
     page?: number;
     limit?: number;
     status?: string;
+    search?: string;
   }) =>
     axiosClient.get<{ status: string; data: RefundInvoicesListResponse }>(
       REFUND_BASE,

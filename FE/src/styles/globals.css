@@ -1050,6 +1050,32 @@ select.input[class*="bg-none"],
 
 
 
+/* react-day-picker (DatePicker) month / year dropdowns.
+   The library lays a native <select> transparently over the caption label
+   (`.rdp-dropdown { opacity: 0; appearance: none }`), so the popup list keeps
+   the *inherited* theme text colour while the OS paints a white list — in dark
+   mode the year/month options were light-on-white and unreadable. Give the
+   control + its options explicit theme colours, and switch its color-scheme so
+   the native popup follows the active theme. */
+.rdp-dropdown {
+  color-scheme: light;
+  background-color: var(--dropdown-bg);
+  color: var(--foreground);
+}
+.dark .rdp-dropdown {
+  color-scheme: dark;
+}
+.rdp-dropdown option,
+.rdp-dropdown optgroup {
+  background-color: var(--dropdown-bg);
+  color: var(--foreground);
+}
+.rdp-dropdown option:checked {
+  background-color: var(--primary-soft);
+  color: var(--primary);
+}
+
+
 /* Custom Dropdown Menu */
 .dropdown-menu {
   background: var(--dropdown-bg);

@@ -98,7 +98,7 @@ export function UserMenu({
   const isStaff = user.roleId === "staff";
   const isDashboardUser = isAdmin || isStaff;
 
-  // Admin có trang notifications riêng trong admin panel (chỉ nhận Report),
+  // Admin có trang notifications riêng trong admin panel (nhận mọi loại thông báo),
   // KHÔNG chuyển sang trang notifications của user.
   const notificationsPath = isAdmin ? "/admin/notifications" : "/notifications";
 

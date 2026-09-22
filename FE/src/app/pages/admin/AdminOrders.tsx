@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Search,
   ChevronUp,
   ChevronDown,
   Check,
@@ -18,6 +17,14 @@ import type {
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
+import {
+  AdminDialogSkeleton,
+  AdminTableSkeleton,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 
 type OrderFilter = "all" | OrderStatus;
 
@@ -43,7 +50,7 @@ export function AdminOrders() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<OrderFilter>("all");
-  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -216,9 +223,32 @@ export function AdminOrders() {
   });
 
   if (loading) {
+    // Skeleton giữ NGUYÊN bố cục trang thật (header + panel toolbar + bảng +
+    // phân trang) để lúc data về không bị giật layout.
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div>
+            <h1 className="mb-2">Order Management</h1>
+            <p className="text-muted-foreground">
+              View and manage all orders from the API
+            </p>
+          </div>
+        </div>
+
+        <AdminTableSkeleton
+          filters={1}
+          pagination
+          rows={7}
+          columns={[
+            "stack",
+            "stack",
+            "text",
+            { type: "money", align: "center" },
+            { type: "badge", align: "center" },
+            { type: "actions", align: "center" },
+          ]}
+        />
       </div>
     );
   }
@@ -240,42 +270,52 @@ export function AdminOrders() {
         className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
         style={{ borderColor: "var(--border)" }}
       >
-        {/* Filters */}
-        <div
-          className="p-6 border-b border-border space-y-3"
-          style={{ background: "var(--surface)" }}
-        >
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search orders..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input w-full"
-              style={{
-                paddingLeft: "3rem",
-                paddingRight: "1rem",
-                paddingTop: "0.75rem",
-                paddingBottom: "0.75rem",
-              }}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(["all", ...ORDER_STATUSES] as OrderFilter[]).map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`order-filter-btn px-4 py-2 rounded-lg whitespace-nowrap transition-all duration-200 text-sm font-medium ${
-                  filter === status ? "active" : ""
-                }`}
-              >
-                {status.toLowerCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-
+        {/* Filters — search dùng chung component (debounce 400ms) */}
+        <AdminSearchToolbar
+          search={{
+            value: searchTerm,
+            onChange: (value) => {
+              setSearchTerm(value);
+              setPage(1);
+            },
+            placeholder: "Search orders (order ID, customer, phone)…",
+            isSearching: searchIsWaiting,
+          }}
+          filters={
+            <div className="flex flex-wrap gap-2">
+              {(["all", ...ORDER_STATUSES] as OrderFilter[]).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`order-filter-btn px-4 py-2 rounded-lg whitespace-nowrap transition-all duration-200 text-sm font-medium ${
+                    filter === status ? "active" : ""
+                  }`}
+                >
+                  {status.toLowerCase()}
+                </button>
+              ))}
+            </div>
+          }
+          onReset={
+            searchTerm || filter !== "all"
+              ? () => {
+                  clearSearch();
+                  setFilter("all");
+                  setPage(1);
+                }
+              : undefined
+          }
+          resetLabel="Clear filters"
+          meta={
+            searchTerm || debouncedSearchTerm ? (
+              <AdminSearchMeta searching={searchIsWaiting}>
+                {sortedOrders.length === 0
+                  ? "No results found"
+                  : `${sortedOrders.length} result${sortedOrders.length === 1 ? "" : "s"}`}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
         {/* Table Body */}
         <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
           <table className="admin-table w-full">
@@ -485,9 +525,9 @@ export function AdminOrders() {
             </div>
             <div className="admin-dialog-body">
               {detailLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-                </div>
+                // Dialog xem chi tiết đơn (read action): skeleton đúng hình
+                // dạng khối thông tin + danh sách sản phẩm trong đơn.
+                <AdminDialogSkeleton items={4} rows={3} />
               ) : (
                 <div className="space-y-6">
                   {/* Order Info */}

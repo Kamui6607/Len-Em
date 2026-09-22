@@ -1,12 +1,17 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
-import type { Notification } from "../types/notification.types";
+import {
+  isServerNotificationId,
+  type NewNotificationInput,
+  type Notification,
+} from "../types/notification.types";
 import { notificationService } from "../api/notificationService";
+import { useAuthStore } from "../store/auth.store";
 
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
-  addNotification: (notification: Omit<Notification, "_id" | "read" | "createdAt">) => void;
+  addNotification: (notification: NewNotificationInput) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   clearNotification: (notificationId: string) => void;
@@ -16,70 +21,125 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(() => {
-    const saved = localStorage.getItem("lenEm_notifications");
-    return saved ? JSON.parse(saved) : [];
-  });
+// Each account keeps its own cache so an Admin session never leaks into the
+// next customer session on the same browser.
+const STORAGE_PREFIX = "lenEm_notifications";
 
+function storageKey(userId: string | null): string {
+  return `${STORAGE_PREFIX}_${userId ?? "guest"}`;
+}
+
+function readCache(userId: string | null): Notification[] {
+  try {
+    const raw = localStorage.getItem(storageKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Notification[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const userId = useAuthStore((s) => s.user?.userId ?? s.user?.id ?? null);
+  const [notifications, setNotifications] = useState<Notification[]>(() => readCache(userId));
+
+  // Mirror of the current list for event handlers (kept out of the updater
+  // functions so those stay pure).
+  const notificationsRef = useRef<Notification[]>(notifications);
   useEffect(() => {
-    localStorage.setItem("lenEm_notifications", JSON.stringify(notifications));
+    notificationsRef.current = notifications;
   }, [notifications]);
+
+  // Reload the cache when the signed-in account changes.
+  useEffect(() => {
+    setNotifications(readCache(userId));
+  }, [userId]);
+
+  // Persist only for a signed-in account (guests keep everything in memory).
+  useEffect(() => {
+    if (!userId) return;
+    try {
+      localStorage.setItem(storageKey(userId), JSON.stringify(notifications));
+    } catch {
+      // Storage full / disabled — notifications still work in memory.
+    }
+  }, [userId, notifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const addNotification = useCallback((data: Omit<Notification, "_id" | "read" | "createdAt">) => {
-    const newNotification: Notification = {
-      ...data,
-      _id: `NOTIF-${Date.now()}`,
-      read: false,
-      createdAt: new Date().toISOString(),
+  const addNotification = useCallback((data: NewNotificationInput) => {
+    const incoming: Notification = {
+      _id: data._id ?? `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: data.type,
+      priority: data.priority ?? "NORMAL",
+      title: data.title,
+      message: data.message,
+      targetId: data.targetId,
+      targetPath: data.targetPath,
+      read: data.read ?? false,
+      createdAt: data.createdAt ?? new Date().toISOString(),
+      updatedAt: data.updatedAt,
+      metadata: data.metadata,
     };
-    setNotifications((prev) => [newNotification, ...prev]);
+
+    setNotifications((prev) => {
+      // The REST history and the socket can both deliver the same notification
+      // — keep a single entry per server id.
+      if (data._id && prev.some((n) => n._id === data._id)) return prev;
+      return [incoming, ...prev];
+    });
   }, []);
 
+
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications((prev) => {
-      const notification = prev.find((n) => n._id === notificationId);
-      // Only call API if notification exists and is not already read
-      if (notification && !notification.read) {
-        notificationService.markAsRead(notificationId).catch(() => {
-          // Silent fail — local state is already updated
-        });
-      }
-      return prev.map((n) => (n._id === notificationId ? { ...n, read: true } : n));
-    });
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === notificationId ? { ...n, read: true } : n)),
+    );
+    // Locally generated notifications have no server record — skip the API.
+    if (isServerNotificationId(notificationId)) {
+      notificationService.markAsRead(notificationId).catch(() => {
+        // Silent fail — local state is already updated
+      });
+    }
   }, []);
 
   const markAllAsRead = useCallback(() => {
-    const unreadIds = notifications.filter((n) => !n.read).map((n) => n._id);
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    // Call API for each unread notification
-    unreadIds.forEach((id) => {
-      notificationService.markAsRead(id).catch(() => {});
-    });
-  }, [notifications]);
+    const unreadServerIds = notificationsRef.current
+      .filter((n) => !n.read && isServerNotificationId(n._id))
+      .map((n) => n._id);
 
-  const clearNotification = useCallback((notificationId: string) => {
-    setNotifications((prev) => prev.filter((n) => n._id !== notificationId));
-    // Call API to delete on server
-    notificationService.delete(notificationId).catch(() => {
-      // Silent fail — local state is already updated
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+
+    // No bulk endpoint on the backend — PATCH each unread notification.
+    unreadServerIds.forEach((id) => {
+      notificationService.markAsRead(id).catch(() => {});
     });
   }, []);
 
+  const clearNotification = useCallback((notificationId: string) => {
+    setNotifications((prev) => prev.filter((n) => n._id !== notificationId));
+    if (isServerNotificationId(notificationId)) {
+      notificationService.delete(notificationId).catch(() => {
+        // Silent fail — local state is already updated
+      });
+    }
+  }, []);
+
   const clearAllNotifications = useCallback(() => {
-    // Get all notification IDs before clearing
-    const allNotificationIds = notifications.map((n) => n._id);
-    // Clear local state immediately
+    const serverIds = notificationsRef.current
+      .filter((n) => isServerNotificationId(n._id))
+      .map((n) => n._id);
+
     setNotifications([]);
-    // Delete each notification from server (backend only supports DELETE /notifications/{id})
-    allNotificationIds.forEach((id) => {
+
+    // Backend only supports DELETE /notifications/{id}
+    serverIds.forEach((id) => {
       notificationService.delete(id).catch(() => {
         // Silent fail — local state is already updated
       });
     });
-  }, [notifications]);
+  }, []);
 
   return (
     <NotificationContext.Provider

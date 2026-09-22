@@ -24,6 +24,10 @@ import type {
   Lesson,
 } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import {
+  AdminFormSkeleton,
+  AdminPickerSkeleton,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 
 const levelOptions: { value: CourseLevel; label: string }[] = [
   { value: "beginner", label: "Beginner" },
@@ -166,13 +170,9 @@ export function CourseFormPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          Loading course...
-        </div>
-      </div>
-    );
+    // Skeleton dựng đúng layout form course (back + tiêu đề, panel field bên
+    // trái, panel ảnh/giá/trạng thái bên phải) → khi data về không nhảy.
+    return <AdminFormSkeleton />;
   }
 
   const filteredLessons = allLessons.filter((lesson) =>
@@ -395,9 +395,7 @@ export function CourseFormPage() {
                 style={{ minHeight: "100px" }}
               >
                 {lessonsLoading ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    {t("admin.courses.form.loading")}
-                  </p>
+                  <AdminPickerSkeleton rows={4} />
                 ) : filteredLessons.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     {lessonSearch ? t("admin.courses.form.noLessonsMatch") : t("admin.courses.form.noLessonsAvailable")}

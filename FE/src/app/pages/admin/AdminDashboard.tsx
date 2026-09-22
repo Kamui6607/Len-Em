@@ -19,6 +19,7 @@ import { useTheme } from "../../../shared/contexts/ThemeContext";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminStatCard, AdminStatGrid, type AdminStatCardData } from "../../../shared/components/admin/AdminStatCard";
 import { AdminPanel, AdminPanelHeader, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import { SkeletonBlock } from "../../../shared/components/skeletons/AdminSkeleton";
 
 export function AdminDashboard() {
   const { t } = useLanguage();
@@ -227,38 +228,65 @@ export function AdminDashboard() {
       <AdminPanel>
         <AdminPanelHeader icon={<TrendingUp className="w-4.5 h-4.5" />} title={t("admin.dashboard.orderStatistics")} />
         <AdminPanelBody className="space-y-5">
-          {/* Proportion bar */}
-          <div className="admin-breakdown-track flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
-            {orderBreakdown.map((o) => (
-              <div
-                key={o.label}
-                className="admin-breakdown-segment"
-                style={{
-                  width: `${(o.value / breakdownTotal) * 100}%`,
-                  background: o.color,
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            {orderBreakdown.map((o) => (
-              <div key={o.label} className="admin-breakdown-row flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="admin-breakdown-dot h-2 w-2 rounded-full" style={{ background: o.color, color: o.color }} />
-                  {o.label}
-                </span>
-                <span className="text-sm font-semibold text-foreground">{o.value}</span>
+          {loading ? (
+            // Skeleton cho khối "Order Statistics": thanh tỉ lệ + 3 dòng
+            // trạng thái + dòng tổng doanh thu (đúng bố cục thật).
+            <>
+              <SkeletonBlock className="h-2 w-full rounded-full" />
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <SkeletonBlock className="size-2 rounded-full" />
+                      <SkeletonBlock className="h-3.5 w-24" />
+                    </span>
+                    <SkeletonBlock className="h-3.5 w-8" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              <div
+                className="flex items-center justify-between border-t pt-4"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <SkeletonBlock className="h-3.5 w-24" />
+                <SkeletonBlock className="h-5 w-28" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="admin-breakdown-track flex h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
+                {orderBreakdown.map((o) => (
+                  <div
+                    key={o.label}
+                    className="admin-breakdown-segment"
+                    style={{
+                      width: `${(o.value / breakdownTotal) * 100}%`,
+                      background: o.color,
+                    }}
+                  />
+                ))}
+              </div>
 
-          <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: "var(--border)" }}>
-            <span className="text-sm font-medium text-foreground">{t("admin.dashboard.totalRevenue")}</span>
-            <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
-              {formatPrice(totalRevenue)}
-            </span>
-          </div>
+              <div className="space-y-3">
+                {orderBreakdown.map((o) => (
+                  <div key={o.label} className="admin-breakdown-row flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="admin-breakdown-dot h-2 w-2 rounded-full" style={{ background: o.color, color: o.color }} />
+                      {o.label}
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">{o.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: "var(--border)" }}>
+                <span className="text-sm font-medium text-foreground">{t("admin.dashboard.totalRevenue")}</span>
+                <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
+                  {formatPrice(totalRevenue)}
+                </span>
+              </div>
+            </>
+          )}
         </AdminPanelBody>
       </AdminPanel>
     </div>

@@ -15,14 +15,16 @@ import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
 import {
-  AdminTableToolbar,
-  AdminSearchInput,
   AdminTableScroll,
   AdminSortableHeader,
   AdminTableHeaderCell,
   AdminTableEmptyRow,
-  AdminPageLoading,
 } from "../../../shared/components/admin/AdminDataTable";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
+import { AdminTableSkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
 
 type SortField = "title" | "level" | "lessons" | "duration" | "status" | "price";
 type SortDirection = "asc" | "desc";
@@ -49,7 +51,7 @@ export function AdminCourses() {
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -107,7 +109,32 @@ export function AdminCourses() {
   };
 
   if (loading) {
-    return <AdminPageLoading title={t("admin.courses.title")} message={t("admin.courses.loading")} />;
+    // Giữ nguyên header + nút "Create" thật, chỉ bảng là skeleton (đúng 7 cột:
+    // khoá học, level, số bài, thời lượng, giá, trạng thái, thao tác).
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title={t("admin.courses.title")}
+          subtitle={t("admin.courses.subtitle")}
+          actions={
+            <CreateButton to="/admin/courses/new" label={t("admin.courses.create")} />
+          }
+        />
+
+        <AdminTableSkeleton
+          rows={6}
+          columns={[
+            { type: "media", className: "w-[300px]" },
+            "badge",
+            { type: "number", align: "right" },
+            { type: "number", align: "right" },
+            { type: "money", align: "right" },
+            "badge",
+            { type: "actions", align: "right" },
+          ]}
+        />
+      </div>
+    );
   }
 
   return (
@@ -121,9 +148,26 @@ export function AdminCourses() {
       />
 
       <AdminPanel>
-        <AdminTableToolbar>
-          <AdminSearchInput value={searchTerm} onChange={setSearchTerm} placeholder={t("admin.courses.searchPlaceholder")} />
-        </AdminTableToolbar>
+        {/* Search: debounce 400ms qua useDebouncedSearch + hiện spinner khi đang chờ */}
+        <AdminSearchToolbar
+          search={{
+            value: searchTerm,
+            onChange: setSearchTerm,
+            placeholder: t("admin.courses.searchPlaceholder"),
+            isSearching: searchIsWaiting,
+          }}
+          onReset={searchTerm ? clearSearch : undefined}
+          resetLabel={t("admin.clearFilters")}
+          meta={
+            searchTerm || debouncedSearchTerm ? (
+              <AdminSearchMeta searching={searchIsWaiting}>
+                {filteredCourses.length === 0
+                  ? t("admin.search.noResults")
+                  : t("admin.search.resultsCount", { count: filteredCourses.length })}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
 
         <AdminTableScroll>
           <thead className="bg-muted">

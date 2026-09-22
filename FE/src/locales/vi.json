@@ -766,8 +766,9 @@
       "createUserButton": "Tạo người dùng",
       "creatingButton": "Đang tạo…",
       "dateOfBirth": "Ngày sinh",
+      "dateOfBirthInvalid": "Ngày sinh không hợp lệ (định dạng mm/dd/yyyy)",
       "dateOfBirthLabel": "Ngày sinh",
-      "dateOfBirthPlaceholder": "MM/DD/YYYY",
+      "dateOfBirthPlaceholder": "mm/dd/yyyy",
       "delete": "Xóa",
       "deleteDisabledError": "Không thể xóa: người dùng đã ở trạng thái không hoạt động.",
       "deleteDisabledHint": "Người dùng đã không hoạt động — không thể xóa",
@@ -836,6 +837,12 @@
       "viewDetail": "Xem chi tiết",
       "viewOnly": "Chỉ xem",
       "viewRegisteredUsers": "Xem người dùng đã đăng ký"
+    },
+    "search": {
+      "clearSearch": "Xoá tìm kiếm",
+      "noResults": "Không tìm thấy kết quả",
+      "resultsCount": "{count} kết quả",
+      "searching": "Đang tìm…"
     }
   },
   "advanced": "Nâng cao",
@@ -2171,8 +2178,8 @@
     "currentPasswordPlaceholder": "Nhập mật khẩu hiện tại",
     "currentRole": "Vai trò hiện tại",
     "dobLabel": "Ngày sinh",
-    "dobLabelLong": "Ngày sinh (MM/DD/YYYY)",
-    "dobPlaceholder": "MM/DD/YYYY",
+    "dobLabelLong": "Ngày sinh (dd/mm/yyyy)",
+    "dobPlaceholder": "Chọn ngày",
     "editButton": "Chỉnh sửa",
     "editProfileDesc": "Cập nhật thông tin cá nhân của bạn.",
     "editProfileTitle": "Chỉnh sửa thông tin",

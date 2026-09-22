@@ -1,11 +1,20 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, CheckCheck, Inbox } from "lucide-react";
 import { useNotifications } from "../contexts/NotificationContext";
+import { NotificationIcon, getNotificationCategoryTint } from "./NotificationIcon";
+import { useAuthStore } from "../store/auth.store";
 import { cn } from "./ui/utils";
+import {
+  NOTIFICATION_CATEGORY_LABELS,
+  getNotificationCategory,
+  isHighPriority,
+  resolveNotificationPath,
+} from "../types/notification.types";
 import { Link } from "react-router";
 
 export function NotificationsBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotification } = useNotifications();
+  const role = useAuthStore((s) => s.user?.roleId);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -42,8 +51,9 @@ export function NotificationsBell() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-primary hover:underline"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
+                <CheckCheck className="size-3.5" />
                 Mark all read
               </button>
             )}
@@ -52,58 +62,89 @@ export function NotificationsBell() {
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
-                <Bell className="size-8 mx-auto mb-2 opacity-30" />
+                <Inbox className="size-8 mx-auto mb-2 opacity-30" />
                 No notifications
               </div>
             ) : (
-              notifications.slice(0, 20).map((notif) => (
-                <div
-                  key={notif._id}
-                  className={cn(
-                    "flex items-start gap-3 p-4 border-b border-border last:border-0 transition-colors",
-                    !notif.read && "bg-primary/5"
-                  )}
-                >
-                  <div className="flex-1 min-w-0">
-                    {notif.targetPath ? (
-                      <Link
-                        to={notif.targetPath}
-                        onClick={() => { markAsRead(notif._id); setOpen(false); }}
-                        className="block"
-                      >
-                        <p className="text-sm font-medium text-foreground">{notif.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
-                      </Link>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium text-foreground">{notif.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
-                      </>
-                    )}
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                      {new Date(notif.createdAt).toLocaleDateString("vi-VN")}
+              notifications.slice(0, 20).map((notif) => {
+                const path = resolveNotificationPath(notif, role);
+                const body = (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      {isHighPriority(notif.priority) && (
+                        <span className="shrink-0 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-destructive">
+                          Urgent
+                        </span>
+                      )}
+                      <p className="text-sm font-medium text-foreground">{notif.title}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-line">
+                      {notif.message}
                     </p>
-                  </div>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    {!notif.read && (
-                      <button
-                        onClick={() => markAsRead(notif._id)}
-                        className="text-[10px] text-primary hover:underline"
-                      >
-                        Read
-                      </button>
+                  </>
+                );
+                return (
+                  <div
+                    key={notif._id}
+                    className={cn(
+                      "flex items-start gap-3 p-4 border-b border-border last:border-0 transition-colors",
+                      !notif.read && "bg-primary/5",
                     )}
-                    <button
-                      onClick={() => clearNotification(notif._id)}
-                      className="text-[10px] text-muted-foreground hover:text-destructive"
-                    >
-                      Dismiss
-                    </button>
+                  >
+                    <NotificationIcon type={notif.type} muted={notif.read} />
+                    <div className="flex-1 min-w-0">
+                      {path ? (
+                        <Link
+                          to={path}
+                          onClick={() => {
+                            markAsRead(notif._id);
+                            setOpen(false);
+                          }}
+                          className="block"
+                        >
+                          {body}
+                        </Link>
+                      ) : (
+                        <>{body}</>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/60 mt-1 flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${getNotificationCategoryTint(notif.type)}`}
+                        >
+                          {NOTIFICATION_CATEGORY_LABELS[getNotificationCategory(notif.type)]}
+                        </span>
+                        {new Date(notif.createdAt).toLocaleDateString("vi-VN")}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {!notif.read && (
+                        <button
+                          onClick={() => markAsRead(notif._id)}
+                          className="text-[10px] text-primary hover:underline"
+                        >
+                          Read
+                        </button>
+                      )}
+                      <button
+                        onClick={() => clearNotification(notif._id)}
+                        className="text-[10px] text-muted-foreground hover:text-destructive"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+
+          <Link
+            to={role === "admin" ? "/admin/notifications" : "/notifications"}
+            onClick={() => setOpen(false)}
+            className="block border-t border-border px-4 py-3 text-center text-xs font-medium text-primary hover:bg-muted transition-colors"
+          >
+            View all notifications
+          </Link>
         </div>
       )}
     </div>

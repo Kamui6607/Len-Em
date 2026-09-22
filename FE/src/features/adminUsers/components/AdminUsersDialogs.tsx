@@ -19,6 +19,8 @@ import {
 import type { ApiUser } from "../../users/services/user.service";
 import type { AdminUsersController } from "../hooks/useAdminUsers";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { DatePicker } from "../../../shared/components/ui/DatePicker";
+import { isFutureDate, isoToUsDisplayDate, usDisplayToIso } from "../../../lib/dateInput";
 import {
   formatDateOfBirth,
   getRoleBadgeClass,
@@ -142,6 +144,43 @@ function Field({
     </FieldShell>
   );
 }
+/**
+ * Date of birth field — calendar picker shown in MM/DD/YYYY, i.e. exactly the
+ * order the signup form sends `dateOfBirth` in (see src/lib/dateInput.ts), so a
+ * user created by an admin and one created by the signup form store the same
+ * format and an existing date can be corrected without guessing its order.
+ * Nothing has to be typed and the format never follows the browser locale.
+ */
+function DateField({
+  icon,
+  label,
+  value,
+  onChange,
+  error,
+  placeholder = "mm/dd/yyyy",
+}: {
+  icon?: React.ElementType;
+  label: string;
+  /** Display text (mm/dd/yyyy). */
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  placeholder?: string;
+}) {
+  return (
+    <FieldShell icon={icon} label={label} error={error}>
+      <DatePicker
+        value={value}
+        onChange={onChange}
+        error={error}
+        placeholder={placeholder}
+        format="mm/dd/yyyy"
+      />
+    </FieldShell>
+  );
+}
+
+
 
 function SelectField({
   icon,
@@ -336,7 +375,8 @@ function UpdateUserDialog({
     phone: user.phone ?? "",
     address: user.address ?? "",
     gender: user.gender ?? "OTHER",
-    dateOfBirth: user.dateOfBirth ? user.dateOfBirth.slice(0, 10) : "",
+    // mm/dd/yyyy display text — sent to the API in that same order.
+    dateOfBirth: isoToUsDisplayDate(user.dateOfBirth),
   });
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
 
@@ -362,6 +402,11 @@ function UpdateUserDialog({
     // but a phone that is filled in must match what the backend accepts.
     if (form.phone.trim() && !/^0[0-9]{9}$/.test(normalizePhone(form.phone)))
       errors.phone = t("admin.users.phoneInvalid");
+    // DOB is optional, but when filled in it must be a real mm/dd/yyyy date.
+    if (form.dateOfBirth.trim()) {
+      const iso = usDisplayToIso(form.dateOfBirth);
+      if (!iso || isFutureDate(iso)) errors.dateOfBirth = t("admin.users.dateOfBirthInvalid");
+    }
     return errors;
   };
 
@@ -373,6 +418,8 @@ function UpdateUserDialog({
     onConfirm({
       ...form,
       phone: form.phone.trim() ? normalizePhone(form.phone) : "",
+      // The API receives mm/dd/yyyy — the same order the signup form sends.
+      dateOfBirth: form.dateOfBirth.trim(),
     });
   };
 
@@ -458,13 +505,13 @@ function UpdateUserDialog({
           options={genderOptions}
           error={errorOf("gender")}
         />
-        <Field
+        <DateField
           icon={CalendarDays}
           label={t("admin.users.dateOfBirth")}
           value={form.dateOfBirth}
           onChange={set("dateOfBirth")}
-          type="date"
           error={errorOf("dateOfBirth")}
+          placeholder={t("admin.users.dateOfBirthPlaceholder")}
         />
         <Field
           icon={MapPin}
@@ -535,6 +582,11 @@ function CreateUserDialog({
     if (!form.address.trim()) errors.address = t("admin.users.addressRequired");
     if (!form.gender) errors.gender = t("admin.users.genderRequired");
     if (!form.roleId) errors.roleId = t("admin.users.roleRequired");
+    // DOB is optional, but when filled in it must be a real mm/dd/yyyy date.
+    if (form.dateOfBirth.trim()) {
+      const iso = usDisplayToIso(form.dateOfBirth);
+      if (!iso || isFutureDate(iso)) errors.dateOfBirth = t("admin.users.dateOfBirthInvalid");
+    }
     return errors;
   };
 
@@ -543,7 +595,12 @@ function CreateUserDialog({
     const errors = validate();
     setLocalErrors(errors);
     if (Object.keys(errors).length > 0) return;
-    void controller.handleCreateUser({ ...form, phone: normalizePhone(form.phone) });
+    void controller.handleCreateUser({
+      ...form,
+      phone: normalizePhone(form.phone),
+      // The API receives mm/dd/yyyy — the same order the signup form sends.
+      dateOfBirth: form.dateOfBirth.trim(),
+    });
   };
 
   const fields = Object.keys(form) as Array<keyof typeof form>;
@@ -646,13 +703,13 @@ function CreateUserDialog({
           error={errorOf("gender")}
           options={GENDER_OPTIONS.map((option) => ({ value: option.value, label: t(option.key) }))}
         />
-        <Field
+        <DateField
           icon={CalendarDays}
           label={t("admin.users.dateOfBirth")}
           value={form.dateOfBirth}
           onChange={set("dateOfBirth")}
-          type="date"
           error={errorOf("dateOfBirth")}
+          placeholder={t("admin.users.dateOfBirthPlaceholder")}
         />
         <div className="admin-dialog-footer col-span-full">
           <button type="button" onClick={close} className="btn-modal-cancel">

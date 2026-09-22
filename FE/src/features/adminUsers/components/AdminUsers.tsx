@@ -4,8 +4,8 @@ import { ADMIN_USERS_PAGE_SIZE } from "../hooks/useAdminUsers";
 import { AdminUsersDesktop } from "./AdminUsersDesktop";
 import { AdminUsersMobile } from "./AdminUsersMobile";
 import { AdminUsersDialogs } from "./AdminUsersDialogs";
-import { ChevronDown } from "lucide-react";
-import { AdminSearchInput } from "../../../shared/components/admin/AdminDataTable";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import { AdminSearchInput } from "../../../shared/components/admin/AdminSearch";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
 
 export function AdminUsers() {
@@ -42,11 +42,25 @@ export function AdminUsers() {
           className="space-y-3 border-b p-4"
           style={{ background: "var(--surface)" }}
         >
-          <AdminSearchInput
-            value={controller.searchTerm}
-            onChange={controller.setSearchTerm}
-            placeholder={controller.t("admin.users.searchPlaceholder")}
-          />
+          <div className="flex items-center gap-2">
+            <AdminSearchInput
+              value={controller.searchTerm}
+              onChange={controller.setSearchTerm}
+              placeholder={controller.t("admin.users.searchPlaceholder")}
+              isSearching={controller.searchPending}
+              size="sm"
+            />
+            {controller.hasActiveFilters && (
+              <button
+                type="button"
+                onClick={controller.handleResetFilters}
+                className="admin-action-btn shrink-0"
+                aria-label={controller.t("admin.users.clearFilters")}
+              >
+                <SlidersHorizontal className="size-4" />
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <select

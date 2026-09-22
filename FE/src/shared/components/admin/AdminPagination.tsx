@@ -2,7 +2,7 @@
 // AdminPagination — Previous / Page x of y / Next bar
 // ============================================================
 // One implementation for every admin list page so pagers look and behave the
-// same everywhere (the design follows /admin/permissions: two `btn-secondary`
+// same everywhere (the design follows the admin list screens: two `btn-secondary`
 // buttons with the page indicator between them).
 // Renders nothing when there is a single page — a one-page list needs no pager.
 // ============================================================

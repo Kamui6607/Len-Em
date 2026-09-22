@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { diyService } from "../../../features/diy/services/diy.service";
 import type { DIYPost } from "../../../features/diy/types/diy.types";
@@ -15,8 +15,18 @@ import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { ReportButton } from "../../../shared/components/ReportButton";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import {
+  AdminListSkeleton,
+  AdminTableBodySkeleton,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
+/** Giữ nguyên thứ tự khớp BE — không thay đổi hành vi sort đã chạy ổn định. */
 const STATUS_OPTIONS = ["", "Pending", "Done"];
 
 type SortField = "id" | "title" | "status" | "date";
@@ -31,6 +41,15 @@ export function AdminDIYPosts() {
   const [filterStatus, setFilterStatus] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  // Search chung: debounce 400ms (ô gõ phản hồi ngay, API chỉ gọi khi ngừng gõ).
+  const {
+    inputValue: searchInput,
+    debouncedValue: debouncedSearch,
+    setInputValue: setSearchInput,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const isSearching = debouncedSearch.trim().length > 0;
 
   const [selectedPost, setSelectedPost] = useState<DIYPost | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -44,9 +63,12 @@ export function AdminDIYPosts() {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
+      // Khi đang search: tải một cửa sổ rộng (100 bài) rồi LỌC + PHÂN TRANG ở
+      // FE → tìm được trong toàn danh sách thay vì 10 dòng của trang hiện tại
+      // (BE /diy-posts chưa hỗ trợ tham số `search`).
       const { data } = await diyService.getAllPosts({
-        page,
-        limit: 10,
+        page: isSearching ? 1 : page,
+        limit: isSearching ? 100 : 10,
         status: filterStatus || undefined,
       });
       setPosts(data.data.posts);
@@ -56,11 +78,15 @@ export function AdminDIYPosts() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus]);
+  }, [page, filterStatus, isSearching, t]);
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filterStatus]);
 
   const openEditModal = (post: DIYPost) => {
     setEditModal(post);
@@ -177,6 +203,24 @@ export function AdminDIYPosts() {
     return sortDirection === "asc" ? cmp : -cmp;
   });
 
+  // Lọc theo search (title / id / tags) trên cửa sổ dữ liệu đã tải, rồi
+  // phân trang ở FE khi đang search (mỗi trang 10 kết quả).
+  const searchNeedle = debouncedSearch.trim().toLowerCase();
+  const matchedPosts = searchNeedle
+    ? sortedPosts.filter(
+        (post) =>
+          post.title.toLowerCase().includes(searchNeedle) ||
+          post._id.toLowerCase().includes(searchNeedle) ||
+          (post.tags || []).some((tag) => tag.toLowerCase().includes(searchNeedle)),
+      )
+    : sortedPosts;
+  const visiblePosts = isSearching
+    ? matchedPosts.slice((page - 1) * 10, page * 10)
+    : matchedPosts;
+  const displayTotalPages = isSearching
+    ? Math.max(1, Math.ceil(matchedPosts.length / 10))
+    : totalPages;
+
   const displayStatus = (post: DIYPost) => {
     const st = (post.status || "Pending").toLowerCase();
     return st === "done" ? "Done" : "Pending";
@@ -203,11 +247,18 @@ export function AdminDIYPosts() {
         className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
         style={{ borderColor: "var(--border)" }}
       >
-        <div
-          className="p-6 border-b border-border"
-          style={{ background: "var(--surface)" }}
-        >
-          <div className="flex flex-wrap gap-3">
+        {/* Search dùng chung (debounce 400ms, tìm trong toàn danh sách) + filter status */}
+        <AdminSearchToolbar
+          search={{
+            value: searchInput,
+            onChange: (value) => {
+              setSearchInput(value);
+              setPage(1);
+            },
+            placeholder: t("admin.diyPosts.searchPlaceholder"),
+            isSearching: searchIsWaiting || loading,
+          }}
+          filters={
             <div className="relative">
               <button
                 type="button"
@@ -281,16 +332,46 @@ export function AdminDIYPosts() {
                 </>
               )}
             </div>
-          </div>
-        </div>
+          }
+          onReset={
+            searchInput || filterStatus
+              ? () => {
+                  clearSearch();
+                  setFilterStatus("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          resetLabel={t("admin.clearFilters")}
+          meta={
+            searchInput || debouncedSearch ? (
+              <AdminSearchMeta searching={searchIsWaiting || loading}>
+                {matchedPosts.length === 0
+                  ? t("admin.search.noResults")
+                  : t("admin.search.resultsCount", { count: matchedPosts.length })}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
 
         {loading ? (
-          <div className="space-y-3 p-6" style={{ background: "var(--card)" }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse bg-muted rounded-lg" />
-            ))}
-          </div>
-        ) : posts.length === 0 ? (
+          // Desktop: skeleton bảng (id, tiêu đề, trạng thái, ngày, thao tác
+          // view/edit/confirm/delete). Mobile: skeleton list card như layout thật.
+          <>
+            <AdminTableBodySkeleton
+              className="hidden md:block"
+              columns={[
+                "mono",
+                "text",
+                { type: "badge", align: "center" },
+                "text",
+                { type: "actionsWide", align: "center", className: "w-[200px]" },
+              ]}
+              rows={5}
+            />
+            <AdminListSkeleton className="md:hidden p-4" rows={4} itemClassName="h-24 rounded-xl" />
+          </>
+        ) : matchedPosts.length === 0 ? (
           <div
             className="text-center py-16 text-muted-foreground"
             style={{ background: "var(--card)" }}
@@ -319,7 +400,7 @@ export function AdminDIYPosts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedPosts.map((post) => (
+                  {visiblePosts.map((post) => (
                     <tr
                       key={post._id}
                       className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
@@ -383,7 +464,7 @@ export function AdminDIYPosts() {
               className="md:hidden space-y-3 p-4"
               style={{ background: "var(--card)" }}
             >
-              {posts.map((post) => (
+              {visiblePosts.map((post) => (
                 <div
                   key={post._id}
                   className="p-4 rounded-xl border border-border bg-surface"
@@ -413,7 +494,7 @@ export function AdminDIYPosts() {
             </div>
             <AdminPagination
               page={page}
-              totalPages={totalPages}
+              totalPages={displayTotalPages}
               onPageChange={setPage}
               pageSize={10}
               className="mt-4 p-4"

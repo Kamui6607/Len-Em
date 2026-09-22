@@ -1,4 +1,4 @@
-import { BarChart3, ChevronDown, ChevronUp, Edit3, Eye, SlidersHorizontal, UserCheck, Users, UserX } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, Edit3, Eye, UserCheck, Users, UserX } from "lucide-react";
 import type { ApiUser, UserStatus } from "../../users/services/user.service";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import type { AdminUsersController } from "../hooks/useAdminUsers";
@@ -6,8 +6,12 @@ import { ADMIN_USERS_PAGE_SIZE } from "../hooks/useAdminUsers";
 import { isInactiveStatus } from "../types/adminUsers.types";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
-import { AdminSearchInput } from "../../../shared/components/admin/AdminDataTable";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
 import { AdminStatCard, type AdminStatCardData } from "../../../shared/components/admin/AdminStatCard";
+import { AdminSkeletonRows, SkeletonBlock } from "../../../shared/components/skeletons/AdminSkeleton";
 import {
   getRoleBadgeClass,
   getStatusBadgeClass,
@@ -116,7 +120,7 @@ export function AdminUsersDesktop({ controller }: { controller: AdminUsersContro
         {controller.statsLoading ? (
           <div className="grid gap-3 sm:grid-cols-3">
             {[0, 1, 2].map((index) => (
-              <div key={index} className="admin-skeleton h-[132px] rounded-2xl" />
+              <SkeletonBlock key={index} className="h-[132px] rounded-2xl" />
             ))}
           </div>
         ) : stats.length > 0 ? (
@@ -131,39 +135,53 @@ export function AdminUsersDesktop({ controller }: { controller: AdminUsersContro
       </section>
 
       <section className="admin-panel-glow overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border)" }}>
-        <div className="space-y-3 border-b p-6" style={{ background: "var(--surface)" }}>
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <AdminSearchInput value={controller.searchTerm} onChange={controller.setSearchTerm} placeholder={t("admin.users.searchPlaceholder")} />
-            </div>
-            {controller.hasActiveFilters && <button type="button" onClick={controller.handleResetFilters} className="admin-action-btn shrink-0" aria-label={t("admin.users.clearFilters")}><SlidersHorizontal className="h-4 w-4" /></button>}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="relative">
-              <select
-                className="input w-full appearance-none bg-none pr-10"
-                style={{ backgroundImage: "none" }}
-                value={controller.statusFilter}
-                onChange={(event) => controller.setStatusFilter(event.target.value as "all" | UserStatus)}
-              >
-                {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-            <div className="relative">
-              <select
-                className="input w-full appearance-none bg-none pr-10"
-                style={{ backgroundImage: "none" }}
-                value={controller.roleFilter || "all"}
-                onChange={(event) => controller.setRoleFilter(event.target.value === "all" ? "" : event.target.value)}
-              >
-                <option value="all">{t("admin.users.allRoles")}</option>
-                {controller.roleDropdownOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-          </div>
-        </div>
+        {/* Search + filter dùng chung component -> cùng thiết kế với mọi trang admin */}
+        <AdminSearchToolbar
+          search={{
+            value: controller.searchTerm,
+            onChange: controller.setSearchTerm,
+            placeholder: t("admin.users.searchPlaceholder"),
+            isSearching: controller.searchPending,
+          }}
+          filters={
+            <>
+              <div className="relative min-w-[170px] flex-1 sm:flex-none">
+                <select
+                  className="input w-full appearance-none bg-none"
+                  style={{ backgroundImage: "none", paddingRight: "2.5rem" }}
+                  value={controller.statusFilter}
+                  onChange={(event) => controller.setStatusFilter(event.target.value as "all" | UserStatus)}
+                >
+                  {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+              <div className="relative min-w-[170px] flex-1 sm:flex-none">
+                <select
+                  className="input w-full appearance-none bg-none"
+                  style={{ backgroundImage: "none", paddingRight: "2.5rem" }}
+                  value={controller.roleFilter || "all"}
+                  onChange={(event) => controller.setRoleFilter(event.target.value === "all" ? "" : event.target.value)}
+                >
+                  <option value="all">{t("admin.users.allRoles")}</option>
+                  {controller.roleDropdownOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            </>
+          }
+          onReset={controller.hasActiveFilters ? controller.handleResetFilters : undefined}
+          resetLabel={t("admin.users.clearFilters")}
+          meta={
+            controller.hasActiveFilters ? (
+              <AdminSearchMeta searching={controller.searchPending}>
+                {controller.users.length === 0
+                  ? t("admin.search.noResults")
+                  : t("admin.search.resultsCount", { count: controller.users.length })}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
 
         <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
           <table className="admin-table w-full">
@@ -184,7 +202,19 @@ export function AdminUsersDesktop({ controller }: { controller: AdminUsersContro
             </thead>
             <tbody>
               {controller.loading ? (
-                <tr><td colSpan={6} className="py-16 text-center text-muted-foreground">Loading...</td></tr>
+                // Skeleton từng hàng trong <tbody> thật → header, toolbar và
+                // phân trang bên dưới không bị nhảy khi data về.
+                <AdminSkeletonRows
+                  rows={5}
+                  columns={[
+                    "avatar",
+                    "text",
+                    { type: "number", align: "center" },
+                    { type: "badge", align: "center" },
+                    { type: "badge", align: "center" },
+                    { type: "actions", align: "center" },
+                  ]}
+                />
               ) : controller.users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-16 text-center">

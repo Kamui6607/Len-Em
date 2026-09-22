@@ -3,11 +3,12 @@ import { toast } from "sonner";
 import { userService, type ApiUser, type UserStatus, type UserStatistics } from "../../users/services/user.service";
 import { authService } from "../../../shared/api/authService";
 import { extractApiErrorMessage, extractFieldErrors } from "../../../lib/apiError";
-import { roleService, normalizeRoles } from "../../../shared/api/roleService";
+import { loadRoles } from "../../../shared/api/roleService";
 import type { Role } from "../../../shared/types/role";
 import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import type { AdminUsersSortDirection, AdminUsersSortField } from "../types/adminUsers.types";
 import { isInactiveStatus } from "../types/adminUsers.types";
 
@@ -16,15 +17,6 @@ export const ADMIN_USERS_PAGE_SIZE = 10;
 export interface AdminUserOption {
   value: string;
   label: string;
-}
-
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
 }
 
 function roleIdOf(roleId: ApiUser["roleId"]): string {
@@ -40,6 +32,32 @@ function roleOptions(roles: Role[]): AdminUserOption[] {
   return roles.filter((role) => role.isActive).map((role) => ({ value: role._id, label: role.roleName }));
 }
 
+/**
+ * Fallback for the role dropdown: when GET /roles is unavailable, every user
+ * row still embeds its own `roleId` object ({ _id, roleName }), so the options
+ * can be derived from the list we already loaded.
+ */
+function rolesFromUsers(users: ApiUser[]): Role[] {
+  const map = new Map<string, Role>();
+  for (const user of users) {
+    const ref = user.roleId;
+    if (!ref || typeof ref === "string") continue;
+    if (!ref._id || map.has(ref._id)) continue;
+    const roleName = ref.roleName ?? "";
+    map.set(ref._id, {
+      _id: ref._id,
+      roleName,
+      name: roleName,
+      permission: [],
+      permissions: [],
+      isActive: true,
+      createdAt: "",
+      updatedAt: "",
+    });
+  }
+  return [...map.values()];
+}
+
 export function useAdminUsers() {
   const { t } = useLanguage();
   const { logActivity } = useAdmin();
@@ -49,8 +67,14 @@ export function useAdminUsers() {
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearch = useDebouncedValue(searchTerm, 400);
+  // Search dùng chung hook debounce của toàn dự án (400ms) — đồng bộ mọi trang admin.
+  const {
+    inputValue: searchTerm,
+    debouncedValue: debouncedSearch,
+    setInputValue: setSearchTerm,
+    isWaiting: searchPending,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
   const [roleFilter, setRoleFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -75,11 +99,12 @@ export function useAdminUsers() {
 
   const fetchRoles = useCallback(async () => {
     try {
-      const { data: response } = await roleService.getAll({ limit: 100 });
-      setApiRoles(normalizeRoles(response.data?.data?.roles ?? []));
+      // Shared, cached loader — avoids one request per screen.
+      setApiRoles(await loadRoles({ limit: 100 }));
     } catch {
-      setError(true);
-      console.error("Failed to load roles for user admin");
+      // GET /roles may be unavailable (older deployment). Do NOT flag the whole
+      // page as failed — `loadUsers` derives the options from the user rows.
+      console.warn("Failed to load roles for user admin");
     }
   }, []);
 
@@ -96,6 +121,9 @@ export function useAdminUsers() {
       });
       const fetchedUsers = response.data.result.users || [];
       setUsers(fetchedUsers);
+      // Fallback: if GET /roles is unavailable, build the dropdown options from
+      // the role objects embedded in the user rows.
+      setApiRoles((prev) => (prev.length > 0 ? prev : rolesFromUsers(fetchedUsers)));
       // The API reports both `totalUsers` and `totalPages` inside `result`
       // (older builds only sent `total`). Reading the wrong key used to make a
       // full first page look like the whole list — and the remains of the list
@@ -169,7 +197,7 @@ export function useAdminUsers() {
   };
 
   const handleResetFilters = () => {
-    setSearchTerm("");
+    clearSearch();
     setStatusFilter("all");
     setRoleFilter("");
   };
@@ -296,6 +324,7 @@ export function useAdminUsers() {
 
   return {
     t, isAdmin, users: sortedUsers, rawUsers: users, loading, error, searchTerm, setSearchTerm,
+    searchPending,
     statusFilter, setStatusFilter, roleFilter, setRoleFilter, page, setPage,
     totalUsersEstimate, totalPages, stats, statsLoading, hasActiveFilters, apiRoles, roleNameMap,
     roleDropdownOptions, updating, creating, selectedUser, setSelectedUser,

@@ -209,6 +209,12 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     if (status === 404 && url.includes("/kits/")) {
       return Promise.reject(error);
     }
+    // GET /roles is optional for the admin UI — the role dropdown and the
+    // staff filter fall back to the role objects embedded in user rows, so a
+    // background 404 there must not pop a global error toast.
+    if (status === 404 && url.includes("/roles")) {
+      return Promise.reject(error);
+    }
     // Sign-up / admin create-user forms print the backend validation errors
     // inline next to the offending field, so keep the global toast out of the
     // way to avoid double-reporting the same problem.

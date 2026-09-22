@@ -11,6 +11,7 @@ import { Package, X } from "lucide-react";
 import { formatPrice } from "../../../lib/formatPrice";
 import type { Product } from "../../../shared/api/productService";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { SkeletonBlock } from "../../../shared/components/skeletons/AdminSkeleton";
 
 function priceRange(product: Product): string {
   const prices = product.variants.map((variant) => variant.price);
@@ -101,11 +102,49 @@ export function ProductDetailModal({
 
         <div className="admin-dialog-body space-y-5">
           {loading ? (
-            <div className="space-y-3">
-              <div className="admin-skeleton h-4 w-2/3 rounded-md" />
-              <div className="admin-skeleton h-20 rounded-xl" />
-              <div className="admin-skeleton h-32 rounded-xl" />
-            </div>
+            // Skeleton khớp nội dung thật của popup: mô tả → 3 tile (giá, tồn
+            // kho, số màu) → danh sách variant có ảnh + giá + tồn.
+            <>
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3 w-24" />
+                <SkeletonBlock className="h-3.5 w-full" />
+                <SkeletonBlock className="h-3.5 w-3/4" />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="space-y-2 rounded-xl border p-3"
+                    style={{ background: "var(--surface)", borderColor: "var(--border-light)" }}
+                  >
+                    <SkeletonBlock className="h-3 w-16" />
+                    <SkeletonBlock className="h-4 w-20 max-w-full" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3 w-32" />
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-xl border p-2.5"
+                    style={{ background: "var(--surface)", borderColor: "var(--border-light)" }}
+                  >
+                    <SkeletonBlock className="size-10 shrink-0 rounded-lg" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <SkeletonBlock className="h-3.5 w-28 max-w-full" />
+                      <SkeletonBlock className="h-3 w-16" />
+                    </div>
+                    <div className="shrink-0 space-y-2">
+                      <SkeletonBlock className="h-3.5 w-16" />
+                      <SkeletonBlock className="h-3 w-20" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <>
               <div>

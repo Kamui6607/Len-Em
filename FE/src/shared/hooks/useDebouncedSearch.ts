@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import debounce from "lodash/debounce";
 
 interface UseDebouncedSearchOptions {
   delay?: number;
@@ -29,20 +28,19 @@ export function useDebouncedSearch({
   const isWaiting = inputValue !== debouncedValue && inputValue.length >= minChars;
   const isTooShort = inputValue.length > 0 && inputValue.length < minChars;
 
-  // Cancel debounce on unmount
+  // Một timer duy nhất cho mọi lần gõ: gõ tiếp → huỷ timer cũ, đặt lại từ đầu.
+  // (Trước đây tạo `debounce()` mới mỗi lần render — timer cũ bị mất tham chiếu
+  // nên KHÔNG bao giờ bị cancel → mỗi ký tự bắn 1 API call.)
   useEffect(() => {
-    const fn = debounce((value: string) => {
-      setDebouncedValue(value);
-    }, delay);
-
-    if (inputValue.length >= minChars) {
-      fn(inputValue);
-    } else {
+    if (inputValue.length < minChars) {
       setDebouncedValue("");
+      return;
     }
-
+    const timer = setTimeout(() => {
+      setDebouncedValue(inputValue);
+    }, delay);
     return () => {
-      fn.cancel();
+      clearTimeout(timer);
     };
   }, [inputValue, delay, minChars]);
 

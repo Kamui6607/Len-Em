@@ -3,6 +3,8 @@
 // (badge colours, avatar initials, labels, date formatting).
 // ============================================================
 
+import { isoToUsDisplayDate } from "../../../lib/dateInput";
+
 /** Badge colour for a role name (Admin = red, Staff = green, Customer = blue). */
 export function getRoleBadgeClass(roleName: string): string {
   const lower = (roleName || "").toLowerCase().trim();
@@ -40,10 +42,12 @@ export function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-/** Date of birth (ISO or plain) → dd/mm/yyyy; returns the raw value if unparsable. */
+/**
+ * Date of birth (ISO or MM/DD/YYYY) → MM/DD/YYYY — the order the create/update
+ * forms and the signup form use, so the detail modal shows the same date the
+ * admin sees (and edits) in the form. Returns the raw value when unparsable.
+ */
 export function formatDateOfBirth(value?: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("vi-VN");
+  const display = isoToUsDisplayDate(value);
+  return display || (value ?? "");
 }

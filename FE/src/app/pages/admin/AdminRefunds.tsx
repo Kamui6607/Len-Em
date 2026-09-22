@@ -17,7 +17,15 @@ import { refundService, type RefundInvoice } from "../../../shared/api/refundSer
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import {
+  AdminTableBodySkeleton,
+  type AdminSkeletonColumnInput,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -306,7 +314,7 @@ export function AdminRefunds() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
-  const { inputValue: searchInput, debouncedValue: debouncedSearch, setInputValue: setSearchInput } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const { inputValue: searchInput, debouncedValue: debouncedSearch, setInputValue: setSearchInput, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   // Detail & process dialog state
   const [detailInvoice, setDetailInvoice] = useState<RefundInvoice | null>(null);
@@ -365,6 +373,20 @@ export function AdminRefunds() {
     }
   };
 
+  // ── Cột skeleton phải khớp bảng thật (nút Process/Reject chỉ có ở Admin) ──
+  const skeletonColumns: AdminSkeletonColumnInput[] = [
+    "mono",
+    "mono",
+    "avatar",
+    { type: "money", align: "center" },
+    "text",
+    { type: "badge", align: "center" },
+    { type: "text", align: "center" },
+  ];
+  if (isAdmin) {
+    skeletonColumns.push({ type: "actions", align: "center", className: "w-[180px]" });
+  }
+
   // ── Render ──
   return (
     <div className="space-y-6">
@@ -384,31 +406,18 @@ export function AdminRefunds() {
 
       {/* Table */}
       <div className="admin-panel-glow rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
-        {/* Filters */}
-        <div
-          className="admin-toolbar p-6 border-b border-border"
-          style={{ background: "var(--surface)" }}
-        >
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="admin-search-wrap relative flex-1 min-w-[180px] max-w-sm">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => {
-                  setSearchInput(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search by invoice ID or order ID…"
-                className="input w-full"
-                style={{
-                  paddingLeft: "3rem",
-                  paddingRight: "1rem",
-                  paddingTop: "0.75rem",
-                  paddingBottom: "0.75rem",
-                }}
-              />
-            </div>
+        {/* Filters — search dùng chung component (debounce 400ms) */}
+        <AdminSearchToolbar
+          search={{
+            value: searchInput,
+            onChange: (value) => {
+              setSearchInput(value);
+              setPage(1);
+            },
+            placeholder: "Search by invoice ID or order ID…",
+            isSearching: searchIsWaiting,
+          }}
+          filters={
             <AdminSelect
               value={statusFilter || ""}
               options={[
@@ -430,19 +439,33 @@ export function AdminRefunds() {
                 },
               ]}
               onChange={(val) => setStatusFilter(val)}
-              className="min-w-[160px]"
+              className="w-full sm:w-44"
             />
-          </div>
-        </div>
+          }
+          onReset={
+            searchInput || statusFilter
+              ? () => {
+                  clearSearch();
+                  setStatusFilter("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          resetLabel="Clear filters"
+          meta={
+            searchInput || debouncedSearch ? (
+              <AdminSearchMeta searching={searchIsWaiting}>
+                {invoices.length === 0
+                  ? "No results found"
+                  : `${invoices.length} result${invoices.length === 1 ? "" : "s"}`}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
 
         {/* Table Body */}
         {loading ? (
-          <div
-            className="p-8 text-center text-muted-foreground"
-            style={{ background: "var(--card)" }}
-          >
-            Loading...
-          </div>
+          <AdminTableBodySkeleton columns={skeletonColumns} rows={6} />
         ) : invoices.length === 0 ? (
           <div
             className="admin-empty-state"

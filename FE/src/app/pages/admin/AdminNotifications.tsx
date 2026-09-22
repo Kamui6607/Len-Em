@@ -1,89 +1,37 @@
 // ============================================================
 // AdminNotifications — route /admin/notifications
 // Trang notifications riêng cho Admin, nằm bên trong admin panel.
-// Admin CHỈ xem/dùng notification Report.
+// Admin nhận TẤT CẢ loại thông báo: đơn hàng (thanh toán / COD / huỷ đơn),
+// Support DIY, bài DIY, Report và System.
+// Tab "All" chia thành từng phần theo loại; chọn chip để xem riêng 1 phần.
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
-import { Check, CheckCheck, Flag, Trash2, CalendarClock } from "lucide-react";
-import { Link } from "react-router";
+import { useMemo, useState } from "react";
+import { CalendarClock, CheckCheck, Flag, Inbox, Trash2 } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "../../../shared/contexts/NotificationContext";
-import { useHoldToDelete } from "../../../shared/hooks/useHoldToDelete";
-import { isReportNotification } from "../../../shared/types/notification.types";
+import {
+  NotificationRow,
+  NotificationSectionHeader,
+} from "../../../shared/components/NotificationRow";
+import {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_CATEGORY_LABELS,
+  getNotificationCategory,
+  resolveNotificationPath,
+  type Notification,
+  type NotificationCategory,
+} from "../../../shared/types/notification.types";
+import { NOTIFICATION_DATE_GROUPS, getDateGroup } from "../../../lib/notificationTime";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 
-function getDateGroup(date: Date): string {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfYesterday = new Date(startOfToday);
-  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-  const startOfWeek = new Date(startOfToday);
-  startOfWeek.setDate(startOfWeek.getDate() - 7);
-  if (date >= startOfToday) return "Today";
-  if (date >= startOfYesterday) return "Yesterday";
-  if (date >= startOfWeek) return "This week";
-  return "Earlier";
-}
-
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const diffMin = Math.floor((Date.now() - date.getTime()) / 60000);
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-const GROUP_ORDER = ["Today", "Yesterday", "This week", "Earlier"];
-
-/** Records per page — every admin list uses the same page size. */
-const PAGE_SIZE = 10;
-
-function DeleteButton({
-  notificationId,
-  onDelete,
-}: {
-  notificationId: string;
-  onDelete: (id: string) => void;
-}) {
-  const { isHolding, holdProgress, startHold, cancelHold, cancelHoldOnLeave } = useHoldToDelete({
-    onDelete: () => onDelete(notificationId),
-  });
-  return (
-    <button
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        startHold();
-      }}
-      onPointerUp={(e) => {
-        e.stopPropagation();
-        cancelHold();
-      }}
-      onPointerLeave={() => cancelHoldOnLeave()}
-      onContextMenu={(e) => e.preventDefault()}
-      className={`admin-action-btn delete relative ${isHolding ? "bg-destructive/20 text-destructive" : ""}`}
-      style={{ width: 28, height: 28 }}
-      aria-label="Hold to dismiss"
-      title="Hold 2s to dismiss"
-    >
-      <Trash2 className="size-3.5" />
-      {isHolding && (
-        <svg className="absolute inset-0 -rotate-90" width="28" height="28" viewBox="0 0 28 28">
-          <circle cx="14" cy="14" r="12" fill="none" stroke="var(--destructive)" strokeWidth="2" strokeLinecap="round" strokeDasharray={`${holdProgress * 75.4} 75.4`} opacity="0.6" />
-        </svg>
-      )}
-    </button>
-  );
-}
+/** How many notifications a section shows before "View all" takes over. */
+const SECTION_PREVIEW = 5;
 
 export function AdminNotifications() {
+  const navigate = useNavigate();
   const {
     notifications,
     markAsRead,
@@ -91,49 +39,75 @@ export function AdminNotifications() {
     clearNotification,
     clearAllNotifications,
   } = useNotifications();
+
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const [page, setPage] = useState(1);
+  const [category, setCategory] = useState<"all" | NotificationCategory>("all");
 
-  // Switching between "All" / "Unread" changes the result set — back to page 1.
-  useEffect(() => {
-    setPage(1);
-  }, [filter]);
-
-  const reportNotifications = useMemo(
-    () => notifications.filter((n) => isReportNotification(n.type)),
+  /** Newest first — REST history and socket pushes must render consistently. */
+  const sortedNotifications = useMemo(
+    () =>
+      [...notifications].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
     [notifications],
   );
-  const unreadCount = reportNotifications.filter((n) => !n.read).length;
-  const filteredNotifications = reportNotifications.filter((n) =>
-    filter === "unread" ? !n.read : true,
-  );
 
-  // Notifications are grouped by day, so page the flat list first and only
-  // group what belongs to the current page.
-  const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pagedNotifications = filteredNotifications.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
+  /** Counters per category — drive the filter chips and the section headers. */
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const notif of sortedNotifications) {
+      const key = getNotificationCategory(notif.type);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }, [sortedNotifications]);
+
+  const unreadCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const notif of sortedNotifications) {
+      if (notif.read) continue;
+      const key = getNotificationCategory(notif.type);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }, [sortedNotifications]);
+
+  const unreadCount = sortedNotifications.filter((n) => !n.read).length;
+  const filteredNotifications = sortedNotifications.filter((notif) => {
+    if (category !== "all" && getNotificationCategory(notif.type) !== category) return false;
+    return filter === "unread" ? !notif.read : true;
+  });
+
+  /** Tab "All" (no unread filter) → split into one section per notification type. */
+  const isSectionedView = category === "all" && filter === "all";
+
+  const sections = useMemo(
+    () =>
+      NOTIFICATION_CATEGORIES.map((cat) => ({
+        category: cat,
+        items: sortedNotifications.filter((n) => getNotificationCategory(n.type) === cat),
+      })).filter((section) => section.items.length > 0),
+    [sortedNotifications],
   );
 
   const groupedNotifications = useMemo(() => {
     const groups: Record<string, typeof filteredNotifications> = {};
-    for (const notif of pagedNotifications) {
+    for (const notif of filteredNotifications) {
       const group = getDateGroup(new Date(notif.createdAt));
       if (!groups[group]) groups[group] = [];
       groups[group].push(notif);
     }
     return groups;
-  }, [pagedNotifications]);
+  }, [filteredNotifications]);
 
-  const handleNotificationClick = (notificationId: string, targetPath?: string) => {
-    markAsRead(notificationId);
-    if (targetPath) window.location.assign(targetPath);
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification._id);
+    const path = resolveNotificationPath(notification, "admin");
+    if (path) navigate(path);
   };
   const handleMarkAllRead = () => {
     markAllAsRead();
-    toast.success("All report notifications marked as read");
+    toast.success("All notifications marked as read");
   };
   const handleDelete = (notificationId: string) => {
     clearNotification(notificationId);
@@ -141,16 +115,14 @@ export function AdminNotifications() {
   };
   const handleDeleteAll = () => {
     clearAllNotifications();
-    toast.success("All report notifications deleted");
+    toast.success("All notifications deleted");
   };
-
-  let cardIndex = 0;
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Report Notifications"
-        subtitle="Notifications về Report cho Admin — không nhận các tin nhắn khác"
+        title="Notifications"
+        subtitle="Thông báo cho Admin — đơn hàng, thanh toán, Report, Support DIY và bài DIY"
         actions={
           <>
             {unreadCount > 0 && (
@@ -162,7 +134,7 @@ export function AdminNotifications() {
                 Mark all read
               </button>
             )}
-            {reportNotifications.length > 0 && (
+            {notifications.length > 0 && (
               <button
                 onClick={handleDeleteAll}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors"
@@ -182,138 +154,142 @@ export function AdminNotifications() {
         }
       />
       <AdminPanel>
-        {/* Filter tabs */}
+        {/* Filter tabs — category (one part per notification type) + Unread */}
         <div
-          className="flex gap-2 px-6 py-4 border-b"
+          className="flex flex-wrap gap-2 px-6 py-4 border-b"
           style={{ background: "var(--surface)", borderColor: "var(--border)" }}
         >
           <button
-            className={`chip !h-9 !px-4 ${filter === "all" ? "chip-active" : ""}`}
-            onClick={() => setFilter("all")}
+            className="chip !h-9 !px-4"
+            data-active={category === "all" && filter === "all"}
+            onClick={() => {
+              setCategory("all");
+              setFilter("all");
+            }}
           >
-            All ({reportNotifications.length})
+            All ({notifications.length})
           </button>
+          {NOTIFICATION_CATEGORIES.filter((cat) => categoryCounts[cat]).map((cat) => (
+            <button
+              key={cat}
+              className="chip !h-9 !px-4"
+              data-active={category === cat}
+              onClick={() => setCategory(category === cat ? "all" : cat)}
+            >
+              {NOTIFICATION_CATEGORY_LABELS[cat]} ({categoryCounts[cat]})
+            </button>
+          ))}
           <button
-            className={`chip !h-9 !px-4 ${filter === "unread" ? "chip-active" : ""}`}
-            onClick={() => setFilter("unread")}
+            className="chip !h-9 !px-4"
+            data-active={filter === "unread"}
+            onClick={() => setFilter(filter === "unread" ? "all" : "unread")}
           >
-            Unread ({unreadCount})
+            Unread ({category === "all" ? unreadCount : (unreadCounts[category] ?? 0)})
           </button>
         </div>
 
         <AdminPanelBody className="p-0">
-          {reportNotifications.length === 0 ? (
+          {notifications.length === 0 ? (
             <div className="text-center py-16">
               <div
                 className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
                 style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
               >
-                <Flag className="size-7" />
+                <Inbox className="size-7" />
               </div>
-              <h3 className="text-base font-semibold text-foreground">
-                No report notifications
-              </h3>
+              <h3 className="text-base font-semibold text-foreground">No notifications</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Các báo cáo mới từ người dùng sẽ xuất hiện tại đây
+                Đơn hàng, báo cáo và yêu cầu hỗ trợ mới sẽ xuất hiện tại đây
               </p>
             </div>
           ) : filteredNotifications.length === 0 ? (
             <div className="text-center py-16 text-sm text-muted-foreground">
               <CalendarClock className="size-8 mx-auto mb-2 opacity-30" />
-              No report notifications
+              No notifications match this filter
+            </div>
+          ) : isSectionedView ? (
+            <div className="px-4 py-5 space-y-7">
+              {sections.map((section) => {
+                const unreadInSection = section.items.filter((n) => !n.read).length;
+                const preview = section.items.slice(0, SECTION_PREVIEW);
+                const hidden = section.items.length - preview.length;
+
+                return (
+                  <section key={section.category}>
+                    <NotificationSectionHeader
+                      category={section.category}
+                      count={section.items.length}
+                      unreadCount={unreadInSection}
+                      actionLabel={hidden > 0 ? `View all (${section.items.length})` : undefined}
+                      onAction={hidden > 0 ? () => setCategory(section.category) : undefined}
+                    />
+
+                    <div className="space-y-1.5">
+                      {preview.map((notification, index) => (
+                        <NotificationRow
+                          key={notification._id}
+                          notification={notification}
+                          index={index}
+                          onClick={handleNotificationClick}
+                          onMarkRead={markAsRead}
+                          onDelete={handleDelete}
+                          showCategory={false}
+                        />
+                      ))}
+
+                      {hidden > 0 && (
+                        <button
+                          onClick={() => setCategory(section.category)}
+                          className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                        >
+                          +{hidden} more{" "}
+                          {NOTIFICATION_CATEGORY_LABELS[section.category].toLowerCase()}
+                        </button>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           ) : (
-            <div className="p-6 space-y-6">
-              {GROUP_ORDER.filter((group) => groupedNotifications[group]?.length).map(
-                (group) => (
-                  <div key={group} className="space-y-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
-                      {group}
-                    </h2>
-                    <div className="space-y-1.5">
-                      {groupedNotifications[group].map((notification) => {
-                        const delay = cardIndex++ * 40;
-                        return (
-                          <div
-                            key={notification._id}
-                            onClick={() =>
-                              handleNotificationClick(
-                                notification._id,
-                                notification.targetPath,
-                              )
-                            }
-                            className={`group relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors animate-fade-in ${
-                              !notification.read
-                                ? "bg-primary/5 hover:bg-primary/10"
-                                : "hover:bg-muted"
-                            }`}
-                            style={{ animationDelay: `${delay}ms` }}
-                          >
-                            {!notification.read && (
-                              <span className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-full" />
-                            )}
-                            <div
-                              className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ml-1 ${
-                                !notification.read
-                                  ? "bg-primary/10 text-primary"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              <Flag className="size-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <h3 className="text-sm font-semibold text-foreground">
-                                    {notification.title}
-                                  </h3>
-                                  <p className="text-sm text-muted-foreground mt-0.5">
-                                    {notification.message}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground/60 mt-1.5">
-                                    {formatRelativeTime(notification.createdAt)}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-                                  {!notification.read && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        markAsRead(notification._id);
-                                      }}
-                                      className="admin-action-btn view"
-                                      style={{ width: 28, height: 28 }}
-                                      aria-label="Mark as read"
-                                    >
-                                      <Check className="size-3.5" />
-                                    </button>
-                                  )}
-                                  <DeleteButton
-                                    notificationId={notification._id}
-                                    onDelete={handleDelete}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ),
+            <div className="px-4 py-5 space-y-6">
+              {/* Header of the selected part — with a shortcut back to All */}
+              {category !== "all" && (
+                <NotificationSectionHeader
+                  category={category}
+                  count={filteredNotifications.length}
+                  unreadCount={unreadCounts[category] ?? 0}
+                  actionLabel="Show all"
+                  onAction={() => setCategory("all")}
+                />
               )}
+
+              {NOTIFICATION_DATE_GROUPS.filter(
+                (group) => groupedNotifications[group]?.length,
+              ).map((group) => (
+                <div key={group} className="space-y-2">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
+                    {group}
+                  </h2>
+
+                  <div className="space-y-1.5">
+                    {groupedNotifications[group].map((notification, index) => (
+                      <NotificationRow
+                        key={notification._id}
+                        notification={notification}
+                        index={index}
+                        onClick={handleNotificationClick}
+                        onMarkRead={markAsRead}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </AdminPanelBody>
       </AdminPanel>
-
-      <AdminPagination
-        page={safePage}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={filteredNotifications.length}
-        pageSize={PAGE_SIZE}
-      />
     </div>
   );
 }

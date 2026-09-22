@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, Edit3, Users } from "lucide-react";
 import type { ApiUser, UserStatus } from "../../users/services/user.service";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { AdminListSkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
 import { isInactiveStatus } from "../types/adminUsers.types";
 import { getRoleBadgeClass, getStatusBadgeClass, initialsOf } from "../utils/adminUsersFormat";
 
@@ -49,15 +50,11 @@ export function AdminUsersMobile({
   const pageCount = totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
 
   if (loading) {
+    // Skeleton dựng theo đúng card user thật: avatar tròn + tên/username/email,
+    // bên dưới là 2 field role & status → không nhảy layout khi data về.
     return (
-      <div className="space-y-3 p-4" aria-label="Loading users">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-36 animate-pulse rounded-2xl"
-            style={{ background: "var(--muted)" }}
-          />
-        ))}
+      <div aria-label="Loading users">
+        <AdminListSkeleton className="p-4" variant="card" rows={4} />
       </div>
     );
   }

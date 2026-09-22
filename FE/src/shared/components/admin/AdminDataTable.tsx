@@ -1,50 +1,11 @@
-import { Search, ChevronUp, ChevronDown, X } from "lucide-react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
-/** Filter/search bar that sits above an admin table, inside its own bordered strip. */
-export function AdminTableToolbar({ children }: { children: ReactNode }) {
-  return (
-    <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
-      {children}
-    </div>
-  );
-}
-
-interface AdminSearchInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}
-
 /**
- * Standard search field with a leading icon and a clear (×) button.
- * Replaces the previous per-page version that set padding via a `style`
- * prop — now a single reusable component.
+ * Ghi chú: ô search + thanh toolbar search của admin đã được chuyển sang
+ * `AdminSearch.tsx` (AdminSearchInput / AdminSearchToolbar / AdminSearchMeta)
+ * để mọi trang dùng chung một thiết kế. File này chỉ còn các primitive của bảng.
  */
-export function AdminSearchInput({ value, onChange, placeholder }: AdminSearchInputProps) {
-  return (
-    <div className="relative">
-      <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="input w-full pl-12 pr-10 py-3"
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          aria-label="Clear search"
-          className="absolute right-3 top-1/2 -translate-y-1/2 flex size-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <X className="size-3.5" />
-        </button>
-      )}
-    </div>
-  );
-}
 
 /** Wraps the <table> in the horizontal-scroll container used by every list page. */
 export function AdminTableScroll({ children }: { children: ReactNode }) {

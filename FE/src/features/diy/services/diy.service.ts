@@ -10,7 +10,7 @@ export interface DIYPostsResponse {
 }
 
 export const diyService = {
-  getAllPosts: (params?: { page?: number; limit?: number; status?: string }) =>
+  getAllPosts: (params?: { page?: number; limit?: number; status?: string; search?: string }) =>
     axiosClient.get<{ status: string; data: DIYPostsResponse }>("/diy-posts", { params }),
 
   getPostById: (id: string) =>

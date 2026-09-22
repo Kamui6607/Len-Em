@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Search,
   Edit3,
   X,
   RotateCcw,
@@ -22,7 +21,13 @@ import {
 } from "../../../shared/components/admin/VariantEditor";
 import { useAuth } from "../../../shared/hooks/useAuth";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
+import { AdminTableBodySkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -98,7 +103,14 @@ export function ProductManagement() {
   const isAdmin = hasRole("admin");
   const isAdminOrStaff = isAdmin || hasRole("staff");
 
-  const [searchTerm, setSearchTerm] = useState("");
+  // Search debounce 400ms (dùng chung hook) — trước đây gọi API ngay từng ký tự.
+  const {
+    inputValue: searchTerm,
+    debouncedValue: debouncedSearchTerm,
+    setInputValue: setSearchTerm,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
   // Lọc theo trạng thái: đang bán / đã ẩn / tất cả.
   // "Đã ẩn" = isActive = false. BE chỉ trả về sản phẩm đã ẩn khi gửi kèm
   // `includeInactive=true` VÀ request có token của Admin (xem product.controller.js
@@ -127,14 +139,15 @@ export function ProductManagement() {
     setLoading(true);
     try {
       const params: Record<string, string | number | boolean> = { page, limit };
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+      // Chỉ gọi API với giá trị ĐÃ debounce (400ms sau khi ngừng gõ).
+      if (debouncedSearchTerm.trim()) params.search = debouncedSearchTerm.trim();
 
       if (statusFilter === "hidden") {
         // Chỉ sản phẩm đã ẩn: BE không có tham số lọc `isActive=false`, chỉ có
         // includeInactive=true (trả cả 2 loại) nên phải gom hết rồi lọc ở FE
         // → hiện đủ mọi sản phẩm đã ẩn trong 1 trang, không cần phân trang.
         const hidden = await productService.getHidden({
-          search: searchTerm.trim() || undefined,
+          search: debouncedSearchTerm.trim() || undefined,
         });
         setProducts(hidden);
         setTotal(hidden.length);
@@ -155,15 +168,24 @@ export function ProductManagement() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, statusFilter, t]);
+  }, [page, debouncedSearchTerm, statusFilter, t]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
+  /**
+   * Đổi search → về trang 1 NGAY khi gõ (không đợi debounce) để chỉ có 1 request
+   * duy nhất với page=1 + từ khoá mới → tránh 2 request đua nhau ghi kết quả.
+   */
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
+
   // ── Filter (client-side search within fetched data) ──
   const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()),
   );
 
   // ─── Modal handlers ───────────────────────────────────
@@ -383,29 +405,16 @@ export function ProductManagement() {
 
       {/* Table */}
       <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
-        {/* Table Header */}
-        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t("admin.products.searchPlaceholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input w-full"
-              style={{ paddingLeft: "3rem", paddingRight: "1rem", paddingTop: "0.75rem", paddingBottom: "0.75rem" }}
-            />
-          </div>
-          {isAdmin && (
-            <div className="mt-3 max-w-xs">
-              <label
-                className="block text-xs font-medium mb-1.5"
-                style={{ color: "var(--foreground-muted)" }}
-              >
-                {t("admin.products.status")}
-              </label>
-              {/* Sản phẩm "đã ẩn" chỉ lấy được khi request có token Admin
-                  (BE chặn includeInactive với role khác) → ẩn filter với Staff. */}
+        {/* Table Header — search dùng chung component (debounce 400ms) */}
+        <AdminSearchToolbar
+          search={{
+            value: searchTerm,
+            onChange: handleSearchChange,
+            placeholder: t("admin.products.searchPlaceholder"),
+            isSearching: searchIsWaiting,
+          }}
+          filters={
+            isAdmin ? (
               <AdminSelect
                 value={statusFilter}
                 options={[
@@ -430,15 +439,43 @@ export function ProductManagement() {
                   setPage(1);
                 }}
               />
-            </div>
-          )}
-        </div>
+            ) : undefined
+          }
+          onReset={
+            searchTerm || statusFilter !== "active"
+              ? () => {
+                  clearSearch();
+                  setStatusFilter("active");
+                  setPage(1);
+                }
+              : undefined
+          }
+          resetLabel={t("admin.clearFilters")}
+          meta={
+            searchTerm || debouncedSearchTerm ? (
+              <AdminSearchMeta searching={searchIsWaiting}>
+                {filtered.length === 0
+                  ? t("admin.search.noResults")
+                  : t("admin.search.resultsCount", { count: filtered.length })}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
 
         {/* Table Body */}
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
-            {t("admin.products.loading")}
-          </div>
+          // Skeleton đồng bộ với bảng thật: ảnh + tên, giá (giữa), tồn kho
+          // (giữa), trạng thái (pill) và cột thao tác view/edit/delete.
+          <AdminTableBodySkeleton
+            columns={[
+              { type: "media", className: "w-[300px]" },
+              { type: "money", align: "center" },
+              { type: "number", align: "center" },
+              { type: "badge", align: "center" },
+              { type: "actions", align: "center", className: "w-[120px]" },
+            ]}
+            rows={6}
+          />
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
             <Package size={40} className="mx-auto mb-3 opacity-40" />

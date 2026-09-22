@@ -6,8 +6,6 @@ import {
   ShoppingCart,
   Activity,
   Flag,
-  Shield,
-  ShieldCheck,
   Scissors,
   BookOpen,
   Video,
@@ -34,16 +32,9 @@ const navItems: NavItem[] = [
       { path: "/admin/diy-posts", label: "DIY Management", icon: Scissors },
     ],
   },
-  {
-    label: "User & Access",
-    icon: Users,
-    highlighted: true,
-    children: [
-      { path: "/admin/users", label: "Users", icon: Users },
-      { path: "/admin/roles", label: "Roles", icon: ShieldCheck },
-      { path: "/admin/permissions", label: "Permissions", icon: Shield },
-    ],
-  },
+  // "User & Access" chỉ còn Users — Role/Permission Management đã bị loại bỏ
+  // (hệ thống dùng Fixed Role: Admin / Staff / Cus).
+  { path: "/admin/users", label: "Users", icon: Users },
   {
     label: "Learning",
     icon: BookOpen,

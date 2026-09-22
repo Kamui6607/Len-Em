@@ -7,9 +7,11 @@ import {
   ChevronLeft,
   ChevronRight,
   XCircle,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
+import { formatExpectedDelivery, isAwaitingDelivery } from "../../lib/orderDelivery";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
 import { useReviews } from "../../shared/contexts/ReviewContext";
@@ -527,6 +529,15 @@ export function Purchased() {
                             "vi-VN",
                           )}
                         </div>
+                        {/* GHN lead time from the backend */}
+                        {isAwaitingDelivery(order.orderStatus) &&
+                          formatExpectedDelivery(order.expectedDeliveryTime) && (
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--primary)] mt-0.5">
+                              <Truck className="w-3 h-3" />
+                              Dự kiến nhận hàng:{" "}
+                              {formatExpectedDelivery(order.expectedDeliveryTime)}
+                            </div>
+                          )}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">

@@ -13,7 +13,10 @@ import { kitService, type Kit } from "../../../shared/api/kitService";
 import type { LessonFormData } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
-import { AdminPageLoading } from "../../../shared/components/admin/AdminDataTable";
+import {
+  AdminFormSkeleton,
+  AdminPickerSkeleton,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 
 export function LessonFormPage() {
   const navigate = useNavigate();
@@ -140,7 +143,8 @@ export function LessonFormPage() {
   };
 
   if (loading) {
-    return <AdminPageLoading title={isEditing ? t("admin.lessons.editLesson") : t("admin.lessons.newLesson")} message={t("admin.lessons.form.loading")} />;
+    // Skeleton form lesson: khớp layout 2 cột (field chính + sidebar) của trang.
+    return <AdminFormSkeleton />;
   }
 
   const filteredProducts = allProducts.filter((p) =>
@@ -252,7 +256,7 @@ export function LessonFormPage() {
               </div>
               <div className="max-h-[220px] overflow-y-auto space-y-1">
                 {productsLoading ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">{t("admin.lessons.form.loading")}</p>
+                  <AdminPickerSkeleton rows={4} />
                 ) : filteredProducts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
                     {productSearch ? t("admin.lessons.noProductsMatch") : t("admin.lessons.noProductsAvailable")}
@@ -308,7 +312,7 @@ export function LessonFormPage() {
               </div>
               <div className="max-h-[220px] overflow-y-auto space-y-1">
                 {kitsLoading ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">{t("admin.lessons.form.loading")}</p>
+                  <AdminPickerSkeleton rows={4} />
                 ) : filteredKits.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
                     {kitSearch ? t("admin.lessons.noCombosMatch") : t("admin.lessons.noCombosAvailable")}

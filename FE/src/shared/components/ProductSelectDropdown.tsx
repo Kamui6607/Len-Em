@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Package, Plus } from "lucide-react";
 import { formatPrice } from "../../lib/formatPrice";
+import { AdminPickerSkeleton } from "./skeletons/AdminSkeleton";
 
 export interface ProductSelectOption {
   productId: string;
@@ -108,9 +109,9 @@ export function ProductSelectDropdown({
           }}
         >
           {isLoading ? (
-            <p className="px-4 py-3 text-sm text-center" style={{ color: "var(--foreground-muted)" }}>
-              Đang tải sản phẩm…
-            </p>
+            // Skeleton list thay cho dòng chữ "Đang tải sản phẩm…" để đồng bộ
+            // với các picker khác (admin DIY form, support DIY form).
+            <AdminPickerSkeleton className="py-2" rows={3} withThumb />
           ) : options.length === 0 ? (
             <p className="px-4 py-3 text-sm text-center" style={{ color: "var(--foreground-muted)" }}>
               Không có sản phẩm nào

@@ -7,6 +7,10 @@ import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatchList } from "../../../shared/components/ui/ColorSwatch";
 import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
 import { AdminPanel, AdminPanelHeader, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import {
+  AdminTableBodySkeleton,
+  SkeletonBlock,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 import { AdminActivePill } from "../../../shared/components/admin/AdminStatusPill";
 
 function formatDate(value: string) {
@@ -53,8 +57,73 @@ export function ProductDetail() {
   }, [productId, navigate]);
 
   if (loading) {
+    // Skeleton dựng theo đúng bố cục trang chi tiết: header (back + tên + phụ
+    // đề) → ảnh 360px + khối thông tin (pill, mô tả, 3 tile, tags, ngày) →
+    // panel Variants. Nhờ vậy khi data về trang không bị "nhảy".
     return (
-      <div className="p-8 text-center text-muted-foreground">Loading...</div>
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-3">
+          <SkeletonBlock className="h-8 w-28 rounded-xl" />
+          <SkeletonBlock className="h-6 w-64 max-w-full" />
+          <SkeletonBlock className="h-3.5 w-32" />
+        </div>
+
+        <div className="grid lg:grid-cols-[360px_1fr] gap-6">
+          <AdminPanel hover={false}>
+            <SkeletonBlock className="aspect-square w-full rounded-none" />
+          </AdminPanel>
+
+          <AdminPanel hover={false}>
+            <AdminPanelBody className="space-y-5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <SkeletonBlock className="h-7 w-20 rounded-full" />
+                <SkeletonBlock className="h-7 w-16 rounded-full" />
+              </div>
+
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3.5 w-full" />
+                <SkeletonBlock className="h-3.5 w-4/5" />
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="space-y-2 rounded-xl bg-muted/40 p-4">
+                    <SkeletonBlock className="h-3 w-20" />
+                    <SkeletonBlock className="h-4 w-24 max-w-full" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3.5 w-16" />
+                <div className="flex flex-wrap gap-2">
+                  <SkeletonBlock className="h-6 w-16 rounded-full" />
+                  <SkeletonBlock className="h-6 w-20 rounded-full" />
+                  <SkeletonBlock className="h-6 w-14 rounded-full" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <SkeletonBlock className="h-3 w-40" />
+                <SkeletonBlock className="h-3 w-40" />
+              </div>
+            </AdminPanelBody>
+          </AdminPanel>
+        </div>
+
+        <AdminPanel>
+          <AdminPanelHeader title="Variants" subtitle="Colors, prices and stock" />
+          <AdminTableBodySkeleton
+            columns={[
+              "media",
+              "text",
+              { type: "money", align: "center" },
+              { type: "number", align: "center" },
+            ]}
+            rows={3}
+          />
+        </AdminPanel>
+      </div>
     );
   }
 

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate } from "react-router";
 import { AdminLayout } from "../../../shared/components/admin/AdminLayout";
 import { AdminDashboard } from "./AdminDashboard";
 import { AdminUsers } from "./AdminUsers";
@@ -7,9 +7,6 @@ import { ProductDetail } from "./ProductDetail";
 import { AdminOrders } from "./AdminOrders";
 import { AdminReports } from "./AdminReports";
 import { AdminRefunds } from "./AdminRefunds";
-import { Permissions } from "./Permissions";
-import { Roles } from "./Roles";
-import { RoleDetail } from "./RoleDetail";
 import { AdminCourses } from "./AdminCourses";
 import { CourseFormPage } from "./CourseFormPage";
 import { AdminLessons } from "./AdminLessons";
@@ -36,9 +33,11 @@ export function AdminPage() {
         <Route path="diy-posts" element={<AdminDIYPosts />} />
         <Route path="diy-posts/new" element={<DIYFormPage />} />
         <Route path="support-diy" element={<AdminSupportDIYPosts />} />
-        <Route path="permissions" element={<Permissions />} />
-        <Route path="roles" element={<Roles />} />
-        <Route path="roles/:roleId" element={<RoleDetail />} />
+        {/* Role & Permission Management đã bị loại bỏ — hệ thống dùng Fixed Role
+            (Admin / Staff / Cus) do Backend xử lý. Link cũ được chuyển về Users. */}
+        <Route path="permissions" element={<Navigate to="/admin/users" replace />} />
+        <Route path="roles" element={<Navigate to="/admin/users" replace />} />
+        <Route path="roles/:roleId" element={<Navigate to="/admin/users" replace />} />
         <Route path="activity" element={<AdminActivity />} />
         {/* Course Management */}
         <Route path="courses" element={<AdminCourses />} />

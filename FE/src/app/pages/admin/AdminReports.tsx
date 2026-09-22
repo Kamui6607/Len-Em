@@ -3,14 +3,23 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
-import { Eye, ChevronUp, ChevronDown, Search, X } from "lucide-react";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+  ADMIN_SEARCH_DEBOUNCE_MS,
+} from "../../../shared/components/admin/AdminSearch";
+import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { userService, type UserRoleRef } from "../../../features/users/services/user.service";
-import { roleService, normalizeRoles } from "../../../shared/api/roleService";
+import { loadRoles } from "../../../shared/api/roleService";
 import type { OrderReport } from "../../../features/orderReport/types/orderReport.types";
 import type { UsersListResponse } from "../../../features/users/services/user.service";
 import { useAuth } from "../../../shared/hooks/useAuth";
+import {
+  AdminListSkeleton,
+  AdminTableBodySkeleton,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 
 type ApiUser = UsersListResponse["result"]["users"][0];
 
@@ -30,7 +39,15 @@ export function AdminReports() {
   const [apiUsers, setApiUsers] = useState<ApiUser[]>([]);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const { inputValue, debouncedValue, setInputValue } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  // Search DÙNG CHUNG: gõ phản hồi ngay, gọi API sau khi ngừng gõ
+  // ADMIN_SEARCH_DEBOUNCE_MS (400ms) — đồng bộ mọi trang admin.
+  const {
+    inputValue,
+    debouncedValue,
+    setInputValue,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: ADMIN_SEARCH_DEBOUNCE_MS, minChars: 0 });
 
   // Detail modal state
   const [selectedReport, setSelectedReport] = useState<OrderReport | null>(null);
@@ -78,9 +95,15 @@ export function AdminReports() {
         const seen = new Set<string>();
         try {
           // 1) Find the "Staff" role so we can filter server-side.
-          const { data: rolesResponse } = await roleService.getAll({ limit: 100 });
-          const roles = normalizeRoles(rolesResponse.data?.data?.roles ?? []);
-          const staffRole = roles.find((role) => role.roleName === "Staff");
+          //    A failure here must NOT abort the staff list: the /users rows
+          //    embed their own `roleId` object, which we filter on below.
+          let staffRole: { _id: string; roleName?: string } | undefined;
+          try {
+            const roles = await loadRoles({ limit: 100 });
+            staffRole = roles.find((role) => role.roleName === "Staff");
+          } catch (err) {
+            console.warn("Role lookup failed — falling back to roleId on users:", err);
+          }
 
           // 2) Fetch staff users — the backend caps `limit` (the official admin
           //    hook uses 20), so page through with a safe page size.
@@ -238,34 +261,20 @@ export function AdminReports() {
         </div>
       </div>
 
-      {/* Search & Filter */}
+      {/* Search & Filter — search dùng chung (debounce 400ms) */}
       <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>
-        <div className="p-6 border-b border-border" style={{ background: "var(--surface)" }}>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[240px] flex-1 sm:max-w-md">
-              <Search
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                type="text"
-                placeholder="Search by report ID or title..."
-                value={inputValue}
-                onChange={(e) => { setInputValue(e.target.value); setPage(1); }}
-                className="input w-full pl-12 pr-10 py-2.5"
-              />
-              {inputValue && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => { setInputValue(""); setPage(1); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex size-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
-            </div>
-            <div className="relative w-44">
+        <AdminSearchToolbar
+          search={{
+            value: inputValue,
+            onChange: (value) => {
+              setInputValue(value);
+              setPage(1);
+            },
+            placeholder: "Search by report ID or title...",
+            isSearching: searchIsWaiting,
+          }}
+          filters={
+            <div className="relative w-full sm:w-44">
               <select
                 value={filterStatus}
                 onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
@@ -278,17 +287,52 @@ export function AdminReports() {
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </div>
-          </div>
-        </div>
+          }
+          onReset={
+            inputValue || filterStatus
+              ? () => {
+                  clearSearch();
+                  setFilterStatus("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          resetLabel="Clear filters"
+          meta={
+            inputValue || debouncedValue ? (
+              <AdminSearchMeta searching={searchIsWaiting}>
+                {reports.length === 0
+                  ? "No results found"
+                  : `${reports.length} result${reports.length === 1 ? "" : "s"}`}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
       </div>
 
       {/* Reports Table */}
       {loading ? (
-        <div className="space-y-3 p-6" style={{ background: "var(--card)" }}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse bg-muted rounded-lg" />
-          ))}
-        </div>
+        // Bảng report nằm ngoài panel (khác các trang khác) nên skeleton tự
+        // bo góc + viền để giữ đúng bố cục; mobile dùng list card.
+        <>
+          <AdminTableBodySkeleton
+            className="hidden md:block rounded-2xl border border-border"
+            columns={[
+              "mono",
+              "text",
+              "mono",
+              { type: "badge", align: "center" },
+              "text",
+              { type: "actions", align: "center" },
+            ]}
+            rows={6}
+          />
+          <AdminListSkeleton
+            className="md:hidden"
+            rows={4}
+            itemClassName="h-24 rounded-xl border border-border"
+          />
+        </>
       ) : reports.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground" style={{ background: "var(--card)" }}>
           No reports found.

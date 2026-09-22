@@ -38,28 +38,18 @@ import {
   DialogFooter,
 } from "../../shared/components/ui/dialog";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
+import { DatePicker } from "../../shared/components/ui/DatePicker";
+import { displayToIso, isoToDisplayDate } from "../../lib/dateInput";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Date of birth (ISO from the API) → dd/mm/yyyy for form/display. */
 function formatDateForInput(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${mm}/${dd}/${yyyy}`;
+  return isoToDisplayDate(iso);
 }
 
 function formatDateForDisplay(iso: string): string {
-  if (!iso) return "Not set";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return isoToDisplayDate(iso);
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -138,7 +128,8 @@ export function Profile({ embedded = false }: ProfileProps) {
       if (editForm.address !== user.address) payload.address = editForm.address;
       if (editForm.gender !== user.gender) payload.gender = editForm.gender;
       if (editForm.dateOfBirth !== formatDateForInput(user.dateOfBirth)) {
-        payload.dateOfBirth = editForm.dateOfBirth;
+        // The API receives ISO (yyyy-mm-dd); the form holds dd/mm/yyyy.
+        payload.dateOfBirth = displayToIso(editForm.dateOfBirth) ?? "";
       }
 
       if (Object.keys(payload).length === 0) {
@@ -374,7 +365,7 @@ export function Profile({ embedded = false }: ProfileProps) {
     {
       icon: <Calendar className="w-4 h-4" />,
       label: t("profile.dobLabel"),
-      value: formatDateForDisplay(user.dateOfBirth),
+      value: formatDateForDisplay(user.dateOfBirth) || t("profile.notSet"),
       color: "text-info-foreground bg-info",
     },
   ];
@@ -692,19 +683,18 @@ export function Profile({ embedded = false }: ProfileProps) {
               </select>
             </div>
 
-            {/* Date of Birth */}
+            {/* Date of Birth — calendar picker (dd/mm/yyyy) */}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("profile.dobLabelLong")}
               </label>
-              <input
-                type="text"
+              <DatePicker
                 value={editForm.dateOfBirth}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, dateOfBirth: e.target.value }))
+                onChange={(value) =>
+                  setEditForm((f) => ({ ...f, dateOfBirth: value }))
                 }
-                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 placeholder={t("profile.dobPlaceholder")}
+                triggerClassName="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all flex items-center justify-between gap-2 text-left"
               />
             </div>
           </div>

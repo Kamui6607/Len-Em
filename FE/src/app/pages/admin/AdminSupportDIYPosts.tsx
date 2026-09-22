@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { supportDIYService } from "../../../features/supportDIY/services/supportDIY.service";
 import type { SupportDIYPost } from "../../../features/supportDIY/types/supportDIY.types";
@@ -15,6 +15,15 @@ import {
 import { ReportButton } from "../../../shared/components/ReportButton";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import {
+  AdminSearchMeta,
+  AdminSearchToolbar,
+} from "../../../shared/components/admin/AdminSearch";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import {
+  AdminListSkeleton,
+  AdminTableBodySkeleton,
+} from "../../../shared/components/skeletons/AdminSkeleton";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 const STATUS_OPTIONS = ["", "Pending", "Done", "Cancel"];
@@ -36,6 +45,16 @@ export function AdminSupportDIYPosts() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Tìm kiếm: gõ phản hồi ngay, gọi API sau 400ms ngừng gõ.
+  const {
+    inputValue: searchInput,
+    debouncedValue: debouncedSearch,
+    setInputValue: setSearchInput,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const isSearching = debouncedSearch.trim().length > 0;
+
   // Edit modal state
   const [editModal, setEditModal] = useState<SupportDIYPost | null>(null);
   const [editForm, setEditForm] = useState({
@@ -49,9 +68,11 @@ export function AdminSupportDIYPosts() {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
+      // Khi đang search: tải một cửa sổ rộng (100 yêu cầu) rồi LỌC + PHÂN TRANG
+      // ở FE → tìm được toàn danh sách (BE /support-diy chưa hỗ trợ `search`).
       const { data } = await supportDIYService.getAllPosts({
-        page,
-        limit: 10,
+        page: isSearching ? 1 : page,
+        limit: isSearching ? 100 : 10,
         status: filterStatus || undefined,
       });
       setPosts(data.data.posts);
@@ -61,11 +82,15 @@ export function AdminSupportDIYPosts() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterStatus]);
+  }, [page, filterStatus, isSearching, t]);
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filterStatus]);
 
   const openEditModal = (post: SupportDIYPost) => {
     setEditModal(post);
@@ -309,11 +334,22 @@ export function AdminSupportDIYPosts() {
         </div>
 
         {loading ? (
-          <div className="space-y-3 p-6" style={{ background: "var(--card)" }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse bg-muted rounded-lg" />
-            ))}
-          </div>
+          // Skeleton đồng bộ với layout thật: bảng trên desktop (id, tiêu đề,
+          // trạng thái, ngày, 4 nút thao tác) + list card trên mobile.
+          <>
+            <AdminTableBodySkeleton
+              className="hidden md:block"
+              columns={[
+                "mono",
+                "text",
+                { type: "badge", align: "center" },
+                { type: "text", align: "center" },
+                { type: "actionsWide", align: "center", className: "w-[240px]" },
+              ]}
+              rows={5}
+            />
+            <AdminListSkeleton className="md:hidden p-4" rows={4} itemClassName="h-24 rounded-xl" />
+          </>
         ) : posts.length === 0 ? (
           <div
             className="text-center py-16 text-muted-foreground"

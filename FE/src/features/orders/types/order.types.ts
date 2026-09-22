@@ -92,6 +92,13 @@ export interface Order {
   coinUsed?: number;
   cancelReason?: string;
   note?: string;
+  /**
+   * Estimated delivery date — the backend adds this while the order is in
+   * SHIPPING (GHN). Rendered as "Dự kiến giao hàng vào: [Ngày]".
+   */
+  expectedDeliveryTime?: string;
+  /** GHN tracking code, when provided by the shipping provider. */
+  ghnOrderCode?: string;
   createdAt: string;
   updatedAt?: string;
 }

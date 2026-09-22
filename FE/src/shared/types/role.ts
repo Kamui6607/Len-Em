@@ -57,41 +57,6 @@ export interface UpdateRoleRequest {
   permissions?: string[];      // PATCH body dùng "permissions" (plural)
 }
 
-/**
- * Helper: map raw BE role to normalized UI Role.
- * BE returns `roleName` + `permission` (singular).
- * UI expects `name` + `permissions` (plural).
- */
-export function normalizeRole(raw: {
-  _id: string;
-  roleName: string;
-  permission: string[];
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}): Role {
-  return {
-    _id: raw._id,
-    roleName: raw.roleName,
-    name: raw.roleName,
-    permission: raw.permission ?? [],
-    permissions: raw.permission ?? [],
-    description: raw.description,
-    isActive: raw.isActive,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
-  };
-}
 
-export function normalizeRoles(roles: Array<{
-  _id: string;
-  roleName: string;
-  permission: string[];
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}>): Role[] {
-  return roles.map(normalizeRole);
-}
+// NOTE: the raw -> UI role mapping lives in `src/shared/api/roleService.ts`
+// (normalizeRole / extractRoles) so there is a single source of truth.

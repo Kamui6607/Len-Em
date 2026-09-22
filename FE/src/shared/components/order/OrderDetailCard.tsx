@@ -15,6 +15,7 @@ import {
   Calendar,
   AlertCircle,
   Star,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
@@ -32,6 +33,7 @@ import { ReportButton } from "../ReportButton";
 import { kitService } from "../../api/kitService";
 import { productService } from "../../api/productService";
 import { useReviews } from "../../contexts/ReviewContext";
+import { formatExpectedDelivery, isAwaitingDelivery } from "../../../lib/orderDelivery";
 
 interface OrderDetailCardProps {
   order: Order;
@@ -42,7 +44,7 @@ interface OrderDetailCardProps {
   onRetryPayment?: (orderId: string) => Promise<void>;
 }
 
-/** Group items by kitId — items without kitId stay as standalone items */
+/** Order items grouped by kit — items without kitId stay as standalone items */
 function groupItemsByKit(orderItems: Order["items"]) {
   const kitGroups: { kitId: string; items: typeof orderItems }[] = [];
   const standalone: typeof orderItems = [];
@@ -62,6 +64,12 @@ function groupItemsByKit(orderItems: Order["items"]) {
 
   return { kitGroups, standalone };
 }
+
+/**
+ * Backend fills `expectedDeliveryTime` from the GHN lead-time API as soon as
+ * the order is created (it may be null when GHN could not be reached).
+ * Formatting/eligibility helpers live in `src/lib/orderDelivery.ts`.
+ */
 
 export function OrderDetailCard({
   order,
@@ -204,6 +212,12 @@ export function OrderDetailCard({
     ? new Date(normalized.createdAt).toLocaleString("vi-VN")
     : "N/A";
 
+  // GHN lead time — shown from the moment the order is created, hidden once
+  // the order is finished (delivered / cancelled) because it is no longer useful.
+  const expectedDelivery = isAwaitingDelivery(normalized.orderStatus)
+    ? formatExpectedDelivery(normalized.expectedDeliveryTime)
+    : "";
+
   // Calculate shipping fee percentage for display
   const subtotal = normalized.itemsPrice || 0;
   const shippingFee = normalized.shippingFee || 0;
@@ -222,6 +236,12 @@ export function OrderDetailCard({
               <Calendar className="w-4 h-4" />
               <span>{createdAt}</span>
             </div>
+            {expectedDelivery && (
+              <div className="flex items-center gap-2 text-sm font-medium text-[var(--primary)] mt-1.5">
+                <Truck className="w-4 h-4" />
+                <span>Dự kiến nhận hàng vào: {expectedDelivery}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <span

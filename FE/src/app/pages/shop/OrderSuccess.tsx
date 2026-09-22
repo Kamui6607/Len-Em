@@ -1,9 +1,11 @@
-import { useEffect } from "react";
-import { ArrowRight, ShoppingBag } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, ShoppingBag, Truck } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useCart } from "../../../shared/contexts/CartContext";
 import { useAuthStore } from "../../../shared/store/auth.store";
+import { orderService } from "../../../features/orders/services/order.service";
+import { formatExpectedDelivery } from "../../../lib/orderDelivery";
 
 // ═══════════════════════════════════════════════════════════════════
 // LARGE GIFT BOX SVG — celebratory, bow-tied, with sparkles
@@ -535,6 +537,31 @@ export function OrderSuccess() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  // GHN lead time — the backend stores `expectedDeliveryTime` on the order the
+  // moment it is created, so the customer sees it right after paying.
+  const [expectedDelivery, setExpectedDelivery] = useState("");
+
+  useEffect(() => {
+    if (!orderId || !isAuthenticated) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { data } = await orderService.getOrderById(orderId);
+        const formatted = formatExpectedDelivery(data.order?.expectedDeliveryTime);
+        if (cancelled || !formatted) return;
+        setExpectedDelivery(formatted);
+      } catch {
+        // Order not readable (guest checkout / offline) — just hide the line.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, isAuthenticated]);
+
   return (
     <div
       style={{
@@ -743,6 +770,30 @@ export function OrderSuccess() {
             {date}
           </span>
         </div>
+
+        {/* ── Expected delivery (GHN lead time from the backend) ── */}
+        {expectedDelivery && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 16px",
+              borderRadius: "999px",
+              background: "var(--chip-active-bg)",
+              border: "1px solid var(--chip-active-border)",
+              color: "var(--primary)",
+              fontFamily: "'Inter',sans-serif",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              marginTop: "-14px",
+              marginBottom: "28px",
+            }}
+          >
+            <Truck size={15} strokeWidth={2} />
+            Dự kiến nhận hàng vào: {expectedDelivery}
+          </div>
+        )}
 
         {/* ── CTAs ── */}
         <div
