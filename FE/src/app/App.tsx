@@ -39,10 +39,10 @@ export default function App() {
 
   // Google OAuth Client ID from FE/.env (on Vercel: set it as a project env var).
   // Only mount GoogleOAuthProvider when a Client ID is actually configured.
-  // Mounting it with an empty clientId makes @react-oauth/google's useGoogleLogin
-  // throw inside initTokenClient({ client_id: "" }), which the route ErrorBoundary
-  // catches and turns into a blank "We couldn't load this page" screen on
-  // deployments where the env var is missing (e.g. Vercel without it set).
+  // Mounting it with an empty clientId makes @react-oauth/google's GoogleLogin
+  // call google.accounts.id.initialize({ client_id: "" }), which the route
+  // ErrorBoundary catches and turns into a blank "We couldn't load this page"
+  // screen on deployments where the env var is missing (e.g. Vercel without it set).
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? "";
   const isGoogleConfigured = Boolean(GOOGLE_CLIENT_ID);
 

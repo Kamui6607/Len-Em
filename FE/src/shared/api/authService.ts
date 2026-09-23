@@ -24,7 +24,8 @@ export const authService = {
     }),
 
   /** POST /auth/google  -> same response shape as /auth/login.
-   *  Body: { token } = the Google access_token from useGoogleLogin().
+   *  Body: { token } = the Google ID token (JWT `credential`) returned by
+   *  <GoogleLogin /> — the backend verifies it with verifyIdToken().
    *  Handles BOTH login and signup (BE auto-creates the account when the
    *  email has never been seen). */
   googleLogin: (token: string) =>

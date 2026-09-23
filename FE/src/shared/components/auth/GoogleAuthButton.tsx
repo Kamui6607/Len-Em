@@ -1,15 +1,18 @@
 // ============================================================
 // GoogleAuthButton — "Continue with Google" button
 // ============================================================
-// Opens the Google OAuth popup via @react-oauth/google, then exchanges
-// the Google access_token for the app's own JWT pair through
-// POST /auth/google. The backend handles BOTH login and signup with that
-// endpoint (auto-creates the account when the email has never been seen),
-// so the same button is reused on LoginPage and RegisterPage.
+// Opens the Google OAuth popup via @react-oauth/google's <GoogleLogin />
+// button, then exchanges the returned Google ID token (the JWT in
+// `credentialResponse.credential`) for the app's own JWT pair through
+// POST /auth/google. The backend verifies it with verifyIdToken(), which
+// accepts ID tokens ONLY — sending an access_token gets rejected with 401.
+// The backend handles BOTH login and signup with that endpoint
+// (auto-creates the account when the email has never been seen), so the
+// same button is reused on LoginPage and RegisterPage.
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useGoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { Loader as Loader2 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 
@@ -80,6 +83,15 @@ const GAUTH_STYLE = `
   @keyframes gauth-spin {
     to { transform: rotate(360deg); }
   }
+  /* Google's official <GoogleLogin /> iframe — center it in the form column.
+     GSI caps the button at 400px wide, so we can't stretch it edge-to-edge
+     like the custom button, but size="large" keeps the height close (40px). */
+  .gauth-gsi {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+  }
 `;
 
 export interface GoogleAuthButtonProps {
@@ -128,99 +140,121 @@ function GoogleAuthButtonInner({
   const googleLogin = useAuthStore((s) => s.googleLogin);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const exchangeToken = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setIsSubmitting(true);
-      try {
-        // Send the Google access_token to the backend — it verifies the token
-        // and returns { accessToken, refreshToken, user, subscription } just
-        // like POST /auth/login does.
-        await googleLogin(tokenResponse.access_token);
+  // Map our free-text label to one of the button texts Google allows
+  // ('continue_with' | 'signup_with' | 'signin_with' | 'signin').
+  const googleButtonText = /sign\s*up/i.test(label) ? "signup_with" : "continue_with";
 
-        // Same role-based redirect as the regular login form
-        const { user } = useAuthStore.getState();
-        if (!user || !user.roleId) navigate("/");
-        else if (user.roleId === "admin") navigate("/admin");
-        else if (user.roleId === "staff") navigate("/staff");
-        else navigate("/shop");
-      } catch (err: unknown) {
-        const axiosError = err as {
-          response?: { status?: number; data?: { message?: string } };
-          code?: string;
-          message?: string;
-        };
-        console.error(
-          "Google auth failed:",
-          axiosError?.response?.status ?? axiosError?.code,
-          err,
-        );
-
-        // Friendly, actionable messages for the two common failure modes:
-        // 1) free-tier backend cold start exceeding the request timeout
-        // 2) backend rejecting the Google token (401 — usually a backend
-        //    Google Client ID mismatch, not a FE problem)
-        let message =
-          axiosError?.response?.data?.message ||
-          "Google sign-in failed. Please try again.";
-        if (
-          axiosError?.code === "ECONNABORTED" ||
-          /timeout/i.test(axiosError?.message ?? "")
-        ) {
-          message =
-            "Server is waking up (free hosting cold start). Please wait a few seconds and try again.";
-        } else if (axiosError?.response?.status === 401) {
-          message =
-            axiosError?.response?.data?.message ||
-            "Google token was rejected by the server (401). Please verify the backend's Google Client ID configuration.";
-        }
-        onError?.(message);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    onError: () => {
-      console.error("Google login failed or popup closed");
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    // <GoogleLogin /> returns the Google ID token (a JWT) in `credential`.
+    // The backend verifies it with verifyIdToken(), which accepts ID tokens
+    // ONLY — sending an access_token here is what caused the 401s.
+    const idToken = credentialResponse.credential;
+    if (!idToken) {
+      console.error("Google sign-in returned no ID token", credentialResponse);
       onError?.("Google sign-in failed. Please try again.");
-    },
-  });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Send the Google ID token to the backend — it verifies the JWT and
+      // returns { accessToken, refreshToken, user, subscription } just
+      // like POST /auth/login does.
+      await googleLogin(idToken);
+
+      // Same role-based redirect as the regular login form
+      const { user } = useAuthStore.getState();
+      if (!user || !user.roleId) navigate("/");
+      else if (user.roleId === "admin") navigate("/admin");
+      else if (user.roleId === "staff") navigate("/staff");
+      else navigate("/shop");
+    } catch (err: unknown) {
+      const axiosError = err as {
+        response?: { status?: number; data?: { message?: string } };
+        code?: string;
+        message?: string;
+      };
+      console.error(
+        "Google auth failed:",
+        axiosError?.response?.status ?? axiosError?.code,
+        err,
+      );
+
+      // Friendly, actionable messages for the two common failure modes:
+      // 1) free-tier backend cold start exceeding the request timeout
+      // 2) backend rejecting the Google token (401 — usually a backend
+      //    Google Client ID mismatch, not a FE problem)
+      let message =
+        axiosError?.response?.data?.message ||
+        "Google sign-in failed. Please try again.";
+      if (
+        axiosError?.code === "ECONNABORTED" ||
+        /timeout/i.test(axiosError?.message ?? "")
+      ) {
+        message =
+          "Server is waking up (free hosting cold start). Please wait a few seconds and try again.";
+      } else if (axiosError?.response?.status === 401) {
+        message =
+          axiosError?.response?.data?.message ||
+          "Google token was rejected by the server (401). Please verify the backend's Google Client ID configuration.";
+      }
+      onError?.(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /** Called by <GoogleLogin /> when no credential comes back (popup closed/denied). */
+  const handleGoogleError = () => {
+    console.error("Google sign-in failed or popup closed");
+    onError?.("Google sign-in failed. Please try again.");
+  };
+
+  /** DX hint: warn devs before Google rejects the request with
+   * `400: origin_mismatch` when the page is served from an origin that is
+   * not in the Client ID's Authorized JavaScript origins. Wired to GSI's
+   * `click_listener` so it fires exactly when the Google button is clicked. */
+  const handleButtonClick = () => {
+    const origin = window.location.origin;
+    if (import.meta.env.DEV && !KNOWN_ORIGINS.includes(origin)) {
+      console.warn(
+        `[Google OAuth] Current origin "${origin}" is probably NOT registered in Google Cloud Console. ` +
+          "Open the app via http://localhost:5173, or add this origin under " +
+          "APIs & Services → Credentials → your OAuth Client → Authorized JavaScript origins.",
+      );
+    }
+  };
 
   return (
     <>
       <style>{GAUTH_STYLE}</style>
-      <button
-        type="button"
-        className="gauth-btn"
-        onClick={() => {
-          // DX hint: warn devs before Google rejects the request with
-          // `400: origin_mismatch` when the page is served from an origin
-          // that is not in the Client ID's Authorized JavaScript origins.
-          const origin = window.location.origin;
-          if (import.meta.env.DEV && !KNOWN_ORIGINS.includes(origin)) {
-            console.warn(
-              `[Google OAuth] Current origin "${origin}" is probably NOT registered in Google Cloud Console. ` +
-                "Open the app via http://localhost:5173, or add this origin under " +
-                "APIs & Services → Credentials → your OAuth Client → Authorized JavaScript origins.",
-            );
-          }
-          exchangeToken();
-        }}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2
-              size={17}
-              style={{ animation: "gauth-spin 0.8s linear infinite" }}
-            />
-            Connecting…
-          </>
-        ) : (
-          <>
-            <GoogleIcon />
-            {label}
-          </>
-        )}
-      </button>
+      {isSubmitting ? (
+        // While exchanging the ID token with the backend, swap in our own
+        // disabled loading button (the GSI iframe can't be disabled).
+        <button type="button" className="gauth-btn" disabled>
+          <Loader2
+            size={17}
+            style={{ animation: "gauth-spin 0.8s linear infinite" }}
+          />
+          Connecting…
+        </button>
+      ) : (
+        <div className="gauth-gsi">
+          {/* Official Google button — returns the ID token (JWT) via
+              onSuccess.credential, which the backend's verifyIdToken()
+              accepts. Never use useGoogleLogin()'s access_token here. */}
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            type="standard"
+            theme="outline"
+            size="large"
+            shape="rectangular"
+            text={googleButtonText}
+            click_listener={handleButtonClick}
+          />
+        </div>
+      )}
     </>
   );
 }

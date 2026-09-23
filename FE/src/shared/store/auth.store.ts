@@ -92,8 +92,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  // Google OAuth: same flow as login() — /auth/google returns the exact same
-  // shape as /auth/login and also auto-signs-up brand-new users.
+  // Google OAuth: same flow as login() — /auth/google receives the Google
+  // ID token (credential JWT) and returns the exact same shape as
+  // /auth/login, also auto-signing-up brand-new users.
   googleLogin: async (googleToken: string) => {
     set({ isLoading: true });
     try {

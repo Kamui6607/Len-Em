@@ -149,7 +149,7 @@ export interface AuthState {
   isAuthenticated: boolean; isLoading: boolean;
   initialize: () => Promise<void>;
   login: (credentials: LoginRequest) => Promise<void>;
-  /** Google OAuth: exchange a Google access_token for app JWTs (login OR signup) */
+  /** Google OAuth: exchange a Google ID token (JWT credential) for app JWTs (login OR signup) */
   googleLogin: (googleToken: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<string>;
   logout: () => void;
