@@ -65,6 +65,17 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Newest first" },
 ];
 
+// Level badge trên card combo — mỗi level một màu + icon riêng để dễ phân biệt
+// ngay khi nhìn lướt trên ảnh (xanh lá / hổ phách / đỏ).
+const KIT_LEVEL_BADGES: Record<
+  string,
+  { label: string; background: string; color: string }
+> = {
+  beginner: { label: "🌱 Beginner", background: "#15803D", color: "#FFFFFF" },
+  intermediate: { label: "🌿 Intermediate", background: "#B45309", color: "#FFFFFF" },
+  advanced: { label: "🌳 Advanced", background: "#B91C1C", color: "#FFFFFF" },
+};
+
 // Small icon shown next to each filter section label — purely orientation,
 // so the sidebar reads at a glance instead of as a wall of identical text.
 const FILTER_ICONS: Record<string, React.ReactNode> = {
@@ -180,7 +191,7 @@ export function Shop() {
   const [kits, setKits] = useState<Kit[]>([]);
   const [kitsLoading, setKitsLoading] = useState(false);
   const [kitLevel, setKitLevel] = useState<string>("all");
-  const [kitMinPrice, setKitMinPrice] = useState<number>(0);
+  // Chỉ giữ Maximum price (đồng bộ với filter của Products) — bỏ Min cho gọn.
   const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
 
   // Kit level options for combo filter
@@ -193,38 +204,34 @@ export function Shop() {
 
   // Check if kit level filter is active
   const hasActiveKitLevel = kitLevel !== "all";
-  const hasActiveKitFilters = hasActiveKitLevel || kitMinPrice > 0 || kitMaxPrice > 0;
+  const hasActiveKitFilters = hasActiveKitLevel || kitMaxPrice > 0;
 
-  // Show combos within the selected price range (Min/Max).
+  // Lọc combo hoàn toàn phía client theo Level + Maximum price — chip level
+  // lọc ngay trên thẻ, không phụ thuộc BE có nhận tham số `level` hay không.
   const filteredKits = useMemo(() => {
     return kits.filter((kit) => {
-      if (kitMinPrice > 0 && kit.price < kitMinPrice) return false;
+      if (kitLevel !== "all" && kit.level !== kitLevel) return false;
       if (kitMaxPrice > 0 && kit.price > kitMaxPrice) return false;
       return true;
     });
-  }, [kits, kitMinPrice, kitMaxPrice]);
+  }, [kits, kitLevel, kitMaxPrice]);
 
   const clearKitFilters = () => {
     setKitLevel("all");
-    setKitMinPrice(0);
     setKitMaxPrice(0);
   };
 
-  // Fetch kits when switching to combo view
+  // Fetch toàn bộ combo một lần khi vào tab — Level/price lọc phía client cho
+  // phản hồi tức thì và đồng bộ với UI filter Maximum price của Products.
   useEffect(() => {
-    if (viewMode === "combo") {
-      setKitsLoading(true);
-      kitService
-        .getAll({
-          page: 1,
-          limit: 50,
-          level: kitLevel === "all" ? undefined : kitLevel,
-        })
-        .then((res) => setKits(res.data.data?.kits ?? []))
-        .catch(() => toast.error("Failed to load kits"))
-        .finally(() => setKitsLoading(false));
-    }
-  }, [viewMode, kitLevel]);
+    if (viewMode !== "combo") return;
+    setKitsLoading(true);
+    kitService
+      .getAll({ page: 1, limit: 50 })
+      .then((res) => setKits(res.data.data?.kits ?? []))
+      .catch(() => toast.error("Failed to load kits"))
+      .finally(() => setKitsLoading(false));
+  }, [viewMode]);
 
   const [recommendationsDismissed, setRecommendationsDismissed] = useState(
     () => localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true",
@@ -404,27 +411,8 @@ export function Shop() {
         </div>
       </div>
 
-      {/* Price range for kits */}
-      <div className="filter-group">
-        <FilterLabel icon="price">Price range</FilterLabel>
-        <div className="price-inputs">
-          <input
-            className="price-input"
-            type="number"
-            placeholder="Min"
-            value={kitMinPrice || ""}
-            onChange={(e) => setKitMinPrice(Number(e.target.value))}
-          />
-          <span className="price-sep">–</span>
-          <input
-            className="price-input"
-            type="number"
-            placeholder="Max"
-            value={kitMaxPrice || ""}
-            onChange={(e) => setKitMaxPrice(Number(e.target.value))}
-          />
-        </div>
-      </div>
+      {/* Maximum price cho combo — dùng chung component với filter của Products */}
+      <PriceRangeFilter maxPrice={kitMaxPrice} onApply={setKitMaxPrice} />
 
       {!kitsLoading && (
         <div className="filter-summary">
@@ -908,7 +896,7 @@ export function Shop() {
                         {
                           [
                             hasActiveKitLevel,
-                            kitMinPrice > 0 || kitMaxPrice > 0,
+                            kitMaxPrice > 0,
                           ].filter(Boolean).length
                         }
                       </span>
@@ -1003,14 +991,17 @@ export function Shop() {
                           <span
                             className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold capitalize"
                             style={{
-                              background: "var(--card-glass)",
-                              backdropFilter: "blur(14px) saturate(160%)",
-                              WebkitBackdropFilter: "blur(14px) saturate(160%)",
-                              border: "1px solid var(--border-subtle)",
-                              color: "var(--primary)",
+                              background:
+                                KIT_LEVEL_BADGES[kit.level]?.background ??
+                                "var(--primary)",
+                              color:
+                                KIT_LEVEL_BADGES[kit.level]?.color ??
+                                "var(--primary-foreground)",
+                              border: "1px solid rgba(255, 255, 255, 0.35)",
+                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
                             }}
                           >
-                            {kit.level}
+                            {KIT_LEVEL_BADGES[kit.level]?.label ?? kit.level}
                           </span>
                         </div>
                         <div className="p-4 space-y-2">

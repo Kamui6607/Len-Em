@@ -18,6 +18,8 @@ import {
 import { Switch } from "../../../shared/components/ui/switch";
 import { courseService } from "../../../shared/api/courseService";
 import { lessonService } from "../../../shared/api/lessonService";
+import { kitService, type Kit } from "../../../shared/api/kitService";
+import { formatPrice } from "../../../lib/formatPrice";
 import type {
   CourseLevel,
   CourseFormData,
@@ -58,6 +60,10 @@ export function CourseFormPage() {
   const [allLessons, setAllLessons] = useState<Lesson[]>([]);
   const [lessonsLoading, setLessonsLoading] = useState(false);
   const [lessonSearch, setLessonSearch] = useState("");
+  // Combos (kits) để chọn linkedCombo — POST/PUT /courses nhận mảng combo id.
+  const [allCombos, setAllCombos] = useState<Kit[]>([]);
+  const [combosLoading, setCombosLoading] = useState(false);
+  const [comboSearch, setComboSearch] = useState("");
   const [form, setForm] = useState<CourseFormData>({
     title: "",
     description: "",
@@ -101,6 +107,22 @@ export function CourseFormPage() {
     fetchLessons();
   }, []);
 
+  // Fetch combos (kits) — danh sách chọn linkedCombo trong form.
+  useEffect(() => {
+    const fetchCombos = async () => {
+      setCombosLoading(true);
+      try {
+        const res = await kitService.getAll({ limit: 100 });
+        setAllCombos(res.data.data?.kits ?? []);
+      } catch {
+        // BE chưa có combo → picker hiện "Không có combo".
+      } finally {
+        setCombosLoading(false);
+      }
+    };
+    fetchCombos();
+  }, []);
+
   useEffect(() => {
     if (!courseId) return;
     const fetchCourse = async () => {
@@ -117,11 +139,11 @@ export function CourseFormPage() {
           tags: course.tags || [],
           // GET /courses/{id} trả linkedLessons đã populate (object lesson) → chuẩn về id string
           linkedLessons: toIdStrings(course.linkedLessons),
-          // linkedCombo có thể là mảng string hoặc object { comboId } tùy BE
+          // linkedCombo có thể là string[], { comboId } hoặc kit đã populate (_id)
           linkedCombo: ((course.linkedCombo ?? []) as unknown as Array<
-            string | { comboId?: string }
+            string | { comboId?: string; _id?: string }
           >)
-            .map((c) => (typeof c === "string" ? c : c.comboId ?? ""))
+            .map((c) => (typeof c === "string" ? c : c.comboId ?? c._id ?? ""))
             .filter(Boolean),
           isPublished: course.isPublished,
         });
@@ -152,6 +174,15 @@ export function CourseFormPage() {
       linkedLessons: prev.linkedLessons.includes(lessonId)
         ? prev.linkedLessons.filter((id) => id !== lessonId)
         : [...prev.linkedLessons, lessonId],
+    }));
+  };
+
+  const toggleCombo = (comboId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      linkedCombo: prev.linkedCombo.includes(comboId)
+        ? prev.linkedCombo.filter((id) => id !== comboId)
+        : [...prev.linkedCombo, comboId],
     }));
   };
 
@@ -237,6 +268,10 @@ export function CourseFormPage() {
 
   const filteredLessons = allLessons.filter((lesson) =>
     lesson.title.toLowerCase().includes(lessonSearch.toLowerCase()),
+  );
+
+  const filteredCombos = allCombos.filter((combo) =>
+    combo.name.toLowerCase().includes(comboSearch.toLowerCase()),
   );
 
   return (
@@ -503,6 +538,78 @@ export function CourseFormPage() {
                           </p>
                           <p className="text-[10px] text-muted-foreground">
                             Order {lesson.order} • {lesson.duration} min
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Linked Combos — chọn combo (kit) link vào khóa học */}
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-center justify-between">
+                <Label>{t("admin.courses.form.linkedCombos")}</Label>
+                <Badge variant="outline">{form.linkedCombo.length}</Badge>
+              </div>
+              <div className="relative w-full">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <Search className="h-4 w-4 text-muted-foreground/60" />
+                </div>
+                <input
+                  type="text"
+                  value={comboSearch}
+                  onChange={(e) => setComboSearch(e.target.value)}
+                  placeholder={t("admin.courses.form.searchCombosPlaceholder")}
+                  className="input w-full !rounded-xl !pl-10 !py-2.5 text-sm"
+                  style={{
+                    background: "var(--input-bg)",
+                    borderColor: "var(--border)",
+                  }}
+                />
+              </div>
+              <div
+                className="max-h-[300px] overflow-y-auto space-y-1"
+                style={{ minHeight: "100px" }}
+              >
+                {combosLoading ? (
+                  <AdminPickerSkeleton rows={4} />
+                ) : filteredCombos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {comboSearch
+                      ? t("admin.courses.form.noCombosMatch")
+                      : t("admin.courses.form.noCombosAvailable")}
+                  </p>
+                ) : (
+                  filteredCombos.map((combo) => {
+                    const selected = form.linkedCombo.includes(combo._id);
+                    return (
+                      <button
+                        key={combo._id}
+                        type="button"
+                        onClick={() => toggleCombo(combo._id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
+                          selected
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-[var(--surface-secondary)] text-foreground"
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selected ? "border-primary bg-primary" : "border-border"
+                          }`}
+                        >
+                          {selected && (
+                            <Check className="w-3 h-3 text-primary-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-xs">{combo.name}</p>
+                          <p className="text-[10px] text-muted-foreground capitalize">
+                            {combo.level} • {formatPrice(combo.price)}
                           </p>
                         </div>
                       </button>
