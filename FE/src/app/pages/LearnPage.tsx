@@ -26,6 +26,7 @@ import { useAuth } from "../../shared/hooks/useAuth";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import type { Course, CourseLevel } from "../../features/learn/types/learn.types";
 import { cn } from "../../shared/components/ui/utils";
+import { formatPrice } from "../../lib/formatPrice";
 import { ProductSkeleton } from "../../shared/components/skeletons/ProductSkeleton";
 
 const levelStyles: Record<CourseLevel, string> = {
@@ -50,6 +51,8 @@ export function LearnPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
+  // CourseId đang gửi đánh giá sao — disable sao của card đó trong lúc chờ.
+  const [ratingCourseId, setRatingCourseId] = useState<string | null>(null);
   const [selectedLevels, setSelectedLevels] = useState<CourseLevel[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -106,6 +109,16 @@ export function LearnPage() {
         return matchesLevel && matchesTags && matchesSearch;
       }),
     [courses, selectedLevels, selectedTags, searchQuery],
+  );
+
+  // Tách danh sách theo giá — miễn phí (không có price) vs Premium (price > 0).
+  const freeCourses = useMemo(
+    () => filteredCourses.filter((course) => (course.price ?? 0) === 0),
+    [filteredCourses],
+  );
+  const premiumCourses = useMemo(
+    () => filteredCourses.filter((course) => (course.price ?? 0) > 0),
+    [filteredCourses],
   );
 
   const toggleValue = <T extends string>(
@@ -189,6 +202,142 @@ export function LearnPage() {
       setEnrollingCourseId(null);
     }
   }, [isAuthenticated, enrolledCourses, navigate, user, setUser]);
+
+  /**
+   * Rate (sao) khóa học — POST /courses/{id}/rate { rating: 1–5 }.
+   * Chưa đăng nhập → về /auth/login. Sau khi rate thành công thì GET lại
+   * course để hiển thị điểm trung bình mới nhất (BE tính lại average).
+   */
+  const handleRate = useCallback(
+    async (courseId: string, score: number) => {
+      if (!isAuthenticated) {
+        navigate("/auth/login");
+        return;
+      }
+      setRatingCourseId(courseId);
+      try {
+        await courseService.rate(courseId, score);
+        try {
+          const res = await courseService.getById(courseId);
+          const updated = res.data.data?.course;
+          if (updated) {
+            setCourses((prev) =>
+              prev.map((course) =>
+                course._id === courseId ? { ...course, rating: updated.rating } : course,
+              ),
+            );
+          }
+        } catch {
+          // Không lấy lại được điểm mới — hiển thị điểm đã có, không báo lỗi.
+        }
+        toast.success(t("learnPage.rateSuccess"));
+      } catch {
+        // Lỗi API (401/400/404...) đã được axios interceptor toast sẵn.
+      } finally {
+        setRatingCourseId(null);
+      }
+    },
+    [isAuthenticated, navigate, t],
+  );
+
+  // Card renderer dùng chung cho 2 khu vực: Khóa học Miễn phí & Khóa học Premium.
+  const renderCourseCard = (course: Course) => {
+    const isEnrolled = enrolledCourses.includes(course._id);
+    const isEnrolling = enrollingCourseId === course._id;
+    const isPremium = (course.price ?? 0) > 0;
+
+    return (
+      <Card key={course._id} className="overflow-hidden learn-course-card">
+        <div className="relative aspect-video overflow-hidden bg-muted">
+          <img
+            src={course.thumbnail}
+            alt={course.title}
+            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+          />
+          <Badge className={cn("absolute left-3 top-3 border", levelStyles[course.level])}>
+            {levelLabels[course.level]}
+          </Badge>
+          {isPremium ? (
+            <Badge className="absolute right-3 top-3 border">{formatPrice(course.price ?? 0)}</Badge>
+          ) : (
+            <Badge className="absolute right-3 top-3 border badge-free">
+              {t("learnPage.free")}
+            </Badge>
+          )}
+        </div>
+        <CardContent className="space-y-4 p-5">
+          <div>
+            <h3 className="line-clamp-2 min-h-12 text-lg font-semibold">{course.title}</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {course.tags.slice(0, 2).map((tag) => (
+                <Badge key={tag} variant="outline">{tag}</Badge>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} {t("learnPage.lessons")}</span>
+            <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} {t("learnPage.min")}</span>
+            <span className="flex items-center gap-1.5"><Users className="size-4" />{course.enrolledCount.toLocaleString()}</span>
+          </div>
+
+          {/* Rate (sao) — hiển thị điểm trung bình + cho phép đánh giá 1–5 */}
+          <div
+            className="flex items-center justify-between rounded-xl border border-border bg-[var(--surface-secondary)]/60 px-3 py-1.5"
+            title={t("learnPage.rateHint")}
+          >
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => {
+                const filled = star <= Math.round(course.rating ?? 0);
+                const pending = ratingCourseId === course._id;
+                return (
+                  <button
+                    key={star}
+                    type="button"
+                    disabled={pending}
+                    aria-label={`${star}/5`}
+                    onClick={() => void handleRate(course._id, star)}
+                    className={`transition-transform ${
+                      pending ? "cursor-wait opacity-60" : "hover:scale-125"
+                    }`}
+                  >
+                    <Star
+                      className={`size-4 ${
+                        filled
+                          ? "fill-[var(--rating-star)] text-[var(--rating-star)]"
+                          : "text-muted-foreground/30"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <span className="text-xs font-medium tabular-nums">
+              {Number(course.rating ?? 0).toFixed(1)}
+            </span>
+          </div>
+          {isPremium && !isEnrolled ? (
+            // Khóa Premium chưa mua → vào trang chi tiết để xem & mua (Buy Now)
+            <button
+              type="button"
+              className="w-full py-2.5 px-4 rounded-full text-sm font-medium transition-all learn-enroll-btn"
+              onClick={() => navigate(`/learn/${course._id}`)}
+            >
+              {t("learnPage.viewDetail")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="w-full py-2.5 px-4 rounded-full text-sm font-medium transition-all learn-enroll-btn"
+              disabled={isEnrolling}
+              onClick={() => handleEnroll(course._id)}
+            >
+              {isEnrolling ? t("learnPage.enrolling") : isEnrolled ? t("learnPage.enrolled") : t("learnPage.startLearning")}
+            </button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
@@ -475,16 +624,16 @@ export function LearnPage() {
           </aside>
 
           <main className="space-y-12">
-            {/* ── Premium Courses ── */}
+            {/* ── Miễn phí (không có giá) ── */}
             <div>
               <div className="mb-5 flex items-end justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">🔥</span>
-                    <h2 className="text-2xl font-semibold">{t("learnPage.premiumCourses")}</h2>
+                    <span className="text-lg">🆓</span>
+                    <h2 className="text-2xl font-semibold">{t("learnPage.freeCourses")}</h2>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {loading ? t("learnPage.loading") : `${filteredCourses.length} ${t("learnPage.courses")}`}
+                    {loading ? t("learnPage.loading") : `${freeCourses.length} ${t("learnPage.courses")}`}
                   </p>
                 </div>
               </div>
@@ -541,53 +690,33 @@ export function LearnPage() {
                   )}
                 </div>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 animate-fade-in-soft">
-                  {filteredCourses.map((course) => {
-                    const isEnrolled = enrolledCourses.includes(course._id);
-                    const isEnrolling = enrollingCourseId === course._id;
+                <div className="space-y-12">
+                  {/* ── Miễn phí (không có price) ── */}
+                  {freeCourses.length > 0 && (
+                    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 animate-fade-in-soft">
+                      {freeCourses.map(renderCourseCard)}
+                    </div>
+                  )}
 
-                    return (
-                      <Card key={course._id} className="overflow-hidden learn-course-card">
-                        <div className="relative aspect-video overflow-hidden bg-muted">
-                          <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                          />
-                          <Badge className={cn("absolute left-3 top-3 border", levelStyles[course.level])}>
-                            {levelLabels[course.level]}
-                          </Badge>
-                          <Badge className="absolute right-3 top-3 border badge-free">
-                            {t("learnPage.free")}
-                          </Badge>
+                  {/* ── Premium (có price) ── */}
+                  {premiumCourses.length > 0 && (
+                    <div>
+                      <div className="mb-5 flex items-end justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">🔥</span>
+                            <h2 className="text-2xl font-semibold">{t("learnPage.premiumCourses")}</h2>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {`${premiumCourses.length} ${t("learnPage.courses")}`}
+                          </p>
                         </div>
-                        <CardContent className="space-y-4 p-5">
-                          <div>
-                            <h3 className="line-clamp-2 min-h-12 text-lg font-semibold">{course.title}</h3>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {course.tags.slice(0, 2).map((tag) => (
-                                <Badge key={tag} variant="outline">{tag}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5"><BookOpen className="size-4" />{course.totalLessons} {t("learnPage.lessons")}</span>
-                            <span className="flex items-center gap-1.5"><Clock className="size-4" />{course.totalDuration} {t("learnPage.min")}</span>
-                            <span className="flex items-center gap-1.5"><Star className="size-4 fill-[var(--rating-star)] text-[var(--rating-star)]" />{course.rating}</span>
-                            <span className="flex items-center gap-1.5"><Users className="size-4" />{course.enrolledCount.toLocaleString()}</span>
-                          </div>
-                          <button
-                            type="button"
-                            className="w-full py-2.5 px-4 rounded-full text-sm font-medium transition-all learn-enroll-btn"
-                            disabled={isEnrolling}
-                            onClick={() => handleEnroll(course._id)}
-                          >
-                            {isEnrolling ? t("learnPage.enrolling") : isEnrolled ? t("learnPage.enrolled") : t("learnPage.startLearning")}
-                          </button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                      </div>
+                      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 animate-fade-in-soft">
+                        {premiumCourses.map(renderCourseCard)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

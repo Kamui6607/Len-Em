@@ -32,13 +32,33 @@ export const courseService = {
   getById: (courseId: string) =>
     axiosClient.get<ApiResponse<{ course: Course }>>(`${COURSES_BASE}/${courseId}`),
 
-  /** POST /courses â€” Create a new course (Admin & Staff) */
-  create: (data: CreateCourseRequest) =>
-    axiosClient.post<ApiResponse<{ course: Course }>>(COURSES_BASE, data),
+  /** POST /courses — Create a new course (Admin & Staff, multipart/form-data) */
+  create: (data: CreateCourseRequest, thumbnail?: File) => {
+    // API expects multipart/form-data: `data` (JSON object) + optional `thumbnail` file.
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(data));
+    if (thumbnail) {
+      formData.append("thumbnail", thumbnail);
+    }
+    return axiosClient.post<ApiResponse<{ course: Course }>>(COURSES_BASE, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60_000,
+    });
+  },
 
-  /** PUT /courses/{id} â€” Update course / publish (Admin & Staff) */
-  update: (courseId: string, data: UpdateCourseRequest) =>
-    axiosClient.put<ApiResponse<{ course: Course }>>(`${COURSES_BASE}/${courseId}`, data),
+  /** PUT /courses/{id} — Update course / publish (Admin & Staff) */
+  // BE yêu cầu multipart/form-data: `data` (JSON) + `thumbnail` (file, tùy chọn).
+  update: (courseId: string, data: UpdateCourseRequest, thumbnail?: File) => {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(data));
+    if (thumbnail) {
+      formData.append("thumbnail", thumbnail);
+    }
+    return axiosClient.put<ApiResponse<{ course: Course }>>(`${COURSES_BASE}/${courseId}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60_000,
+    });
+  },
 
   /** DELETE /courses/{id} â€” Soft delete course (Admin & Staff) */
   delete: (courseId: string) =>

@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
     children: [
       { path: "/admin/courses", label: "Courses", icon: BookOpen },
       { path: "/admin/lessons", label: "Lessons", icon: Video },
+      { path: "/admin/videos", label: "Videos", icon: Video },
     ],
   },
   { path: "/admin/orders", label: "Orders", icon: ShoppingCart },

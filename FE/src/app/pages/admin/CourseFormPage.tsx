@@ -35,6 +35,18 @@ const levelOptions: { value: CourseLevel; label: string }[] = [
   { value: "advanced", label: "Advanced" },
 ];
 
+/**
+ * GET /courses/{id} trả `linkedLessons` dạng populated objects (đầy đủ lesson)
+ * trong khi POST/PUT yêu cầu mảng id string → chuẩn hóa về string cả lúc load
+ * lẫn lúc submit để không vấp lỗi "linkedLessons[0]" must be a string.
+ */
+const toIdStrings = (
+  items?: Array<string | { _id?: string; id?: string }>,
+): string[] =>
+  (items ?? [])
+    .map((item) => (typeof item === "string" ? item : item?._id ?? item?.id ?? ""))
+    .filter((id): id is string => Boolean(id));
+
 export function CourseFormPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
@@ -58,6 +70,20 @@ export function CourseFormPage() {
     isPublished: false,
   });
   const [tagInput, setTagInput] = useState("");
+  // Ảnh bìa chọn từ máy — POST /courses nhận `thumbnail` dạng binary (multipart).
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+
+  // Dọn object URL của file preview khi đổi file / unmount để không rò rỉ bộ nhớ.
+  useEffect(() => {
+    if (!thumbnailFile) {
+      setThumbnailPreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(thumbnailFile);
+    setThumbnailPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [thumbnailFile]);
 
   // Fetch all lessons for linking
   useEffect(() => {
@@ -89,8 +115,14 @@ export function CourseFormPage() {
           level: course.level,
           price: course.price ?? 0,
           tags: course.tags || [],
-          linkedLessons: course.linkedLessons ?? [],
-          linkedCombo: (course.linkedCombo || []).map((c) => c.comboId),
+          // GET /courses/{id} trả linkedLessons đã populate (object lesson) → chuẩn về id string
+          linkedLessons: toIdStrings(course.linkedLessons),
+          // linkedCombo có thể là mảng string hoặc object { comboId } tùy BE
+          linkedCombo: ((course.linkedCombo ?? []) as unknown as Array<
+            string | { comboId?: string }
+          >)
+            .map((c) => (typeof c === "string" ? c : c.comboId ?? ""))
+            .filter(Boolean),
           isPublished: course.isPublished,
         });
       } catch {
@@ -123,6 +155,20 @@ export function CourseFormPage() {
     }));
   };
 
+  /**
+   * Đối chiếu price sau khi lưu bằng GET /courses/{id} (giá thật từ BE).
+   * Trả về false nếu BE không lưu giá; true nếu không kiểm tra được
+   * (tránh báo lỗi false-positive khi GET lỗi mạng).
+   */
+  const priceSaved = async (id: string, expected: number): Promise<boolean> => {
+    try {
+      const res = await courseService.getById(id);
+      return (res.data.data?.course?.price ?? 0) === expected;
+    } catch {
+      return true;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
@@ -132,32 +178,46 @@ export function CourseFormPage() {
 
     try {
       setSaving(true);
+      // `data` — JSON object chứa chi tiết khóa học (title, description, level,
+      // linkedLessons, tags, linkedCombo, isPublished, price); `thumbnail` — file ảnh
+      // đính kèm riêng trong multipart/form-data.
+      const data = {
+        title: form.title,
+        description: form.description,
+        thumbnail: thumbnailFile ? undefined : form.thumbnail,
+        level: form.level,
+        price: form.price,
+        tags: form.tags,
+        linkedLessons: toIdStrings(form.linkedLessons),
+        linkedCombo: form.linkedCombo,
+        isPublished: form.isPublished,
+      };
       if (isEditing && courseId) {
-        await courseService.update(courseId, {
-          title: form.title,
-          description: form.description,
-          thumbnail: form.thumbnail,
-          level: form.level,
-          price: form.price,
-          tags: form.tags,
-          linkedLessons: form.linkedLessons,
-          linkedCombo: form.linkedCombo,
-          isPublished: form.isPublished,
-        });
-        toast.success(t("admin.courses.form.updatedSuccess"));
+        await courseService.update(courseId, data, thumbnailFile ?? undefined);
+        if (await priceSaved(courseId, form.price)) {
+          toast.success(t("admin.courses.form.updatedSuccess"));
+        } else {
+          toast.error(t("admin.courses.form.priceSaveFailed"));
+        }
       } else {
-        await courseService.create({
-          title: form.title,
-          description: form.description,
-          thumbnail: form.thumbnail,
-          level: form.level,
-          price: form.price,
-          tags: form.tags,
-          linkedLessons: form.linkedLessons,
-          linkedCombo: form.linkedCombo,
-          isPublished: form.isPublished,
-        });
-        toast.success(t("admin.courses.form.createdSuccess"));
+        const res = await courseService.create(data, thumbnailFile ?? undefined);
+        const createdId = res.data.data?.course?._id;
+        // POST /courses không có price trong schema API → set lại giá ngay sau
+        // khi tạo (PUT multipart) để khóa học Premium không rơi về miễn phí.
+        let priceOk = true;
+        if (createdId && form.price > 0) {
+          try {
+            await courseService.update(createdId, data);
+          } catch {
+            priceOk = false;
+          }
+          priceOk = priceOk && (await priceSaved(createdId, form.price));
+        }
+        if (priceOk) {
+          toast.success(t("admin.courses.form.createdSuccess"));
+        } else {
+          toast.error(t("admin.courses.form.priceSaveFailed"));
+        }
       }
       navigate("/admin/courses");
     } catch {
@@ -234,23 +294,35 @@ export function CourseFormPage() {
               </div>
 
               <div>
-                <Label htmlFor="thumbnail">{t("admin.courses.form.thumbnailUrl")}</Label>
+                <Label htmlFor="thumbnail">{t("admin.courses.form.thumbnail")}</Label>
                 <Input
                   id="thumbnail"
-                  value={form.thumbnail}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, thumbnail: e.target.value }))
-                  }
-                  placeholder={t("admin.courses.form.placeholder.thumbnail")}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
                 />
-                {form.thumbnail && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("admin.courses.form.thumbnailHint")}
+                </p>
+                {(thumbnailPreview || form.thumbnail) && (
                   <div className="mt-3 overflow-hidden rounded-xl border">
                     <img
-                      src={form.thumbnail}
+                      src={thumbnailPreview ?? form.thumbnail}
                       alt="Preview"
                       className="aspect-video w-full object-cover"
                     />
                   </div>
+                )}
+                {thumbnailFile && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => setThumbnailFile(null)}
+                  >
+                    {t("admin.courses.form.removeThumbnail")}
+                  </Button>
                 )}
               </div>
 

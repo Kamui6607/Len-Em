@@ -11,6 +11,8 @@ import { AdminCourses } from "./AdminCourses";
 import { CourseFormPage } from "./CourseFormPage";
 import { AdminLessons } from "./AdminLessons";
 import { LessonFormPage } from "./LessonFormPage";
+import { AdminVideos } from "./AdminVideos";
+import { VideoFormPage } from "./VideoFormPage";
 import { AdminDIYPosts } from "./AdminDIYPosts";
 import { DIYFormPage } from "./DIYFormPage";
 import { AdminSupportDIYPosts } from "./AdminSupportDIYPosts";
@@ -47,6 +49,10 @@ export function AdminPage() {
         <Route path="lessons" element={<AdminLessons />} />
         <Route path="lessons/new" element={<LessonFormPage />} />
         <Route path="lessons/:lessonId" element={<LessonFormPage />} />
+        {/* Video Management */}
+        <Route path="videos" element={<AdminVideos />} />
+        <Route path="videos/new" element={<VideoFormPage />} />
+        <Route path="videos/:videoId" element={<VideoFormPage />} />
         {/* Kit Management */}
         <Route path="kits" element={<AdminKits />} />
       </Routes>
