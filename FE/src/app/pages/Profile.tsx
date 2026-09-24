@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, type ReactNode } from "react";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useMembershipStore } from "../../features/membership/store/membership.store";
 import {
@@ -10,16 +10,17 @@ import {
   Pencil,
   ShieldCheck,
   KeyRound,
-  Bell,
   LogOut,
   Eye,
   EyeOff,
   Loader as Loader2,
   Camera,
   Check,
+  Copy,
   X,
   ZoomIn,
   ZoomOut,
+  ChevronDown,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -39,17 +40,79 @@ import {
 } from "../../shared/components/ui/dialog";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { DatePicker } from "../../shared/components/ui/DatePicker";
-import { displayToIso, isoToDisplayDate } from "../../lib/dateInput";
+import { isoToUsDisplayDate } from "../../lib/dateInput";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Date of birth (ISO from the API) → dd/mm/yyyy for form/display. */
+/**
+ * Date of birth → mm/dd/yyyy cho form/display. DOB là field DUY NHẤT form
+ * đăng ký gửi theo thứ tự month-first (xem src/lib/dateInput.ts) và form
+ * admin cũng hiển thị mm/dd/yyyy — profile phải khớp cả hai.
+ */
 function formatDateForInput(iso: string): string {
-  return isoToDisplayDate(iso);
+  return isoToUsDisplayDate(iso);
 }
 
 function formatDateForDisplay(iso: string): string {
-  return isoToDisplayDate(iso);
+  return isoToUsDisplayDate(iso);
+}
+
+/** Style input / select / date-trigger dùng chung cho các modal của Profile. */
+const fieldInputClass =
+  "w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-sm transition-all placeholder:text-muted-foreground/60 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25";
+
+/** Tiêu đề section đồng bộ cho mọi panel profile — chấm primary phát sáng + slot action bên phải. */
+function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="px-5 pt-4 pb-1 flex items-center justify-between gap-3">
+      <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span
+          className="size-1.5 rounded-full bg-primary shadow-[0_0_6px_var(--glow-primary)]"
+          aria-hidden
+        />
+        {children}
+      </h3>
+      {action}
+    </div>
+  );
+}
+
+/** Thao tác tài khoản — dùng chung cho /profile và profile admin (đổi mật khẩu, đăng xuất). */
+function AccountActions({
+  onChangePassword,
+  onSignOut,
+}: {
+  onChangePassword: () => void;
+  onSignOut: () => void;
+}) {
+  const { t } = useLanguage();
+  const rowBase =
+    "group flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:translate-x-0.5 active:scale-[0.98] cursor-pointer";
+  return (
+    <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
+      <SectionTitle>{t("profile.accountActions")}</SectionTitle>
+      <div className="px-3 pb-3 pt-1 space-y-0.5">
+        <button
+          type="button"
+          onClick={onChangePassword}
+          className={`${rowBase} hover:bg-[var(--surface-secondary)]`}
+        >
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-primary bg-primary/10 transition-all duration-200 group-hover:scale-110 group-hover:-rotate-6">
+            <KeyRound className="w-4 h-4" />
+          </div>
+          <span className="flex-1 text-sm font-medium">{t("profile.changePassword")}</span>
+          <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+        </button>
+        <button type="button" onClick={onSignOut} className={`${rowBase} hover:bg-rose-500/10`}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-rose-500 bg-rose-500/10 transition-all duration-200 group-hover:scale-110 group-hover:rotate-6">
+            <LogOut className="w-4 h-4" />
+          </div>
+          <span className="flex-1 text-sm font-medium text-rose-500">{t("profile.signOut")}</span>
+          <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-rose-500" />
+        </button>
+      </div>
+    </section>
+  );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -128,8 +191,11 @@ export function Profile({ embedded = false }: ProfileProps) {
       if (editForm.address !== user.address) payload.address = editForm.address;
       if (editForm.gender !== user.gender) payload.gender = editForm.gender;
       if (editForm.dateOfBirth !== formatDateForInput(user.dateOfBirth)) {
-        // The API receives ISO (yyyy-mm-dd); the form holds dd/mm/yyyy.
-        payload.dateOfBirth = displayToIso(editForm.dateOfBirth) ?? "";
+        // The API receives MM/DD/YYYY — the exact order the signup form sends
+        // and the admin edit form forwards (see AdminUsersDialogs). Sending an
+        // ISO string (yyyy-mm-dd) here made PATCH /users/{id} reject the whole
+        // update with400, so pass the display value through unchanged.
+        payload.dateOfBirth = editForm.dateOfBirth.trim();
       }
 
       if (Object.keys(payload).length === 0) {
@@ -153,7 +219,7 @@ export function Profile({ embedded = false }: ProfileProps) {
     } finally {
       setSaving(false);
     }
-  }, [user, editForm, setUser]);
+  }, [user, editForm, setUser, t]);
 
   // ── Avatar crop logic ──
   const handleAvatarClick = useCallback(() => {
@@ -324,13 +390,27 @@ export function Profile({ embedded = false }: ProfileProps) {
     } finally {
       setChangingPwd(false);
     }
-  }, [user, pwdForm]);
+  }, [user, pwdForm, t]);
 
   // ── Logout ──
   const handleLogout = useCallback(() => {
     signOut();
     navigate("/auth/login", { replace: true });
   }, [signOut, navigate]);
+
+  // ── Click-to-copy trên các hàng thông tin cá nhân ──
+  const handleCopy = useCallback(
+    async (value: string) => {
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        toast.success(t("profile.copied"));
+      } catch {
+        // Clipboard bị chặn (insecure context / permission) — im lặng.
+      }
+    },
+    [t],
+  );
 
   if (!user) return null;
 
@@ -381,8 +461,14 @@ export function Profile({ embedded = false }: ProfileProps) {
       <div className="max-w-4xl mx-auto space-y-5">
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold md:text-2xl">{t("profile.title")}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="flex items-center gap-3 text-xl font-bold md:text-2xl">
+            <span
+              className="h-6 w-1 rounded-full bg-gradient-to-b from-primary to-primary/40"
+              aria-hidden
+            />
+            {t("profile.title")}
+          </h1>
+          <p className="mt-1 pl-4 text-sm text-muted-foreground">
             {isDashboardUser ? t("profile.subtitleAdmin") : t("profile.subtitleUser")}
           </p>
         </div>
@@ -391,11 +477,16 @@ export function Profile({ embedded = false }: ProfileProps) {
         <div className="grid gap-5 lg:grid-cols-5">
           {/* ── Left column ── */}
           <div className="lg:col-span-3 space-y-4">
-            {/* Avatar card */}
-            <div className="glass-panel-solid rounded-2xl overflow-hidden hover:shadow-[var(--shadow-card-hover)] transition-shadow">
-              {/* Banner */}
-              <div className="h-24 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent relative overflow-hidden">
+            {/* Identity card */}
+            <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
+              {/* Banner — gradient ấm + vệt chỉ chạy (brand seam) ở đáy */}
+              <div className="h-28 bg-gradient-to-br from-primary/30 via-primary/12 to-transparent relative overflow-hidden">
                 <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(400px 160px at 20% 0%, var(--glow-primary), transparent 70%)" }} />
+                <div
+                  className="absolute inset-x-6 bottom-0 h-px opacity-40"
+                  aria-hidden
+                  style={{ backgroundImage: "repeating-linear-gradient(90deg, var(--primary) 0 6px, transparent 6px 12px)" }}
+                />
               </div>
 
               {/* Avatar + name row */}
@@ -404,7 +495,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   <button
                     type="button"
                     onClick={handleAvatarClick}
-                    className="relative w-20 h-20 rounded-2xl bg-primary/15 border-4 border-card flex items-center justify-center text-xl font-bold text-primary shadow-[var(--shadow-card-elevated)] overflow-hidden group cursor-pointer hover:scale-[1.03] transition-transform"
+                    className="group relative w-20 h-20 rounded-2xl bg-primary/15 border-4 border-card flex items-center justify-center text-xl font-bold text-primary shadow-[var(--shadow-card-elevated)] overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_10px_28px_rgba(107,63,160,0.35)] active:scale-95"
                     title={t("profile.changeAvatar")}
                   >
                     {user.avatar ? (
@@ -416,7 +507,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     ) : (
                       initials
                     )}
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Camera className="w-5 h-5 text-white" />
                     </div>
                   </button>
@@ -430,18 +521,24 @@ export function Profile({ embedded = false }: ProfileProps) {
                   <button
                     type="button"
                     onClick={openEditModal}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors text-muted-foreground mb-0.5"
+                    className="group/edit mb-0.5 flex items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-2 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:shadow-primary/25 active:scale-95"
                   >
-                    <Pencil className="w-3 h-3" />
+                    <Pencil className="w-3 h-3 transition-transform duration-200 group-hover/edit:rotate-12" />
                     {t("profile.editButton")}
                   </button>
                 </div>
 
-                <h2 className="text-base font-bold leading-tight">
+                <h2 className="text-lg font-bold leading-tight">
                   {user.fullName}
                 </h2>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <span className="text-xs text-muted-foreground capitalize px-2 py-0.5 bg-muted rounded-full">
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`capitalize rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      isDashboardUser
+                        ? "border-primary/20 bg-primary/10 text-primary"
+                        : "border-border bg-muted text-muted-foreground"
+                    }`}
+                  >
                     {user.roleId}
                   </span>
                   {!isDashboardUser && data && (
@@ -449,91 +546,94 @@ export function Profile({ embedded = false }: ProfileProps) {
                   )}
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* Info card */}
-            <div className="glass-panel-solid rounded-2xl overflow-hidden">
-              <div className="px-5 pt-4 pb-2">
-                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("profile.personalInfo")}
-                </h3>
-              </div>
-              <div className="px-3 pb-3 space-y-0.5">
-                {infoRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${row.color}`}
+            {/* Info card — click vào hàng để sao chép giá trị */}
+            <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
+              <SectionTitle>{t("profile.personalInfo")}</SectionTitle>
+              <div className="space-y-0.5 px-3 pb-3 pt-1">
+                {infoRows.map((row) => {
+                  const empty = row.value === t("profile.notSet");
+                  return (
+                    <button
+                      key={row.label}
+                      type="button"
+                      disabled={empty}
+                      onClick={() => handleCopy(row.value)}
+                      className={`group flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:translate-x-0.5 active:scale-[0.99] ${
+                        empty
+                          ? "cursor-default"
+                          : "cursor-pointer hover:bg-[var(--surface-secondary)]"
+                      }`}
                     >
-                      {row.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground leading-none mb-0.5">
-                        {row.label}
-                      </p>
-                      <p className="text-sm font-medium truncate">
-                        {row.value}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:-rotate-6 ${row.color}`}
+                      >
+                        {row.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-muted-foreground leading-none mb-0.5">
+                          {row.label}
+                        </p>
+                        <p className="text-sm font-medium truncate">{row.value}</p>
+                      </div>
+                      {!empty && (
+                        <Copy className="w-3.5 h-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
+            </section>
           </div>
 
-          {/* ── Right column ── */}
-          <div className="lg:col-span-2">
+          {/* ── Right column — /profile: Thành viên + Thao tác · admin/staff: Vai trò + Thao tác ── */}
+          <div className="lg:col-span-2 space-y-4">
             {!isDashboardUser ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t("profile.membership")}
-                  </h3>
-                  <Link
-                    to="/my-account/membership"
-                    className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+              <>
+                {/* Membership — giữ cho /profile, đóng khung đồng bộ các panel */}
+                <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
+                  <SectionTitle
+                    action={
+                      <Link
+                        to="/my-account/membership"
+                        className="flex items-center gap-1 text-xs font-medium text-primary transition-all hover:underline"
+                      >
+                        {t("profile.viewDetails")} <ChevronRight className="w-3 h-3" />
+                      </Link>
+                    }
                   >
-                    {t("profile.viewDetails")} <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
-                <MembershipCard
-                  onViewHistory={() =>
-                    (window.location.href =
-                      "/my-account/membership?tab=history")
-                  }
-                  onViewBenefits={() =>
-                    (window.location.href =
-                      "/my-account/membership?tab=benefits")
-                  }
-                  onViewTimeline={() =>
-                    (window.location.href =
-                      "/my-account/membership?tab=timeline")
-                  }
-                />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Role card */}
-                <div className="glass-panel-solid rounded-2xl overflow-hidden">
-                  <div className="px-5 pt-4 pb-2">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {t("profile.roleAccess")}
-                    </h3>
+                    {t("profile.membership")}
+                  </SectionTitle>
+                  <div className="px-4 pb-4 pt-1">
+                    <MembershipCard
+                      onViewHistory={() => navigate("/my-account/membership?tab=history")}
+                      onViewBenefits={() => navigate("/my-account/membership?tab=benefits")}
+                      onViewTimeline={() => navigate("/my-account/membership?tab=timeline")}
+                    />
                   </div>
-                  <div className="px-5 pb-5 space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
+                </section>
+
+                <AccountActions
+                  onChangePassword={() => setPwdOpen(true)}
+                  onSignOut={handleLogout}
+                />
+              </>
+            ) : (
+              <>
+                {/* Role card — CHỈ admin/staff (không đưa xuống /profile) */}
+                <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
+                  <SectionTitle>{t("profile.roleAccess")}</SectionTitle>
+                  <div className="space-y-3 px-5 pb-5 pt-1">
+                    <div className="flex items-center gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 to-primary/5 p-3.5 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_4px_16px_rgba(107,63,160,0.12)]">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 transition-transform duration-300 hover:scale-110 hover:-rotate-6">
+                        <ShieldCheck className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-[11px] text-muted-foreground leading-none mb-0.5">
+                        <p className="text-[11px] text-muted-foreground leading-none mb-1">
                           {t("profile.currentRole")}
                         </p>
-                        <p className="text-sm font-semibold capitalize">
-                          {user.roleId}
-                        </p>
+                        <p className="text-sm font-semibold capitalize">{user.roleId}</p>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
@@ -542,62 +642,13 @@ export function Profile({ embedded = false }: ProfileProps) {
                         : t("profile.staffDescription")}
                     </p>
                   </div>
-                </div>
+                </section>
 
-                {/* Quick actions */}
-                <div className="glass-panel-solid rounded-2xl overflow-hidden">
-                  <div className="px-5 pt-4 pb-2">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {t("profile.accountActions")}
-                    </h3>
-                  </div>
-                  <div className="px-3 pb-3 space-y-0.5">
-                    {/* Change password */}
-                    <button
-                      type="button"
-                      onClick={() => setPwdOpen(true)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors group cursor-pointer text-left"
-                    >
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-primary bg-primary/10">
-                        <KeyRound className="w-4 h-4" />
-                      </div>
-                      <span className="flex-1 text-sm font-medium">
-                        {t("profile.changePassword")}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-                    </button>
-
-                    {/* Notification settings */}
-                    <button
-                      type="button"
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors group cursor-pointer text-left"
-                    >
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-secondary bg-secondary/10">
-                        <Bell className="w-4 h-4" />
-                      </div>
-                      <span className="flex-1 text-sm font-medium">
-                        {t("profile.notificationSettings")}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-                    </button>
-
-                    {/* Sign out */}
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--surface-secondary)] transition-colors group cursor-pointer text-left"
-                    >
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-rose-500 bg-rose-500/10">
-                        <LogOut className="w-4 h-4" />
-                      </div>
-                      <span className="flex-1 text-sm font-medium text-rose-500">
-                        {t("profile.signOut")}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                <AccountActions
+                  onChangePassword={() => setPwdOpen(true)}
+                  onSignOut={handleLogout}
+                />
+              </>
             )}
           </div>
         </div>
@@ -605,17 +656,27 @@ export function Profile({ embedded = false }: ProfileProps) {
 
       {/* ── Edit Profile Modal ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md glass-panel-solid">
+        <DialogContent className="glass-panel-solid sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{t("profile.editProfileTitle")}</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {t("profile.editProfileDesc")}
-            </DialogDescription>
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Pencil className="size-4" />
+              </span>
+              <div>
+                <DialogTitle className="text-lg font-semibold leading-tight">
+                  {t("profile.editProfileTitle")}
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                  {t("profile.editProfileDesc")}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-5 py-4">
+          {/* Grid2 cột trên sm+: họ tên full-width, các field ngắn xếp cặp cho gọn */}
+          <div className="grid grid-cols-1 gap-4 py-1 sm:grid-cols-2">
             {/* Full Name */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("profile.fullNameLabel")}
               </label>
@@ -625,13 +686,13 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, fullName: e.target.value }))
                 }
-                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className={fieldInputClass}
                 placeholder={t("profile.fullNamePlaceholder")}
               />
             </div>
 
-            {/* Phone */}
-            <div className="space-y-2">
+            {/* Phone | Address */}
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("profile.phoneLabel")}
               </label>
@@ -641,13 +702,11 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, phone: e.target.value }))
                 }
-                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className={fieldInputClass}
                 placeholder={t("profile.phonePlaceholder")}
               />
             </div>
-
-            {/* Address */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("profile.addressLabel")}
               </label>
@@ -657,34 +716,35 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(e) =>
                   setEditForm((f) => ({ ...f, address: e.target.value }))
                 }
-                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className={fieldInputClass}
                 placeholder={t("profile.addressPlaceholder")}
               />
             </div>
 
-            {/* Gender */}
-            <div className="space-y-2">
+            {/* Gender | Date of Birth */}
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("profile.genderLabel")}
               </label>
-              <select
-                value={editForm.gender}
-                onChange={(e) =>
-                  setEditForm((f) => ({
-                    ...f,
-                    gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
-                  }))
-                }
-                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-              >
-                <option value="MALE">{t("profile.maleOption")}</option>
-                <option value="FEMALE">{t("profile.femaleOption")}</option>
-                <option value="OTHER">{t("profile.otherOption")}</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={editForm.gender}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      gender: e.target.value as "MALE" | "FEMALE" | "OTHER",
+                    }))
+                  }
+                  className={`${fieldInputClass} appearance-none pr-10`}
+                >
+                  <option value="MALE">{t("profile.maleOption")}</option>
+                  <option value="FEMALE">{t("profile.femaleOption")}</option>
+                  <option value="OTHER">{t("profile.otherOption")}</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
             </div>
-
-            {/* Date of Birth — calendar picker (dd/mm/yyyy) */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("profile.dobLabelLong")}
               </label>
@@ -693,8 +753,9 @@ export function Profile({ embedded = false }: ProfileProps) {
                 onChange={(value) =>
                   setEditForm((f) => ({ ...f, dateOfBirth: value }))
                 }
+                format="mm/dd/yyyy"
                 placeholder={t("profile.dobPlaceholder")}
-                triggerClassName="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all flex items-center justify-between gap-2 text-left"
+                triggerClassName={`${fieldInputClass} flex items-center justify-between gap-2 text-left`}
               />
             </div>
           </div>
@@ -703,7 +764,7 @@ export function Profile({ embedded = false }: ProfileProps) {
             <button
               type="button"
               onClick={() => setEditOpen(false)}
-              className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium"
+              className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-[var(--surface-secondary)] hover:text-foreground active:scale-95"
               disabled={saving}
             >
               {t("profile.cancelButton")}
@@ -712,7 +773,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={handleEditSubmit}
               disabled={saving}
-              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
+              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/35 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {saving ? t("profile.savingButton") : t("profile.saveChanges")}
@@ -744,7 +805,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   onChange={(e) =>
                     setPwdForm((f) => ({ ...f, oldPassword: e.target.value }))
                   }
-                  className="w-full px-4 py-3 pr-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  className={`${fieldInputClass} pr-10`}
                   placeholder={t("profile.currentPasswordPlaceholder")}
                 />
                 <button
@@ -774,7 +835,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   onChange={(e) =>
                     setPwdForm((f) => ({ ...f, newPassword: e.target.value }))
                   }
-                  className="w-full px-4 py-3 pr-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  className={`${fieldInputClass} pr-10`}
                   placeholder={t("profile.newPasswordPlaceholder")}
                 />
                 <button
@@ -806,7 +867,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                     confirmNewPassword: e.target.value,
                   }))
                 }
-                className="w-full px-4 py-3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className={fieldInputClass}
                 placeholder={t("profile.confirmNewPasswordPlaceholder")}
               />
             </div>

@@ -99,10 +99,19 @@ export function SupportDIYCreatePage() {
         price: price > 0 ? price : undefined,
       };
       await supportDIYService.createPost(data, selectedFiles);
-      toast.success("Đã gửi yêu cầu hỗ trợ thành công");
+      // Success feedback comes from the real-time SUPPORT notification via
+      // useNotificationSocket ("🛠️ Đã gửi yêu cầu hỗ trợ DIY" + description).
+      // Toasting here as well made the same event pop up twice.
       navigate("/diy");
-    } catch {
-      toast.error("Gửi yêu cầu thất bại, thử lại giúp mình nhé");
+    } catch (error) {
+      // API errors (4xx/5xx) are already toasted ONCE by the axios
+      // interceptor with the backend's own message — only surface transport
+      // failures (timeout / network) here, so every failure shows exactly
+      // one toast instead of two.
+      const axiosError = error as { response?: unknown };
+      if (!axiosError.response) {
+        toast.error("Gửi yêu cầu thất bại, thử lại giúp mình nhé");
+      }
     } finally {
       setLoading(false);
     }

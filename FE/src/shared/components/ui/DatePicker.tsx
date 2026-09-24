@@ -4,8 +4,9 @@
 // Replaces <input type="date"> because that native control renders in
 // the BROWSER locale (MM/DD/YYYY on en-US), which looked wrong in this
 // Vietnamese UI. The label shows the order requested through `format`
-// (dd/mm/yyyy by default, mm/dd/yyyy for the admin date-of-birth fields)
-// and the calendar uses the Vietnamese locale with month/year dropdowns.
+// (dd/mm/yyyy by default, mm/dd/yyyy for every date-of-birth field — the
+// order the signup form sends them in) and the calendar uses the
+// Vietnamese locale with month/year dropdowns.
 //
 // Value in/out is the display text in that same order
 // (see src/lib/dateInput.ts).
@@ -101,10 +102,13 @@ export function DatePicker({
       </Popover.Trigger>
 
       <Popover.Portal>
+        {/* z-index phải vượt --z-modal (500) của Dialog/admin-dialog, nếu không
+            lịch sẽ mở ra nhưng bị modal che khuất (không chọn được ngày).
+            Giữ dưới --z-toast (600) để toast luôn hiển thị trên cùng. */}
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-[70] rounded-2xl border p-3 shadow-xl outline-none"
+          className="z-[510] rounded-2xl border p-3 shadow-xl outline-none"
           style={{
             background: "var(--card)",
             borderColor: "var(--border)",
