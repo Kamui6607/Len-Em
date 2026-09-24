@@ -498,16 +498,14 @@ export function ClosingCTA() {
 function FooterLogo() {
   return (
     <a href="#" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-      <svg width="30" height="30" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="14" cy="14" r="13" fill="color-mix(in srgb, var(--footer-text) 12%, transparent)" />
-        <circle cx="14" cy="14" r="7" fill="color-mix(in srgb, var(--footer-text-muted) 20%, transparent)" stroke="var(--footer-text-muted)" strokeWidth="1.2" />
-        <path d="M8 11.5C10 12.4 12 12.7 14 12.6C16 12.5 17.8 11.9 19.5 10.8" stroke="var(--footer-text-muted)" strokeWidth="0.9" strokeLinecap="round"/>
-        <path d="M7.5 15C9.5 14.0 12 13.4 14 13.6C16.2 13.8 18 14.6 19.8 15.8" stroke="var(--footer-text-muted)" strokeWidth="0.9" strokeLinecap="round"/>
-        <path d="M11 7.5C11.6 9.5 11.8 11.8 11.7 14C11.6 16.2 11.0 18.4 9.9 20.2" stroke="var(--footer-text-muted)" strokeWidth="0.9" strokeLinecap="round"/>
-        <path d="M17 7.8C16.4 9.8 16.2 12 16.3 14C16.4 16.2 17 18.4 18.1 20.0" stroke="var(--footer-text-muted)" strokeWidth="0.9" strokeLinecap="round"/>
-        <line x1="6" y1="6" x2="22" y2="22" stroke="var(--footer-text-muted)" strokeWidth="1.4" strokeLinecap="round" />
-        <circle cx="6.5" cy="6.5" r="1.5" fill="var(--footer-text-muted)" />
-      </svg>
+      <img
+        src="/yarn-shop-2-removebg-preview.vng.svg"
+        alt=""
+        width={30}
+        height={30}
+        style={{ display: "block", objectFit: "contain" }}
+        draggable={false}
+      />
       <span style={{ display: "flex", alignItems: "baseline", gap: 0 }}>
         <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", fontWeight: 600, color: "var(--footer-text)", letterSpacing: "-0.01em" }}>Len</span>
         <span style={{ fontFamily: "'Caveat', cursive", fontSize: "1.35rem", fontWeight: 500, color: "var(--footer-text-muted)", lineHeight: 1, marginTop: "2px" }}>&</span>

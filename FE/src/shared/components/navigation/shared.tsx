@@ -60,9 +60,16 @@ export function Brand({
           transition={{ duration: 0.4, ease: "easeOut" }}
           whileHover={{ rotate: -6, scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
-          className="relative flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-hover)] text-lg font-bold text-white shadow-[0_8px_24px_rgba(107,63,160,0.25)]"
+          className="relative flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-hover)] shadow-[0_8px_24px_rgba(107,63,160,0.25)]"
         >
-          L
+          <img
+            src="/yarn-shop-2-removebg-preview.vng.svg"
+            alt=""
+            width={36}
+            height={36}
+            className="size-9 object-contain"
+            draggable={false}
+          />
           <motion.span
             initial={{ opacity: 0, scale: 0 }}
             whileHover={{ opacity: 1, scale: 1 }}

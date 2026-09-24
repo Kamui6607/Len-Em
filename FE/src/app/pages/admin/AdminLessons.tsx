@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router";
-import { Edit, Video } from "lucide-react";
+import { Edit, Eye, Video } from "lucide-react";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
@@ -12,6 +12,7 @@ import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import { AdminModal } from "../../../shared/components/admin/AdminModal";
 import {
   AdminTableScroll,
   AdminSortableHeader,
@@ -35,6 +36,7 @@ export function AdminLessons() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [viewingLesson, setViewingLesson] = useState<Lesson | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
@@ -114,12 +116,12 @@ export function AdminLessons() {
         <AdminTableSkeleton
           rows={6}
           columns={[
-            { type: "icon", className: "w-[400px]" },
-            { type: "number", align: "right" },
-            { type: "number", align: "right" },
-            { type: "number", align: "right" },
-            "badge",
-            { type: "actions", align: "right" },
+            { type: "icon", className: "w-[400px]", align: "center" },
+            { type: "number", align: "center" },
+            { type: "number", align: "center" },
+            { type: "number", align: "center" },
+            { type: "badge", align: "center" },
+            { type: "actions", align: "center" },
           ]}
         />
       </div>
@@ -161,12 +163,12 @@ export function AdminLessons() {
         <AdminTableScroll>
           <thead className="bg-muted">
             <tr>
-              <AdminSortableHeader label={t("admin.lessons.lesson")} field="title" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-              <AdminSortableHeader label={t("admin.lessons.order")} field="order" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
-              <AdminSortableHeader label={t("admin.lessons.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
-              <AdminSortableHeader label={t("admin.lessons.products")} field="products" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
-              <AdminSortableHeader label={t("admin.lessons.preview")} field="preview" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-              <AdminTableHeaderCell label={t("admin.lessons.actions")} align="right" />
+              <AdminSortableHeader label={t("admin.lessons.lesson")} field="title" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.lessons.order")} field="order" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.lessons.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.lessons.products")} field="products" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.lessons.preview")} field="preview" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminTableHeaderCell label={t("admin.lessons.actions")} align="center" />
             </tr>
           </thead>
           <tbody>
@@ -176,8 +178,8 @@ export function AdminLessons() {
                   key={lesson._id}
                   className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-3">
                       <div className="flex size-11 items-center justify-center rounded-lg bg-muted">
                         <Video className="size-5 text-muted-foreground" />
                       </div>
@@ -191,29 +193,38 @@ export function AdminLessons() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
+                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
                     {lesson.order}
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
+                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
                     {lesson.duration} min
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
+                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
                     {lesson.linkedProduct?.length ?? 0}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-center">
                     <span
                       className={`badge ${lesson.isPreview ? "badge-green" : "badge-red"}`}
                     >
                       {lesson.isPreview ? t("admin.lessons.preview") : t("admin.lessons.locked")}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="admin-action-btn view"
+                        title={t("admin.lessons.view")}
+                        onClick={() => setViewingLesson(lesson)}
+                      >
+                        <Eye className="size-4" />
+                      </Button>
                       <Button
                         asChild
                         variant="ghost"
                         size="sm"
-                        className="admin-action-btn view"
+                        className="admin-action-btn edit"
                       >
                         <Link to={`/admin/lessons/${lesson._id}`}>
                           <Edit className="size-4" />
@@ -249,6 +260,59 @@ export function AdminLessons() {
         totalItems={sortedLessons.length}
         pageSize={PAGE_SIZE}
       />
+
+      {/* ── Read dialog: xem chi tiết bài học ngay tại trang admin, không chuyển trang ── */}
+      {viewingLesson && (
+        <AdminModal
+          title={viewingLesson.title}
+          onClose={() => setViewingLesson(null)}
+          className="max-w-2xl w-full"
+        >
+          <div className="admin-dialog-body">
+            {/* Trạng thái preview */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`badge ${viewingLesson.isPreview ? "badge-green" : "badge-red"}`}>
+                {viewingLesson.isPreview ? t("admin.lessons.preview") : t("admin.lessons.locked")}
+              </span>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.orderLabel")}</p>
+                <p className="text-sm font-medium">{viewingLesson.order}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.durationLabel")}</p>
+                <p className="text-sm font-medium">{viewingLesson.duration} min</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.productsLabel")}</p>
+                <p className="text-sm font-medium">{viewingLesson.linkedProduct?.length ?? 0}</p>
+              </div>
+            </div>
+
+            {/* Video URL */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.videoUrl")}</p>
+              <a
+                href={viewingLesson.videoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-[var(--primary)] break-all hover:underline"
+              >
+                {viewingLesson.videoUrl}
+              </a>
+            </div>
+          </div>
+
+          <div className="admin-dialog-footer">
+            <button type="button" onClick={() => setViewingLesson(null)} className="btn-modal-cancel">
+              {t("common.close")}
+            </button>
+          </div>
+        </AdminModal>
+      )}
     </div>
   );
 }

@@ -12,6 +12,9 @@ import { useAuth } from "../../../shared/hooks/useAuth";
 import { Badge } from "../../../shared/components/ui/badge";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
 
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+
 const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];
 
 export function StaffReports() {
@@ -83,10 +86,10 @@ export function StaffReports() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl mb-2">My Assigned Reports</h1>
-        <p className="text-muted-foreground">Handle reports assigned to you by admin</p>
-      </div>
+      <AdminPageHeader
+        title="My Assigned Reports"
+        subtitle="Handle reports assigned to you by admin"
+      />
 
       {/* Filter */}
       <div className="flex flex-wrap gap-3">
@@ -114,16 +117,16 @@ export function StaffReports() {
           ))}
         </div>
       ) : reports.length === 0 ? (
-        <div className="bg-card rounded-2xl p-12 text-center border border-border">
+        <AdminPanel className="p-12 text-center">
           <Eye className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="mb-2">No Reports Assigned</h3>
           <p className="text-muted-foreground">When admin assigns you a report, it will appear here.</p>
-        </div>
+        </AdminPanel>
       ) : (
         <>
           <div className="space-y-4">
             {reports.map((report) => (
-              <div key={report._id} className="bg-card rounded-2xl p-5 border border-border">
+              <AdminPanel key={report._id} className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
@@ -158,7 +161,7 @@ export function StaffReports() {
                     View Details
                   </button>
                 </div>
-              </div>
+              </AdminPanel>
             ))}
           </div>
 

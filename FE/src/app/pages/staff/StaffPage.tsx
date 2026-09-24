@@ -36,6 +36,8 @@ import type { NavItem } from "../../../shared/components/dashboard/Sidebar";
 import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { DashboardShell } from "../../../shared/components/dashboard/DashboardShell";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
 
 const staffNavItems: NavItem[] = [
   { path: "/staff/orders", label: "Pending Orders", icon: ShoppingCart },
@@ -90,12 +92,10 @@ function PendingOrdersContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl mb-2">Pending Orders</h1>
-        <p className="text-muted-foreground">
-          Staff xử lý các đơn hàng Pending — xác nhận thanh toán & gửi đi
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Pending Orders"
+        subtitle="Staff xử lý các đơn hàng Pending — xác nhận thanh toán & gửi đi"
+      />
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -104,7 +104,7 @@ function PendingOrdersContent() {
       ) : pendingOrders.length > 0 ? (
         <div className="grid gap-4">
           {pendingOrders.map((order) => (
-            <div key={order._id} className="bg-card rounded-2xl p-6 border border-border">
+            <AdminPanel key={order._id} className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-semibold mb-1">
@@ -141,15 +141,15 @@ function PendingOrdersContent() {
                 <CheckCircle className="w-4 h-4" />
                 Confirm Order
               </button>
-            </div>
+            </AdminPanel>
           ))}
         </div>
       ) : (
-        <div className="bg-card rounded-2xl p-12 text-center border border-border">
+        <AdminPanel className="p-12 text-center">
           <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="mb-2">No pending orders</h3>
           <p className="text-muted-foreground">All orders have been processed.</p>
-        </div>
+        </AdminPanel>
       )}
     </div>
   );
@@ -238,12 +238,23 @@ function UsersContent() {
       setDeleting(false);
     }
   };
-return (
+  return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl mb-2">Users (Read Only)</h1>
-        <p className="text-muted-foreground">View all registered users</p>
-      </div>
+      <AdminPageHeader
+        title="Users (Read Only)"
+        subtitle="View all registered users"
+        actions={
+          canCreate && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="size-4" />
+              Create User
+            </button>
+          )
+        }
+      />
 
       {!canCreate && !canUpdate && !canDelete ? (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted/40 text-sm text-muted-foreground">
@@ -257,19 +268,10 @@ return (
             <ShieldAlert className="size-4 shrink-0" />
             Staff có quyền xử lý User theo permission được cấp.
           </div>
-          {canCreate && (
-            <button
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="size-4" />
-              Create User
-            </button>
-          )}
         </div>
       )}
 
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <AdminPanel>
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>
@@ -316,7 +318,7 @@ return (
             )}
           </tbody>
         </table>
-      </div>
+      </AdminPanel>
 {/* ── Edit modal ── */}
       {editingUser && (
         <div

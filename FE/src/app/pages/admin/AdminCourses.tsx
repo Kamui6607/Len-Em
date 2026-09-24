@@ -14,6 +14,7 @@ import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import { AdminModal } from "../../../shared/components/admin/AdminModal";
 import {
   AdminTableScroll,
   AdminSortableHeader,
@@ -49,6 +50,7 @@ export function AdminCourses() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [viewingCourse, setViewingCourse] = useState<Course | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
@@ -125,12 +127,12 @@ export function AdminCourses() {
           rows={6}
           columns={[
             { type: "media", className: "w-[300px]" },
-            "badge",
-            { type: "number", align: "right" },
-            { type: "number", align: "right" },
-            { type: "money", align: "right" },
-            "badge",
-            { type: "actions", align: "right" },
+            { type: "badge", align: "center" },
+            { type: "number", align: "center" },
+            { type: "number", align: "center" },
+            { type: "money", align: "center" },
+            { type: "badge", align: "center" },
+            { type: "actions", align: "center" },
           ]}
         />
       </div>
@@ -173,12 +175,12 @@ export function AdminCourses() {
           <thead className="bg-muted">
             <tr>
               <AdminSortableHeader label={t("admin.courses.course")} field="title" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-              <AdminSortableHeader label={t("admin.courses.level")} field="level" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-              <AdminSortableHeader label={t("admin.courses.lessons")} field="lessons" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
-              <AdminSortableHeader label={t("admin.courses.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
-              <AdminSortableHeader label="Price" field="price" activeField={sortField} direction={sortDirection} onSort={handleSort} align="right" />
-              <AdminSortableHeader label={t("admin.courses.status")} field="status" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-              <AdminTableHeaderCell label={t("admin.courses.actions")} align="right" />
+              <AdminSortableHeader label={t("admin.courses.level")} field="level" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.courses.lessons")} field="lessons" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.courses.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.courses.price")} field="price" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminSortableHeader label={t("admin.courses.status")} field="status" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
+              <AdminTableHeaderCell label={t("admin.courses.actions")} align="center" />
             </tr>
           </thead>
           <tbody>
@@ -198,30 +200,28 @@ export function AdminCourses() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-center">
                     <Badge className={levelStyles[course.level]} variant="outline">{levelLabels[course.level]}</Badge>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="flex items-center gap-1.5 text-sm">
+                    <span className="flex justify-center items-center gap-1.5 text-sm">
                       <BookOpen className="size-4 text-muted-foreground" />
                       {course.totalLessons}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{course.totalDuration} min</td>
-                  <td className="px-6 py-4 text-sm text-right">
+                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">{course.totalDuration} min</td>
+                  <td className="px-6 py-4 text-sm text-center">
                     {(course.price ?? 0) > 0 ? formatPrice(course.price ?? 0) : "Free"}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-center">
                     <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
                       {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button asChild variant="ghost" size="sm" className="admin-action-btn view">
-                        <Link to={`/learn/${course._id}`} target="_blank">
-                          <Eye className="size-4" />
-                        </Link>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button onClick={() => setViewingCourse(course)} variant="ghost" size="sm" className="admin-action-btn view" title={t("admin.courses.view")}>
+                        <Eye className="size-4" />
                       </Button>
                       <Button asChild variant="ghost" size="sm" className="admin-action-btn edit">
                         <Link to={`/admin/courses/${course._id}`}>
@@ -258,6 +258,83 @@ export function AdminCourses() {
         totalItems={sortedCourses.length}
         pageSize={PAGE_SIZE}
       />
+
+      {/* ── Read dialog: xem chi tiết ngay tại trang admin, không chuyển trang ── */}
+      {viewingCourse && (
+        <AdminModal
+          title={viewingCourse.title}
+          onClose={() => setViewingCourse(null)}
+          className="max-w-3xl w-full"
+        >
+          <div className="admin-dialog-body">
+            {/* Thumbnail + badges + description */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <img
+                src={viewingCourse.thumbnail}
+                alt={viewingCourse.title}
+                className="w-full sm:w-40 aspect-square shrink-0 rounded-xl object-cover bg-muted"
+              />
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={levelStyles[viewingCourse.level]} variant="outline">
+                    {levelLabels[viewingCourse.level]}
+                  </Badge>
+                  <span className={`badge ${viewingCourse.isPublished ? "badge-green" : "badge-orange"}`}>
+                    {viewingCourse.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {viewingCourse.description}
+                </p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.level")}</p>
+                <p className="text-sm font-medium">{levelLabels[viewingCourse.level]}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.lessonsCount")}</p>
+                <p className="text-sm font-medium">{viewingCourse.totalLessons}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.duration")}</p>
+                <p className="text-sm font-medium">
+                  {t("admin.courses.durationMin", { duration: viewingCourse.totalDuration })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.price")}</p>
+                <p className="text-sm font-medium">
+                  {(viewingCourse.price ?? 0) > 0 ? formatPrice(viewingCourse.price ?? 0) : "Free"}
+                </p>
+              </div>
+            </div>
+
+            {/* Tags */}
+            {viewingCourse.tags && viewingCourse.tags.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">{t("admin.courses.tags")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {viewingCourse.tags.map((tag) => (
+                    <Badge key={tag} variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="admin-dialog-footer">
+            <button type="button" onClick={() => setViewingCourse(null)} className="btn-modal-cancel">
+              {t("common.close")}
+            </button>
+          </div>
+        </AdminModal>
+      )}
     </div>
   );
 }

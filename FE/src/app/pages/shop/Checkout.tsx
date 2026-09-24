@@ -60,7 +60,7 @@ const PAYMENT_METHODS = [
 export function Checkout() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { cartItems, cartKits, totalItems, totalPrice } = useCart();
+  const { cartItems, cartKits, totalItems, totalPrice, removeFromCart, removeKitFromCart } = useCart();
   const user = useAuthStore((s) => s.user);
   const [paymentMethod, setPaymentMethod] = useState<"MOMO" | "COD">("COD");
   const [submitting, setSubmitting] = useState(false);
@@ -258,7 +258,12 @@ export function Checkout() {
     lat?: number,
     lng?: number
   ) => {
-    if (cartItems.length === 0 && cartKits.length === 0) return;
+    if (cartItems.length === 0 && cartKits.length === 0) {
+      // Giỏ rỗng (kể cả sau khi self-healing gỡ hết item "bóng ma") →
+      // reset phí ship cũ để tổng tiền không cộng dồn phí đã lỗi thời.
+      setDeliveryFee(null);
+      return;
+    }
 
     setCalculatingFee(true);
     try {
@@ -309,9 +314,45 @@ export function Checkout() {
       setDeliveryFee(data.shippingFee ?? 0);
     } catch (error) {
       console.error("[Checkout] Failed to calculate shipping fee:", error);
-      // Show a toast with the error so the user knows what happened
       const axiosError = error as { response?: { data?: { message?: string } } };
       const errMsg = axiosError?.response?.data?.message;
+
+      // ── Self-healing: BE chặn sản phẩm đã bị xoá khỏi DB (404 "Product
+      // <id> not found") — "bóng ma" còn lưu trong LocalStorage giỏ hàng.
+      // Tự xoá nó khỏi cart (state + localStorage đồng bộ qua effect trong
+      // CartContext); effect tính phí có deps cartItems/cartKits nên sẽ tự
+      // gọi lại với các item còn sống — giao diện sạch mà không cần refresh.
+      const missingId =
+        errMsg && /not found/i.test(errMsg)
+          ? errMsg.match(/[a-f0-9]{24}/i)?.[0]
+          : undefined;
+
+      if (missingId) {
+        const deadItem = cartItems.find(
+          (item) => item.productId === missingId || item.variantId === missingId
+        );
+        const deadKit =
+          cartKits.find((kit) => kit.kitId === missingId) ??
+          // Kit chứa product đã bị xoá khỏi DB → gỡ luôn cả kit (không còn
+          // đủ sản phẩm hợp lệ để thanh toán).
+          cartKits.find((kit) => kit.products.some((p) => p.productId === missingId));
+
+        if (deadItem) {
+          removeFromCart(deadItem.productId, deadItem.variantId);
+          toast.warning(
+            `"${deadItem.name}" không còn tồn tại nên đã tự động xoá khỏi giỏ hàng.`
+          );
+        } else if (deadKit) {
+          removeKitFromCart(deadKit.kitId);
+          toast.warning(
+            `DIY Kit "${deadKit.name}" có sản phẩm không còn tồn tại nên đã tự động xoá khỏi giỏ hàng.`
+          );
+        } else {
+          toast.warning("Một sản phẩm trong giỏ không còn tồn tại nên đã được bỏ qua.");
+        }
+        return;
+      }
+
       toast.error(errMsg || "Không thể tính phí vận chuyển. Vui lòng thử lại sau.");
     } finally {
       setCalculatingFee(false);

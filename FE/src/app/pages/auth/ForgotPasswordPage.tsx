@@ -18,8 +18,14 @@ export function ForgotPasswordPage() {
     try {
       await authService.sendForgotPasswordEmail(email);
       setSent(true);
-    } catch {
-      toast.error("Failed to send reset email. Please try again.");
+    } catch (error: unknown) {
+      // Hiển thị thông báo lỗi THẬT từ backend (vd: "User not found") thay vì
+      // nuốt mất nó bằng một câu tĩnh — chỉ fallback khi BE không trả message.
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError?.response?.data?.message ||
+          "Failed to send reset email. Please try again.",
+      );
     } finally {
       setLoading(false);
     }

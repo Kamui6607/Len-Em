@@ -192,6 +192,7 @@
       "newCourse": "Khóa học mới",
       "noCourses": "Không tìm thấy khóa học",
       "noCoursesFound": "Không tìm thấy khóa học",
+      "price": "Giá",
       "publish": "Xuất bản",
       "published": "Đã xuất bản",
       "searchLessons": "Tìm kiếm Lesson...",
@@ -417,7 +418,8 @@
       "updateError": "Không thể cập nhật bài học",
       "updateSuccess": "Cập nhật bài học thành công",
       "videoUrl": "Video URL",
-      "videoUrlPlaceholder": "https://www.youtube.com/watch?v=..."
+      "videoUrlPlaceholder": "https://www.youtube.com/watch?v=...",
+      "view": "Xem"
     },
     "loading": "Đang tải...",
     "locked": "Đã khóa",

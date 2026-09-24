@@ -22,7 +22,7 @@ interface AdminSortableHeaderProps<T extends string> {
   activeField: T | null;
   direction: "asc" | "desc";
   onSort: (field: T) => void;
-  align?: "left" | "right";
+  align?: "left" | "center" | "right";
   className?: string;
 }
 
@@ -43,7 +43,7 @@ export function AdminSortableHeader<T extends string>({
   const active = activeField === field;
   return (
     <th
-      className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"} ${className}`}
+      className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left"} ${className}`}
     >
       <button
         type="button"
@@ -65,9 +65,9 @@ export function AdminSortableHeader<T extends string>({
 }
 
 /** Plain (non-sortable) header cell, kept visually identical to AdminSortableHeader. */
-export function AdminTableHeaderCell({ label, align = "left" }: { label: string; align?: "left" | "right" }) {
+export function AdminTableHeaderCell({ label, align = "left" }: { label: string; align?: "left" | "center" | "right" }) {
   return (
-    <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : "text-left"}`}>
+    <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left"}`}>
       {label}
     </th>
   );

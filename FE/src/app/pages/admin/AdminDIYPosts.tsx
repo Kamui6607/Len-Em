@@ -388,9 +388,9 @@ export function AdminDIYPosts() {
                 <thead>
                   <tr>
                     <SortableHeader label={t("admin.diyPosts.postId")} field="id" />
-                    <SortableHeader label={t("admin.diyPosts.postTitle")} field="title" />
+                    <SortableHeader label={t("admin.diyPosts.postTitle")} field="title" align="center" />
                     <SortableHeader label={t("admin.diyPosts.status")} field="status" align="center" />
-                    <SortableHeader label={t("admin.diyPosts.date")} field="date" />
+                    <SortableHeader label={t("admin.diyPosts.date")} field="date" align="center" />
                     <th
                       className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[200px]"
                       style={{ textAlign: "center" }}
@@ -408,7 +408,7 @@ export function AdminDIYPosts() {
                       <td className="px-6 py-4 font-mono text-xs">
                         {post._id.slice(-8)}
                       </td>
-                      <td className="px-6 py-4 max-w-[200px] truncate text-sm">
+                      <td className="px-6 py-4 max-w-[200px] truncate text-sm text-center">
                         {post.title}
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -418,13 +418,12 @@ export function AdminDIYPosts() {
                           {displayStatus(post)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-6 py-4 text-sm text-muted-foreground text-center">
                         {(() => { try { return new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); } catch { return "—"; } })()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {/* Order mirrors the other admin tables: view → edit →
-                              approve (pending only) → delete. */}
+                          {/* View */}
                           <button
                             onClick={() => setSelectedPost(post)}
                             className="admin-action-btn view"
@@ -432,6 +431,8 @@ export function AdminDIYPosts() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          
+                          {/* Edit */}
                           <button
                             onClick={() => openEditModal(post)}
                             className="admin-action-btn edit"
@@ -439,6 +440,8 @@ export function AdminDIYPosts() {
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
+                          
+                          {/* Confirm */}
                           {isPending(post) && (
                             <button
                               onClick={() => handleConfirmPost(post._id)}
@@ -449,6 +452,8 @@ export function AdminDIYPosts() {
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
+                          
+                          {/* Delete */}
                           <ConfirmDeleteButton
                             onDelete={() => handleDelete(post)}
                             itemName={post.title}
@@ -506,67 +511,123 @@ export function AdminDIYPosts() {
       {/* View Detail Modal */}
       {selectedPost && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={() => setSelectedPost(null)}
         >
           <div
-            className="admin-dialog-content max-w-lg w-full mx-4"
+            className="admin-dialog-content max-w-2xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="admin-dialog-header">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{selectedPost.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Post #{selectedPost._id.slice(-8)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`badge ${isPending(selectedPost) ? "badge-orange" : "badge-green"}`}
-                  >
-                    {displayStatus(selectedPost)}
-                  </span>
-                  <ReportButton
-                    targetType="diy_post"
-                    targetId={selectedPost._id}
-                    targetTitle={selectedPost.title}
-                  />
-                </div>
+            <div className="admin-dialog-header flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-bold">{selectedPost.title}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  ID: <span className="font-mono">{selectedPost._id.slice(-8)}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`badge ${isPending(selectedPost) ? "badge-orange" : "badge-green"} text-sm px-3 py-1`}>
+                  {displayStatus(selectedPost)}
+                </span>
+                <ReportButton
+                  targetType="diy_post"
+                  targetId={selectedPost._id}
+                  targetTitle={selectedPost.title}
+                />
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="admin-action-btn"
+                  style={{ color: "var(--foreground-muted)" }}
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
-            <div className="admin-dialog-body">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
-                <p className="text-sm">{selectedPost.description}</p>
+
+            <div className="admin-dialog-body p-6 space-y-6">
+              {/* Description */}
+              <div className="bg-[var(--surface-secondary)] p-4 rounded-xl border border-border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  {t("admin.diyPosts.modal.descriptionField") || "Description"}
+                </p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {selectedPost.description || <span className="italic text-muted-foreground">No description provided</span>}
+                </p>
               </div>
+
+              {/* Tags & Price */}
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px] bg-[var(--surface-secondary)] p-4 rounded-xl border border-border">
+                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                     {t("admin.diyPosts.modal.tagsField") || "Tags"}
+                   </p>
+                   <div className="flex flex-wrap gap-2">
+                     {selectedPost.tags && selectedPost.tags.length > 0 ? (
+                       selectedPost.tags.map(tag => (
+                         <span key={tag} className="px-2.5 py-1 rounded-md bg-[var(--background)] border border-border text-xs">
+                           #{tag}
+                         </span>
+                       ))
+                     ) : (
+                       <span className="italic text-muted-foreground text-sm">No tags</span>
+                     )}
+                   </div>
+                </div>
+                <div className="flex-1 min-w-[150px] bg-[var(--surface-secondary)] p-4 rounded-xl border border-border">
+                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                     {t("admin.diyPosts.modal.priceField") || "Price"}
+                   </p>
+                   <p className="text-lg font-semibold text-primary">
+                     {selectedPost.price && selectedPost.price > 0 ? (
+                        new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(selectedPost.price)
+                     ) : (
+                        "Free"
+                     )}
+                   </p>
+                </div>
+              </div>
+
+              {/* Images Grid */}
               {selectedPost.images && selectedPost.images.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Images</p>
-                  <div className="flex gap-2 flex-wrap">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Attached Images ({selectedPost.images.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedPost.images.map((img, i) => (
-                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                      <div key={i} className="aspect-square rounded-xl overflow-hidden border border-border bg-[var(--surface-secondary)]">
+                        <img src={img} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Created</p>
-                <p className="text-sm">
+            </div>
+
+            <div className="admin-dialog-footer flex justify-between items-center bg-[var(--surface-secondary)]/50 rounded-b-2xl border-t border-border p-4">
+               <div className="text-sm text-muted-foreground">
+                  <span className="font-medium">Created:</span>{" "}
                   {(() => { try { return new Date(selectedPost.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return "—"; } })()}
-                </p>
-              </div>
-              {isPending(selectedPost) && (
-                <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+               </div>
+               
+               <div className="flex gap-2">
                   <button
-                    onClick={() => handleConfirmPost(selectedPost._id)}
-                    disabled={statusUpdating}
-                    className="btn-primary"
+                    onClick={() => setSelectedPost(null)}
+                    className="btn-modal-cancel"
                   >
-                    <CheckCircle className="w-4 h-4 inline mr-1" /> Confirm
+                    Close
                   </button>
-                </div>
-              )}
+                  {isPending(selectedPost) && (
+                    <button
+                      onClick={() => handleConfirmPost(selectedPost._id)}
+                      disabled={statusUpdating}
+                      className="btn-modal-primary flex items-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Confirm Post
+                    </button>
+                  )}
+               </div>
             </div>
           </div>
         </div>
@@ -575,48 +636,110 @@ export function AdminDIYPosts() {
       {/* Edit Modal */}
       {editModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={() => setEditModal(null)}
         >
           <div
-            className="admin-dialog-content max-w-lg w-full mx-4"
+            className="admin-dialog-content max-w-2xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">{t("admin.diyPosts.editingTitle")}</h3>
+            <div className="admin-dialog-header flex justify-between items-center pb-4 border-b border-border">
+              <div>
+                <h3 className="text-xl font-bold">{t("admin.diyPosts.editingTitle")}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  ID: <span className="font-mono">{editModal._id.slice(-8)}</span>
+                </p>
+              </div>
               <button
                 onClick={() => setEditModal(null)}
+                className="admin-action-btn bg-[var(--surface-secondary)] hover:bg-[var(--border)] transition-colors"
                 style={{ color: "var(--foreground-muted)" }}
-                className="admin-action-btn absolute top-4 right-4"
                 aria-label="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
+            
             <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }}>
-              <div className="admin-dialog-body space-y-4">
-                <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+              <div className="admin-dialog-body p-6 space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold flex items-center gap-1">
                     {t("admin.diyPosts.modal.titleField")} <span className="text-destructive">*</span>
                   </label>
-                  <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="input w-full" placeholder="Post title" />
+                  <input
+                    type="text"
+                    required
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    className="input w-full px-4 py-2.5 text-base rounded-xl bg-[var(--surface-secondary)]/50 focus:bg-[var(--background)] transition-colors"
+                    placeholder="Enter the post title..."
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>{t("admin.diyPosts.modal.descriptionField")}</label>
-                  <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className="input w-full resize-none" placeholder="Post description" />
+                
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold">
+                    {t("admin.diyPosts.modal.descriptionField")}
+                  </label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    rows={4}
+                    className="input w-full px-4 py-3 text-base resize-none rounded-xl bg-[var(--surface-secondary)]/50 focus:bg-[var(--background)] transition-colors"
+                    placeholder="Write a detailed description..."
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>{t("admin.diyPosts.modal.tagsField")}</label>
-                  <input type="text" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="input w-full" placeholder="e.g. funny, pokemon, ghibli" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>{t("admin.diyPosts.modal.priceField")}</label>
-                  <input type="number" value={editForm.price || ""} onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })} className="input w-full" placeholder="0 for free" min={0} />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">
+                      {t("admin.diyPosts.modal.tagsField")}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.tags}
+                      onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                      className="input w-full px-4 py-2.5 rounded-xl bg-[var(--surface-secondary)]/50 focus:bg-[var(--background)] transition-colors"
+                      placeholder="e.g. funny, pokemon, ghibli"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold flex items-center justify-between">
+                      <span>{t("admin.diyPosts.modal.priceField")}</span>
+                      <span className="text-xs font-normal text-muted-foreground">VND</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.price || ""}
+                      onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
+                      className="input w-full px-4 py-2.5 rounded-xl bg-[var(--surface-secondary)]/50 focus:bg-[var(--background)] transition-colors font-mono"
+                      placeholder="0 for free"
+                      min={0}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="admin-dialog-footer">
-                <button type="button" onClick={() => setEditModal(null)} disabled={savingEdit} className="btn-modal-cancel">{t("admin.diyPosts.modal.cancel")}</button>
-                <button type="submit" disabled={savingEdit} className="btn-modal-primary">{savingEdit ? t("admin.diyPosts.modal.saving") : t("admin.diyPosts.modal.updatePost")}</button>
+              
+              <div className="admin-dialog-footer flex justify-end gap-3 p-5 bg-[var(--surface-secondary)]/30 border-t border-border rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={() => setEditModal(null)}
+                  disabled={savingEdit}
+                  className="btn-modal-cancel px-6 py-2.5 rounded-xl font-medium"
+                >
+                  {t("admin.diyPosts.modal.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="btn-modal-primary px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+                >
+                  {savingEdit ? t("admin.diyPosts.modal.saving") : (
+                    <>
+                      <Check className="w-4 h-4" /> {t("admin.diyPosts.modal.updatePost")}
+                    </>
+                  )}
+                </button>
               </div>
             </form>
           </div>

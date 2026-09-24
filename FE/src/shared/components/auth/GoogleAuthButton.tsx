@@ -15,6 +15,7 @@ import { useNavigate } from "react-router";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { Loader as Loader2 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
+import { useTheme } from "../../contexts/ThemeContext";
 
 /**
  * Origins currently registered in Google Cloud Console for this Client ID
@@ -60,7 +61,7 @@ const GAUTH_STYLE = `
     justify-content: center;
     gap: 10px;
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg, 12px);
+    border-radius: 9999px; /* pill shape to match GSI */
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-body);
@@ -138,6 +139,7 @@ function GoogleAuthButtonInner({
 }: GoogleAuthButtonProps) {
   const navigate = useNavigate();
   const googleLogin = useAuthStore((s) => s.googleLogin);
+  const { isDark } = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Map our free-text label to one of the button texts Google allows
@@ -247,10 +249,11 @@ function GoogleAuthButtonInner({
             onSuccess={handleGoogleSuccess}
             onError={handleGoogleError}
             type="standard"
-            theme="outline"
+            theme={isDark ? "filled_black" : "outline"}
             size="large"
-            shape="rectangular"
+            shape="pill"
             text={googleButtonText}
+            logo_alignment="center"
             click_listener={handleButtonClick}
           />
         </div>

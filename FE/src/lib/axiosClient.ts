@@ -217,8 +217,20 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     }
     // Sign-up / admin create-user forms print the backend validation errors
     // inline next to the offending field, so keep the global toast out of the
-    // way to avoid double-reporting the same problem.
-    if (url.includes("/auth/signup") || url.includes("/auth/register")) {
+    // way to avoid double-reporting the same problem. ForgotPasswordPage does
+    // the same: it shows the backend's own message (e.g. "User not found")
+    // in its own toast, so /mail/forgot-password/send is skipped too.
+    if (
+      url.includes("/auth/signup") ||
+      url.includes("/auth/register") ||
+      url.includes("/mail/forgot-password/send")
+    ) {
+      return Promise.reject(error);
+    }
+    // Checkout previews shipping fees itself: on "product not found" it
+    // auto-removes the ghost item from the cart and shows its own toast, so
+    // the global toast would only duplicate the same message.
+    if (url.includes("/orders/shipping-fee")) {
       return Promise.reject(error);
     }
     const mapped: Record<number, string> = {

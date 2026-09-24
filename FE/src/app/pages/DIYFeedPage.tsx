@@ -16,6 +16,8 @@ import { kitService, type KitProduct } from "../../shared/api/kitService";
 import type { DIYCreator, DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "../../shared/components/ui/ResponsiveImage";
+import { CreateDIYPostModal } from "../../features/diy/components/CreateDIYPostModal";
+import "../../styles/diy-feed.css";
 
 type FeedFilter = "all" | "newest" | "purchased";
 
@@ -28,66 +30,6 @@ function getPostCreator(post: DIYPost): DIYCreator | undefined {
     : undefined;
 }
 
-// Shared page styles — per-mode pill buttons for the two feed CTAs.
-// Light mode: accent-blush fill → solid --primary on hover.
-// Dark mode: full --primary fill with indigo glow (like .add-cart-btn / .learn-enroll-btn).
-const DIY_FEED_STYLES = `
-  .diy-support-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 10px 20px; border-radius: 999px;
-    background: var(--accent-blush);
-    color: var(--foreground);
-    border: 2px solid var(--primary);
-    box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
-    transition: all 0.2s ease;
-  }
-  .diy-support-btn:hover {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    transform: translateY(-2px);
-    box-shadow: 0 7px 18px var(--glow-primary);
-  }
-  .diy-support-btn:active { transform: translateY(0); }
-  .dark .diy-support-btn {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border-color: var(--primary);
-    box-shadow: 0 0 0 1px var(--primary), 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
-  }
-  .dark .diy-support-btn:hover {
-    background: var(--primary-hover);
-    color: var(--primary-foreground);
-    box-shadow: 0 0 0 1px var(--primary), 0 8px 20px var(--glow-primary);
-  }
-
-  .diy-post-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 10px 20px; border-radius: 999px;
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border: 2px solid var(--primary);
-    box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
-    transition: all 0.2s ease;
-  }
-  .diy-post-btn:hover {
-    background: var(--primary-hover);
-    color: var(--primary-foreground);
-    transform: translateY(-2px);
-    box-shadow: 0 7px 18px var(--glow-primary);
-  }
-  .diy-post-btn:active { transform: translateY(0); }
-  .dark .diy-post-btn {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border-color: var(--primary);
-    box-shadow: 0 0 0 1px var(--primary), 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
-  }
-  .dark .diy-post-btn:hover {
-    background: var(--primary-hover);
-    color: var(--primary-foreground);
-    box-shadow: 0 0 0 1px var(--primary), 0 8px 20px var(--glow-primary);
-  }
-`;
 
 export function DIYFeedPage() {
   const { t } = useLanguage();
@@ -100,12 +42,6 @@ export function DIYFeedPage() {
   const searchQuery = searchParams.get("search") || "";
   const [loading, setLoading] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
-  const [postSubmitting, setPostSubmitting] = useState(false);
-  const [postTitle, setPostTitle] = useState("");
-  const [postDescription, setPostDescription] = useState("");
-  const [postTags, setPostTags] = useState("");
-  const [postPrice, setPostPrice] = useState("");
-  const [postImages, setPostImages] = useState<File[]>([]);
   const { isDIYPostSaved, toggleDIYPostSave } = useFavorites();
 
   const fetchPosts = useCallback(async () => {
@@ -147,50 +83,6 @@ export function DIYFeedPage() {
       return;
     }
     action();
-  };
-
-  const resetPostForm = () => {
-    setPostTitle("");
-    setPostDescription("");
-    setPostTags("");
-    setPostPrice("");
-    setPostImages([]);
-  };
-
-  const submitPost = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!isAuthenticated) {
-      navigate("/auth/login");
-      return;
-    }
-    if (!postTitle.trim() || !postDescription.trim()) {
-      toast.error("Vui lòng nhập tiêu đề và mô tả");
-      return;
-    }
-
-    setPostSubmitting(true);
-    try {
-      await diyService.createPost(
-        {
-          title: postTitle.trim(),
-          description: postDescription.trim(),
-          tags: postTags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-          price: postPrice ? Math.max(0, Number(postPrice)) : undefined,
-        },
-        postImages,
-      );
-      toast.success("Đã gửi bài viết. Vui lòng chờ admin duyệt.");
-      resetPostForm();
-      setPostOpen(false);
-      await fetchPosts();
-    } catch {
-      toast.error("Không thể đăng bài viết");
-    } finally {
-      setPostSubmitting(false);
-    }
   };
 
   const buyCombo = async (post: DIYPost) => {
@@ -312,7 +204,6 @@ export function DIYFeedPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
-      <style>{DIY_FEED_STYLES}</style>
       <div className="mx-auto max-w-7xl">
         {/* Hero */}
         <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
@@ -415,109 +306,13 @@ export function DIYFeedPage() {
         </div>
 
         {postOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <motion.form
-              onSubmit={submitPost}
-              initial={{ opacity: 0, y: 12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border bg-card p-5 shadow-2xl md:p-6"
-            >
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold">Post sản phẩm</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Bài viết sẽ ở trạng thái Pending và cần admin duyệt trước
-                    khi hiển thị.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetPostForm();
-                    setPostOpen(false);
-                  }}
-                  className="text-2xl leading-none text-muted-foreground hover:text-foreground"
-                  aria-label="Đóng"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-sm font-medium">
-                  Tiêu đề
-                  <input
-                    required
-                    value={postTitle}
-                    onChange={(event) => setPostTitle(event.target.value)}
-                    className="input mt-1"
-                    placeholder="Ví dụ: Túi len hoa cúc"
-                  />
-                </label>
-                <label className="block text-sm font-medium">
-                  Mô tả
-                  <textarea
-                    required
-                    value={postDescription}
-                    onChange={(event) => setPostDescription(event.target.value)}
-                    className="input mt-1 min-h-28 resize-y"
-                    placeholder="Mô tả sản phẩm hoặc công thức DIY"
-                  />
-                </label>
-                <label className="block text-sm font-medium">
-                  Tags
-                  <input
-                    value={postTags}
-                    onChange={(event) => setPostTags(event.target.value)}
-                    className="input mt-1"
-                    placeholder="len, beginner, túi xách"
-                  />
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    Phân tách bằng dấu phẩy
-                  </span>
-                </label>
-                <label className="block text-sm font-medium">
-                  Giá (không bắt buộc)
-                  <input
-                    type="number"
-                    min="0"
-                    value={postPrice}
-                    onChange={(event) => setPostPrice(event.target.value)}
-                    className="input mt-1"
-                    placeholder="0"
-                  />
-                </label>
-                <label className="block text-sm font-medium">
-                  Hình ảnh
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(event) =>
-                      setPostImages(Array.from(event.target.files ?? []))
-                    }
-                    className="input mt-1"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    resetPostForm();
-                    setPostOpen(false);
-                  }}
-                >
-                  Hủy
-                </Button>
-                <Button type="submit" disabled={postSubmitting}>
-                  {postSubmitting ? "Đang đăng..." : "Gửi bài"}
-                </Button>
-              </div>
-            </motion.form>
-          </div>
+          <CreateDIYPostModal
+            onClose={() => setPostOpen(false)}
+            onSuccess={() => {
+              setPostOpen(false);
+              fetchPosts();
+            }}
+          />
         )}
 
         {/* Grid / empty state */}

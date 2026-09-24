@@ -25,6 +25,8 @@ import {
   AdminDialogSkeleton,
   AdminTableSkeleton,
 } from "../../../shared/components/skeletons/AdminSkeleton";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
 
 type OrderFilter = "all" | OrderStatus;
 
@@ -227,14 +229,10 @@ export function AdminOrders() {
     // phân trang) để lúc data về không bị giật layout.
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div>
-            <h1 className="mb-2">Order Management</h1>
-            <p className="text-muted-foreground">
-              View and manage all orders from the API
-            </p>
-          </div>
-        </div>
+        <AdminPageHeader
+          title="Order Management"
+          subtitle="View and manage all orders from the API"
+        />
 
         <AdminTableSkeleton
           filters={1}
@@ -256,20 +254,13 @@ export function AdminOrders() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div>
-          <h1 className="mb-2">Order Management</h1>
-          <p className="text-muted-foreground">
-            View and manage all orders from the API
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Order Management"
+        subtitle="View and manage all orders from the API"
+      />
 
       {/* Filters and Table */}
-      <div
-        className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
-        style={{ borderColor: "var(--border)" }}
-      >
+      <AdminPanel>
         {/* Filters — search dùng chung component (debounce 400ms) */}
         <AdminSearchToolbar
           search={{
@@ -508,7 +499,7 @@ export function AdminOrders() {
           disabled={loading}
           className="border-t p-4"
         />
-      </div>
+      </AdminPanel>
 
       {/* Order Detail Dialog */}
       {selectedOrder && (

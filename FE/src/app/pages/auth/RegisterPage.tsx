@@ -506,7 +506,7 @@ export function RegisterPage() {
         .rp-subbtn {
           width: 100%;
           height: 48px;
-          border-radius: var(--radius-lg);
+          border-radius: 9999px;
           border: none;
           background: var(--cta-gradient);
           color: var(--primary-foreground);
@@ -744,7 +744,16 @@ export function RegisterPage() {
 
           <div className="rp-welcome-content">
             <div className="rp-logo">
-              <span className="rp-logo-mark">L</span>
+              <span className="rp-logo-mark">
+                <img
+                  src="/yarn-shop-2-removebg-preview.vng.svg"
+                  alt=""
+                  width={30}
+                  height={30}
+                  style={{ objectFit: "contain" }}
+                  draggable={false}
+                />
+              </span>
               <span className="rp-logo-name">Len&amp;em</span>
             </div>
 
@@ -812,7 +821,16 @@ export function RegisterPage() {
             />
 
             <div className="rp-mobile-brand">
-              <span className="rp-mobile-brand-mark">L</span>
+              <span className="rp-mobile-brand-mark">
+                <img
+                  src="/yarn-shop-2-removebg-preview.vng.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  style={{ objectFit: "contain" }}
+                  draggable={false}
+                />
+              </span>
               <span className="rp-mobile-brand-name">Len&amp;em</span>
             </div>
 

@@ -530,7 +530,7 @@ export function LoginPage() {
         .submit-btn {
           width: 100%;
           padding: 14px;
-          border-radius: var(--radius-lg);
+          border-radius: 9999px;
           border: none;
           cursor: pointer;
           font-family: var(--font-body);
@@ -699,7 +699,16 @@ export function LoginPage() {
 
           <div className="welcome-content">
             <div className="welcome-logo">
-              <span className="welcome-logo-mark">L</span>
+              <span className="welcome-logo-mark">
+                <img
+                  src="/yarn-shop-2-removebg-preview.vng.svg"
+                  alt=""
+                  width={30}
+                  height={30}
+                  style={{ objectFit: "contain" }}
+                  draggable={false}
+                />
+              </span>
               <span className="welcome-logo-name">
                 Len&amp;em
               </span>
@@ -763,7 +772,16 @@ export function LoginPage() {
             />
 
             <div className="mobile-brand">
-              <span className="mobile-brand-mark">L</span>
+              <span className="mobile-brand-mark">
+                <img
+                  src="/yarn-shop-2-removebg-preview.vng.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  style={{ objectFit: "contain" }}
+                  draggable={false}
+                />
+              </span>
               <span className="mobile-brand-name">Len&amp;em</span>
             </div>
 

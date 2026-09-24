@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
 import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
@@ -391,20 +393,18 @@ export function ProductManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="mb-2">{t("admin.products.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("admin.products.totalCount", { count: total })}
-          </p>
-        </div>
-        {isAdminOrStaff && (
-          <CreateButton label={t("admin.products.create")} onClick={openCreate} />
-        )}
-      </div>
+      <AdminPageHeader
+        title={t("admin.products.title")}
+        subtitle={t("admin.products.totalCount", { count: total })}
+        actions={
+          isAdminOrStaff && (
+            <CreateButton label={t("admin.products.create")} onClick={openCreate} />
+          )
+        }
+      />
 
       {/* Table */}
-      <div className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
+      <AdminPanel>
         {/* Table Header — search dùng chung component (debounce 400ms) */}
         <AdminSearchToolbar
           search={{
@@ -648,7 +648,7 @@ export function ProductManagement() {
             </table>
           </div>
         )}
-      </div>
+      </AdminPanel>
 
       <AdminPagination
         page={page}

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://yarn-shop-be.onrender.com/api/v1/logo" alt="Len Em Logo" width="120" height="120" style="border-radius: 20px;"/>
+  <img src="./public/yarn-shop-2-removebg-preview.vng.svg" alt="Len Em Logo" width="120" height="120" style="border-radius: 20px;"/>
   
   <h1 align="center" style="font-size: 2.5rem; font-weight: 700; margin-top: 0.5rem; background: linear-gradient(135deg, #f472b6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
     🧶 Len Em

@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from "react";
+import { useLocation } from "react-router";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../ui/utils";
 import type { NavItem } from "./Sidebar";
 import { Sidebar } from "./Sidebar";
@@ -20,6 +22,7 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [showProfile, setShowProfile] = useState(false);
   const { isDark } = useTheme();
+  const location = useLocation();
 
   return (
     <div className="min-h-screen flex">
@@ -76,11 +79,20 @@ export function DashboardShell({
         </div>
 
         {/* Page content */}
-        <main className={cn("flex-1 overflow-y-auto relative z-10", className)}>
-          <div className="p-4 lg:p-8">
-            {showProfile ? <Profile embedded /> : children}
-          </div>
-        </main>
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={location.pathname}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className={cn("flex-1 overflow-y-auto relative z-10", className)}
+          >
+            <div className="p-4 lg:p-8">
+              {showProfile ? <Profile embedded /> : children}
+            </div>
+          </motion.main>
+        </AnimatePresence>
       </div>
     </div>
   );
