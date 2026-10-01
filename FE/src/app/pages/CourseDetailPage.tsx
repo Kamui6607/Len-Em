@@ -40,16 +40,16 @@ import { formatPrice } from "../../lib/formatPrice";
 
 const levelLabels: Record<CourseLevel, string> = {
   beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
+  mid: "Intermediate",
+  pro: "Advanced",
 };
 
 const levelStyles: Record<CourseLevel, string> = {
   beginner:
     "border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
-  intermediate:
+  mid:
     "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  advanced:
+  pro:
     "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
 };
 

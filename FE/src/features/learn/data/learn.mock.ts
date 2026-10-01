@@ -71,7 +71,7 @@ export const freeVideos: FreeVideo[] = [
     description: "Đổi màu len không để lại chỉ thừa, chuyên nghiệp như creator.",
     videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
     duration: 7,
-    level: "intermediate",
+    level: "mid",
     thumbnail: "https://images.unsplash.com/photo-1678443087150-4a40aa2f250a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
     creator: { id: "creator-linh", name: "Linh Creator", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=faces&cs=tinysrgb&fit=crop&fm=jpg&w=160&h=160" },
     linkedProducts: [
@@ -133,7 +133,7 @@ export const learnCourses: Course[] = [
     pointReward: 300,
     purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1618354691229-88d47f285158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
-    level: "intermediate",
+    level: "mid",
     creator: {
       id: "creator-minh",
       name: "Minh Handmade",
@@ -161,7 +161,7 @@ export const learnCourses: Course[] = [
     pointReward: 400,
     purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1544816155-12df9643f363?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
-    level: "advanced",
+    level: "pro",
     creator: {
       id: "creator-linh",
       name: "Linh Creator",
@@ -189,7 +189,7 @@ export const learnCourses: Course[] = [
     pointReward: 300,
     purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
-    level: "intermediate",
+    level: "mid",
     creator: {
       id: "creator-ngoc",
       name: "Ngọc Handmade",
@@ -245,7 +245,7 @@ export const learnCourses: Course[] = [
     pointReward: 500,
     purchasedBy: [],
     thumbnail: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200",
-    level: "advanced",
+    level: "pro",
     creator: {
       id: "creator-linh",
       name: "Linh Creator",

@@ -11,6 +11,18 @@ import type { Kit } from "../../shared/api/kitService";
 import { formatPrice } from "../../lib/formatPrice";
 import { useState, useEffect } from "react";
 
+/** Info cho 1 material product; unavailable = product đã bị xóa/ẩn (GET 404). */
+interface MaterialProductInfo {
+  name: string;
+  image: string;
+  price?: number;
+  variantId?: string;
+  color?: string;
+  hexCode?: string;
+  stock?: number;
+  unavailable?: boolean;
+}
+
 export function DIYDetailPage() {
   const { addToCart, addKitToCart: addKitToCartContext } = useCart();
   const { postId } = useParams();
@@ -19,7 +31,7 @@ export function DIYDetailPage() {
   const [post, setPost] = useState<DIYPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [kits, setKits] = useState<Kit[]>([]);
-  const [products, setProducts] = useState<Record<string, { name: string; image: string; price?: number }>>({});
+  const [products, setProducts] = useState<Record<string, MaterialProductInfo>>({});
 
   // Fetch kit and product details for linked items
   useEffect(() => {
@@ -44,31 +56,39 @@ export function DIYDetailPage() {
         setKits(validKits);
       }
 
-      // Fetch products
+      // Fetch products — 404 (product đã xóa/ẩn) được đánh dấu `unavailable`
+      // thay vì hiển thị "Product xxxxxx" + toast lỗi toàn cục.
       if (linkedProduct && linkedProduct.length > 0) {
         const productPromises = linkedProduct.map(async (item) => {
+          const id = String(item.productId);
           try {
-            const { data } = await productService.getById(item.productId);
+            const { data } = await productService.getById(id);
             const productData = data.data.product;
-            return { 
-              id: item.productId, 
-              name: productData.name, 
-              image: productData.image,
-              price: productData.variants?.[0]?.price 
+            const variant = productData.variants?.[0];
+            return {
+              id,
+              entry: {
+                name: productData.name,
+                image: productData.image,
+                price: variant?.price,
+                variantId: variant?._idVariants,
+                color: variant?.color,
+                hexCode: variant?.hexCode,
+                stock: variant?.stock,
+                unavailable: false,
+              } satisfies MaterialProductInfo,
             };
           } catch {
-            return { 
-              id: item.productId, 
-              name: `Product ${item.productId.slice(-6)}`, 
-              image: "",
-              price: undefined 
+            return {
+              id,
+              entry: { name: "", image: "", unavailable: true } satisfies MaterialProductInfo,
             };
           }
         });
         const productResults = await Promise.all(productPromises);
-        const productMap: Record<string, { name: string; image: string; price?: number }> = {};
+        const productMap: Record<string, MaterialProductInfo> = {};
         productResults.forEach((p) => {
-          if (p) productMap[p.id] = { name: p.name, image: p.image, price: p.price };
+          if (p) productMap[p.id] = p.entry;
         });
         setProducts(productMap);
       }
@@ -129,18 +149,22 @@ export function DIYDetailPage() {
     toast.success("All materials added to cart");
   };
 
-  const addProductToCart = (productId: string, productName: string, productImage: string) => {
+  // Thêm 1 material vào giỏ — dùng variant/price THẬT đã fetch được
+  // (bản cũ hardcode price 0 + variantId "default" → giá trị sai trong giỏ).
+  const addProductToCart = (productId: string) => {
+    const info = products[productId];
+    if (!info || info.unavailable) return;
     addToCart({
-      productId: productId,
-      variantId: "default",
-      name: productName,
-      image: productImage,
-      color: "",
-      hexCode: "#ccc",
-      price: 0,
-      stock: 999,
+      productId,
+      variantId: info.variantId ?? "default",
+      name: info.name,
+      image: info.image,
+      color: info.color ?? "",
+      hexCode: info.hexCode ?? "#ccc",
+      price: info.price ?? 0,
+      stock: info.stock ?? 999,
     });
-    toast.success(`${productName} added to cart`);
+    toast.success(`${info.name} added to cart`);
   };
 
   const handleAddKitToCart = (kit: Kit) => {
@@ -181,12 +205,17 @@ export function DIYDetailPage() {
           <div>
             <h2 className="mb-3 text-xl font-semibold">Products Used</h2>
             <div className="grid gap-3">
-              {postData.linkedProduct?.map((item, idx) => {
-                const product = products[item.productId];
+              {(!postData.linkedProduct || postData.linkedProduct.length === 0) ? (
+                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No products linked to this post yet
+                </div>
+              ) : postData.linkedProduct.map((item, idx) => {
+                const productId = String(item.productId);
+                const product = products[productId];
                 return (
                   <Link
                     key={idx}
-                    to={`/shop/product/${item.productId}`}
+                    to={`/shop/product/${productId}`}
                     className="group flex gap-3 rounded-xl border bg-card p-2.5 transition-all hover:border-primary hover:shadow-md"
                   >
                     <div className="size-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -204,20 +233,23 @@ export function DIYDetailPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="line-clamp-2 text-sm font-medium group-hover:text-primary">
-                        {product?.name || `Product ${item.productId.slice(-6)}`}
+                        {product?.unavailable
+                          ? "Product no longer available"
+                          : product?.name || `Product ${productId.slice(-6)}`}
                       </h3>
-                      {product?.price && (
+                      {product && !product.unavailable && product.price != null && (
                         <p className="mt-1 text-sm font-bold text-primary">
                           {formatPrice(product.price)}
                         </p>
                       )}
                       <button
                         type="button"
-                        className="add-to-cart-btn mt-2"
+                        className="add-to-cart-btn mt-2 disabled:opacity-50"
+                        disabled={product?.unavailable}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          requireAuth(() => addProductToCart(item.productId, product?.name || `Product ${item.productId.slice(-6)}`, product?.image || ""));
+                          requireAuth(() => addProductToCart(productId));
                         }}
                       >
                         <div className="btn-text">
@@ -251,12 +283,17 @@ export function DIYDetailPage() {
           <div>
             <h2 className="mb-3 text-xl font-semibold">Combos Used</h2>
             <div className="grid gap-3">
-              {postData.linkedCombo?.map((item, idx) => {
-                const kit = kits.find((k) => k._id === item.comboId);
+              {(!postData.linkedCombo || postData.linkedCombo.length === 0) ? (
+                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No combos linked to this post yet
+                </div>
+              ) : postData.linkedCombo.map((item, idx) => {
+                const comboId = String(item.comboId);
+                const kit = kits.find((k) => k._id === comboId);
                 return (
                   <Link
                     key={`kit-${idx}`}
-                    to={`/kits/${item.comboId}`}
+                    to={`/kits/${comboId}`}
                     className="group flex gap-3 rounded-xl border bg-card p-2.5 transition-all hover:border-primary hover:shadow-md"
                   >
                     <div className="size-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -274,7 +311,7 @@ export function DIYDetailPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="line-clamp-2 text-sm font-medium group-hover:text-primary">
-                        {kit?.name || `Combo ${item.comboId.slice(-6)}`}
+                        {kit?.name || `Combo ${comboId.slice(-6)}`}
                       </h3>
                       {kit?.price && (
                         <p className="mt-1 text-sm font-bold text-primary">
@@ -283,7 +320,8 @@ export function DIYDetailPage() {
                       )}
                       <button
                         type="button"
-                        className="add-to-cart-btn mt-2"
+                        className="add-to-cart-btn mt-2 disabled:opacity-50"
+                        disabled={!kit}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();

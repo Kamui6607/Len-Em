@@ -31,14 +31,14 @@ import { ProductSkeleton } from "../../shared/components/skeletons/ProductSkelet
 
 const levelStyles: Record<CourseLevel, string> = {
   beginner: "level-badge level-badge-success",
-  intermediate: "level-badge level-badge-warning",
-  advanced: "level-badge level-badge-error",
+  mid: "level-badge level-badge-warning",
+  pro: "level-badge level-badge-error",
 };
 
 const LEVEL_EMOJI: Record<CourseLevel, string> = {
   beginner: "🌱",
-  intermediate: "🌿",
-  advanced: "🌳",
+  mid: "🌿",
+  pro: "🌳",
 };
 
 type ActiveFilterChip = { type: "level" | "tag"; value: string; label: string };
@@ -62,8 +62,8 @@ export function LearnPage() {
 
   const levelLabels: Record<CourseLevel, string> = {
     beginner: t("beginner"),
-    intermediate: t("intermediate"),
-    advanced: t("advanced"),
+    mid: t("intermediate"),
+    pro: t("advanced"),
   };
 
   // Get enrolled courses from user profile

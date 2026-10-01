@@ -8,7 +8,7 @@ export type { OrderStatus };
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type PaymentMethod = "MOMO" | "COD";
+export type PaymentMethod = "MOMO" | "COD" | "SEPAY";
 
 export interface OrderUser {
   _id: string;
@@ -191,6 +191,19 @@ export interface MomoPaymentRequest {
 
 export interface MomoPaymentResponse {
   message: string;
+  payUrl: string;
+}
+
+// ── SePay payment QR (POST /payment/sepay-payment) ──
+
+export interface SepayPaymentRequest {
+  /** ID of the order created via POST /orders. */
+  orderId: string;
+}
+
+export interface SepayPaymentResponse {
+  message: string;
+  /** VietQR image URL — render it in an <img>, do NOT redirect. */
   payUrl: string;
 }
 

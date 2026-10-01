@@ -33,8 +33,8 @@ import {
 
 const levelOptions: { value: CourseLevel; label: string }[] = [
   { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
+  { value: "mid", label: "Intermediate" },
+  { value: "pro", label: "Advanced" },
 ];
 
 /**

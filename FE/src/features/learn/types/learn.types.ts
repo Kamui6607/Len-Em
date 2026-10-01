@@ -1,4 +1,10 @@
-export type CourseLevel = "beginner" | "intermediate" | "advanced";
+export type CourseLevel = "beginner" | "mid" | "pro";
+
+/**
+ * Combo / DIY-kit difficulty — matches the BE kit enum.
+ * Kept separate from CourseLevel because kits still use "beginner" | "intermediate" | "advanced".
+ */
+export type ComboLevel = "beginner" | "intermediate" | "advanced";
 
 export interface Course {
   id: string;
@@ -91,7 +97,7 @@ export interface LinkedProduct {
 export interface MaterialCombo {
   id: string;
   name: string;
-  level: CourseLevel;
+  level: ComboLevel;
   description: string;
   price: number;
   thumbnail: string;

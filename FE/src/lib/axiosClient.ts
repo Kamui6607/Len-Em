@@ -209,6 +209,11 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     if (status === 404 && url.includes("/kits/")) {
       return Promise.reject(error);
     }
+    // Skip toast for /products/{id} 404 — DIY detail materials hiển thị inline
+    // ("không còn khả dụng") thay vì popup lỗi toàn cục khi product đã bị xóa/ẩn.
+    if (status === 404 && url.includes("/products/")) {
+      return Promise.reject(error);
+    }
     // GET /roles is optional for the admin UI — the role dropdown and the
     // staff filter fall back to the role objects embedded in user rows, so a
     // background 404 there must not pop a global error toast.
