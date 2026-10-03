@@ -42,19 +42,12 @@ const shippingSchema = yup.object({
 
 type ShippingFormData = yup.InferType<typeof shippingSchema>;
 
-// ── Payment method config ──
 const PAYMENT_METHODS = [
   {
     value: "COD" as const,
     label: "COD",
     icon: Check,
     description: "Thanh toán khi nhận hàng (COD)",
-  },
-  {
-    value: "MOMO" as const,
-    label: "MoMo",
-    icon: QrCode,
-    description: "Thanh toán qua MoMo",
   },
   {
     value: "SEPAY" as const,
@@ -619,23 +612,7 @@ export function Checkout() {
       // must still be intact. The cart is cleared on /order/success only after
       // payment is confirmed (or for COD, when the order is created successfully).
 
-      // MOMO: create the MoMo payment link via POST /payment/momo-payment,
-      // then redirect the user to the MoMo payment page.
-      if (paymentMethod === "MOMO") {
-        const orderId = result.order?._id ?? "";
-        const momoRes = await orderService.createMomoPaymentLink({
-          amount: Math.round(grandTotal),
-          orderInfo: orderId
-            ? `Yarn Shop order payment #${orderId}`
-            : "Yarn Shop order payment",
-        });
-        if (momoRes.data.payUrl) {
-          window.location.href = momoRes.data.payUrl;
-          return;
-        }
-        // No payUrl → treat as a failure so we don't land on the success page.
-        throw new Error("MoMo did not return a payment URL");
-      }
+
 
       // SEPAY (VietQR): tạo mã QR và hiển thị NGAY trên trang — không redirect
       // sang cổng thanh toán. Webhook của SePay sẽ chuyển đơn sang PAID;

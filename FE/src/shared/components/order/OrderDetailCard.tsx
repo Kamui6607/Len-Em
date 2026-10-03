@@ -130,27 +130,12 @@ export function OrderDetailCard({
   const canChangeStatus =
     isAdminView && VALID_TRANSITIONS[normalized.orderStatus]?.length > 0;
   const availableTransitions = VALID_TRANSITIONS[normalized.orderStatus] ?? [];
-  /** PENDING + unpaid (MOMO) → show retry payment button */
-  const isUnpaid =
-    !isAdminView &&
-    normalized.orderStatus === "PENDING" &&
-    normalized.payment.method === "MOMO" &&
-    normalized.payment.status === "PENDING";
-  /** PENDING + not unpaid → show cancel (only if no refund invoice exists) */
-  const canCancel =
-    !isAdminView &&
-    normalized.orderStatus === "PENDING" &&
-    !normalized.isCancelRequested &&
-    normalized.payment.status !== "PENDING";
+  const isUnpaid = false;
+  const canCancel = !isAdminView && normalized.orderStatus === "PENDING" && !normalized.isCancelRequested;
   /** Order is PENDING and has been cancelled (has refund invoice) */
   const isCancelRequested =
     normalized.isCancelRequested && normalized.orderStatus === "PENDING";
-  /** CANCELLED + MOMO + not PAID → show retry payment button */
-  const canRetryPayment =
-    !isAdminView &&
-    normalized.orderStatus === "CANCELLED" &&
-    normalized.payment.method === "MOMO" &&
-    normalized.payment.status !== "PAID";
+  const canRetryPayment = false;
   /** Order can be rated if it's not PENDING or CANCELLED */
   const canRate = !isAdminView && !["PENDING", "CANCELLED"].includes(normalized.orderStatus);
 

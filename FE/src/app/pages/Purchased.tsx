@@ -306,30 +306,7 @@ export function Purchased() {
     }
   };
 
-  /** Shared retry payment handler — works for MOMO */
-  const handleRetryPayment = async (order: Order) => {
-    setRetryingId(order._id);
-    try {
-      const { data } = await orderService.retryPayment(order._id);
-      if (data.payUrl) {
-        const methodLabel = "MoMo";
-        toast.success(
-          t("purchased.retryPaymentRedirect", { method: methodLabel }),
-        );
-        setTimeout(() => {
-          window.location.href = data.payUrl;
-        }, 500);
-      } else {
-        toast.error(t("purchased.retryPaymentError"));
-      }
-    } catch {
-      toast.error(t("purchased.retryPaymentInitError"));
-    } finally {
-      setRetryingId(null);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
+const getStatusIcon = (status: string) => {
     switch (status) {
       case "DELIVERED":
         return "✅";
@@ -602,28 +579,9 @@ export function Purchased() {
                   </div>
 
                   <div className="purchased-card-footer">
-                      {/* ── Retry payment for PENDING + unpaid orders (MOMO) ── */}
+                      {/* ── Cancel button for PENDING orders ── */}
                       {order.orderStatus === "PENDING" &&
-                        order.payment.status === "PENDING" &&
                         !order.isCancelRequested && (
-                          <button
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              await handleRetryPayment(order);
-                            }}
-                            disabled={retryingId === order._id}
-                            className="purchased-action-btn text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90"
-                          >
-                            {retryingId === order._id
-                              ? "..."
-                              : `${t("purchased.retryPayment")}`}
-                          </button>
-                        )}
-                      {/* ── Cancel button for PENDING orders (only if not unpaid MOMO) ── */}
-                      {order.orderStatus === "PENDING" &&
-                        !order.isCancelRequested &&
-                        order.payment.status !== "PENDING" && (
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -657,24 +615,6 @@ export function Purchased() {
                           ✅ {t("purchased.markAsDone")}
                         </button>
                       )}
-                      {/* ── Retry payment for CANCELLED orders (MOMO) ── */}
-                      {order.orderStatus === "CANCELLED" &&
-                        order.payment.method === "MOMO" &&
-                        order.payment.status !== "PAID" && (
-                          <button
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              await handleRetryPayment(order);
-                            }}
-                            disabled={retryingId === order._id}
-                            className="purchased-action-btn text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90"
-                          >
-                            {retryingId === order._id
-                              ? "..."
-                              : `${t("purchased.retryPayment")}`}
-                          </button>
-                        )}
                       <button
                         onClick={(e) => {
                           e.preventDefault();

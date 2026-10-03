@@ -412,7 +412,7 @@ export function CourseDetailPage() {
           districtName: "",
           wardName: "",
         },
-        paymentMethod: "MOMO",
+        paymentMethod: "SEPAY",
         itemsPrice: price,
         shippingFee: 0,
         totalPrice: price,
@@ -421,19 +421,7 @@ export function CourseDetailPage() {
       const response = await orderService.createOrder(payload);
       const result = response.data;
 
-      // MOMO: create the MoMo payment link via POST /payment/momo-payment,
-      // then redirect the user to the MoMo payment page.
-      const orderId = result.order?._id ?? "";
-      const momoRes = await orderService.createMomoPaymentLink({
-        amount: Math.round(price),
-        orderInfo: orderId
-          ? `Yarn Shop course purchase #${orderId}`
-          : "Yarn Shop course purchase",
-      });
-      if (momoRes.data.payUrl) {
-        window.location.href = momoRes.data.payUrl;
-        return;
-      }
+
 
       toast.success("Order created! Complete payment to start the course.");
       navigate(`/order/success?orderId=${result.order?._id ?? ""}`);

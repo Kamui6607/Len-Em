@@ -107,7 +107,6 @@ export const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  MOMO: "MoMo",
   COD: "Tiền mặt (COD)",
   SEPAY: "Chuyển khoản (SePay)",
   CASH: "Tiền mặt (COD)",

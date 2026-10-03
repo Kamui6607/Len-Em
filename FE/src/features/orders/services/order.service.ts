@@ -16,8 +16,6 @@ import type {
   GetOrderResponse,
   ShippingFeePreviewRequest,
   ShippingFeePreviewResponse,
-  MomoPaymentRequest,
-  MomoPaymentResponse,
   SepayPaymentRequest,
   SepayPaymentResponse,
 } from "../types/order.types";
@@ -32,15 +30,6 @@ export const orderService = {
    */
   createOrder: (data: CreateOrderRequest) =>
     axiosClient.post<CreateOrderResponse>(ORDERS_BASE, data),
-
-  /**
-   * Create a MoMo payment link for an order (customer).
-   * POST /payment/momo-payment
-   * Body: { amount, orderInfo }
-   * Response: { message, payUrl } — redirect the user to payUrl.
-   */
-  createMomoPaymentLink: (data: MomoPaymentRequest) =>
-    axiosClient.post<MomoPaymentResponse>("/payment/momo-payment", data),
 
   /**
    * Create a SePay (VietQR) payment QR for an order (customer).

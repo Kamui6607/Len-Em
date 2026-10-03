@@ -510,7 +510,7 @@ export function OrderSuccess() {
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [searchParams] = useSearchParams();
-  // After paying, the payment gateway (MoMo) redirects back here with the
+  // After paying, the payment gateway redirects back here with the
   // orderId query param.
   const orderId = searchParams.get("orderId") || "";
   const date =
@@ -522,7 +522,7 @@ export function OrderSuccess() {
     });
 
   // Clear the cart ONLY when the order is confirmed on this success page.
-  // This ensures that if the user presses Back on the MoMo gateway
+  // This ensures that if the user presses Back
   // or payment fails, their cart is still intact.
   useEffect(() => {
     clearCart();

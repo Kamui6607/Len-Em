@@ -8,7 +8,7 @@ export type { OrderStatus };
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type PaymentMethod = "MOMO" | "COD" | "SEPAY";
+export type PaymentMethod = "COD" | "SEPAY";
 
 export interface OrderUser {
   _id: string;
@@ -180,19 +180,6 @@ export interface CreateOrderResponse {
   payUrl?: string;
 }
 
-// ── MoMo payment link (POST /payment/momo-payment) ──
-
-export interface MomoPaymentRequest {
-  /** Total amount to pay (VND). */
-  amount: number;
-  /** Order description shown on the MoMo page. */
-  orderInfo: string;
-}
-
-export interface MomoPaymentResponse {
-  message: string;
-  payUrl: string;
-}
 
 // ── SePay payment QR (POST /payment/sepay-payment) ──
 
