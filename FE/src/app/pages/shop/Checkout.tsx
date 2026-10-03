@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { toast } from "sonner";
-import { Check, Copy, Landmark, Loader2, QrCode, X, ArrowLeft, ChevronDown, List, Map as MapIcon } from "lucide-react";
+import { Check, Copy, Landmark, Loader2, X, ArrowLeft, ChevronDown, List, Map as MapIcon } from "lucide-react";
 import { useCart } from "../../../shared/contexts/CartContext";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useAuthStore } from "../../../shared/store/auth.store";

@@ -51,7 +51,6 @@ export function Purchased() {
     reason: string;
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [kitNames, setKitNames] = useState<Record<string, string>>({});
   const [kitNamesLoaded, setKitNamesLoaded] = useState(false);
   const { addToCart, addKitToCart } = useCart();
