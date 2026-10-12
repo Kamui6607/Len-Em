@@ -113,8 +113,9 @@ export function ArchiveFloatingMenu() {
     <div
       className="fixed z-200"
       style={{
-        bottom: "max(90px, env(safe-area-inset-bottom, 80px))",
-        right: "max(12px, env(safe-area-inset-right, 12px))",
+        // Mốc chung với các thanh nổi cạnh FAB (xem --float-row-* trong safe-area.css)
+        bottom: "var(--float-row-bottom)",
+        right: "var(--float-row-right)",
       }}
     >
       <AnimatePresence>

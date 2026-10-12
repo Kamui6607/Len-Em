@@ -1,11 +1,32 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, ShoppingBag, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  BookOpen,
+  Check,
+  CheckCircle2,
+  Copy,
+  CreditCard,
+  GraduationCap,
+  MapPin,
+  Package,
+  ShoppingBag,
+  Truck,
+} from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useCart } from "../../../shared/contexts/CartContext";
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { orderService } from "../../../features/orders/services/order.service";
+import type { Order } from "../../../features/orders/types/order.types";
+import { isCourseItem, normalizeOrder } from "../../../features/orders/types/order.types";
 import { formatExpectedDelivery } from "../../../lib/orderDelivery";
+import { formatPrice } from "../../../lib/formatPrice";
+import { shortId, toId, toText } from "../../../lib/displayText";
+import { PAYMENT_METHOD_LABELS } from "../../../constants/orderStatus";
+import { OrderThread } from "../../../shared/components/order/OrderThread";
+import "../../../styles/purchased.css";
+import "../../../styles/order-success.css";
 
 // ═══════════════════════════════════════════════════════════════════
 // LARGE GIFT BOX SVG — celebratory, bow-tied, with sparkles
@@ -501,8 +522,26 @@ function ConfettiLayer() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ORDER SUCCESS PAGE
+// ORDER SUCCESS PAGE — /order/success?orderId=…
+// Trái: lời chúc mừng + mã đơn + tiến trình sợi chỉ (bước 1 đã xong).
+// Phải: "vé" tóm tắt đơn lấy từ GET /orders/:id (sản phẩm, tiền, thanh
+// toán, địa chỉ, ngày giao dự kiến). Đơn chỉ gồm khoá học thì không có
+// giao hàng — nút chính dẫn thẳng vào khoá học.
 // ═══════════════════════════════════════════════════════════════════
+
+const MAX_ITEMS = 4;
+
+function formatOrderDate(iso?: string): string {
+  const date = iso ? new Date(iso) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 export function OrderSuccess() {
   const { t } = useLanguage();
@@ -513,20 +552,17 @@ export function OrderSuccess() {
   // After paying, the payment gateway redirects back here with the
   // orderId query param.
   const orderId = searchParams.get("orderId") || "";
-  const date =
-    searchParams.get("date") ||
-    new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
 
-  // Clear the cart ONLY when the order is confirmed on this success page.
-  // This ensures that if the user presses Back
-  // or payment fails, their cart is still intact.
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loadingOrder, setLoadingOrder] = useState(Boolean(orderId));
+  const [copied, setCopied] = useState(false);
+
+  // Clear the cart ONLY when the order is confirmed on this success page —
+  // and only when there IS an order (mở trang trống không được xoá giỏ).
+  // If the user presses Back or payment fails, their cart is still intact.
   useEffect(() => {
-    clearCart();
-  }, [clearCart]);
+    if (orderId) clearCart();
+  }, [clearCart, orderId]);
 
   // After payment the backend webhook may have granted course purchases
   // (purchasedCourses) — re-fetch the profile so the Buy-Now button turns
@@ -538,336 +574,231 @@ export function OrderSuccess() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  // GHN lead time — the backend stores `expectedDeliveryTime` on the order the
-  // moment it is created, so the customer sees it right after paying.
-  const [expectedDelivery, setExpectedDelivery] = useState("");
-
+  // Tải đơn để hiện phiếu tóm tắt + ngày giao dự kiến (GHN lead time).
   useEffect(() => {
-    if (!orderId || !isAuthenticated) return;
+    if (!orderId || !isAuthenticated) {
+      setLoadingOrder(false);
+      return;
+    }
     let cancelled = false;
-
+    setLoadingOrder(true);
     void (async () => {
       try {
         const { data } = await orderService.getOrderById(orderId);
-        const formatted = formatExpectedDelivery(data.order?.expectedDeliveryTime);
-        if (cancelled || !formatted) return;
-        setExpectedDelivery(formatted);
+        if (!cancelled && data.order) setOrder(normalizeOrder(data.order));
       } catch {
-        // Order not readable (guest checkout / offline) — just hide the line.
+        // Order not readable (guest checkout / offline) — chỉ ẩn phiếu tóm tắt.
+      } finally {
+        if (!cancelled) setLoadingOrder(false);
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [orderId, isAuthenticated]);
 
+  const items = order?.items ?? [];
+  const courseItems = items.filter((item) => isCourseItem(item));
+  const isCourseOnly = items.length > 0 && courseItems.length === items.length;
+  const firstCourseId = toId(courseItems[0]?.course);
+  const expectedDelivery = order ? formatExpectedDelivery(order.expectedDeliveryTime) : "";
+  const paid = order?.payment?.status === "PAID";
+  const method = toText(order?.payment?.method);
+  const address = order
+    ? [order.shippingAddress?.address, order.shippingAddress?.ward, order.shippingAddress?.district, order.shippingAddress?.city]
+        .map(toText)
+        .filter(Boolean)
+        .join(", ")
+    : "";
+  const code = orderId ? shortId(orderId) : "";
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(orderId);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard bị chặn — bỏ qua, mã vẫn hiển thị để người dùng tự chép.
+    }
+  };
+
+  const primaryCta = isCourseOnly && firstCourseId
+    ? { to: `/learn/${firstCourseId}`, label: "Vào học ngay", icon: GraduationCap }
+    : orderId
+      ? { to: `/purchased/${orderId}`, label: t("orderSuccess.viewDetails"), icon: ArrowRight }
+      : { to: "/purchased", label: "Xem đơn hàng của tôi", icon: ArrowRight };
+  const PrimaryIcon = primaryCta.icon;
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--background)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "60px 24px 80px",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* ── Confetti pom-poms ── */}
+    <div className="os-page">
       <ConfettiLayer />
 
-      {/* ── Deep warm ambient glow ── */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            width: "700px",
-            height: "700px",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(ellipse, rgba(245,239,168,0.32) 0%, rgba(240,196,224,0.22) 40%, transparent 72%)",
-            filter: "blur(40px)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: "900px",
-            height: "600px",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -52%)",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(ellipse, rgba(240,196,224,0.18) 0%, rgba(107,63,160,0.08) 55%, transparent 75%)",
-            filter: "blur(55px)",
-          }}
-        />
-      </div>
-
-      {/* ── Main content ── */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          width: "100%",
-          maxWidth: "480px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          textAlign: "center",
-          gap: "0",
-        }}
-      >
-        {/* ── Gift box with warm glow ── */}
-        <div style={{ position: "relative", marginBottom: "8px" }}>
-          <div
-            style={{
-              position: "absolute",
-              inset: "-40px",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(ellipse at 50% 55%, rgba(245,239,168,0.55) 0%, rgba(240,196,224,0.38) 40%, transparent 70%)",
-              filter: "blur(24px)",
-              zIndex: 0,
-            }}
-          />
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <LargeGiftBox size={200} />
+      <div className="os-wrap">
+        {/* ── Lời chúc mừng ── */}
+        <section className="os-hero" aria-labelledby="os-title">
+          <div className="os-gift">
+            <LargeGiftBox size={180} />
           </div>
-        </div>
 
-        {/* ── Eyebrow chip ── */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "7px",
-            padding: "5px 16px",
-            borderRadius: "999px",
-            background: "var(--accent-pink)",
-            border: "1px solid var(--border)",
-            marginBottom: "18px",
-          }}
-        >
-          <span style={{ fontSize: "0.75rem" }}>✦</span>
-          <span
-            style={{
-              fontFamily: "'Caveat',cursive",
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              color: "var(--primary)",
-              letterSpacing: "0.04em",
-            }}
-          >
+          <span className="os-chip">
+            <CheckCircle2 className="h-3.5 w-3.5" />
             {t("orderSuccess.confirmed")}
           </span>
-          <span style={{ fontSize: "0.75rem" }}>✦</span>
-        </div>
 
-        {/* ── Heading ── */}
-        <h1
-          style={{
-            fontFamily: "'Playfair Display',Georgia,serif",
-            fontSize: "clamp(1.7rem, 3.5vw, 2.2rem)",
-            fontWeight: 700,
-            color: "var(--foreground)",
-            letterSpacing: "-0.025em",
-            lineHeight: 1.12,
-            margin: "0 0 10px",
-          }}
-        >
-          {t("orderSuccess.heading1")}
-          <span
-            style={{
-              display: "block",
-              fontStyle: "italic",
-              color: "var(--primary)",
-            }}
-          >
-            {t("orderSuccess.heading2")}
-          </span>
-        </h1>
+          <h1 id="os-title" className="os-title">
+            {isCourseOnly ? "Khoá học đã sẵn sàng" : t("orderSuccess.heading1")}{" "}
+            <em>{isCourseOnly ? "cho bạn!" : t("orderSuccess.heading2")}</em>
+          </h1>
+          <div className="os-stitch" aria-hidden />
+          <p className="os-sub">
+            {isCourseOnly
+              ? "Bạn có thể bắt đầu học ngay — khoá học đã được thêm vào tài khoản của bạn."
+              : t("orderSuccess.subtext")}
+          </p>
 
-        {/* ── Sub-copy ── */}
-        <p
-          style={{
-            fontFamily: "'Caveat',cursive",
-            fontSize: "0.95rem",
-            color: "var(--foreground-muted)",
-            letterSpacing: "0.02em",
-            lineHeight: 1.5,
-            margin: "0 0 22px",
-          }}
-        >
-          {t("orderSuccess.subtext")}
-        </p>
+          {orderId && (
+            <div className="os-code">
+              <span className="os-code-label">{t("orderSuccess.order")}</span>
+              <span className="os-code-value" title={orderId}>
+                #{code}
+              </span>
+              <button type="button" className="os-code-copy" onClick={copyCode} aria-label="Sao chép mã đơn đầy đủ">
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Đã chép" : "Chép mã"}
+              </button>
+            </div>
+          )}
 
-        {/* ── Order number ── */}
-        <div
-          style={{
-            padding: "8px 20px",
-            borderRadius: "10px",
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            marginBottom: "28px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "'Inter',sans-serif",
-              fontSize: "0.68rem",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            {t("orderSuccess.order")}
-          </span>
-          <span
-            style={{
-              fontFamily: "'Playfair Display',serif",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              fontStyle: "italic",
-              color: "var(--primary)",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            #{orderId}
-          </span>
-          <span
-            style={{
-              width: "1px",
-              height: "14px",
-              background: "var(--border)",
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "'Caveat',cursive",
-              fontSize: "0.78rem",
-              color: "var(--foreground-muted)",
-            }}
-          >
-            {date}
-          </span>
-        </div>
+          {!isCourseOnly && (
+            <div className="os-thread">
+              <OrderThread status={order?.orderStatus ?? "PENDING"} />
+            </div>
+          )}
 
-        {/* ── Expected delivery (GHN lead time from the backend) ── */}
-        {expectedDelivery && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 16px",
-              borderRadius: "999px",
-              background: "var(--chip-active-bg)",
-              border: "1px solid var(--chip-active-border)",
-              color: "var(--primary)",
-              fontFamily: "'Inter',sans-serif",
-              fontSize: "0.82rem",
-              fontWeight: 600,
-              marginTop: "-14px",
-              marginBottom: "28px",
-            }}
-          >
-            <Truck size={15} strokeWidth={2} />
-            Dự kiến nhận hàng vào: {expectedDelivery}
+          <div className="os-ctas">
+            <Link to={primaryCta.to} className="os-btn-primary">
+              {primaryCta.label}
+              <PrimaryIcon className="h-4 w-4" />
+            </Link>
+            <Link to={isCourseOnly ? "/learn" : "/shop"} className="os-btn-ghost">
+              {isCourseOnly ? <BookOpen className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
+              {isCourseOnly ? "Xem thêm khoá học" : t("orderSuccess.continueShopping")}
+            </Link>
           </div>
+        </section>
+
+        {/* ── Phiếu tóm tắt đơn ── */}
+        {(loadingOrder || order) && (
+          <aside className="os-ticket" aria-label="Tóm tắt đơn hàng">
+            <div className="os-ticket-head">
+              <p className="os-ticket-eyebrow">Phiếu đơn hàng</p>
+              <p className="os-ticket-date">{formatOrderDate(order?.createdAt)}</p>
+            </div>
+
+            {loadingOrder ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="os-skeleton h-12" />
+                ))}
+                <div className="os-skeleton h-24" />
+              </div>
+            ) : order ? (
+              <>
+                <ul className="os-items">
+                  {items.slice(0, MAX_ITEMS).map((item, idx) => {
+                    const course = isCourseItem(item);
+                    return (
+                      <li key={idx}>
+                        <span className="os-item-thumb">
+                          {item.image ? (
+                            <img src={toText(item.image)} alt="" />
+                          ) : course ? (
+                            <GraduationCap className="h-4 w-4" />
+                          ) : (
+                            <Package className="h-4 w-4" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="os-item-name">{toText(item.productName) || "Sản phẩm"}</span>
+                          <span className="os-item-meta">
+                            {course ? "Khoá học" : [toText(item.color), `×${item.quantity}`].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
+                        {item.price != null && (
+                          <span className="os-item-price">{formatPrice((item.price ?? 0) * item.quantity)}</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {items.length > MAX_ITEMS && (
+                  <p className="os-more">và {items.length - MAX_ITEMS} sản phẩm khác</p>
+                )}
+
+                <div className="os-divider" />
+
+                <div className="os-row">
+                  <span>Tạm tính</span>
+                  <span>{formatPrice(order.itemsPrice)}</span>
+                </div>
+                {!isCourseOnly && (
+                  <div className="os-row">
+                    <span>Phí giao hàng</span>
+                    <span>{formatPrice(order.shippingFee)}</span>
+                  </div>
+                )}
+                {order.discount != null && order.discount > 0 && (
+                  <div className="os-row">
+                    <span>Giảm giá</span>
+                    <span className="text-[var(--success-text)]">-{formatPrice(order.discount)}</span>
+                  </div>
+                )}
+                <div className="os-total">
+                  <span>Tổng cộng</span>
+                  <strong>{formatPrice(order.totalPrice)}</strong>
+                </div>
+
+                <div className="os-divider" />
+
+                <div className="os-facts">
+                  <div className="os-fact">
+                    {method === "SEPAY" ? <CreditCard className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
+                    <span>
+                      <span className="os-fact-label">Thanh toán</span>
+                      {PAYMENT_METHOD_LABELS[method] ?? (method || "—")}
+                      <span className={`badge ${paid ? "badge-green" : "badge-orange"} ml-2`}>
+                        {paid ? "Đã thanh toán" : method === "SEPAY" ? "Đang chờ xác nhận" : "Trả khi nhận hàng"}
+                      </span>
+                    </span>
+                  </div>
+                  {!isCourseOnly && address && (
+                    <div className="os-fact">
+                      <MapPin className="h-4 w-4" />
+                      <span>
+                        <span className="os-fact-label">Giao đến</span>
+                        <strong className="font-semibold text-foreground">
+                          {toText(order.shippingAddress?.fullName)}
+                        </strong>
+                        {order.shippingAddress?.phone && ` · ${toText(order.shippingAddress.phone)}`}
+                        <br />
+                        {address}
+                      </span>
+                    </div>
+                  )}
+                  {!isCourseOnly && expectedDelivery && (
+                    <div className="os-fact is-highlight">
+                      <Truck className="h-4 w-4" />
+                      <span>
+                        <span className="os-fact-label">Dự kiến nhận hàng</span>
+                        {expectedDelivery}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </aside>
         )}
-
-        {/* ── CTAs ── */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            width: "100%",
-          }}
-        >
-          {/* Primary CTA */}
-          <Link
-            to={`/purchased/${orderId}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "14px 32px",
-              borderRadius: "999px",
-              border: "none",
-              background: "var(--primary)",
-              color: "var(--primary-foreground)",
-              fontFamily: "'Inter',sans-serif",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              textDecoration: "none",
-              boxShadow: "0 6px 22px rgba(107,63,160,0.30)",
-            }}
-          >
-            {t("orderSuccess.viewDetails")}
-            <ArrowRight size={15} strokeWidth={2} />
-          </Link>
-
-          {/* Secondary CTA */}
-          <Link
-            to="/shop"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              padding: "13px 32px",
-              borderRadius: "999px",
-              border: "1.5px solid var(--border)",
-              background: "transparent",
-              color: "var(--foreground-muted)",
-              fontFamily: "'Inter',sans-serif",
-              fontSize: "0.9rem",
-              fontWeight: 500,
-              textDecoration: "none",
-            }}
-          >
-            <ShoppingBag
-              size={14}
-              strokeWidth={1.8}
-              style={{ color: "var(--primary)" }}
-            />
-            {t("orderSuccess.continueShopping")}
-          </Link>
-        </div>
-
-        {/* ── Footer note ── */}
-        <p
-          style={{
-            fontFamily: "'Caveat',cursive",
-            fontSize: "0.78rem",
-            color: "var(--foreground-muted)",
-            marginTop: "24px",
-            letterSpacing: "0.02em",
-          }}
-        >
-          {t("orderSuccess.emailNote")}
-        </p>
       </div>
     </div>
   );

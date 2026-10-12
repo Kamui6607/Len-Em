@@ -37,6 +37,33 @@ const TYPE_OPTIONS = [
   { value: "premium", label: "Premium" },
 ];
 
+/**
+ * BE có thể trả các trường dạng object thay vì chuỗi (vd. category được
+ * populate thành { _id, name }). Render thẳng object làm React ném lỗi
+ * "Objects are not valid as a React child" → ErrorBoundary hiện
+ * "We couldn't load this page". Luôn quy về chuỗi trước khi hiển thị.
+ */
+function toText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (Array.isArray(value)) return value.map(toText).filter(Boolean).join(", ");
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    return toText(obj.name ?? obj.title ?? obj.label ?? "");
+  }
+  return "";
+}
+
+function toNumber(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    return toNumber(obj.average ?? obj.avg ?? obj.value ?? null);
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
@@ -119,15 +146,15 @@ export function AdminVideos() {
     const getValue = (video: Video) => {
       switch (sortField) {
         case "title":
-          return video.title;
+          return toText(video.title);
         case "type":
-          return video.type;
+          return toText(video.type);
         case "category":
-          return video.category ?? "";
+          return toText(video.category);
         case "views":
-          return video.viewCount ?? 0;
+          return toNumber(video.viewCount) ?? 0;
         case "rating":
-          return video.rating ?? 0;
+          return toNumber(video.rating) ?? 0;
       }
     };
     const cmp = String(getValue(a)).localeCompare(String(getValue(b)), undefined, {
@@ -298,30 +325,30 @@ export function AdminVideos() {
                       </div>
                       <div className="min-w-0">
                         <span className="block truncate font-medium text-sm max-w-[320px]">
-                          {video.title}
+                          {toText(video.title)}
                         </span>
                         <span className="block text-xs text-muted-foreground truncate max-w-[320px]">
-                          {video.url?.slice(0, 60)}
-                          {video.url && video.url.length > 60 ? "…" : ""}
+                          {toText(video.url).slice(0, 60)}
+                          {toText(video.url).length > 60 ? "…" : ""}
                         </span>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span
-                      className={`badge ${video.type === "premium" ? "badge-orange" : "badge-green"}`}
+                      className={`badge ${toText(video.type) === "premium" ? "badge-orange" : "badge-green"}`}
                     >
-                      {video.type}
+                      {toText(video.type)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {video.category || "—"}
+                    {toText(video.category) || "—"}
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {video.viewCount ?? 0}
+                    {toNumber(video.viewCount) ?? 0}
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {video.rating != null ? Number(video.rating).toFixed(1) : "—"}
+                    {toNumber(video.rating) != null ? toNumber(video.rating)!.toFixed(1) : "—"}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
@@ -356,7 +383,7 @@ export function AdminVideos() {
                             toast.error(t("admin.videos.deleteError"));
                           }
                         }}
-                        itemName={video.title}
+                        itemName={toText(video.title)}
                       />
                     </div>
                   </td>
@@ -381,13 +408,13 @@ export function AdminVideos() {
       {/* ── Read dialog: xem chi tiết + phát video ngay tại trang admin ── */}
       {viewingVideo && (
         <AdminModal
-          title={viewingVideo.title}
+          title={toText(viewingVideo.title)}
           onClose={() => setViewingVideo(null)}
           className="max-w-3xl w-full"
         >
           <div className="admin-dialog-body space-y-4">
             <video
-              src={viewingVideo.url}
+              src={toText(viewingVideo.url)}
               controls
               preload="metadata"
               className="aspect-video w-full rounded-xl bg-black"
@@ -395,22 +422,22 @@ export function AdminVideos() {
 
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`badge ${viewingVideo.type === "premium" ? "badge-orange" : "badge-green"}`}
+                className={`badge ${toText(viewingVideo.type) === "premium" ? "badge-orange" : "badge-green"}`}
               >
-                {viewingVideo.type}
+                {toText(viewingVideo.type)}
               </span>
-              {viewingVideo.category && (
-                <span className="badge badge-green">{viewingVideo.category}</span>
+              {toText(viewingVideo.category) && (
+                <span className="badge badge-green">{toText(viewingVideo.category)}</span>
               )}
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Star className="size-3.5" />
-                {viewingVideo.viewCount ?? 0} {t("admin.videos.views")}
+                {toNumber(viewingVideo.viewCount) ?? 0} {t("admin.videos.views")}
               </span>
             </div>
 
-            {viewingVideo.description && (
+            {toText(viewingVideo.description) && (
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {viewingVideo.description}
+                {toText(viewingVideo.description)}
               </p>
             )}
 
@@ -432,18 +459,18 @@ export function AdminVideos() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">{t("admin.videos.rating")}</p>
                 <p className="text-sm font-medium">
-                  {viewingVideo.rating != null
-                    ? `${Number(viewingVideo.rating).toFixed(1)} / 5`
+                  {toNumber(viewingVideo.rating) != null
+                    ? `${toNumber(viewingVideo.rating)!.toFixed(1)} / 5`
                     : "—"}
                 </p>
               </div>
             </div>
 
-            {viewingVideo.tags && viewingVideo.tags.length > 0 && (
+            {Array.isArray(viewingVideo.tags) && viewingVideo.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {viewingVideo.tags.map((tag) => (
-                  <span key={tag} className="badge badge-green">
-                    #{tag}
+                {viewingVideo.tags.map((tag, index) => (
+                  <span key={`${toText(tag)}-${index}`} className="badge badge-green">
+                    #{toText(tag)}
                   </span>
                 ))}
               </div>
@@ -452,12 +479,12 @@ export function AdminVideos() {
             <div>
               <p className="text-xs text-muted-foreground mb-1">{t("admin.videos.url")}</p>
               <a
-                href={viewingVideo.url}
+                href={toText(viewingVideo.url)}
                 target="_blank"
                 rel="noreferrer"
                 className="text-sm font-medium text-[var(--primary)] break-all hover:underline"
               >
-                {viewingVideo.url}
+                {toText(viewingVideo.url)}
               </a>
             </div>
 

@@ -1,13 +1,12 @@
 /* ============================================================
-   SUPPORT DIY — polish layer cho form yêu cầu hỗ trợ
-   Dùng lại token sẵn có (--surface, --border, --primary, ...)
-
-   Cấu trúc mới:
-   - Bên trái: lưới 2x2 gồm 4 field-card (Bạn cần giúp gì?, Hình ảnh,
-     Gắn thẻ, Ngân sách) — gọn theo 2 hàng thay vì xếp dọc 4 tầng.
-   - Bên phải: 1 card duy nhất (Sản phẩm liên quan), cao bằng đúng
-     chiều cao khối 2x2 bên trái (nhờ CSS Grid align-items: stretch
-     mặc định ở outer grid), nhìn "to" ngang bằng bên trái.
+   SUPPORT DIY — form "Đang vướng ở mũi nào? Kể mình nghe."
+   Hero dùng craft.css. Bố cục:
+   - Trái: 4 bước đánh số, nối nhau bằng một sợi chỉ dọc;
+     bước điền xong thì nút số chuyển thành dấu tick.
+   - Phải (sticky): sản phẩm liên quan, quy trình sau khi gửi,
+     nút gửi.
+   Giữ nguyên .diy-input (ProductSelectDropdown dùng chung) và
+   các class ảnh preview / nút bỏ chọn.
    ============================================================ */
 
 @keyframes diy-fade-in {
@@ -18,187 +17,361 @@
   animation: diy-fade-in 0.25s ease-out both;
 }
 
-/* ── Khung panel chính ── */
-.diy-panel {
-  background: var(--surface);
-  border-color: var(--border);
-  transition: box-shadow 0.2s ease-out;
+.support-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: 0.875rem;
+  color: var(--foreground-muted) !important;
+  transition: color 0.2s var(--ease-out), gap 0.2s var(--ease-out);
+}
+.support-back:hover {
+  color: var(--primary) !important;
+  gap: 10px;
 }
 
-/* ── Pill tiến độ cạnh tiêu đề ── */
-.diy-progress-pill {
+/* ── Hero ── */
+.support-hero {
+  margin-bottom: 28px;
+}
+.support-hero-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.support-hero .craft-title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+/* Tiến trình 4 mũi khâu */
+.support-progress {
   flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 999px;
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-  letter-spacing: 0.02em;
+  width: min(100%, 340px);
+  padding: 16px 18px 14px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
-
-/* ── Nút quay lại: rõ ràng ngay cả lúc nghỉ, không "chìm" vào nền ── */
-.diy-btn-icon {
-  width: 40px;
-  height: 40px;
+.support-progress-label {
+  font-size: 0.78rem;
+  color: var(--foreground-muted);
+  margin-bottom: 12px;
+}
+.support-progress-label strong {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: var(--primary);
+}
+.support-progress-thread {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.support-progress-thread li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.support-progress-line {
+  position: absolute;
+  top: 11px;
+  left: calc(-50% + 15px);
+  right: calc(50% + 15px);
+  height: 2px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 7px 2px;
+}
+.support-progress-thread li.is-done .support-progress-line {
+  background-image: none;
+  background-color: var(--primary);
+}
+.support-progress-knot {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
-  background: var(--card, var(--surface)) !important;
-  color: var(--foreground) !important;
-  transition: background 0.15s ease-out, transform 0.1s ease-out, border-color 0.15s ease-out;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--foreground-subtle);
+  background: var(--muted);
+  border: 1.5px dashed var(--border);
+  transition: background 0.25s, color 0.25s, transform 0.25s var(--ease-spring);
 }
-.diy-btn-icon:hover {
-  background: color-mix(in srgb, var(--primary) 12%, var(--card, var(--surface))) !important;
-  border-color: color-mix(in srgb, var(--primary) 50%, var(--border)) !important;
+.support-progress-thread li.is-done .support-progress-knot {
+  background: var(--cta-gradient);
+  color: #fff;
+  border: none;
+  box-shadow: var(--cta-shadow);
+  transform: scale(1.08);
 }
-.diy-btn-icon:active {
-  transform: scale(0.92);
+.support-progress-name {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--foreground-muted);
+  white-space: nowrap;
+}
+.support-progress-thread li.is-done .support-progress-name {
+  color: var(--foreground);
 }
 
-/* ============================================================
-   FIELD CARDS — 4 ô bên trái, xếp lưới 2x2 (2 hàng x 2 cột)
-   ============================================================ */
-.diy-fields-grid {
+/* ── Bố cục 2 cột ── */
+.support-layout {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 28px;
+  align-items: start;
 }
-@media (min-width: 640px) {
-  .diy-fields-grid {
-    grid-template-columns: 1fr 1fr;
+@media (max-width: 960px) {
+  .support-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.diy-field-card {
+/* ── Các bước bên trái, nối bằng sợi chỉ dọc ── */
+.support-steps {
   position: relative;
-  height: 100%;
-  border-radius: 16px;
-  padding: 14px;
-  background: var(--card, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 10%);
-  transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.12s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
-.diy-field-card:focus-within {
+.support-steps::before {
+  content: "";
+  position: absolute;
+  left: 39px;
+  top: 40px;
+  bottom: 40px;
+  width: 2px;
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--primary) 35%, var(--border)) 55%, transparent 45%);
+  background-size: 2px 9px;
+  z-index: 0;
+}
+.support-step {
+  position: relative;
+  z-index: 1;
+  padding: 20px 22px 22px;
+  border-radius: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  animation: diy-fade-in 0.35s var(--ease-out) both;
+}
+.support-step:nth-child(2) { animation-delay: 50ms; }
+.support-step:nth-child(3) { animation-delay: 100ms; }
+.support-step:nth-child(4) { animation-delay: 150ms; }
+.support-step:focus-within {
   border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+  box-shadow: 0 0 0 4px var(--glow-primary), var(--shadow-card);
 }
-
-.diy-field-card-head {
+.support-step-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.support-step-knot {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--card);
+  border: 2px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  transition: background 0.25s, color 0.25s, border-color 0.25s,
+    transform 0.25s var(--ease-spring);
+}
+.support-step:focus-within .support-step-knot {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--glow-primary);
+}
+.support-step.is-done .support-step-knot {
+  background: var(--cta-gradient);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--cta-shadow);
+  transform: rotate(-6deg);
+}
+.support-step-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.support-step-hint {
+  margin-top: 2px;
+  font-size: 0.76rem;
+  color: var(--foreground-muted);
+}
+.support-step-body {
+  padding-left: 50px;
+}
+@media (max-width: 560px) {
+  .support-steps::before {
+    display: none;
+  }
+  .support-step {
+    padding: 16px;
+  }
+  .support-step-body {
+    padding-left: 0;
+  }
 }
 
-.diy-card-icon {
-  width: 30px;
-  height: 30px;
+.support-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+}
+.support-counter {
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+  color: var(--foreground-muted);
+  font-variant-numeric: tabular-nums;
+}
+.support-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-family: var(--font-script);
+  font-size: 1.08rem;
+  line-height: 1.35;
+  color: var(--foreground-secondary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--background));
+  border: 1px dashed color-mix(in srgb, var(--primary) 28%, var(--border));
+}
+.support-note svg {
+  margin-top: 3px;
+  color: var(--primary);
+}
+
+/* ── Input / textarea ── */
+.diy-input {
+  display: block;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.45;
+  padding: 11px 14px;
+  border-radius: 14px;
+  color: var(--foreground);
+  background: var(--input-bg) !important;
+  border: 1.5px solid var(--input-border) !important;
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background 0.15s ease-out;
+}
+.diy-input::placeholder {
+  color: var(--input-placeholder);
+}
+.diy-input:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--input-border)) !important;
+}
+.diy-input:focus {
+  outline: none;
+  border-color: var(--input-focus-border) !important;
+  box-shadow: var(--input-focus-shadow);
+}
+.diy-input.pl-9 {
+  padding-left: 36px;
+}
+
+/* ── Ảnh ── */
+.support-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.support-dropzone {
+  width: 104px;
+  height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border-radius: 18px;
+  border: 2px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 4%, var(--card));
+  color: var(--foreground-muted);
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.support-dropzone:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 9%, var(--card));
+  color: var(--primary);
+}
+.support-dropzone:active {
+  transform: scale(0.96);
+}
+.support-dropzone-icon {
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--primary);
-  flex-shrink: 0;
-  transition: background 0.18s ease-out, color 0.18s ease-out, transform 0.18s ease-out;
+  transition: transform 0.2s var(--ease-spring);
 }
-.diy-field-card:focus-within .diy-card-icon,
-.diy-field-card:hover .diy-card-icon {
-  transform: scale(1.08);
+.support-dropzone:hover .support-dropzone-icon {
+  transform: translateY(-2px) rotate(-6deg);
 }
-.diy-field-card:focus-within .diy-card-icon {
-  background: var(--primary);
-  color: var(--surface, #fff);
+.support-dropzone-text {
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
-/* Card "Bạn cần giúp gì?" chứa nhiều nội dung nên chiếm cả hàng đầu
-   trên màn hình rất hẹp là hợp lý, nhưng ở >=sm nó chỉ chiếm 1 ô như
-   các card khác để giữ đúng lưới 2x2. */
-.diy-field-card--info {
-  grid-column: 1 / -1;
-}
-@media (min-width: 640px) {
-  .diy-field-card--info {
-    grid-column: auto;
-  }
-}
-
-/* ============================================================
-   INPUT / TEXTAREA — border + nền tương phản rõ ngay lúc nghỉ
-   ============================================================ */
-.diy-input {
-  display: block;
-  width: 100%;
-  font-size: 14px;
-  line-height: 1.4;
-  padding: 10px 14px;
-  border-radius: 12px;
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--surface) 88%, var(--foreground) 6%) !important;
-  border: 1.5px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
-  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background 0.15s ease-out;
-}
-.diy-input::placeholder {
-  color: color-mix(in srgb, var(--foreground-muted) 85%, transparent);
-}
-.diy-input:hover {
-  border-color: color-mix(in srgb, var(--border) 30%, var(--foreground) 30%) !important;
-}
-.diy-input:focus {
-  outline: none;
-  background: var(--surface) !important;
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-.diy-input.pl-9 {
-  padding-left: 36px;
-}
-
-/* ── Khối gợi ý nhẹ nhàng (helper note) ── */
-.diy-helper-note {
-  border-left: 3px solid var(--primary);
-  background: var(--surface-secondary, var(--card));
-}
-
-/* ── Upload tile ── */
-.diy-upload-tile {
-  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
-  background: var(--card);
-  transition: border-color 0.18s ease-out, background 0.18s ease-out;
-}
-.diy-upload-tile:hover {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 6%, var(--card));
-}
-.diy-upload-tile:hover .diy-upload-icon {
-  transform: translateY(-2px);
-  color: var(--primary) !important;
-}
-.diy-upload-icon {
-  transition: transform 0.18s ease-out, color 0.18s ease-out;
-}
-.diy-upload-tile:active {
-  transform: scale(0.96);
-}
-
-/* ── Ảnh preview ── */
 .diy-image-thumb {
   position: relative;
+  width: 104px;
+  height: 104px;
   overflow: hidden;
-  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--muted);
 }
 .diy-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   transition: transform 0.25s ease-out;
 }
 .diy-image-thumb:hover img {
   transform: scale(1.08);
 }
-.diy-image-thumb .diy-image-remove {
+.diy-image-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
   opacity: 0;
   transform: scale(0.85);
   transition: opacity 0.15s ease-out, transform 0.15s ease-out;
@@ -208,134 +381,166 @@
   opacity: 1;
   transform: scale(1);
 }
-.diy-image-remove:active {
-  transform: scale(0.85);
+@media (hover: none) {
+  .diy-image-remove {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-/* ── Tag chip ── */
-.diy-tag-chip {
-  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+/* ── Thẻ ── */
+.support-add-btn {
+  width: 46px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  border: 1.5px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  transition: background 0.15s, transform 0.1s;
 }
-.diy-tag-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 25%, transparent);
+.support-add-btn:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--card));
 }
-.diy-tag-chip:active {
-  transform: scale(0.94);
-}
-
-.diy-btn-secondary {
-  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
-  background: var(--card, var(--surface)) !important;
-  color: var(--foreground) !important;
-  transition: transform 0.12s ease-out, background 0.15s ease-out, border-color 0.15s ease-out;
-}
-.diy-btn-secondary:hover {
-  background: color-mix(in srgb, var(--primary) 10%, var(--card, var(--surface))) !important;
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border)) !important;
-}
-.diy-btn-secondary:active {
+.support-add-btn:active {
   transform: scale(0.92);
 }
-
-/* ============================================================
-   CỘT PHẢI — 1 card lớn duy nhất, cao bằng khối 2x2 bên trái
-   ============================================================ */
-.diy-side-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  border-radius: 20px;
-  padding: 18px;
-  background: color-mix(in srgb, var(--primary) 4%, var(--card, var(--surface)));
-  border: 1px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 10%);
+.support-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--border));
+  transition: background 0.15s, transform 0.15s;
+}
+.support-tag svg {
+  opacity: 0.6;
+}
+.support-tag:hover {
+  background: color-mix(in srgb, var(--primary) 15%, var(--card));
+  transform: translateY(-1px);
+}
+.support-tag:hover svg {
+  opacity: 1;
 }
 
-.diy-side-card-head {
+/* ── Ngân sách ── */
+.support-price {
+  position: relative;
+  max-width: 320px;
+}
+.support-price .diy-input {
+  padding-right: 56px;
+}
+.support-price-unit {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--foreground-muted);
+  pointer-events: none;
+}
+.support-price-preview {
+  margin-top: 8px;
+  font-family: var(--font-script);
+  font-size: 1.15rem;
+  color: var(--primary);
+}
+
+/* ── Cột phải ── */
+.support-aside {
+  position: sticky;
+  top: calc(var(--header-height, 88px) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+@media (max-width: 960px) {
+  .support-aside {
+    position: static;
+  }
+}
+.support-card {
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.support-card-head {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-}
-
-.diy-static-icon {
-  transition: transform 0.18s ease-out;
-}
-.diy-side-card:hover .diy-static-icon {
-  transform: rotate(-4deg) scale(1.05);
-}
-
-/* Khu vực nội dung phía dưới header, chiếm hết chiều cao còn lại
-   để card luôn nhìn "đầy" và cân đối với bên trái */
-.diy-side-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   gap: 12px;
-  margin-top: 14px;
-  min-height: 0;
+  margin-bottom: 14px;
+}
+.support-card-head .craft-section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+.support-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.support-card-sub {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
 }
 
-/* Wrapper giữ dropdown làm overlay, không đẩy layout bên dưới xuống */
 .diy-search-wrapper {
   position: relative;
 }
 
-.diy-results {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 30;
-  max-height: 260px;
-  overflow-y: auto;
-  background: var(--card);
-  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
-  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.22);
-}
-.diy-result-row {
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  transition: background 0.15s ease-out, padding-left 0.15s ease-out;
-}
-.diy-result-row:last-child {
-  border-bottom: none;
-}
-.diy-result-row:hover:not(:disabled) {
-  background: var(--surface-secondary, color-mix(in srgb, var(--primary) 6%, transparent));
-  padding-left: 18px;
-}
-.diy-result-row:hover:not(:disabled) .diy-result-plus {
-  color: var(--primary) !important;
-  transform: scale(1.15);
-}
-.diy-result-row:active:not(:disabled) {
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-}
-.diy-result-plus {
-  transition: transform 0.15s ease-out, color 0.15s ease-out;
-}
-
-.diy-combo-list {
-  border-color: color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
-  background: color-mix(in srgb, var(--primary) 4%, transparent);
-  flex: 1;
+.support-combo {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-}
-/* Giới hạn chiều cao danh sách đã chọn — cuộn riêng thay vì kéo dài cả trang.
-   Trong card cao hơn, danh sách được phép giãn để lấp đầy không gian. */
-.diy-combo-scroll {
-  flex: 1;
-  min-height: 80px;
-  max-height: none;
+  gap: 8px;
+  max-height: 280px;
   overflow-y: auto;
+  margin-top: 12px;
 }
-.diy-combo-row {
-  transition: transform 0.12s ease-out;
+.support-combo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--background));
+  border: 1px solid var(--border);
 }
-/* Nút bỏ chọn 1 sản phẩm khỏi danh sách đã chọn — icon thùng rác, gọn trong 1 hàng
-   (trước đây là link chữ "Bỏ chọn"). */
+.support-combo-row img {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--muted);
+}
+.support-combo-empty {
+  margin-top: 12px;
+  padding: 18px 14px;
+  border-radius: 14px;
+  text-align: center;
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  color: var(--foreground-muted);
+  border: 1.5px dashed var(--border);
+}
+
 .diy-remove-btn {
   width: 32px;
   height: 32px;
@@ -344,14 +549,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  border: 1.5px solid color-mix(in srgb, var(--destructive) 35%, var(--border)) !important;
-  background: color-mix(in srgb, var(--destructive) 8%, var(--card, var(--surface))) !important;
-  color: var(--destructive) !important;
-  transition: background 0.15s ease-out, border-color 0.15s ease-out, transform 0.1s ease-out;
+  color: var(--error-text);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  transition: background 0.15s ease-out, transform 0.1s ease-out;
 }
 .diy-remove-btn:hover {
-  background: color-mix(in srgb, var(--destructive) 18%, var(--card, var(--surface))) !important;
-  border-color: color-mix(in srgb, var(--destructive) 60%, var(--border)) !important;
+  background: var(--action-destructive-hover-bg);
 }
 .diy-remove-btn:active {
   transform: scale(0.92);
@@ -361,76 +565,88 @@
   outline-offset: 1px;
 }
 
-/* Trạng thái rỗng của cột phải: căn giữa để card không nhìn trống trải */
-.diy-side-empty {
-  flex: 1;
+/* Quy trình sau khi gửi */
+.support-flow ol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.support-flow ol::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background-image: linear-gradient(to bottom, var(--border) 55%, transparent 45%);
+  background-size: 2px 7px;
+}
+.support-flow li {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.support-flow-knot {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--card);
+  border: 1.5px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+/* Nút gửi */
+.support-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.support-actions .craft-btn {
+  padding: 14px 22px;
+  font-size: 0.95rem;
+}
+.support-later {
+  padding: 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--foreground-muted);
+  transition: color 0.15s, background 0.15s;
+}
+.support-later:hover:not(:disabled) {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.support-actions-hint {
   text-align: center;
-  border: 1.5px dashed color-mix(in srgb, var(--border) 55%, var(--foreground) 15%);
-  border-radius: 14px;
-  padding: 24px 16px;
-}
-
-/* ============================================================
-   NÚT HÀNH ĐỘNG CUỐI FORM — rõ ràng, nổi bật, dễ bấm
-   ============================================================ */
-.diy-btn-cancel,
-.diy-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: transform 0.12s ease-out, box-shadow 0.15s ease-out, filter 0.15s ease-out, background 0.15s ease-out;
-}
-
-.diy-btn-cancel {
-  background: transparent !important;
-  color: var(--foreground-muted) !important;
-  border: 1.5px solid color-mix(in srgb, var(--border) 55%, var(--foreground) 20%) !important;
-}
-.diy-btn-cancel:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent) !important;
-  border-color: color-mix(in srgb, var(--foreground) 35%, var(--border)) !important;
-}
-
-.diy-btn-primary {
-  background: var(--primary) !important;
-  color: var(--primary-foreground, #fff) !important;
-  border: none !important;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
-}
-.diy-btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.05);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 38%, transparent);
-}
-.diy-btn-cancel:active:not(:disabled),
-.diy-btn-primary:active:not(:disabled) {
-  transform: scale(0.97);
-  box-shadow: none;
-}
-.diy-btn-primary:disabled,
-.diy-btn-cancel:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  color: var(--foreground-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .diy-fade-in,
-  .diy-image-remove,
-  .diy-card-icon,
-  .diy-upload-icon,
+  .support-step,
+  .support-progress-knot,
+  .support-step-knot,
+  .support-dropzone,
+  .support-dropzone-icon,
   .diy-image-thumb img,
-  .diy-tag-chip,
-  .diy-result-row,
-  .diy-btn-primary,
-  .diy-btn-cancel,
-  .diy-static-icon {
+  .diy-image-remove,
+  .support-tag {
     animation: none !important;
     transition: none !important;
   }

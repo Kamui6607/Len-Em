@@ -1,0 +1,459 @@
+/* ============================================================
+   LEARN — "lớp học đan móc"
+   Hero/section heading dùng craft.css; file này lo phần riêng:
+   - Pill trình độ: mầm (beginner) → lá (mid) → cây (pro)
+   - Thẻ khoá học: ảnh 16:9, nhãn trình độ, thẻ giá dạng
+     "mác treo" có lỗ xỏ dây
+   - Bộ lọc: khung vải có đường khâu viền trong
+   Trước đây toàn bộ CSS nằm inline trong LearnPage.tsx.
+   ============================================================ */
+
+/* ── Hero ── */
+.learn-hero-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.learn-hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  .learn-hero-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.learn-level-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+.learn-level-pill {
+  --lvl: var(--success-text);
+  --lvl-bg: var(--success-bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s var(--ease-out), border-color 0.2s, background 0.2s, color 0.2s;
+}
+.learn-level-pill svg {
+  color: var(--lvl);
+}
+.learn-level-pill.is-mid {
+  --lvl: var(--warning-text);
+  --lvl-bg: var(--warning-bg);
+}
+.learn-level-pill.is-pro {
+  --lvl: var(--error-text);
+  --lvl-bg: var(--error-bg);
+}
+.learn-level-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--lvl);
+}
+.learn-level-pill.is-active {
+  background: var(--lvl-bg);
+  border-color: var(--lvl);
+  color: var(--lvl);
+}
+
+/* ── Bộ lọc ── */
+.learn-filter-panel {
+  position: sticky;
+  top: calc(var(--header-height, 88px) + 16px);
+  height: fit-content;
+  padding: 22px;
+  border-radius: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.learn-filter-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.learn-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  transition: background 0.2s, opacity 0.2s;
+}
+.learn-filter-reset:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.learn-filter-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.learn-filter-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+}
+.learn-filter-group-title svg {
+  color: var(--primary);
+}
+.learn-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: color 0.2s;
+}
+.learn-filter-option:hover {
+  color: var(--primary);
+}
+.learn-filter-divider {
+  height: 1.5px;
+  margin: 20px 0;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+}
+.learn-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  color: var(--foreground-muted);
+  background: color-mix(in srgb, var(--primary) 5%, var(--background));
+}
+.learn-filter-summary strong {
+  color: var(--primary);
+}
+.learn-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.learn-drawer {
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Dải chip bộ lọc đang bật */
+.filter-active-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -24px;
+}
+.filter-active-label {
+  margin-right: 2px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground-muted);
+}
+.filter-active-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  transition: opacity 0.2s;
+}
+.filter-active-chip:hover {
+  opacity: 0.85;
+}
+.filter-active-clear {
+  padding: 0 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Nhãn trình độ trên ảnh — nền đặc để đọc rõ trên mọi ảnh ── */
+.learn-level {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+.learn-level.is-beginner { background: #15803d; }
+.learn-level.is-mid      { background: #c2410c; }
+.learn-level.is-pro      { background: #b91c1c; }
+
+/* ── Thẻ khoá học ── */
+.learn-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out);
+}
+.learn-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: var(--shadow-card-hover);
+}
+.learn-card-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  margin: 8px 8px 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--muted);
+}
+.learn-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s var(--ease-out);
+}
+.learn-card:hover .learn-card-media img {
+  transform: scale(1.05);
+}
+
+/* Mác giá treo — có lỗ xỏ dây bên trái */
+.learn-price-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  padding: 5px 12px 5px 22px;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--card);
+  border-radius: 4px 999px 999px 4px;
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  transform: rotate(4deg);
+}
+.learn-price-tag::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 25%, transparent);
+}
+.learn-price-tag.is-free {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: #fff;
+  background: #15803d;
+}
+.learn-price-tag.is-free::before {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.learn-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 18px;
+}
+.learn-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
+  font-family: var(--font-heading);
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.learn-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--foreground-muted);
+}
+.learn-card-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.learn-card-meta svg {
+  color: var(--primary);
+  opacity: 0.8;
+}
+.learn-rating {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--background));
+  border: 1px dashed color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+.learn-rating-score {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.learn-card-cta {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+/* ── Thẻ video miễn phí ── */
+.learn-video {
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out);
+}
+.learn-video:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  box-shadow: var(--shadow-card-hover);
+}
+.learn-video:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.learn-video-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--muted);
+}
+.learn-video-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s var(--ease-out);
+}
+.learn-video:hover .learn-video-media img {
+  transform: scale(1.05);
+}
+.learn-video-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--brand-600);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s var(--ease-spring);
+}
+.learn-video:hover .learn-video-play {
+  transform: scale(1.12);
+}
+.learn-video-duration {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(10, 8, 20, 0.7);
+}
+.learn-video-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.learn-video-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+  background-repeat: repeat-x;
+  background-position: top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-level-pill,
+  .learn-card,
+  .learn-card-media img,
+  .learn-video,
+  .learn-video-media img,
+  .learn-video-play {
+    transition: none !important;
+  }
+}

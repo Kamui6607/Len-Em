@@ -1,0 +1,603 @@
+/* ============================================================
+   PRODUCT DETAIL — /shop/product/:id
+   Đồng bộ craft.css + product-card.css:
+   - Ảnh chính nằm trong "khung vải" có đường khâu viền trong
+   - Thông số len trình bày như nhãn cuộn len (ball band)
+   - Bước số lượng + nút thêm giỏ chung một hàng
+   - Cam kết dạng 3 ô nhỏ viền khâu
+   Chỉ dùng token sẵn có → tự đổi light/dark.
+   ============================================================ */
+
+.pd-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Khoảng thở trước footer. */
+.pd-page {
+  padding-bottom: 48px;
+}
+/* Mobile: thanh mua nổi (.pd-float) luôn hiện → chừa đáy tài liệu bằng
+   bottom nav + thanh nổi + 16px + safe-area, để tiêu đề, mô tả, ô cam kết
+   và cả footer (nằm ngoài trang này) cuộn lên được khỏi thanh. */
+body:has(.pd-float) {
+  padding-bottom: calc(var(--float-row-bottom) + var(--fab-size) + 16px);
+}
+@media (min-width: 768px) {
+  .pd-page {
+    padding-bottom: 64px;
+  }
+}
+
+/* ── Breadcrumb ── */
+.pd-crumbs {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+  font-size: 0.82rem;
+  color: var(--foreground-muted);
+  min-width: 0;
+}
+.pd-crumbs a {
+  color: var(--foreground-muted) !important;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.pd-crumbs a:hover {
+  color: var(--primary) !important;
+}
+.pd-crumbs span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--foreground);
+  font-weight: 500;
+}
+.pd-crumbs svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+@media (min-width: 768px) {
+  .pd-crumbs {
+    display: flex;
+  }
+}
+
+/* ── Bố cục ── */
+.pd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 768px) {
+  .pd-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+}
+@media (min-width: 1100px) {
+  .pd-grid {
+    gap: 64px;
+  }
+}
+
+/* ── Gallery (desktop) ── */
+.pd-gallery {
+  position: sticky;
+  top: calc(var(--header-height, 88px) + 16px);
+}
+.pd-stage {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 32px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.pd-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* đường khâu viền trong khung ảnh */
+.pd-stage::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  z-index: 1;
+  border-radius: 22px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.pd-thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pd-thumbs::-webkit-scrollbar {
+  display: none;
+}
+.pd-thumb {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 2px solid var(--border);
+  background: var(--muted);
+  opacity: 0.75;
+  transition: border-color 0.2s, opacity 0.2s, transform 0.2s;
+}
+.pd-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pd-thumb:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+.pd-thumb.is-active {
+  opacity: 1;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--glow-primary);
+}
+
+.pd-fav {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--foreground-muted);
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s var(--ease-spring), color 0.2s;
+}
+.pd-fav:hover {
+  transform: scale(1.08);
+  color: var(--decor-heart);
+}
+.pd-fav.is-active {
+  color: var(--decor-heart);
+}
+.pd-fav.is-active svg {
+  fill: currentColor;
+}
+.pd-color-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+}
+.pd-color-chip span {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid var(--card);
+  box-shadow: 0 0 0 1px var(--border), inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+}
+
+/* ── Thông tin ── */
+.pd-info {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 16px 0;
+}
+@media (min-width: 768px) {
+  .pd-info {
+    padding: 0;
+  }
+}
+.pd-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-family: var(--font-script);
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--primary);
+  transform: rotate(-1.5deg);
+  transform-origin: left;
+}
+.pd-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.pd-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--background));
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+.pd-price {
+  font-family: var(--font-heading);
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+}
+.pd-price-old {
+  font-size: 1rem;
+  color: var(--foreground-muted);
+  text-decoration: line-through;
+}
+.pd-desc {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--foreground-secondary);
+}
+
+.pd-panel {
+  padding: 20px;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.pd-panel-divider {
+  height: 1.5px;
+  margin: 18px 0 14px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+}
+
+/* Nhãn cuộn len */
+.pd-band {
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.pd-band::before {
+  /* đường khâu viền trong như nhãn vải */
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 17px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 25%, transparent);
+  pointer-events: none;
+}
+.pd-band-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 20px;
+  text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.pd-band-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  transform: rotate(-4deg);
+}
+.pd-band-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.pd-band-body {
+  position: relative;
+  padding: 0 20px 20px;
+}
+.pd-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.pd-spec {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--background));
+}
+.pd-spec-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.pd-spec-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+}
+.pd-spec-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pd-materials {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.pd-materials li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--foreground-secondary);
+}
+.pd-materials svg {
+  margin-top: 2px;
+  color: var(--primary);
+}
+
+/* ── Mua ── */
+/* Khối mua inline chỉ cho desktop (≥ md); mobile dùng thanh nổi .pd-float */
+.pd-buy {
+  display: none;
+  align-items: center;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .pd-buy {
+    display: flex;
+  }
+}
+.pd-add {
+  flex: 1;
+  min-width: 0;
+  height: 52px !important;
+  font-size: 0.92rem !important;
+  /* nhãn tự chọn bản dài/ngắn theo bề ngang thật của nút */
+  container-type: inline-size;
+}
+/* .card-add-btn__label mặc định max-width: 160px + co về 0 khi hover
+   (globals.css) — đó là lý do giá bị cắt ("250.00" thiếu "0đ").
+   Ở trang chi tiết: bỏ giới hạn, giữ nhãn luôn hiện đủ. */
+.pd-add .card-add-btn__label,
+.pd-add:hover .card-add-btn__label,
+.pd-add:disabled:hover .card-add-btn__label {
+  max-width: none;
+  opacity: 1;
+  transform: none;
+  overflow: visible;
+  white-space: nowrap;
+}
+.pd-add-label-short,
+.pd-add-label-tiny {
+  display: none;
+}
+/* Nhãn tự rút gọn theo bề ngang thật của nút — không bao giờ cắt số tiền:
+   "Thêm vào giỏ · giá" → "Thêm · giá" → bỏ icon → chỉ còn giá */
+@container (max-width: 290px) {
+  .pd-add-label-long {
+    display: none;
+  }
+  .pd-add-label-short {
+    display: inline;
+  }
+}
+@container (max-width: 190px) {
+  .pd-add .card-add-btn__icon {
+    display: none;
+  }
+}
+@container (max-width: 118px) {
+  .pd-add-label-short {
+    display: none;
+  }
+  .pd-add-label-tiny {
+    display: inline;
+  }
+}
+.pd-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+}
+.pd-qty button {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--foreground);
+  transition: background 0.2s, color 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.pd-qty button:hover:not(:disabled) {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.pd-qty button:disabled {
+  color: var(--foreground-subtle);
+  cursor: not-allowed;
+}
+.pd-qty span {
+  min-width: 28px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+/* Stepper trong thanh nổi: [ − | số | + ], nút 40×40 (vùng chạm tối thiểu) */
+.pd-qty.is-floating {
+  gap: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+.pd-qty.is-floating button {
+  width: 40px;
+  height: 40px;
+}
+.pd-qty.is-floating span {
+  min-width: 28px;
+  font-size: 1rem;
+  line-height: 22px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+/* ── Cam kết ── */
+.pd-trust {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 18px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+  background-repeat: repeat-x;
+  background-position: top;
+}
+.pd-trust > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 16px;
+  text-align: center;
+  background: color-mix(in srgb, var(--primary) 4%, var(--background));
+  border: 1px dashed color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+.pd-trust svg {
+  color: var(--primary);
+}
+.pd-trust p {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--foreground-secondary);
+}
+
+/* ── Gợi ý ── */
+.pd-related {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.pd-related::-webkit-scrollbar {
+  display: none;
+}
+.pd-related-item {
+  width: 200px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+@media (min-width: 768px) {
+  .pd-related {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    overflow: visible;
+  }
+  .pd-related-item {
+    width: auto;
+  }
+}
+@media (min-width: 1024px) {
+  .pd-related {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ── Thanh mua nổi (mobile < md) ──
+   Cùng hàng với nút FAB "+": cùng bottom (--float-row-bottom) và cùng chiều
+   cao (--fab-size) nên tâm 2 phần tử trùng nhau theo chiều dọc. Mép phải
+   cách FAB 10px, mép trái cách màn hình 16px.
+   Lớp: bottom nav (z 50) < thanh mua (z 60) < FAB (z 200) < drawer/modal
+   (portal ra <body>, ngoài stacking context z-1 của layout nên luôn ở trên). */
+.pd-float {
+  position: fixed;
+  left: max(16px, var(--sal));
+  right: calc(var(--float-row-right) + var(--fab-size) + 10px);
+  bottom: var(--float-row-bottom);
+  z-index: 60;
+  height: var(--fab-size);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 8px 24px rgba(24, 24, 27, 0.16), 0 0 0 4px color-mix(in srgb, var(--background) 60%, transparent);
+}
+.pd-float-add {
+  height: 40px !important;
+  padding: 0 12px !important;
+  gap: 6px !important;
+  font-size: 0.82rem !important;
+}
+@media (min-width: 768px) {
+  .pd-float {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-thumb,
+  .pd-fav,
+  .pd-qty button {
+    transition: none !important;
+  }
+
+}

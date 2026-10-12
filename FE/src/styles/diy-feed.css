@@ -1,59 +1,335 @@
-/* Shared page styles — per-mode pill buttons for the two feed CTAs. */
-/* Light mode: accent-blush fill → solid --primary on hover. */
-/* Dark mode: full --primary fill with indigo glow (like .add-cart-btn / .learn-enroll-btn). */
+/* ============================================================
+   DIY FEED — "góc sáng tạo của cộng đồng"
+   Hero dùng craft.css; file này lo phần riêng của trang:
+   - Dây phơi ảnh: 3 polaroid treo bằng kẹp gỗ trên sợi chỉ cong
+   - Thẻ tác phẩm: ảnh 4:5, nút lưu, hành động hiện khi hover,
+     chân thẻ ngăn bằng đường khâu đứt nét
+   Chỉ dùng token sẵn có → tự đổi light/dark.
+   ============================================================ */
 
-.diy-support-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 20px; border-radius: 999px;
-  background: var(--accent-blush);
+/* ── Dây phơi ảnh trong hero ── */
+.diy-clothesline {
+  position: relative;
+  height: 300px;
+  display: none;
+}
+@media (min-width: 1024px) {
+  .diy-clothesline {
+    display: block;
+  }
+}
+.diy-clothesline-thread {
+  position: absolute;
+  top: 18px;
+  left: -4%;
+  width: 108%;
+  height: 60px;
+  overflow: visible;
+}
+.diy-clothesline-thread path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--primary) 55%, var(--border));
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.diy-polaroid {
+  position: absolute;
+  width: 150px;
+  margin: 0;
+  padding: 10px 10px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  transform-origin: top center;
+  transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-out);
+}
+.diy-polaroid:hover {
+  box-shadow: var(--shadow-xl);
+  z-index: 5;
+}
+.diy-polaroid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--muted);
+}
+.diy-polaroid figcaption {
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--foreground-secondary);
+  padding: 8px 2px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Kẹp gỗ giữ ảnh trên dây */
+.diy-polaroid-pin {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  width: 14px;
+  height: 30px;
+  margin-left: -7px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--brand-300), var(--brand-400));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.diy-polaroid-pin::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 999px;
+  background: var(--card);
+  opacity: 0.8;
+}
+/* Vị trí theo độ võng của sợi chỉ */
+.diy-polaroid-0 {
+  left: 2%;
+  top: 30px;
+  transform: rotate(-7deg);
+}
+.diy-polaroid-1 {
+  left: 50%;
+  top: 56px;
+  margin-left: -75px;
+  transform: rotate(2deg);
+  z-index: 2;
+}
+.diy-polaroid-2 {
+  right: 2%;
+  top: 30px;
+  transform: rotate(8deg);
+}
+.diy-polaroid-0:hover { transform: rotate(-3deg) translateY(-4px); }
+.diy-polaroid-1:hover { transform: rotate(0deg) translateY(-4px); }
+.diy-polaroid-2:hover { transform: rotate(4deg) translateY(-4px); }
+
+/* ── Đếm kết quả ── */
+.diy-result-count {
+  font-family: var(--font-script);
+  font-size: 1.2rem;
+  color: var(--foreground-muted);
+}
+.diy-result-count strong {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   color: var(--foreground);
-  border: 2px solid var(--primary);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
-  transition: all 0.2s ease;
-}
-.diy-support-btn:hover {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  transform: translateY(-2px);
-  box-shadow: 0 7px 18px var(--glow-primary);
-}
-.diy-support-btn:active { transform: translateY(0); }
-.dark .diy-support-btn {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px var(--primary), 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
-}
-.dark .diy-support-btn:hover {
-  background: var(--primary-hover);
-  color: var(--primary-foreground);
-  box-shadow: 0 0 0 1px var(--primary), 0 8px 20px var(--glow-primary);
 }
 
-.diy-post-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 20px; border-radius: 999px;
+/* ── Thẻ tác phẩm ── */
+.diy-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out);
+}
+.diy-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: var(--shadow-card-hover);
+}
+
+.diy-card-media {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--muted);
+  margin: 8px 8px 0;
+  border-radius: 16px;
+}
+
+.diy-card-save {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  color: var(--foreground);
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s var(--ease-spring), background 0.2s, color 0.2s;
+}
+.diy-card-save:hover {
+  transform: scale(1.1);
+  color: var(--primary);
+}
+.diy-card-save.is-saved {
   background: var(--primary);
   color: var(--primary-foreground);
-  border: 2px solid var(--primary);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 18%, transparent);
-  transition: all 0.2s ease;
 }
-.diy-post-btn:hover {
-  background: var(--primary-hover);
-  color: var(--primary-foreground);
-  transform: translateY(-2px);
-  box-shadow: 0 7px 18px var(--glow-primary);
+.diy-card-save.is-saved svg {
+  fill: currentColor;
 }
-.diy-post-btn:active { transform: translateY(0); }
-.dark .diy-post-btn {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px var(--primary), 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
+
+.diy-card-sold {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--foreground);
+  backdrop-filter: blur(8px);
 }
-.dark .diy-post-btn:hover {
-  background: var(--primary-hover);
+.diy-card-sold svg {
+  color: var(--primary);
+}
+
+.diy-card-actions {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 10px 10px;
+  background: linear-gradient(to top, rgba(10, 8, 20, 0.7), rgba(10, 8, 20, 0.15) 70%, transparent);
+  transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+}
+@media (hover: hover) and (min-width: 768px) {
+  .diy-card-actions {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  .diy-card:hover .diy-card-actions,
+  .diy-card:focus-within .diy-card-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.diy-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
+}
+.diy-card-action:hover {
+  transform: translateY(-1px);
+}
+.diy-card-action.is-light {
+  background: rgba(255, 255, 255, 0.94);
+  color: #18181b !important;
+}
+.diy-card-action.is-primary {
+  background: var(--cta-gradient);
   color: var(--primary-foreground);
-  box-shadow: 0 0 0 1px var(--primary), 0 8px 20px var(--glow-primary);
+  box-shadow: var(--cta-shadow);
+}
+
+.diy-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+.diy-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--foreground) !important;
+  transition: color 0.2s;
+}
+.diy-card-title:hover {
+  color: var(--primary) !important;
+}
+.diy-card-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+  background-repeat: repeat-x;
+  background-position: top;
+}
+.diy-card-price {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--primary);
+}
+.diy-card-free {
+  font-family: var(--font-script);
+  font-size: 1.1rem;
+  color: var(--success-text);
+}
+.diy-card-likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--foreground-muted);
+}
+.diy-card:hover .diy-card-likes svg {
+  color: var(--decor-heart);
+}
+
+@media (max-width: 480px) {
+  .diy-card-media {
+    margin: 6px 6px 0;
+    border-radius: 14px;
+  }
+  .diy-card-body {
+    padding: 12px;
+    gap: 8px;
+  }
+  .diy-card-title {
+    font-size: 0.92rem;
+  }
+  .diy-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .diy-card-action {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diy-polaroid,
+  .diy-card,
+  .diy-card-save,
+  .diy-card-actions,
+  .diy-card-action {
+    transition: none !important;
+  }
 }

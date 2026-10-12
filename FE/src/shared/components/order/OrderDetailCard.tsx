@@ -10,12 +10,17 @@
 import { useState, useEffect } from "react";
 import {
   Package,
+  PackageOpen,
   MapPin,
   CreditCard,
   Calendar,
   AlertCircle,
+  Clock,
+  Phone,
+  ShoppingBag,
   Star,
   Truck,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
@@ -27,13 +32,15 @@ import {
   PAYMENT_METHOD_LABELS,
   VALID_TRANSITIONS,
 } from "../../../constants/orderStatus";
-import type { Order, OrderStatus } from "../../../features/orders/types/order.types";
+import type { Order, OrderItem, OrderStatus } from "../../../features/orders/types/order.types";
 import { normalizeOrder, isCourseItem } from "../../../features/orders/types/order.types";
 import { ReportButton } from "../ReportButton";
+import { OrderThread } from "./OrderThread";
 import { kitService } from "../../api/kitService";
 import { productService } from "../../api/productService";
 import { useReviews } from "../../contexts/ReviewContext";
 import { formatExpectedDelivery, isAwaitingDelivery } from "../../../lib/orderDelivery";
+import "../../../styles/purchased.css";
 
 interface OrderDetailCardProps {
   order: Order;
@@ -203,97 +210,198 @@ export function OrderDetailCard({
     ? formatExpectedDelivery(normalized.expectedDeliveryTime)
     : "";
 
-  // Calculate shipping fee percentage for display
   const subtotal = normalized.itemsPrice || 0;
   const shippingFee = normalized.shippingFee || 0;
-  const shippingPercent = subtotal > 0 ? Math.round((shippingFee / subtotal) * 100) : 0;
+  const { kitGroups, standalone } = groupItemsByKit(normalized.items);
+  const itemCount = normalized.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const address = normalized.shippingAddress;
 
-  return (
-    <div className="space-y-6">
-      {/* ── Order Header ── */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">
-              Đơn hàng #{normalized._id.slice(-8).toUpperCase()}
-            </h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-              <Calendar className="w-4 h-4" />
-              <span>{createdAt}</span>
-            </div>
-            {expectedDelivery && (
-              <div className="flex items-center gap-2 text-sm font-medium text-[var(--primary)] mt-1.5">
-                <Truck className="w-4 h-4" />
-                <span>Dự kiến nhận hàng vào: {expectedDelivery}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className={`badge ${getOrderStatusBadgeClass(normalized.orderStatus)}`}
-            >
-              {ORDER_STATUS_LABELS[normalized.orderStatus]}
-            </span>
-            {isUnpaid && (
-              <button
-                onClick={async () => {
-                  if (!onRetryPayment) return;
-                  setRetrying(true);
-                  try {
-                    await onRetryPayment(normalized._id);
-                  } finally {
-                    setRetrying(false);
-                  }
-                }}
-                disabled={retrying}
-                className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors font-medium"
-              >
-                {retrying ? "..." : "💳 Thanh toán lại"}
-              </button>
-            )}
-            {isCancelRequested && (
-              <span className="text-sm bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-4 py-1.5 rounded-full font-medium">
-                ⏳ Đang chờ duyệt huỷ
+  const retryPayment = async () => {
+    if (!onRetryPayment) return;
+    setRetrying(true);
+    try {
+      await onRetryPayment(normalized._id);
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  /** 1 dòng sản phẩm — cùng bố cục với danh sách /purchased */
+  const renderItem = (item: OrderItem, key: string, kitId?: string) => {
+    const reviewed = hasReviewed(normalized._id, item.productId);
+    const rateable = canRate && !isCourseItem(item);
+    const lineTotal = (item.price ?? 0) * item.quantity;
+
+    return (
+      <div key={key} className="purchased-item-row order-detail-item">
+        <div className="purchased-item-thumb">
+          {item.image ? (
+            <img
+              src={item.image}
+              alt={item.productName || "Sản phẩm"}
+              loading="lazy"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.fallback) {
+                  target.dataset.fallback = "true";
+                  target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
+                }
+              }}
+            />
+          ) : (
+            <Package className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+
+        <div className="purchased-item-info">
+          <p className="purchased-item-name">
+            {item.productName || `Product ${item.productId}`}
+          </p>
+          <div className="purchased-item-meta">
+            <span className="purchased-qty-chip">x{item.quantity}</span>
+            {item.color && (
+              <span>
+                {item.hexCode && (
+                  <span
+                    className="purchased-color-dot"
+                    style={{ backgroundColor: item.hexCode }}
+                  />
+                )}
+                {item.color}
               </span>
             )}
-            {canRetryPayment && (
-              <button
-                onClick={async () => {
-                  if (!onRetryPayment) return;
-                  setRetrying(true);
-                  try {
-                    await onRetryPayment(normalized._id);
-                  } finally {
-                    setRetrying(false);
+          </div>
+          {rateable && (
+            <div className="purchased-item-review-row">
+              {!reviewed ? (
+                <button
+                  onClick={() =>
+                    setRatingModal({
+                      itemId: item.productId,
+                      itemName: item.productName || "Sản phẩm",
+                      kitId,
+                    })
                   }
-                }}
+                  className="purchased-review-btn"
+                >
+                  <Star className="w-3 h-3" /> Đánh giá
+                </button>
+              ) : (
+                <span className="purchased-reviewed-label">
+                  <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
+                  Đã đánh giá
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="purchased-item-price">
+          {item.price != null ? (
+            <>
+              <span className="line-total">{formatPrice(lineTotal)}</span>
+              {item.quantity > 1 && (
+                <span className="unit-price">{formatPrice(item.price)} / 1</span>
+              )}
+            </>
+          ) : (
+            <span className="line-total">—</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {/* ── Hero: mã đơn + sợi chỉ tiến trình ── */}
+      <section className="order-detail-panel order-detail-hero">
+        <div className="order-detail-hero-top">
+          <div className="min-w-0">
+            <p className="order-detail-eyebrow">Chi tiết đơn len</p>
+            <h1 className="order-detail-title">
+              Đơn hàng #{normalized._id.slice(-8).toUpperCase()}
+            </h1>
+            <div className="order-detail-meta">
+              <span>
+                <Calendar className="w-3.5 h-3.5" />
+                {createdAt}
+              </span>
+              <span>
+                <Package className="w-3.5 h-3.5" />
+                {itemCount} sản phẩm
+              </span>
+            </div>
+          </div>
+
+          <div className="order-detail-hero-actions">
+            <span className={`badge ${getOrderStatusBadgeClass(normalized.orderStatus)}`}>
+              {ORDER_STATUS_LABELS[normalized.orderStatus] ?? normalized.orderStatus}
+            </span>
+            {(isUnpaid || canRetryPayment) && (
+              <button
+                onClick={retryPayment}
                 disabled={retrying}
-                className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors font-medium"
+                className="purchased-action-btn is-primary"
               >
-                {retrying ? "..." : "💳 Thanh toán lại"}
+                <CreditCard className="w-3.5 h-3.5" />
+                {retrying ? "..." : "Thanh toán lại"}
               </button>
             )}
-            {canCancel && !isAdminView && (
+            {canCancel && (
               <button
                 onClick={() => setShowCancelModal(true)}
-                className="text-sm bg-destructive/10 text-destructive px-4 py-1.5 rounded-full hover:bg-destructive/20 transition-colors font-medium"
+                className="purchased-action-btn is-danger"
               >
+                <XCircle className="w-3.5 h-3.5" />
                 Huỷ đơn
               </button>
             )}
             {!isAdminView && (
-              <ReportButton
-                targetType="purchased_order"
-                targetId={normalized._id}
-                targetTitle={`Order ${normalized._id}`}
-              />
+              <span className="purchased-report-cell">
+                <ReportButton
+                  targetType="purchased_order"
+                  targetId={normalized._id}
+                  targetTitle={`Order ${normalized._id}`}
+                />
+              </span>
             )}
           </div>
         </div>
 
+        <div className="order-detail-thread">
+          <OrderThread status={normalized.orderStatus} />
+        </div>
+
+        {expectedDelivery && (
+          <div className="order-detail-callout is-info">
+            <Truck className="w-4 h-4 flex-shrink-0 text-[var(--primary)]" />
+            <span>
+              Dự kiến nhận hàng vào <strong>{expectedDelivery}</strong>
+            </span>
+          </div>
+        )}
+        {isCancelRequested && (
+          <div className="order-detail-callout is-warning">
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span>Yêu cầu huỷ đơn đang chờ cửa hàng duyệt.</span>
+          </div>
+        )}
+        {normalized.cancelReason && (
+          <div className="order-detail-callout is-error">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Lý do huỷ</p>
+              <p className="text-[var(--foreground-secondary)] mt-0.5">
+                {normalized.cancelReason}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Admin status changer */}
         {canChangeStatus && (
-          <div className="flex items-center gap-3 pt-4 border-t border-border">
+          <div className="order-detail-admin">
             <span className="text-sm font-medium text-muted-foreground">
               Cập nhật trạng thái:
             </span>
@@ -303,11 +411,9 @@ export function OrderDetailCard({
                   key={status}
                   onClick={() => handleStatusUpdate(status)}
                   disabled={statusUpdating}
-                  className={`text-sm px-4 py-1.5 rounded-full font-medium transition-colors ${
-                    status === "CANCELLED"
-                      ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                      : "bg-primary/10 text-primary hover:bg-primary/20"
-                  } disabled:opacity-50`}
+                  className={`purchased-action-btn ${
+                    status === "CANCELLED" ? "is-danger" : "is-soft"
+                  }`}
                 >
                   {statusUpdating ? "..." : ORDER_STATUS_LABELS[status]}
                 </button>
@@ -315,251 +421,150 @@ export function OrderDetailCard({
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* ── Items ── */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Package className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Sản phẩm</h3>
-        </div>
-        <div className="space-y-3">
-          {(() => {
-            const { kitGroups, standalone } = groupItemsByKit(normalized.items);
-            return (
-              <>
-                {/* Kit groups - only show after kit names are loaded */}
-                {kitNamesLoaded &&
-                  kitGroups.map((group) => {
-                    const kitName = kitNames[group.kitId];
-                    if (!kitName) return null;
-                    return (
-                      <div
-                        key={group.kitId}
-                        className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2"
-                      >
-                        <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                          🎁 {kitName}
-                        </p>
-                        {group.items.map((item, idx) => {
-                          const reviewed = hasReviewed(normalized._id, item.productId);
-                          return (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between py-1.5"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">
-                                  {item.productName ||
-                                    `Product ${item.productId}`}
-                                </p>
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                  <span>x{item.quantity}</span>
-                                  {item.color && <span>{item.color}</span>}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                                {canRate && !reviewed && (
-                                  <button
-                                    onClick={() => setRatingModal({
-                                      itemId: item.productId,
-                                      itemName: item.productName || "Sản phẩm",
-                                      kitId: group.kitId,
-                                    })}
-                                    className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                                  >
-                                    <Star className="w-3 h-3 inline mr-1" />
-                                    Đánh giá
-                                  </button>
-                                )}
-                                {canRate && reviewed && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
-                                    Đã đánh giá
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                {/* Standalone items */}
-                {standalone.map((item, idx) => {
-                  const reviewed = hasReviewed(normalized._id, item.productId);
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-3 py-3 border-b border-border last:border-0"
-                    >
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.productName || "Sản phẩm"}
-                          className="w-16 h-16 rounded-lg object-cover bg-muted flex-shrink-0"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (!target.dataset.fallback) {
-                              target.dataset.fallback = "true";
-                              target.src = `https://picsum.photos/seed/${item.productId}/100/100`;
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                          <Package className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{item.productName || "Sản phẩm"}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {item.hexCode && (
-                            <span
-                              className="inline-block w-3 h-3 rounded-full border border-border"
-                              style={{ backgroundColor: item.hexCode }}
-                            />
-                          )}
-                          {item.color && (
-                            <span className="text-xs text-muted-foreground">{item.color}</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          SL: {item.quantity}
-                          {item.price != null && ` x ${formatPrice(item.price)}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {canRate && !reviewed && !isCourseItem(item) && (
-                          <button
-                            onClick={() => setRatingModal({
-                              itemId: item.productId,
-                              itemName: item.productName || "Sản phẩm",
-                            })}
-                            className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
-                          >
-                            <Star className="w-3 h-3 inline mr-1" />
-                            Đánh giá
-                          </button>
-                        )}
-                        {canRate && reviewed && !isCourseItem(item) && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
-                            Đã đánh giá
-                          </span>
-                        )}
-                      </div>
+      <div className="order-detail-grid">
+        <div className="order-detail-main">
+          {/* ── Sản phẩm ── */}
+          <section className="order-detail-panel" style={{ animationDelay: "60ms" }}>
+            <h2 className="order-detail-section-title">
+              <span className="order-detail-section-icon">
+                <ShoppingBag className="w-4 h-4" />
+              </span>
+              Sản phẩm trong đơn
+            </h2>
+            {kitNamesLoaded &&
+              kitGroups.map((group) => {
+                const kitName = kitNames[group.kitId];
+                if (!kitName) return null;
+                return (
+                  <div key={group.kitId} className="purchased-kit-group">
+                    <div className="purchased-kit-header">
+                      <span className="purchased-kit-icon">
+                        <PackageOpen className="w-3.5 h-3.5" />
+                      </span>
+                      <p className="purchased-kit-title">{kitName}</p>
                     </div>
-                  );
-                })}
-              </>
-            );
-          })()}
-        </div>
-      </div>
+                    {group.items.map((item, idx) =>
+                      renderItem(item, `${group.kitId}-${idx}`, group.kitId),
+                    )}
+                  </div>
+                );
+              })}
+            {standalone.map((item, idx) => renderItem(item, `item-${idx}`))}
+          </section>
 
-      {/* ── Shipping Address ── */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Địa chỉ giao hàng</h3>
+          {/* ── Địa chỉ giao hàng ── */}
+          <section className="order-detail-panel" style={{ animationDelay: "120ms" }}>
+            <h2 className="order-detail-section-title">
+              <span className="order-detail-section-icon">
+                <MapPin className="w-4 h-4" />
+              </span>
+              Giao đến
+            </h2>
+            <div className="order-detail-address">
+              <p className="order-detail-address-name">{address?.fullName}</p>
+              {address?.phone && (
+                <p className="flex items-center gap-1.5 text-[var(--foreground-secondary)]">
+                  <Phone className="w-3.5 h-3.5" />
+                  {address.phone}
+                </p>
+              )}
+              <p className="text-[var(--foreground-muted)] mt-1">
+                {[address?.address, address?.ward, address?.district, address?.city]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            </div>
+          </section>
         </div>
-        <div className="space-y-1 text-sm">
-          <p className="font-medium">{normalized.shippingAddress?.fullName}</p>
-          <p className="text-muted-foreground">{normalized.shippingAddress?.phone}</p>
-          <p className="text-muted-foreground">
-            {[
-              normalized.shippingAddress?.address,
-              normalized.shippingAddress?.ward,
-              normalized.shippingAddress?.district,
-              normalized.shippingAddress?.city,
-            ]
-              .filter(Boolean)
-              .join(", ")}
-          </p>
-        </div>
-      </div>
 
-      {/* ── Payment Info ── */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <CreditCard className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Thanh toán</h3>
-        </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Phương thức</span>
-            <span className="font-medium">
-              {PAYMENT_METHOD_LABELS[normalized.payment?.method ?? ""] || normalized.payment?.method || "N/A"}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Trạng thái</span>
-            <span
-              className={`badge ${getPaymentStatusBadgeClass(normalized.payment?.status ?? "")}`}
-            >
-              {PAYMENT_STATUS_LABELS[normalized.payment?.status] || normalized.payment?.status}
-            </span>
-          </div>
-          {normalized.payment?.transactionNo && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Mã giao dịch</span>
-              <span className="font-medium">{normalized.payment.transactionNo}</span>
+        {/* ── Vé thanh toán ── */}
+        <aside className="order-detail-aside">
+          <section
+            className="order-detail-panel order-detail-ticket"
+            style={{ animationDelay: "90ms" }}
+          >
+            <h2 className="order-detail-section-title">
+              <span className="order-detail-section-icon">
+                <CreditCard className="w-4 h-4" />
+              </span>
+              Thanh toán
+            </h2>
+            <div className="order-detail-row">
+              <span>Phương thức</span>
+              <span>
+                {PAYMENT_METHOD_LABELS[normalized.payment?.method ?? ""] ||
+                  normalized.payment?.method ||
+                  "N/A"}
+              </span>
             </div>
-          )}
-        </div>
-      </div>
+            <div className="order-detail-row">
+              <span>Trạng thái</span>
+              <span
+                className={`badge ${getPaymentStatusBadgeClass(normalized.payment?.status ?? "")}`}
+              >
+                {PAYMENT_STATUS_LABELS[normalized.payment?.status] ||
+                  normalized.payment?.status}
+              </span>
+            </div>
+            {normalized.payment?.transactionNo && (
+              <div className="order-detail-row">
+                <span>Mã giao dịch</span>
+                <span className="font-mono text-xs break-all">
+                  {normalized.payment.transactionNo}
+                </span>
+              </div>
+            )}
 
-      {/* ── Order Total ── */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Tạm tính</span>
-            <span>{formatPrice(subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Phí giao hàng ({shippingPercent}%)</span>
-            <span>{formatPrice(shippingFee)}</span>
-          </div>
-          {normalized.discount != null && normalized.discount > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Giảm giá</span>
-              <span>-{formatPrice(normalized.discount)}</span>
-            </div>
-          )}
-          {/* 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
-          {normalized.coinUsed != null && normalized.coinUsed > 0 && (
-            <div className="flex justify-between text-blue-600">
-              <span>Xu đã dùng</span>
-              <span>-{formatPrice(normalized.coinUsed)}</span>
-            </div>
-          )}
-          */}
-          <div className="flex justify-between font-semibold text-lg pt-2 border-t border-border">
-            <span>Tổng cộng</span>
-            <span className="text-primary">{formatPrice(normalized.totalPrice)}</span>
-          </div>
-        </div>
-      </div>
+            <div className="order-detail-divider" />
 
-      {/* ── Cancel Reason ── */}
-      {normalized.cancelReason && (
-        <div className="bg-card rounded-2xl border border-destructive/30 p-6">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-sm">Lý do huỷ</h3>
-              <p className="text-sm text-muted-foreground mt-1">{normalized.cancelReason}</p>
+            <div className="order-detail-row">
+              <span>Tạm tính</span>
+              <span>{formatPrice(subtotal)}</span>
             </div>
-          </div>
-        </div>
-      )}
+            <div className="order-detail-row">
+              <span>Phí giao hàng</span>
+              <span>{formatPrice(shippingFee)}</span>
+            </div>
+            {normalized.discount != null && normalized.discount > 0 && (
+              <div className="order-detail-row">
+                <span>Giảm giá</span>
+                <span className="text-[var(--success-text)]">
+                  -{formatPrice(normalized.discount)}
+                </span>
+              </div>
+            )}
+            {/* 🪙 Coin system — tạm tắt, sẽ bật lại khi phát triển tính năng dùng Coin:
+            {normalized.coinUsed != null && normalized.coinUsed > 0 && (
+              <div className="order-detail-row">
+                <span>Xu đã dùng</span>
+                <span>-{formatPrice(normalized.coinUsed)}</span>
+              </div>
+            )}
+            */}
+
+            <div className="order-detail-divider" />
+
+            <div className="order-detail-grand">
+              <span className="order-detail-grand-label">Tổng cộng</span>
+              <span className="order-detail-grand-value">
+                {formatPrice(normalized.totalPrice)}
+              </span>
+            </div>
+
+            {!isAdminView && (
+              <p className="order-detail-note">Cảm ơn bạn đã đan cùng chúng mình ♡</p>
+            )}
+          </section>
+        </aside>
+      </div>
 
       {/* ── Cancel Modal ── */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card rounded-2xl p-6 max-w-md w-full border border-border shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">Huỷ đơn hàng</h3>
+        <div className="order-modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="order-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="order-modal-title">Huỷ đơn hàng</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Vui lòng cho chúng tôi biết lý do bạn muốn huỷ đơn hàng này.
             </p>
@@ -591,18 +596,10 @@ export function OrderDetailCard({
 
       {/* ── Rating Modal ── */}
       {ratingModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setRatingModal(null)}
-        >
-          <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold mb-1">Đánh giá sản phẩm</h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              {ratingModal.itemName}
-            </p>
+        <div className="order-modal-overlay" onClick={() => setRatingModal(null)}>
+          <div className="order-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="order-modal-title">Đánh giá sản phẩm</h3>
+            <p className="text-xs text-muted-foreground mb-4">{ratingModal.itemName}</p>
             <div className="flex items-center gap-2 mb-4">
               {Array.from({ length: 5 }, (_, i) => (
                 <button

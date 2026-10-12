@@ -1,308 +1,334 @@
 // ============================================================
 // StaffReports — route /staff/reports
-// Staff xem reports được assigned cho mình
+// Staff xử lý các báo cáo đơn hàng mà Admin giao cho mình.
+// - Lọc theo trạng thái bằng tab (mặc định "Đang chờ" — việc cần làm).
+// - Ghi chú: sửa trên bản nháp khởi tạo từ ghi chú đã lưu; chỉ bật nút
+//   lưu khi có thay đổi (trước đây ô ghi chú dùng `newNote || adminNote`
+//   nên không thể xoá hết chữ).
+// - Đánh dấu Xong / Huỷ kèm ghi chú hiện tại, có hỏi lại trước khi đổi.
 // ============================================================
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { CheckCircle2, Flag, XCircle, ImageIcon, Save } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
 import type { OrderReport } from "../../../features/orderReport/types/orderReport.types";
 import { useAuth } from "../../../shared/hooks/useAuth";
-import { Badge } from "../../../shared/components/ui/badge";
-import { CheckCircle, XCircle, Eye } from "lucide-react";
-
+import { shortId, toText } from "../../../lib/displayText";
+import { cn } from "../../../shared/components/ui/utils";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import { AdminModal } from "../../../shared/components/admin/AdminModal";
+import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 
-const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];
+type ReportStatus = OrderReport["status"];
+
+const PAGE_SIZE = 10;
+
+const STATUS_TABS: { value: ReportStatus | ""; label: string }[] = [
+  { value: "PENDING", label: "Đang chờ" },
+  { value: "DONE", label: "Đã xong" },
+  { value: "CANCELLED", label: "Đã huỷ" },
+  { value: "", label: "Tất cả" },
+];
+
+const STATUS_META: Record<ReportStatus, { label: string; badge: string }> = {
+  PENDING: { label: "Đang chờ", badge: "badge-orange" },
+  DONE: { label: "Đã xong", badge: "badge-green" },
+  CANCELLED: { label: "Đã huỷ", badge: "badge-red" },
+};
+
+function formatDate(value: string, pattern: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : format(date, pattern);
+}
 
 export function StaffReports() {
   const { user } = useAuth();
   const [reports, setReports] = useState<OrderReport[]>([]);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<ReportStatus | "">("PENDING");
 
-  // Detail modal state
-  const [selectedReport, setSelectedReport] = useState<OrderReport | null>(null);
-  const [statusUpdating, setStatusUpdating] = useState(false);
-  const [noteUpdating, setNoteUpdating] = useState(false);
-  const [newNote, setNewNote] = useState("");
+  // Hộp chi tiết
+  const [selected, setSelected] = useState<OrderReport | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<"DONE" | "CANCELLED" | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await orderReportService.getAll({
         page,
-        limit: 10,
+        limit: PAGE_SIZE,
         assignedStaff: user?.id,
         status: filterStatus || undefined,
       });
-      setReports(data.data.reports);
-      setTotalPages(data.data.totalPages);
+      const list = Array.isArray(data.data?.reports) ? data.data.reports : [];
+      setReports(list);
+      setTotal(data.data?.total ?? list.length);
+      setTotalPages(Math.max(1, data.data?.totalPages ?? 1));
     } catch {
-      toast.error("Failed to load reports");
+      toast.error("Không tải được danh sách báo cáo");
     } finally {
       setLoading(false);
     }
   }, [page, filterStatus, user?.id]);
 
   useEffect(() => {
-    fetchReports();
+    void fetchReports();
   }, [fetchReports]);
 
-  const handleUpdateStatus = async (id: string, status: string) => {
-    setStatusUpdating(true);
+  const openReport = (report: OrderReport) => {
+    setSelected(report);
+    setNoteDraft(toText(report.adminNote));
+    setPendingStatus(null);
+  };
+
+  const closeReport = () => {
+    if (savingNote || updatingStatus) return;
+    setSelected(null);
+    setPendingStatus(null);
+  };
+
+  const savedNote = selected ? toText(selected.adminNote) : "";
+  const noteDirty = noteDraft.trim() !== savedNote.trim();
+
+  const handleSaveNote = async () => {
+    if (!selected || !noteDirty) return;
+    setSavingNote(true);
     try {
-      await orderReportService.updateStatus(id, status, newNote);
-      toast.success(`Report marked as ${status}`);
-      setSelectedReport(null);
-      setNewNote("");
-      fetchReports();
+      await orderReportService.updateNote(selected._id, noteDraft.trim());
+      const updated = { ...selected, adminNote: noteDraft.trim() };
+      setSelected(updated);
+      setReports((prev) => prev.map((r) => (r._id === updated._id ? updated : r)));
+      toast.success("Đã lưu ghi chú");
     } catch {
-      toast.error("Failed to update status");
+      toast.error("Không lưu được ghi chú");
     } finally {
-      setStatusUpdating(false);
+      setSavingNote(false);
     }
   };
 
-  const handleUpdateNote = async () => {
-    if (!selectedReport || !newNote.trim()) return;
-    setNoteUpdating(true);
+  const handleUpdateStatus = async () => {
+    if (!selected || !pendingStatus) return;
+    setUpdatingStatus(true);
     try {
-      await orderReportService.updateNote(selectedReport._id, newNote);
-      toast.success("Note updated");
-      setSelectedReport({ ...selectedReport, adminNote: newNote });
-      setNewNote("");
-      fetchReports();
+      await orderReportService.updateStatus(selected._id, pendingStatus, noteDraft.trim() || undefined);
+      toast.success(pendingStatus === "DONE" ? "Đã đánh dấu báo cáo là xong" : "Đã huỷ báo cáo");
+      setSelected(null);
+      setPendingStatus(null);
+      void fetchReports();
     } catch {
-      toast.error("Failed to update note");
+      toast.error("Không cập nhật được trạng thái");
     } finally {
-      setNoteUpdating(false);
+      setUpdatingStatus(false);
     }
   };
+
+  const activeTab = STATUS_TABS.find((tab) => tab.value === filterStatus);
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="My Assigned Reports"
-        subtitle="Handle reports assigned to you by admin"
+        eyebrow="Được giao cho bạn"
+        title="Báo cáo đơn hàng"
+        subtitle="Xử lý các khiếu nại của khách mà Admin đã giao cho bạn."
       />
 
-      {/* Filter */}
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={filterStatus}
-          onChange={(e) => {
-            setFilterStatus(e.target.value);
-            setPage(1);
-          }}
-          className="px-4 py-2 rounded-lg border border-border bg-card text-sm"
-        >
-          <option value="">All Status</option>
-          {STATUS_OPTIONS.filter(Boolean).map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse bg-muted rounded-lg" />
+      <AdminPanel hover={false}>
+        <div className="admin-toolbar staff-tabs" role="tablist" aria-label="Lọc theo trạng thái">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value || "all"}
+              type="button"
+              role="tab"
+              aria-selected={filterStatus === tab.value}
+              className={cn("staff-tab", filterStatus === tab.value && "is-active")}
+              onClick={() => {
+                setFilterStatus(tab.value);
+                setPage(1);
+              }}
+            >
+              {tab.label}
+              {filterStatus === tab.value && !loading && <span className="staff-tab-count">{total}</span>}
+            </button>
           ))}
         </div>
-      ) : reports.length === 0 ? (
-        <AdminPanel className="p-12 text-center">
-          <Eye className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="mb-2">No Reports Assigned</h3>
-          <p className="text-muted-foreground">When admin assigns you a report, it will appear here.</p>
-        </AdminPanel>
-      ) : (
-        <>
-          <div className="space-y-4">
-            {reports.map((report) => (
-              <AdminPanel key={report._id} className="p-5">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge
-                        variant={
-                          report.status === "PENDING"
-                            ? "secondary"
-                            : report.status === "DONE"
-                            ? "default"
-                            : "destructive"
-                        }
-                      >
-                        {report.status}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        #{report._id.slice(-8)}
-                      </span>
-                    </div>
-                    <h3 className="font-semibold text-lg mb-1">{report.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                      {report.description}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Order: #{report.orderId.slice(-8)} •{" "}
-                      {format(new Date(report.createdAt), "MMM dd, yyyy")}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedReport(report)}
-                    className="text-primary hover:underline text-sm"
-                  >
-                    View Details
-                  </button>
-                </div>
-              </AdminPanel>
-            ))}
-          </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-4">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="px-3 py-1.5 rounded-lg text-sm border border-border hover:bg-muted disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <span className="text-sm text-muted-foreground self-center">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="px-3 py-1.5 rounded-lg text-sm border border-border hover:bg-muted disabled:opacity-50"
-              >
-                Next
-              </button>
+        <div className="staff-reports">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => <div key={i} className="admin-skeleton h-24 rounded-2xl" />)
+          ) : reports.length === 0 ? (
+            <div className="admin-empty-state">
+              <Flag size={40} />
+              <p>
+                {filterStatus === "PENDING"
+                  ? "Không có báo cáo nào đang chờ bạn"
+                  : `Không có báo cáo "${activeTab?.label.toLowerCase()}"`}
+              </p>
+              <p className="text-sm">Khi Admin giao báo cáo cho bạn, nó sẽ xuất hiện ở đây.</p>
             </div>
-          )}
-        </>
-      )}
-
-      {/* Detail Modal */}
-      {selectedReport && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setSelectedReport(null)}
-        >
-          <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 border-b border-border">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{selectedReport.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Report #{selectedReport._id.slice(-8)} • Order #
-                    {selectedReport.orderId.slice(-8)}
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    selectedReport.status === "PENDING"
-                      ? "secondary"
-                      : selectedReport.status === "DONE"
-                      ? "default"
-                      : "destructive"
-                  }
-                >
-                  {selectedReport.status}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Description
-                </p>
-                <p className="text-sm">{selectedReport.description}</p>
-              </div>
-
-              {selectedReport.images && selectedReport.images.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Images
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {selectedReport.images.map((img, i) => (
-                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-lg object-cover" />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Created
-                </p>
-                <p className="text-sm">
-                  {format(new Date(selectedReport.createdAt), "MMM dd, yyyy HH:mm")}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Admin Note
-                </p>
-                <textarea
-                  value={newNote || selectedReport.adminNote || ""}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm min-h-[80px]"
-                  placeholder="Add admin note..."
-                />
+          ) : (
+            reports.map((report) => {
+              const meta = STATUS_META[report.status] ?? STATUS_META.PENDING;
+              return (
                 <button
-                  onClick={handleUpdateNote}
-                  disabled={noteUpdating || !newNote.trim()}
-                  className="mt-2 px-4 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  key={report._id}
+                  type="button"
+                  className="staff-report"
+                  onClick={() => openReport(report)}
                 >
-                  {noteUpdating ? "Saving..." : "Save Note"}
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className={`badge ${meta.badge}`}>{meta.label}</span>
+                      <span className="staff-report-id">#{shortId(report._id)}</span>
+                    </span>
+                    <span className="staff-report-title">{toText(report.title) || "Báo cáo"}</span>
+                    <span className="staff-report-desc">{toText(report.description)}</span>
+                    <span className="staff-report-meta">
+                      Đơn #{shortId(report.orderId)} · {formatDate(report.createdAt, "dd/MM/yyyy")}
+                      {Array.isArray(report.images) && report.images.length > 0 && (
+                        <>
+                          {" "}
+                          · <ImageIcon className="inline h-3.5 w-3.5" /> {report.images.length}
+                        </>
+                      )}
+                    </span>
+                  </span>
+                  <span className="staff-report-open">Xem &amp; xử lý</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </AdminPanel>
+
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalItems={total}
+        pageSize={PAGE_SIZE}
+        disabled={loading}
+      />
+
+      {selected && (
+        <AdminModal
+          title={toText(selected.title) || "Báo cáo"}
+          onClose={closeReport}
+          className="max-w-lg w-full"
+        >
+          <div className="admin-dialog-body">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className={`badge ${(STATUS_META[selected.status] ?? STATUS_META.PENDING).badge}`}>
+                {(STATUS_META[selected.status] ?? STATUS_META.PENDING).label}
+              </span>
+              <span>Báo cáo #{shortId(selected._id)}</span>
+              <span>· Đơn #{shortId(selected.orderId)}</span>
+              <span>· {formatDate(selected.createdAt, "dd/MM/yyyy HH:mm")}</span>
+            </div>
+
+            <div>
+              <p className="staff-label">Nội dung khách báo</p>
+              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                {toText(selected.description) || "—"}
+              </p>
+            </div>
+
+            {Array.isArray(selected.images) && selected.images.length > 0 && (
+              <div>
+                <p className="staff-label">Ảnh đính kèm</p>
+                <div className="flex flex-wrap gap-2">
+                  {selected.images.map((img, i) => (
+                    <a key={i} href={toText(img)} target="_blank" rel="noreferrer" className="staff-report-img">
+                      <img src={toText(img)} alt={`Ảnh ${i + 1}`} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="staff-note" className="staff-label">
+                Ghi chú xử lý
+              </label>
+              <textarea
+                id="staff-note"
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                className="input w-full min-h-[96px] resize-y"
+                placeholder="Bạn đã làm gì để xử lý báo cáo này?"
+              />
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {noteDirty ? "Có thay đổi chưa lưu" : savedNote ? "Đã lưu" : "Chưa có ghi chú"}
+                </span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handleSaveNote}
+                  disabled={!noteDirty || savingNote}
+                >
+                  <Save className="h-4 w-4" />
+                  {savingNote ? "Đang lưu…" : "Lưu ghi chú"}
                 </button>
               </div>
-
-              {selectedReport.status === "PENDING" && (
-                <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                  <button
-                    onClick={() => handleUpdateStatus(selectedReport._id, "DONE")}
-                    disabled={statusUpdating}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                    style={{
-                      background: "var(--accent-green)",
-                      color: "var(--accent-green-text)",
-                    }}
-                  >
-                    <CheckCircle className="w-4 h-4 inline mr-1" />
-                    Mark as Done
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(selectedReport._id, "CANCELLED")}
-                    disabled={statusUpdating}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                    style={{
-                      background: "var(--accent-red)",
-                      color: "var(--accent-red-text)",
-                    }}
-                  >
-                    <XCircle className="w-4 h-4 inline mr-1" />
-                    Cancel Report
-                  </button>
-                </div>
-              )}
             </div>
+
+            {selected.status === "PENDING" && pendingStatus && (
+              <div className={cn("staff-confirm", pendingStatus === "DONE" ? "is-done" : "is-cancel")}>
+                {pendingStatus === "DONE"
+                  ? "Đánh dấu báo cáo này là ĐÃ XỬ LÝ XONG?"
+                  : "Huỷ báo cáo này? (dùng khi báo cáo không hợp lệ)"}
+                {noteDraft.trim() && " Ghi chú hiện tại sẽ được lưu kèm."}
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="admin-dialog-footer">
+            {selected.status !== "PENDING" ? (
+              <button type="button" className="btn-modal-cancel" onClick={closeReport}>
+                Đóng
+              </button>
+            ) : pendingStatus ? (
+              <>
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setPendingStatus(null)}
+                  disabled={updatingStatus}
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="button"
+                  className={pendingStatus === "DONE" ? "btn-modal-primary" : "btn-modal-destructive"}
+                  onClick={handleUpdateStatus}
+                  disabled={updatingStatus}
+                >
+                  {updatingStatus ? "Đang cập nhật…" : pendingStatus === "DONE" ? "Xác nhận xong" : "Xác nhận huỷ"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="btn-modal-cancel" onClick={() => setPendingStatus("CANCELLED")}>
+                  <XCircle className="h-4 w-4" />
+                  Huỷ báo cáo
+                </button>
+                <button type="button" className="btn-modal-primary" onClick={() => setPendingStatus("DONE")}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Đánh dấu xong
+                </button>
+              </>
+            )}
+          </div>
+        </AdminModal>
       )}
     </div>
   );

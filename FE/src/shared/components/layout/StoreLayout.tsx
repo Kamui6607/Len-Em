@@ -56,7 +56,8 @@ export function StoreLayout({ children }: StoreLayoutProps) {
           )}
         </div>
 
-        <ArchiveFloatingMenu />
+        {/* /chatbot là màn hình chat toàn trang — FAB sẽ đè lên tin nhắn & ô nhập */}
+        {location.pathname !== "/chatbot" && <ArchiveFloatingMenu />}
         {!hideNav && location.pathname !== "/" && <Footer />}
       </div>
     </motion.div>

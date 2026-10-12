@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 
 interface AdminPageHeaderProps {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   actions?: ReactNode;
+  /** Dòng chữ viết tay nhỏ phía trên tiêu đề (tuỳ chọn). */
+  eyebrow?: string;
 }
 
 /**
@@ -17,14 +19,15 @@ interface AdminPageHeaderProps {
  *   - ProductDetail used   <h1 className="mb-1">  (no admin-page-title)
  * All three now render identically.
  */
-export function AdminPageHeader({ title, subtitle, actions }: AdminPageHeaderProps) {
+export function AdminPageHeader({ title, subtitle, actions, eyebrow }: AdminPageHeaderProps) {
   return (
-    <div className="flex items-center justify-between flex-wrap gap-4">
-      <div>
+    <div className="flex items-end justify-between flex-wrap gap-4">
+      <div className="min-w-0">
+        {eyebrow && <span className="admin-page-eyebrow">{eyebrow}</span>}
         <h1 className="admin-page-title text-2xl font-semibold mb-1">{title}</h1>
-        {subtitle && <p className="admin-page-subtitle text-sm">{subtitle}</p>}
+        {subtitle && <div className="admin-page-subtitle text-sm">{subtitle}</div>}
       </div>
-      {actions && <div className="flex items-center gap-3 flex-shrink-0">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </div>
   );
 }

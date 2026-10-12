@@ -25,6 +25,7 @@ import {
   AdminSearchMeta,
   AdminSearchToolbar,
 } from "../../../shared/components/admin/AdminSearch";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -390,18 +391,16 @@ export function AdminRefunds() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="mb-2">Refund Management</h1>
-          <p className="text-muted-foreground">
-            {total} refund invoice{total !== 1 ? "s" : ""} total
-          </p>
-        </div>
-        <button onClick={fetchInvoices} className="btn-secondary">
-          <RefreshCw size={16} />
-          Refresh
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Refund Management"
+        subtitle={`${total} refund invoice${total !== 1 ? "s" : ""} total`}
+        actions={
+          <button onClick={fetchInvoices} className="btn-secondary">
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        }
+      />
 
       {/* Table */}
       <div className="admin-panel-glow rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">

@@ -1,7 +1,26 @@
+// ============================================================
+// ChatBot Page — route /chatbot
+// Trợ lý Len&em: menu chủ đề + các "flow" hỏi từng bước từ
+// /chatbot/menu, gửi tin qua /chatbot/messages.
+// Giao diện theo ngôn ngữ craft (craft.css + chatbot.css).
+// ============================================================
+
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Sparkles, RotateCcw, ChevronRight, ChevronDown, Send, ArrowLeft } from "lucide-react";
+import {
+  RotateCcw,
+  ChevronDown,
+  Send,
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  ShoppingBag,
+  BookOpen,
+  Palette,
+  Package,
+  ArrowUpRight,
+} from "lucide-react";
 import {
   getChatbotMenu,
   getChatbotHealth,
@@ -12,6 +31,9 @@ import {
   type Flow,
   type FlowStep,
 } from "../../shared/api/chatbotService";
+import { YarnBallIcon } from "../../features/shop/shopMeta";
+import { cn } from "../../shared/components/ui/utils";
+import "../../styles/craft.css";
 import "../../styles/chatbot.css";
 
 // ─── Types ───────────────────────────────────────────────
@@ -51,33 +73,37 @@ const NEAR_BOTTOM_THRESHOLD = 120;
  *  can tighten spacing/avatar the way real chat apps (Zalo/Messenger) do. */
 const GROUP_WINDOW_MS = 60_000;
 
+const BOT_NAME = "Trợ lý Len&em";
+
+/** Lối tắt sang các khu vực chính — hiện ở cột bên (desktop). */
+const QUICK_LINKS = [
+  { to: "/shop", label: "Cửa hàng", Icon: ShoppingBag },
+  { to: "/learn", label: "Khoá học", Icon: BookOpen },
+  { to: "/diy", label: "Góc sáng tạo", Icon: Palette },
+  { to: "/purchased", label: "Đơn hàng của tôi", Icon: Package },
+];
+
+function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+}
+
 // ─── Small presentational pieces ─────────────────────────
 
-function BotAvatar({ size = 28, thinking = false }: { size?: number; thinking?: boolean }) {
+function BotAvatar({ size = 32, thinking = false }: { size?: number; thinking?: boolean }) {
   return (
     <div
-      className={`rounded-full flex items-center justify-center flex-shrink-0 ${
-        thinking ? "chatbot-avatar-thinking" : ""
-      }`}
-      style={{
-        width: size,
-        height: size,
-        background: "var(--cta-gradient)",
-        boxShadow: "var(--cta-shadow)",
-        animation: "chatbot-avatar-in 0.3s var(--ease-spring)",
-      }}
+      className={cn("chatbot-avatar", thinking && "chatbot-avatar-thinking")}
+      style={{ width: size, height: size }}
+      aria-hidden
     >
-      <Sparkles
-        style={{ width: size * 0.5, height: size * 0.5, color: "#fff" }}
-        strokeWidth={2.25}
-      />
+      <YarnBallIcon size={size * 0.55} strokeWidth={2} />
     </div>
   );
 }
 
 function TypingDots() {
   return (
-    <div className="flex gap-1.5 items-center px-0.5">
+    <div className="flex gap-1.5 items-center px-0.5" aria-label="Đang trả lời">
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}
@@ -86,6 +112,31 @@ function TypingDots() {
         />
       ))}
     </div>
+  );
+}
+
+/** Nút chọn dạng chip — dùng cho menu chủ đề và các bước của flow. */
+function OptionChip({
+  label,
+  onClick,
+  disabled,
+  index,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled: boolean;
+  index: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="chatbot-chip"
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -407,219 +458,329 @@ export function ChatBot() {
     }
   }, [menu]);
 
+  // ─── Derived ────────────────────────────────────────────
+
+  const lastBotIndex = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "bot") return i;
+    return -1;
+  })();
+  const lastUserIndex = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
+    return -1;
+  })();
+  const hasUserMessage = lastUserIndex >= 0;
+  const statusLabel =
+    mode === "GUIDED_FALLBACK" ? "Trả lời theo chủ đề có sẵn" : "Đang hoạt động";
+
+  /** Vị trí bước hiện tại trong flow đầy đủ (lấy từ menu) — để hiện "Bước x/y". */
+  const getStepProgress = (flow: Flow) => {
+    const full = menu?.flows?.[flow.id];
+    const stepId = flow.steps[0]?.id;
+    if (!full || !stepId) return null;
+    const index = full.steps.findIndex((s) => s.id === stepId);
+    return index >= 0 ? { current: index + 1, total: full.steps.length, title: full.title } : null;
+  };
+
+  const sidebar = (
+    <aside className="chatbot-side" aria-label="Giới thiệu trợ lý">
+      <div className="chatbot-side-card">
+        <BotAvatar size={56} />
+        <p className="craft-eyebrow mt-4">Xin chào bạn</p>
+        <h2 className="chatbot-side-title">{BOT_NAME}</h2>
+        <p className="chatbot-side-desc">
+          Hỏi mình về khoá học, chọn len, dự án DIY hay đơn hàng — mình chỉ đường cho bạn.
+        </p>
+        <span className="chatbot-mode">
+          <span className="chatbot-online-dot" />
+          {statusLabel}
+        </span>
+      </div>
+
+      {menu && menu.options.length > 0 && (
+        <div className="chatbot-side-card">
+          <p className="chatbot-side-label">Chủ đề nhanh</p>
+          <div className="chatbot-side-topics">
+            {menu.options.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleMenuOption(opt)}
+                disabled={sending || !sessionId}
+                className="chatbot-side-topic"
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="chatbot-side-card">
+        <p className="chatbot-side-label">Đi tới</p>
+        <nav className="chatbot-side-links">
+          {QUICK_LINKS.map(({ to, label, Icon }) => (
+            <Link key={to} to={to} className="chatbot-side-link">
+              <Icon className="w-4 h-4" />
+              {label}
+              <ArrowUpRight className="ml-auto w-3.5 h-3.5" />
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </aside>
+  );
+
   // ─── Render ─────────────────────────────────────────────
 
   if (loading && messages.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="chatbot-page min-h-dvh flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{
-              background: "var(--cta-gradient)",
-              boxShadow: "var(--shadow-glow-primary)",
-              animation: "chatbot-breathe 1.6s ease-in-out infinite",
-            }}
-          >
-            <Sparkles className="w-5 h-5 text-white" strokeWidth={2.25} />
+          <div className="chatbot-loading-ball">
+            <YarnBallIcon size={30} strokeWidth={2} />
           </div>
-          <p className="text-muted-foreground text-sm chatbot-loading-text">
-            Đang kết nối chatbot...
-          </p>
+          <p className="chatbot-loading-text">Đang cuộn len, chờ mình chút nhé…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-dvh flex flex-col relative" style={{ background: "var(--bg-gradient-160)" }}>
-      {/* Header — fixed at top */}
-      <header className="shrink-0 bg-card/80 backdrop-blur-md border-b border-border z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => navigate(-1)}
-              title="Quay lại"
-              className="chatbot-back-btn w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-border/50"
-              style={{ background: "var(--card)", boxShadow: "var(--shadow-sm)" }}
-            >
-              <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={2.5} />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ background: "var(--cta-gradient)", boxShadow: "var(--cta-shadow)" }}
-                >
-                  <Sparkles className="w-4 h-4 text-white" strokeWidth={2.25} />
-                </div>
-                <span
-                  className="chatbot-online-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
-                  style={{ background: "#22c55e", borderColor: "var(--card)" }}
-                />
-              </div>
-              <div>
-                <h1 className="font-semibold text-foreground text-sm leading-tight">
-                  Yarn Shop Assistant
-                </h1>
-                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                  {mode === "GUIDED_FALLBACK" ? "Hướng dẫn chọn sản phẩm" : "Đang hoạt động"}
-                </p>
-              </div>
+    <div className="chatbot-page h-dvh flex flex-col relative">
+      {/* ── Header ── */}
+      <header className="chatbot-header">
+        <div className="chatbot-header-inner">
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Quay lại"
+            className="chatbot-icon-btn"
+          >
+            <ArrowLeft className="w-5 h-5" strokeWidth={2.25} />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="relative shrink-0">
+              <BotAvatar size={40} />
+              <span className="chatbot-online-dot is-badge" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="chatbot-title">{BOT_NAME}</h1>
+              <p className="chatbot-subtitle">
+                {thinking ? "Đang soạn trả lời…" : statusLabel}
+              </p>
             </div>
           </div>
           <button
             onClick={handleReset}
             disabled={loading}
-            title="Bắt đầu lại"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-accent disabled:opacity-50"
+            aria-label="Bắt đầu cuộc trò chuyện mới"
+            className="chatbot-reset-btn"
           >
-            <RotateCcw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">
-              {loading ? "Đang reset..." : "Bắt đầu lại"}
-            </span>
+            <RotateCcw className={cn("w-4 h-4", loading && "animate-spin")} />
+            <span className="hidden sm:inline">{loading ? "Đang làm mới…" : "Bắt đầu lại"}</span>
           </button>
         </div>
       </header>
 
-      {/* Messages — scrollable area, fills remaining space */}
-      <div
-        ref={messagesContainerRef}
-        onScroll={handleScroll}
-        className="chatbot-scroll flex-1 overflow-y-auto min-h-0"
-      >
-        <div className="max-w-3xl mx-auto px-4 py-5 space-y-4">
-          {messages.map((msg, idx) => {
-            const prevMsg = messages[idx - 1];
-            const isGrouped =
-              !!prevMsg &&
-              prevMsg.role === msg.role &&
-              msg.timestamp - prevMsg.timestamp < GROUP_WINDOW_MS &&
-              !prevMsg.options &&
-              !prevMsg.flow;
-            return (
-              <div
-                key={msg.id}
-                className={`chatbot-msg-row flex items-end gap-2 ${isGrouped ? "is-grouped" : ""} ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {msg.role === "bot" && (
-                  <div className="w-7 flex-shrink-0">{!isGrouped && <BotAvatar />}</div>
-                )}
+      <div className="chatbot-body">
+        {sidebar}
 
-                <div className="flex flex-col max-w-[85%] sm:max-w-[70%]">
+        <section className="chatbot-main">
+          {/* ── Tin nhắn ── */}
+          <div className="chatbot-scroll-wrap">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="chatbot-scroll"
+            role="log"
+            aria-live="polite"
+            aria-label="Cuộc trò chuyện"
+          >
+            <div className="chatbot-thread">
+              <div className="chatbot-day" aria-hidden>
+                <span>Hôm nay</span>
+              </div>
+
+              {messages.map((msg, idx) => {
+                const prevMsg = messages[idx - 1];
+                const nextMsg = messages[idx + 1];
+                const isGrouped =
+                  !!prevMsg &&
+                  prevMsg.role === msg.role &&
+                  msg.timestamp - prevMsg.timestamp < GROUP_WINDOW_MS &&
+                  !prevMsg.options &&
+                  !prevMsg.flow;
+                // giờ chỉ hiện ở tin cuối của mỗi cụm cùng người gửi
+                const isGroupEnd =
+                  !nextMsg ||
+                  nextMsg.role !== msg.role ||
+                  nextMsg.timestamp - msg.timestamp >= GROUP_WINDOW_MS ||
+                  !!msg.options ||
+                  !!msg.flow;
+                const isUser = msg.role === "user";
+                const flowStep = msg.flow?.steps[0];
+                const progress = msg.flow ? getStepProgress(msg.flow) : null;
+                // Chỉ bước flow của tin bot MỚI NHẤT còn bấm được — bấm lại bước cũ
+                // sẽ lệch với flowState hiện tại.
+                const flowActive = idx === lastBotIndex && !!flowState;
+
+                return (
                   <div
-                    className={`chatbot-bubble rounded-2xl px-4 py-3 ${
-                      msg.role === "user"
-                        ? `chatbot-bubble-user text-primary-foreground rounded-br-md ${isGrouped ? "is-grouped" : ""}`
-                        : `chatbot-bubble-bot bg-card border border-border rounded-bl-md shadow-sm ${isGrouped ? "is-grouped" : ""}`
-                    }`}
-                    style={
-                      msg.role === "user"
-                        ? { background: "var(--cta-gradient)", boxShadow: "var(--cta-shadow)" }
-                        : undefined
-                    }
+                    key={msg.id}
+                    className={cn(
+                      "chatbot-msg-row",
+                      isGrouped && "is-grouped",
+                      isUser ? "is-user" : "is-bot",
+                    )}
                   >
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-
-                    {/* Main menu options */}
-                    {msg.options && msg.options.length > 0 && !msg.flow && (
-                      <div className="mt-3 space-y-1.5">
-                        {msg.options.map((opt, idx2) => (
-                          <button
-                            key={opt.id}
-                            onClick={() => handleMenuOption(opt)}
-                            disabled={sending}
-                            style={{ animation: `chatbot-option-in 0.3s ease-out ${idx2 * 60}ms both` }}
-                            className="chatbot-option-btn group w-full flex items-center justify-between gap-2 text-left text-sm px-3 py-2 rounded-xl bg-accent/50 hover:bg-accent border border-border/50 hover:border-primary/40 disabled:opacity-50"
-                          >
-                            <span>{opt.label}</span>
-                            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                          </button>
-                        ))}
-                      </div>
+                    {!isUser && (
+                      <div className="chatbot-avatar-slot">{!isGrouped && <BotAvatar />}</div>
                     )}
 
-                    {/* Flow step options */}
-                    {msg.flow && msg.flow.steps.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        {msg.flow.steps[0].options.map((opt, idx2) => (
-                          <button
-                            key={`${msg.flow!.id}-${msg.flow!.steps[0].id}-${idx2}`}
-                            onClick={() => handleFlowOption(msg.flow!.steps[0], opt.value)}
-                            disabled={sending}
-                            style={{ animation: `chatbot-option-in 0.3s ease-out ${idx2 * 60}ms both` }}
-                            className="chatbot-option-btn group w-full flex items-center justify-between gap-2 text-left text-sm px-3 py-2 rounded-xl bg-accent/50 hover:bg-accent border border-border/50 hover:border-primary/40 disabled:opacity-50"
-                          >
-                            <span>{opt.label}</span>
-                            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                          </button>
-                        ))}
+                    <div className="chatbot-msg-col">
+                      <div
+                        className={cn(
+                          "chatbot-bubble",
+                          isUser ? "chatbot-bubble-user" : "chatbot-bubble-bot",
+                          isGrouped && "is-grouped",
+                        )}
+                      >
+                        {progress && (
+                          <p className="chatbot-step">
+                            {progress.title} · Bước {progress.current}/{progress.total}
+                          </p>
+                        )}
+                        <p className="chatbot-text">{msg.text}</p>
                       </div>
-                    )}
+
+                      {/* Menu chủ đề */}
+                      {msg.options && msg.options.length > 0 && !msg.flow && (
+                        <div className="chatbot-chips">
+                          {msg.options.map((opt, i) => (
+                            <OptionChip
+                              key={opt.id}
+                              label={opt.label}
+                              index={i}
+                              disabled={sending}
+                              onClick={() => handleMenuOption(opt)}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Lựa chọn của bước flow */}
+                      {flowStep && flowStep.options.length > 0 && (
+                        <div className={cn("chatbot-chips", !flowActive && "is-past")}>
+                          {flowStep.options.map((opt, i) => (
+                            <OptionChip
+                              key={`${msg.flow!.id}-${flowStep.id}-${i}`}
+                              label={opt.label}
+                              index={i}
+                              disabled={sending || !flowActive}
+                              onClick={() => handleFlowOption(flowStep, opt.value)}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {isGroupEnd && (
+                        <p className="chatbot-meta">
+                          {formatTime(msg.timestamp)}
+                          {isUser && idx === lastUserIndex && msg.status && (
+                            <span className="chatbot-status">
+                              {msg.status === "delivered" ? (
+                                <>
+                                  <CheckCheck className="w-3.5 h-3.5" /> Đã nhận
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-3.5 h-3.5" /> Đã gửi
+                                </>
+                              )}
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Thinking indicator — shown while waiting for API response */}
+              {thinking && (
+                <div className="chatbot-msg-row is-bot">
+                  <div className="chatbot-avatar-slot">
+                    <BotAvatar thinking />
+                  </div>
+                  <div className="chatbot-bubble chatbot-bubble-bot chatbot-thinking-bubble">
+                    <TypingDots />
                   </div>
                 </div>
-              </div>
-            );
-          })}
-
-          {/* Thinking indicator — shown while waiting for API response */}
-          {thinking && (
-            <div className="chatbot-msg-row flex items-end gap-2 justify-start">
-              <BotAvatar thinking />
-              <div className="chatbot-thinking-bubble bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
-                <TypingDots />
-              </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Jump to latest — appears once the user has scrolled up */}
-      {showScrollToBottom && (
-        <button
-          onClick={() => scrollToBottom()}
-          title="Đến tin nhắn mới nhất"
-          className="absolute right-4 bottom-24 w-9 h-9 rounded-full flex items-center justify-center border border-border bg-card hover:bg-accent transition-colors"
-          style={{ boxShadow: "var(--shadow-float)", animation: "chatbot-fab-in 0.25s var(--ease-spring)" }}
-        >
-          <ChevronDown className="w-4 h-4 text-foreground" />
-        </button>
-      )}
-
-      {/* Input bar — fixed at bottom */}
-      <div className="shrink-0 bg-card/80 backdrop-blur-md border-t border-border z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div
-            className={`chatbot-input-wrap flex items-center gap-2 bg-background border border-border rounded-2xl px-4 py-2 ${
-              inputFocused ? "is-focused border-primary/50" : ""
-            }`}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              placeholder="Nhập tin nhắn..."
-              disabled={!sessionId}
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-none disabled:opacity-50"
-            />
-            <button
-              onClick={handleSendText}
-              disabled={!inputText.trim() || sending || !sessionId}
-              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-40 hover:scale-105 active:scale-95 ${
-                sendPulse ? "chatbot-send-ready chatbot-send-pulse" : ""
-              }`}
-              style={{ background: "var(--cta-gradient)", boxShadow: "var(--cta-shadow)" }}
-            >
-              <Send className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
-            </button>
           </div>
-        </div>
+
+          {/* Jump to latest — appears once the user has scrolled up */}
+          {showScrollToBottom && (
+            <button
+              onClick={() => scrollToBottom()}
+              aria-label="Đến tin nhắn mới nhất"
+              className="chatbot-jump"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          )}
+          </div>
+
+          {/* ── Ô nhập ── */}
+          <div className="chatbot-composer">
+            <div className="chatbot-composer-inner">
+              {/* Chủ đề nhanh trên mobile/tablet sau khi đã bắt đầu trò chuyện
+                  (desktop đã có ở cột bên). Ẩn khi đang trong flow để không rối. */}
+              {menu && hasUserMessage && !flowState && (
+                <div className="chatbot-quick" aria-label="Chủ đề nhanh">
+                  {menu.options.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleMenuOption(opt)}
+                      disabled={sending}
+                      className="chatbot-quick-chip"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className={cn("chatbot-input-wrap", inputFocused && "is-focused")}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  placeholder={flowState ? "Chọn một đáp án ở trên, hoặc gõ câu hỏi…" : "Nhắn cho trợ lý Len&em…"}
+                  aria-label="Tin nhắn"
+                  disabled={!sessionId}
+                  className="chatbot-input"
+                />
+                <button
+                  onClick={handleSendText}
+                  disabled={!inputText.trim() || sending || !sessionId}
+                  aria-label="Gửi"
+                  className={cn("chatbot-send", sendPulse && "chatbot-send-ready chatbot-send-pulse")}
+                >
+                  <Send className="w-4 h-4" strokeWidth={2.25} />
+                </button>
+              </div>
+              <p className="chatbot-hint">
+                Trợ lý có thể chưa trả lời hết mọi câu hỏi — cần gấp, hãy chọn “Liên hệ admin”.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

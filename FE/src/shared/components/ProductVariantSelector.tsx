@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Check } from "lucide-react";
 import { cn } from "./ui/utils";
-import { ColorSwatch } from "./ColorSwatch";
+import { YarnBallIcon } from "../../features/shop/shopMeta";
 
 export interface ProductVariantUI {
   id: string;
@@ -17,6 +17,31 @@ interface ProductVariantSelectorProps {
   defaultVariantId?: string;
   onVariantChange: (variant: ProductVariantUI) => void;
   showLabel?: boolean;
+}
+
+const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+const DEFAULT_COLOR_RE = /^(m[aặ]c [dđ][iị]nh|default)$/i;
+
+/** hexCode hợp lệ (#rgb / #rrggbb) — ngược lại trả undefined để không tô màu sai (đen). */
+export function getValidHex(hexCode?: string): string | undefined {
+  const value = hexCode?.trim();
+  return value && HEX_RE.test(value) ? value : undefined;
+}
+
+/** Biến thể "Mặc định": không có tên màu, hoặc tên màu là "Mặc định"/"Default". */
+export function isDefaultVariant(variant: Pick<ProductVariantUI, "color">): boolean {
+  const color = variant.color?.trim();
+  return !color || DEFAULT_COLOR_RE.test(color);
+}
+
+/** Tên hiển thị dưới swatch. */
+export function getVariantLabel(variant: Pick<ProductVariantUI, "color">): string {
+  return isDefaultVariant(variant) ? "Mặc định" : (variant.color as string).trim();
+}
+
+/** Chỉ 1 biến thể và là "Mặc định" → không cần khối chọn màu. */
+export function shouldHideVariantPicker(variants: ProductVariantUI[]): boolean {
+  return variants.length === 1 && isDefaultVariant(variants[0]);
 }
 
 export function ProductVariantSelector({
@@ -41,6 +66,8 @@ export function ProductVariantSelector({
     [selectedId, variants],
   );
 
+  // Luôn báo biến thể đang chọn lên trên — kể cả khi khối chọn màu bị ẩn,
+  // vì trang chi tiết dựa vào đây để biết giá/tồn kho.
   useEffect(() => {
     if (selectedVariant) {
       onVariantChange(selectedVariant);
@@ -52,56 +79,81 @@ export function ProductVariantSelector({
   }, []);
 
   if (!variants || variants.length === 0) return null;
+  if (shouldHideVariantPicker(variants)) return null;
 
-  const hasColorVariants = variants.some((v) => v.color);
+  const hasColorVariants = variants.some((v) => !isDefaultVariant(v) || getValidHex(v.hexCode));
 
   // Color variants display as swatches
   if (hasColorVariants) {
     return (
       <div className="space-y-3">
-        {showLabel && (
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-foreground">Color</label>
-            <span className="text-sm font-medium text-primary">
-              {selectedVariant?.color}
+        {showLabel && selectedVariant && (
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-semibold text-foreground">Màu len</label>
+            <span className="truncate text-sm font-medium text-primary">
+              {getVariantLabel(selectedVariant)}
             </span>
           </div>
         )}
-        <div className="flex flex-wrap gap-3">
-          {variants.map((variant) => (
-            <button
-              key={variant.id}
-              onClick={() => handleSelect(variant.id)}
-              disabled={variant.stock === 0}
-              title={variant.color || variant.id}
-              className={cn(
-                "group relative flex flex-col items-center gap-1.5 transition-all",
-                variant.stock === 0 && "opacity-40 cursor-not-allowed",
-              )}
-            >
-              <ColorSwatch
-                color={variant.color || "Default"}
-                hexCode={variant.hexCode || "#ccc"}
-                isSelected={selectedId === variant.id}
-                size="lg"
-              />
-              {selectedId === variant.id && (
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white drop-shadow-md" />
-                </span>
-              )}
-              <span
+        <div className="flex flex-wrap gap-x-3 gap-y-2">
+          {variants.map((variant) => {
+            const isSelected = selectedId === variant.id;
+            const soldOut = variant.stock === 0;
+            const label = getVariantLabel(variant);
+            const hex = isDefaultVariant(variant) ? undefined : getValidHex(variant.hexCode);
+            const stockNote = soldOut ? "hết hàng" : `còn ${variant.stock}`;
+            return (
+              <button
+                key={variant.id}
+                type="button"
+                onClick={() => handleSelect(variant.id)}
+                disabled={soldOut}
+                title={`${label} · ${stockNote}`}
+                aria-label={`${label}, ${stockNote}`}
+                aria-pressed={isSelected}
                 className={cn(
-                  "text-[10px] transition-colors",
-                  selectedId === variant.id
-                    ? "text-primary font-medium"
-                    : "text-muted-foreground",
+                  "group flex w-16 flex-col items-center gap-1.5 transition-opacity",
+                  soldOut && "opacity-40 cursor-not-allowed",
                 )}
               >
-                {variant.stock > 0 ? `${variant.stock}` : "Out"}
-              </span>
-            </button>
-          ))}
+                <span
+                  className={cn(
+                    "relative flex size-10 items-center justify-center rounded-full transition-transform duration-200",
+                    !soldOut && "group-hover:scale-110",
+                    isSelected
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-110"
+                      : "ring-1 ring-black/10 dark:ring-white/20",
+                    !hex && "border-2 border-dashed border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] bg-[var(--muted)] text-primary",
+                  )}
+                  style={
+                    hex
+                      ? {
+                          backgroundColor: hex,
+                          boxShadow:
+                            "inset 0 -3px 6px rgba(0,0,0,0.18), inset 0 2px 4px rgba(255,255,255,0.25)",
+                        }
+                      : undefined
+                  }
+                >
+                  {!hex && !isSelected && <YarnBallIcon size={18} strokeWidth={1.8} />}
+                  {isSelected && (
+                    <Check
+                      className={cn("size-4", hex ? "text-white drop-shadow-md" : "text-primary")}
+                      strokeWidth={3}
+                    />
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "w-full truncate text-center text-[11px] leading-tight transition-colors",
+                    isSelected ? "font-semibold text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -111,12 +163,13 @@ export function ProductVariantSelector({
   return (
     <div className="space-y-3">
       {showLabel && (
-        <label className="text-sm text-foreground">Size / Option</label>
+        <label className="text-sm font-semibold text-foreground">Phân loại</label>
       )}
       <div className="flex flex-wrap gap-2">
-        {variants.map((variant) => (
+        {variants.map((variant, idx) => (
           <button
             key={variant.id}
+            type="button"
             onClick={() => handleSelect(variant.id)}
             disabled={variant.stock === 0}
             className={cn(
@@ -128,14 +181,14 @@ export function ProductVariantSelector({
                 "opacity-40 cursor-not-allowed line-through",
             )}
           >
-            {variant.color || variant.id}
+            {variant.color?.trim() || `Loại ${idx + 1}`}
             {variant.stock <= 5 && variant.stock > 0 && (
               <span className="ml-2 text-xs text-muted-foreground">
-                (only {variant.stock} left)
+                (còn {variant.stock})
               </span>
             )}
             {variant.stock === 0 && (
-              <span className="ml-2 text-xs text-destructive">Sold out</span>
+              <span className="ml-2 text-xs text-destructive">Hết hàng</span>
             )}
           </button>
         ))}

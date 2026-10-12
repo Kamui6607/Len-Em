@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Link, useNavigate } from "react-router";
-import { Heart, ShoppingBag } from "lucide-react";
+import { Heart, ShoppingBag, PlayCircle, Star } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import type { Product } from "../../app/data/products";
@@ -11,29 +11,14 @@ import { useCart } from "../contexts/CartContext";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "./ui/ResponsiveImage";
+import { getCategoryMeta } from "../../features/shop/shopMeta";
+import { getValidHex, isDefaultVariant } from "./ProductVariantSelector";
+import "../../styles/product-card.css";
 
 interface ProductCardProps {
   product: Product;
   relatedLessonId?: string;
   relatedCourseId?: string;
-}
-
-// ── Star rating ──
-function Stars({ value }: { value: number }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <svg key={s} width="11" height="11" viewBox="0 0 11 11" fill="none">
-          <path
-            d="M5.5 1L6.7 4.1H10L7.4 6.1L8.4 9.2L5.5 7.4L2.6 9.2L3.6 6.1L1 4.1H4.3Z"
-            fill={
-              s <= Math.round(value) ? "var(--rating-star)" : "var(--border)"
-            }
-          />
-        </svg>
-      ))}
-    </div>
-  );
 }
 
 export const ProductCard = memo(function ProductCard({
@@ -52,10 +37,18 @@ export const ProductCard = memo(function ProductCard({
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const hasPriceRange = minPrice !== maxPrice;
-
-  const formattedPrice = hasPriceRange
-    ? `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`
-    : formatPrice(minPrice);
+  const category = getCategoryMeta(product.category);
+  const CategoryIcon = category.Icon;
+  const favorite = isFavorite(product.id);
+  // Tối đa 5 chấm màu — gợi ý bảng màu len ngay trên thẻ
+  // Bỏ biến thể "Mặc định" / hex không hợp lệ để không vẽ chấm màu đen sai.
+  const swatches = (product.variants ?? [])
+    .filter((variant) => !isDefaultVariant(variant) && getValidHex(variant.hexCode))
+    .slice(0, 5);
+  const colorVariantCount = (product.variants ?? []).filter(
+    (variant) => !isDefaultVariant(variant) && getValidHex(variant.hexCode),
+  ).length;
+  const extraSwatches = colorVariantCount - swatches.length;
 
   const requireAuth = (action: () => void) => {
     if (!isAuthenticated) {
@@ -93,351 +86,113 @@ export const ProductCard = memo(function ProductCard({
 
   return (
     // NOTE ON LAYOUT STABILITY (no gaps in sibling cards on hover):
-    // 1. Lift/scale on hover chạy bằng `transform` qua CSS thuần
-    //    (.product-card:hover trong globals.css — chỉ trên thiết bị có chuột),
-    //    không đụng width/height/margin → grid track không đổi kích thước.
-    // 2. `isolation: isolate` + `contain: layout` scope z-index & repaint
-    //    vào đúng card này.
-    // 3. Rating + "Add to cart" hiển thị MỌI LÚC (đã bỏ hover-to-reveal) —
-    //    mọi card cùng chiều cao, grid dùng align-items: start.
-    <article
-      className="product-card"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--card)",
-        borderRadius: "24px",
-        overflow: "hidden",
-        position: "relative",
-        isolation: "isolate",
-        contain: "layout",
-        transformOrigin: "center bottom",
-      }}
-    >
-      {/* ── Image area ── */}
+    // Lift/scale on hover chạy bằng `transform` qua CSS thuần
+    // (.product-card:hover trong globals.css — chỉ trên thiết bị có chuột),
+    // không đụng width/height/margin → grid track không đổi kích thước.
+    // Rating + "Thêm vào giỏ" hiển thị MỌI LÚC — mọi card cùng chiều cao.
+    <article className="product-card pc">
+      {/* ── Ảnh ── */}
       <Link
         to={`/shop/product/${product.id}`}
-        className="block"
+        className="pc-media"
         onClick={handleProductClick}
-        style={{ position: "relative" }}
       >
-        <div
-          style={{
-            position: "relative",
-            aspectRatio: "1 / 1",
-            overflow: "hidden",
-            background: "var(--surface)",
-            flexShrink: 0,
+        <div className="product-card__img pc-img">
+          <ResponsiveImage src={product.image} alt={product.name} />
+        </div>
+        <div aria-hidden className="product-card__sweep pc-sweep" />
+
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.12 }}
+          whileTap={{ scale: 0.88 }}
+          onClick={(event) => {
+            event.preventDefault();
+            toggleFavorite(product.id);
           }}
+          className={`pc-fav ${favorite ? "is-active" : ""}`}
+          aria-label={favorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+          aria-pressed={favorite}
         >
-          <div
-            className="product-card__img"
-            style={{ width: "100%", height: "100%" }}
+          <motion.span
+            animate={favorite ? { scale: [1, 1.35, 1] } : { scale: 1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="flex"
           >
-            <ResponsiveImage
-              src={product.image}
-              alt={product.name}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center",
-                transition: "filter 0.4s ease",
-              }}
-            />
-          </div>
+            <Heart size={15} strokeWidth={favorite ? 0 : 1.9} />
+          </motion.span>
+        </motion.button>
 
-          {/* Ambient image vignette — subtle, keeps top badges legible */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "var(--bg-vignette)",
-              pointerEvents: "none",
-            }}
-          />
+        <div className="pc-badges">
+          <LevelBadge level={product.difficulty} />
+        </div>
 
-          {/* Soft glow sweep on hover — CSS-only, không tốn JS mỗi frame */}
-          <div
-            aria-hidden
-            className="product-card__sweep"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "45%",
-              height: "100%",
-              pointerEvents: "none",
-              zIndex: 1,
-              opacity: 0,
-              background:
-                "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)",
-              transform: "translateX(-120%) skewX(-12deg)",
-            }}
-          />
-
-          {/* Heart button */}
-          <motion.button
+        {relatedLessonId && relatedCourseId && (
+          <button
             type="button"
-            whileHover={{ scale: 1.12 }}
-            whileTap={{ scale: 0.88 }}
             onClick={(event) => {
               event.preventDefault();
-              toggleFavorite(product.id);
+              navigate(`/learn/${relatedCourseId}/lesson/${relatedLessonId}`);
             }}
-            style={{
-              position: "absolute",
-              top: "12px",
-              right: "12px",
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              background: "var(--bg-overlay-88)",
-              backdropFilter: "blur(6px)",
-              border: "1px solid var(--border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              zIndex: 5,
-              boxShadow: "var(--shadow-sm)",
-            }}
-            aria-label={
-              isFavorite(product.id)
-                ? "Remove from favorites"
-                : "Add to favorites"
-            }
+            className="pc-lesson"
           >
-            <motion.span
-              animate={
-                isFavorite(product.id) ? { scale: [1, 1.35, 1] } : { scale: 1 }
-              }
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              style={{ display: "flex" }}
-            >
-              <Heart
-                size={14}
-                strokeWidth={isFavorite(product.id) ? 0 : 1.8}
-                style={{
-                  fill: isFavorite(product.id) ? "var(--decor-heart)" : "none",
-                  stroke: isFavorite(product.id)
-                    ? "var(--decor-heart)"
-                    : "var(--color-text-muted)",
-                }}
-              />
-            </motion.span>
-          </motion.button>
-
-          {/* Level badge */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: "12px",
-              left: "12px",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "6px",
-              zIndex: 3,
-            }}
-          >
-            <LevelBadge level={product.difficulty} />
-          </div>
-
-          {/* In a lesson badge */}
-          {relatedLessonId && relatedCourseId && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                navigate(`/learn/${relatedCourseId}/lesson/${relatedLessonId}`);
-              }}
-              style={{
-                position: "absolute",
-                bottom: "12px",
-                right: "12px",
-                padding: "2px 9px",
-                borderRadius: "999px",
-                background: "var(--primary)",
-                border: "none",
-                fontFamily: "'Caveat', cursive",
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                color: "var(--primary-foreground)",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px var(--glow-primary)",
-                zIndex: 5,
-              }}
-            >
-              📹 Lesson
-            </button>
-          )}
-        </div>
+            <PlayCircle size={12} />
+            Bài học
+          </button>
+        )}
       </Link>
 
-      {/* ── Card body ── */}
-      <div
-        style={{
-          padding: "16px 20px",
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        {/* Row 1: Category + Price */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "6px",
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "2px 10px",
-              borderRadius: "999px",
-              background: "var(--accent-pink)",
-              fontFamily: "'Poppins', sans-serif",
-              fontSize: "0.62rem",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--text-accent)",
-            }}
-          >
-            {product.category}
-          </div>
-
-          <div
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              fontSize: "1.15rem",
-              fontWeight: 700,
-              color: "var(--primary)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            {formattedPrice}
-          </div>
+      {/* ── Thân thẻ ── */}
+      <div className="pc-body">
+        <div className="pc-row">
+          <span className="pc-category">
+            <CategoryIcon size={11} />
+            {category.label}
+          </span>
+          <span className="pc-rating">
+            <Star size={12} />
+            {product.rating.toFixed(1)}
+            <span className="pc-rating-count">({product.reviewCount})</span>
+          </span>
         </div>
 
-        <Link
-          to={`/shop/product/${product.id}`}
-          className="block"
-          onClick={handleProductClick}
-        >
-          {/* Product name */}
-          <div
-            className="product-card__name"
-            style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: "1.05rem",
-              fontWeight: 600,
-              color: "var(--foreground)",
-              letterSpacing: "-0.015em",
-              lineHeight: 1.2,
-              marginBottom: "4px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {product.name}
-          </div>
-
-          {/* Description */}
-          <div
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "0.75rem",
-              color: "var(--foreground-muted)",
-              lineHeight: 1.4,
-              marginBottom: "8px",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {product.description}
-          </div>
+        <Link to={`/shop/product/${product.id}`} onClick={handleProductClick}>
+          <h3 className="product-card__name pc-name">{product.name}</h3>
+          <p className="pc-desc">{product.description}</p>
         </Link>
 
-        {/* Tags */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "4px",
-            marginBottom: "8px",
-          }}
-        >
-          {product.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              style={{
-                padding: "2px 8px",
-                borderRadius: "999px",
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "0.6rem",
-                color: "var(--foreground-muted)",
-              }}
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+        {swatches.length > 1 && (
+          <div className="pc-swatches" aria-label={`${product.variants?.length} màu`}>
+            {swatches.map((variant) => (
+              <span
+                key={variant.id}
+                className="pc-swatch"
+                style={{ backgroundColor: getValidHex(variant.hexCode) }}
+                title={variant.color}
+              />
+            ))}
+            {extraSwatches > 0 && <span className="pc-swatch-more">+{extraSwatches}</span>}
+          </div>
+        )}
 
-        {/* ── Rating + Add to cart — hiển thị MỌI LÚC trên mọi thiết bị ──
-            Đã bỏ cơ chế hover-to-reveal: rating và nút luôn nằm trong card,
-            không còn animation height/opacity khi hover. */}
-        <div style={{ marginTop: "2px" }}>
-          {/* Rating */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "10px",
-            }}
-          >
-            <Stars value={product.rating} />
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "0.68rem",
-                color: "var(--foreground-muted)",
-              }}
-            >
-              {product.rating.toFixed(1)} ({product.reviewCount})
-            </span>
+        <div className="pc-foot">
+          <div className="pc-price">
+            {hasPriceRange && <span className="pc-price-from">từ</span>}
+            {formatPrice(minPrice)}
           </div>
 
-          {/* Add to cart button */}
           <motion.button
             type="button"
-            className="card-add-btn"
+            className="card-add-btn pc-add"
             onClick={handleAddClick}
-            aria-label={`Add ${product.name} to cart`}
+            aria-label={`Thêm ${product.name} vào giỏ`}
             whileTap={{ scale: 0.97 }}
-            transition={{
-              type: "spring",
-              stiffness: 380,
-              damping: 30,
-              mass: 0.6,
-            }}
+            transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
           >
             <span className="card-add-btn__icon" aria-hidden="true">
               <ShoppingBag size={15} strokeWidth={2.2} />
             </span>
-            <span className="card-add-btn__label">Add to cart</span>
+            <span className="card-add-btn__label">Thêm vào giỏ</span>
             <span className="card-add-btn__shine" aria-hidden="true" />
           </motion.button>
         </div>

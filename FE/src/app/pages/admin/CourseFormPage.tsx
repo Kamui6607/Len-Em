@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Save, Check, Search } from "lucide-react";
+import { Save, Check, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../../../shared/components/ui/badge";
 import { Button } from "../../../shared/components/ui/button";
@@ -30,6 +30,7 @@ import {
   AdminFormSkeleton,
   AdminPickerSkeleton,
 } from "../../../shared/components/skeletons/AdminSkeleton";
+import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
 
 const levelOptions: { value: CourseLevel; label: string }[] = [
   { value: "beginner", label: "Beginner" },
@@ -276,21 +277,16 @@ export function CourseFormPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/admin/courses")}>
-          <ArrowLeft className="size-4" /> {t("admin.courses.form.back")}
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {isEditing ? t("admin.courses.editCourse") : t("admin.courses.newCourse")}
-          </h1>
-          <p className="text-muted-foreground">
-            {isEditing
-              ? t("admin.courses.form.updateCourseDetails")
-              : t("admin.courses.form.createNewCourse")}
-          </p>
-        </div>
-      </div>
+      <AdminBackHeader
+        title={isEditing ? t("admin.courses.editCourse") : t("admin.courses.newCourse")}
+        subtitle={
+          isEditing
+            ? t("admin.courses.form.updateCourseDetails")
+            : t("admin.courses.form.createNewCourse")
+        }
+        onBack={() => navigate("/admin/courses")}
+        backLabel={t("admin.courses.form.back")}
+      />
 
       <form
         onSubmit={handleSubmit}

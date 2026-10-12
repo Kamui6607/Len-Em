@@ -1,0 +1,325 @@
+/* ============================================================
+   KIT DETAIL — /kits/:id
+   Khung trang, ảnh, giá, tồn kho, nút mua, thanh nổi mobile dùng
+   chung product-detail.css. File này chỉ lo phần riêng của combo:
+   - Mác "N món trong hộp" treo ở góc ảnh
+   - Hộp nguyên liệu: danh sách món, viền khâu như hộp quà
+   - Huy hiệu tiết kiệm so với mua lẻ
+   Chỉ dùng token sẵn có → tự đổi light/dark.
+   ============================================================ */
+
+/* Trên mobile ảnh combo vẫn có khung bo tròn (khác carousel tràn viền
+   của trang sản phẩm vì combo chỉ có 1 ảnh). */
+.kd-gallery {
+  display: block !important;
+  padding: 12px 16px 0;
+}
+@media (min-width: 768px) {
+  .kd-gallery {
+    padding: 0;
+  }
+}
+.kd-stage {
+  border-radius: 28px;
+}
+@media (max-width: 767px) {
+  .kd-gallery {
+    position: static;
+  }
+  .kd-stage::after {
+    inset: 10px;
+    border-radius: 20px;
+  }
+}
+
+/* Mác treo "N món trong hộp" — lỗ xỏ dây bên trái */
+.kd-box-tag {
+  position: absolute;
+  left: 16px;
+  bottom: 18px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px 7px 24px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--card);
+  clip-path: polygon(11px 0, 100% 0, 100% 100%, 11px 100%, 0 50%);
+  border-radius: 4px 999px 999px 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transform: rotate(-3deg);
+}
+.kd-box-tag::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 25%, transparent);
+}
+
+/* Giá + tiết kiệm */
+.kd-price-row {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.kd-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--success-text);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  white-space: nowrap;
+}
+.kd-price-note {
+  margin-top: -14px;
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  color: var(--foreground-muted);
+}
+
+/* ── Hộp nguyên liệu ── */
+.kd-box {
+  position: relative;
+  padding: 18px 18px 16px;
+  border-radius: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.kd-box::before {
+  /* đường khâu viền trong như nắp hộp quà vải */
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 19px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 25%, transparent);
+  pointer-events: none;
+}
+.kd-box-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kd-box-sub {
+  margin-top: 1px;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+.kd-box-empty {
+  padding: 16px 0 4px;
+  text-align: center;
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  color: var(--foreground-muted);
+}
+
+.kd-items {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kd-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 16px;
+  color: inherit !important;
+  transition: background 0.2s var(--ease-out);
+}
+.kd-item:hover {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+.kd-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.kd-item-thumb {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--muted);
+  border: 1px solid var(--border);
+}
+.kd-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s var(--ease-out);
+}
+.kd-item:hover .kd-item-thumb img {
+  transform: scale(1.08);
+}
+.kd-item-qty {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+.kd-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kd-item-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+  transition: color 0.2s;
+}
+.kd-item:hover .kd-item-name {
+  color: var(--primary);
+}
+.kd-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+.kd-item-dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--border), inset 0 -2px 3px rgba(0, 0, 0, 0.15);
+}
+.kd-item-dot.is-default {
+  background: var(--muted);
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: none;
+}
+.kd-item-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+}
+.kd-item-price svg {
+  color: var(--foreground-subtle);
+  transition: transform 0.2s, color 0.2s;
+}
+.kd-item:hover .kd-item-price svg {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+
+.kd-more {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  transition: background 0.2s;
+}
+.kd-more:hover {
+  background: color-mix(in srgb, var(--primary) 13%, transparent);
+}
+.kd-box-total {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+  font-size: 0.85rem;
+  color: var(--foreground-muted);
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+  background-repeat: repeat-x;
+  background-position: top;
+}
+.kd-box-total span:last-child {
+  font-weight: 600;
+  color: var(--foreground-secondary);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+
+/* ── Gợi ý khoe thành phẩm ── */
+.kd-cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 56px 16px 0;
+  padding: 20px 22px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+@media (min-width: 768px) {
+  .kd-cta {
+    margin: 72px 0 0;
+  }
+}
+.kd-cta-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.kd-cta-sub {
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--foreground-muted);
+}
+
+/* Thanh nổi mobile của combo: chỉ có nút thêm giỏ, không có bộ chọn số lượng */
+.kd-float .pd-float-add {
+  flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kd-item,
+  .kd-item-thumb img,
+  .kd-item-price svg,
+  .kd-more {
+    transition: none !important;
+  }
+}

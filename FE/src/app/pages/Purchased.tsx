@@ -1,13 +1,19 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Package,
+  PackageCheck,
+  PackageOpen,
   Calendar,
+  Check,
+  Clock,
   Star,
-  ShoppingCart,
+  RotateCcw,
   ChevronLeft,
   ChevronRight,
+  Scissors,
   XCircle,
   Truck,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
@@ -23,8 +29,10 @@ import { productService } from "../../shared/api/productService";
 import { kitService } from "../../shared/api/kitService";
 import type { Order, OrderItem } from "../../features/orders/types/order.types";
 import { normalizeOrder, isCourseItem } from "../../features/orders/types/order.types";
-import { getOrderStatusBadgeClass } from "../../constants/orderStatus";
+import { getOrderStatusBadgeClass, ORDER_STATUS_LABELS } from "../../constants/orderStatus";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
+import { OrderThread } from "../../shared/components/order/OrderThread";
+import { EmptyHoopIllustration } from "./shop/CartPage";
 import "../../styles/purchased.css";
 
 const PAGE_SIZE = 10;
@@ -305,38 +313,25 @@ export function Purchased() {
     }
   };
 
-const getStatusIcon = (status: string) => {
+  /** Map order status -> icon + màu vòng tròn (dùng token success/warning/error/info sẵn có) */
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "DELIVERED":
-        return "✅";
+      case "PROCESSED":
+        return { Icon: PackageCheck, tone: "is-success" };
       case "CONFIRMED":
+        return { Icon: Check, tone: "is-info" };
       case "PREPARING":
+        return { Icon: PackageOpen, tone: "is-info" };
       case "SHIPPING":
-        return "✔️";
+        return { Icon: Truck, tone: "is-info" };
       case "PENDING":
-        return "⏳";
+        return { Icon: Clock, tone: "is-warning" };
       case "CANCELLED":
-        return "❌";
+      case "REJECTED":
+        return { Icon: Scissors, tone: "is-error" };
       default:
-        return "📦";
-    }
-  };
-
-  /** Map order status -> màu vòng tròn icon (dùng token success/warning/error/info sẵn có) */
-  const getStatusIconClass = (status: string) => {
-    switch (status) {
-      case "DELIVERED":
-        return "is-success";
-      case "CONFIRMED":
-      case "PREPARING":
-      case "SHIPPING":
-        return "is-info";
-      case "PENDING":
-        return "is-warning";
-      case "CANCELLED":
-        return "is-error";
-      default:
-        return "is-neutral";
+        return { Icon: Package, tone: "is-neutral" };
     }
   };
 
@@ -439,169 +434,162 @@ const getStatusIcon = (status: string) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="purchased-skeleton h-10 w-64 mb-3" />
+          <div className="purchased-skeleton h-5 w-96 max-w-full mb-10" />
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="purchased-skeleton h-52 w-full mb-5 rounded-3xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="mb-2">{t("purchased.title")}</h1>
-          <p className="text-muted-foreground">{t("purchased.subtitle")}</p>
+    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-12">
+      <div className="max-w-4xl mx-auto">
+        {/* ── Hero: tiêu đề kiểu sổ tay thủ công ── */}
+        <header className="purchased-hero">
+          <div className="min-w-0">
+            <p className="purchased-eyebrow">Góc len của bạn</p>
+            <h1 className="purchased-title">{t("purchased.title")}</h1>
+            <div className="purchased-title-stitch" aria-hidden />
+            <p className="purchased-subtitle">{t("purchased.subtitle")}</p>
+          </div>
           {total > 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("purchased.showingOrders", undefined, {
-                count: orders.length,
-                total,
-              })}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          {orders.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-                <Package className="w-12 h-12 text-muted-foreground" />
-              </div>
-              <h3 className="mb-2">{t("purchased.noOrdersTitle")}</h3>
-              <p className="text-muted-foreground mb-6">
-                {t("purchased.noOrdersDesc")}
-              </p>
-              <Link
-                to="/shop"
-                className="inline-flex bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium hover:bg-primary/90 transition-colors"
-              >
-                {t("purchased.browseShop")}
-              </Link>
+            <div className="purchased-hero-count">
+              <span className="purchased-hero-count-num">{total}</span>
+              <span className="purchased-hero-count-label">đơn hàng</span>
             </div>
-          ) : (
-            <>
-              {orders.map((order) => (
+          )}
+        </header>
+
+        {orders.length === 0 ? (
+          <div className="purchased-empty">
+            <EmptyHoopIllustration size={170} />
+            <h2 className="purchased-empty-title">{t("purchased.noOrdersTitle")}</h2>
+            <p className="purchased-empty-desc">{t("purchased.noOrdersDesc")}</p>
+            <Link to="/shop" className="purchased-empty-btn">
+              {t("purchased.browseShop")}
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {orders.map((order, orderIdx) => {
+              const { Icon: StatusIcon, tone } = getStatusIcon(order.orderStatus);
+              const { kitGroups, standalone } = groupItemsByKit(order.items);
+              const expected =
+                isAwaitingDelivery(order.orderStatus) &&
+                formatExpectedDelivery(order.expectedDeliveryTime);
+
+              return (
                 <Link
                   to={`/purchased/${order._id}`}
                   key={order._id}
-                  className="purchased-card block bg-card rounded-2xl border border-border overflow-hidden"
+                  className="purchased-card"
+                  style={{ animationDelay: `${Math.min(orderIdx, 6) * 50}ms` }}
                 >
+                  {/* ── Header: mã đơn + trạng thái ── */}
                   <div className="purchased-card-header">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className={`purchased-status-icon ${getStatusIconClass(order.orderStatus)}`}
-                      >
-                        {getStatusIcon(order.orderStatus)}
+                      <span className={`purchased-status-icon ${tone}`}>
+                        <StatusIcon className="w-[18px] h-[18px]" />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="purchased-order-id font-semibold truncate">
+                        <h3 className="purchased-order-id truncate">
                           {t("purchased.orderNumber", undefined, {
                             id: order._id.slice(-8).toUpperCase(),
                           })}
                         </h3>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(order.createdAt).toLocaleDateString(
-                            "vi-VN",
-                          )}
+                        <div className="purchased-order-meta">
+                          <span>
+                            <Calendar className="w-3 h-3" />
+                            {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                          </span>
+                          <span>
+                            <Package className="w-3 h-3" />
+                            {order.items.length} sản phẩm
+                          </span>
                         </div>
-                        {/* GHN lead time from the backend */}
-                        {isAwaitingDelivery(order.orderStatus) &&
-                          formatExpectedDelivery(order.expectedDeliveryTime) && (
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--primary)] mt-0.5">
-                              <Truck className="w-3 h-3" />
-                              Dự kiến nhận hàng:{" "}
-                              {formatExpectedDelivery(order.expectedDeliveryTime)}
-                            </div>
-                          )}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-primary text-xl leading-tight">
-                        {formatPrice(order.totalPrice)}
-                      </p>
-                      <div className="flex items-center justify-end gap-1.5 mt-1.5 flex-wrap">
-                        <span
-                          className={`badge ${getOrderStatusBadgeClass(order.orderStatus)}`}
-                        >
-                          {order.orderStatus}
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap flex-shrink-0">
+                      {order.payment.status === "PAID" && (
+                        <span className="badge badge-green text-[10px]">
+                          {t("purchased.paid")}
                         </span>
-                        {order.payment.status === "PAID" && (
-                          <span className="badge badge-green text-[10px]">
-                            {t("purchased.paid")}
-                          </span>
-                        )}
-                      </div>
+                      )}
+                      <span className={`badge ${getOrderStatusBadgeClass(order.orderStatus)}`}>
+                        {ORDER_STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
+                      </span>
                     </div>
                   </div>
 
+                  {/* ── Sợi chỉ tiến trình ── */}
+                  <div className="purchased-card-thread">
+                    <OrderThread status={order.orderStatus} compact />
+                    {expected && (
+                      <p className="purchased-expected">
+                        <Truck className="w-3.5 h-3.5" />
+                        Dự kiến nhận hàng: <strong>{expected}</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ── Danh sách sản phẩm ── */}
                   <div className="purchased-card-body">
-                    <div className="space-y-3">
-                      {(() => {
-                        const { kitGroups, standalone } = groupItemsByKit(
-                          order.items,
-                        );
+                    {kitNamesLoaded &&
+                      kitGroups.map((group) => {
+                        const kitName = kitNames[group.kitId];
+                        if (!kitName) return null;
                         return (
-                          <>
-                            {/* Kit groups - only show after kit names are loaded */}
-                            {kitNamesLoaded &&
-                              kitGroups.map((group) => {
-                                const kitName = kitNames[group.kitId];
-                                if (!kitName) return null;
-                                return (
-                                  <div
-                                    key={group.kitId}
-                                    className="purchased-kit-group"
-                                  >
-                                    <div className="purchased-kit-header">
-                                      <span className="purchased-kit-icon">
-                                        🎁
-                                      </span>
-                                      <p className="purchased-kit-title">
-                                        {kitName}
-                                      </p>
-                                    </div>
-                                    {group.items.map((item, idx) =>
-                                      renderItemRow(item, order, `${group.kitId}-${idx}`),
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            {/* Standalone items (no kitId) */}
-                            {standalone.map((item, idx) =>
-                              renderItemRow(item, order, idx),
+                          <div key={group.kitId} className="purchased-kit-group">
+                            <div className="purchased-kit-header">
+                              <span className="purchased-kit-icon">
+                                <PackageOpen className="w-3.5 h-3.5" />
+                              </span>
+                              <p className="purchased-kit-title">{kitName}</p>
+                            </div>
+                            {group.items.map((item, idx) =>
+                              renderItemRow(item, order, `${group.kitId}-${idx}`),
                             )}
-                          </>
+                          </div>
                         );
-                      })()}
-                    </div>
+                      })}
+                    {standalone.map((item, idx) => renderItemRow(item, order, idx))}
                   </div>
 
+                  {/* ── Footer: tổng tiền + hành động ── */}
                   <div className="purchased-card-footer">
-                      {/* ── Cancel button for PENDING orders ── */}
-                      {order.orderStatus === "PENDING" &&
-                        !order.isCancelRequested && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setCancelModal({
-                                orderId: order._id,
-                                reason: "",
-                              });
-                            }}
-                            className="purchased-action-btn text-xs bg-destructive/10 text-destructive px-4 py-2 rounded-full hover:bg-destructive/20"
-                          >
-                            <XCircle className="w-3 h-3 inline mr-1" />{" "}
-                            {t("purchased.cancelOrder")}
-                          </button>
-                        )}
-                      {order.isCancelRequested &&
-                        order.orderStatus === "PENDING" && (
-                          <span className="badge badge-orange text-[10px] mt-1">
-                            ⏳ {t("purchased.cancelPending")}
-                          </span>
-                        )}
+                    <div className="purchased-total">
+                      <span className="purchased-total-label">Tổng cộng</span>
+                      <span className="purchased-total-value">
+                        {formatPrice(order.totalPrice)}
+                      </span>
+                    </div>
+
+                    <div className="purchased-actions">
+                      {order.isCancelRequested && order.orderStatus === "PENDING" && (
+                        <span className="badge badge-orange text-[10px]">
+                          <Clock className="w-3 h-3 inline mr-1" />
+                          {t("purchased.cancelPending")}
+                        </span>
+                      )}
+                      {order.orderStatus === "PENDING" && !order.isCancelRequested && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCancelModal({ orderId: order._id, reason: "" });
+                          }}
+                          className="purchased-action-btn is-danger"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          {t("purchased.cancelOrder")}
+                        </button>
+                      )}
                       {order.orderStatus === "SHIPPING" && (
                         <button
                           onClick={(e) => {
@@ -609,9 +597,10 @@ const getStatusIcon = (status: string) => {
                             e.stopPropagation();
                             markAsDone(order._id);
                           }}
-                          className="purchased-action-btn text-xs bg-secondary text-secondary-foreground px-4 py-2 rounded-full hover:bg-secondary/90"
+                          className="purchased-action-btn is-soft"
                         >
-                          ✅ {t("purchased.markAsDone")}
+                          <PackageCheck className="w-3.5 h-3.5" />
+                          {t("purchased.markAsDone")}
                         </button>
                       )}
                       <button
@@ -620,54 +609,55 @@ const getStatusIcon = (status: string) => {
                           e.stopPropagation();
                           handleReorder(order);
                         }}
-                        className="purchased-action-btn text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90"
+                        className="purchased-action-btn is-primary"
                       >
-                        <ShoppingCart className="w-3 h-3 inline mr-1" />{" "}
+                        <RotateCcw className="w-3.5 h-3.5" />
                         {t("purchased.reorderButton")}
                       </button>
+                    </div>
                   </div>
                 </Link>
-              ))}
+              );
+            })}
 
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-4 pt-6 pb-4">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                    className="purchased-page-btn flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    {t("purchased.previousButton")}
-                  </button>
-                  <span className="text-sm text-muted-foreground">
-                    {t("purchased.pageInfo", undefined, { page, totalPages })}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                    className="purchased-page-btn flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {t("purchased.nextButton")}
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            {totalPages > 1 && (
+              <nav className="purchased-pagination" aria-label="Phân trang">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="purchased-page-btn"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  {t("purchased.previousButton")}
+                </button>
+                <span className="purchased-page-info">
+                  {t("purchased.pageInfo", undefined, { page, totalPages })}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="purchased-page-btn"
+                >
+                  {t("purchased.nextButton")}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </nav>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Cancel Modal */}
       {cancelModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="order-modal-overlay"
           onClick={() => setCancelModal(null)}
         >
           <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
+            className="order-modal"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-semibold mb-1">
+            <h3 className="order-modal-title">
               {t("purchased.cancelModalTitle")}
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
@@ -706,14 +696,14 @@ const getStatusIcon = (status: string) => {
       {/* Review Modal */}
       {reviewModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="order-modal-overlay"
           onClick={() => setReviewModal(null)}
         >
           <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4 p-6"
+            className="order-modal"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-semibold mb-1">
+            <h3 className="order-modal-title">
               {t("purchased.reviewModalTitle")}
             </h3>
             <p className="text-xs text-muted-foreground mb-4">

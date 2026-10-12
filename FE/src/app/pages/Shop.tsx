@@ -1,20 +1,26 @@
+import "../../styles/craft.css";
 import "../../styles/shop.css";
-import { useEffect, useMemo, useState, memo } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Package,
   SlidersHorizontal,
   X,
   Heart,
   Tag,
   Palette,
-  Layers3,
   Gauge,
-  DollarSign,
-  Sparkles,
+  Wallet,
   Boxes,
   Star,
+  Gift,
+  RotateCcw,
+  GraduationCap,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  Truck,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../../shared/components/ProductCard";
@@ -33,58 +39,27 @@ import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit } from "../../shared/api/kitService";
 import { cn } from "../../shared/components/ui/utils";
+import { ProductSkeleton } from "../../shared/components/skeletons/ProductSkeleton";
 import {
-  ProductSkeleton,
-} from "../../shared/components/skeletons/ProductSkeleton";
-
-const CATEGORY_META: Record<
-  string,
-  { label: string; desc: string; emoji: string }
-> = {
-  all: {
-    label: "All",
-    desc: "Everything you need to start your cozy crochet journey",
-    emoji: "🛍️",
-  },
-  yarn: { label: "Yarn", desc: "Premium yarns for every project", emoji: "🧵" },
-  kit: {
-    label: "DIY Kits",
-    desc: "Curated kits with everything you need",
-    emoji: "🎁",
-  },
-  tools: {
-    label: "Tools",
-    desc: "Essential tools for every crafter",
-    emoji: "🪡",
-  },
-};
+  getCategoryMeta,
+  SHOP_LEVELS,
+  YarnBallIcon,
+  type ShopLevel,
+} from "../../features/shop/shopMeta";
+import { EmptyHoopIllustration } from "./shop/CartPage";
 
 // Backend only supports: newest. Remove price-asc, price-desc, rating (cause 400)
 const SORT_OPTIONS = [
-  { value: "popular", label: "Most popular" },
-  { value: "newest", label: "Newest first" },
+  { value: "popular", label: "Phổ biến nhất" },
+  { value: "newest", label: "Mới nhất" },
 ];
-
-// Level badge trên card combo — mỗi level một màu + icon riêng để dễ phân biệt
-// ngay khi nhìn lướt trên ảnh (xanh lá / hổ phách / đỏ).
-const KIT_LEVEL_BADGES: Record<
-  string,
-  { label: string; background: string; color: string }
-> = {
-  beginner: { label: "🌱 Beginner", background: "#15803D", color: "#FFFFFF" },
-  intermediate: { label: "🌿 Intermediate", background: "#B45309", color: "#FFFFFF" },
-  advanced: { label: "🌳 Advanced", background: "#B91C1C", color: "#FFFFFF" },
-};
 
 // Small icon shown next to each filter section label — purely orientation,
 // so the sidebar reads at a glance instead of as a wall of identical text.
 const FILTER_ICONS: Record<string, React.ReactNode> = {
   category: <Tag size={13} />,
   color: <Palette size={13} />,
-  material: <Layers3 size={13} />,
-  weight: <Gauge size={13} />,
-  difficulty: <Sparkles size={13} />,
-  price: <DollarSign size={13} />,
+  price: <Wallet size={13} />,
   level: <Gauge size={13} />,
 };
 
@@ -135,25 +110,25 @@ function PriceRangeFilter({
     setMaxInput(maxPrice ? String(maxPrice) : "");
   }, [maxPrice]);
 
+  const apply = () => onApply(Math.max(0, Number(maxInput) || 0));
+
   return (
     <div className="filter-group">
-      <FilterLabel icon="price">Maximum price</FilterLabel>
-      <div className="price-inputs">
+      <FilterLabel icon="price">Giá tối đa</FilterLabel>
+      <div className="price-field">
         <input
           className="price-input"
           type="number"
           min="0"
-          placeholder="Price up to"
+          placeholder="Ví dụ: 200000"
           value={maxInput}
           onChange={(e) => setMaxInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && apply()}
         />
+        <span className="price-unit">đ</span>
       </div>
-      <button
-        type="button"
-        onClick={() => onApply(Math.max(0, Number(maxInput) || 0))}
-        className="price-find-btn"
-      >
-        Find
+      <button type="button" onClick={apply} className="price-find-btn">
+        Áp dụng
       </button>
     </div>
   );
@@ -187,24 +162,32 @@ export function Shop() {
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [showAllColors, setShowAllColors] = useState(false);
-  const [viewMode, setViewMode] = useState<"products" | "combo">("products");
+  // Chế độ xem nằm trên URL (?view=combo) để link từ nơi khác (vd. breadcrumb
+  // "Combo" ở /kits/:id) mở thẳng tab Combo, và nút Back của trình duyệt giữ đúng tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewMode: "products" | "combo" =
+    searchParams.get("view") === "combo" ? "combo" : "products";
+  const setViewMode = (mode: "products" | "combo") => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (mode === "combo") next.set("view", "combo");
+        else next.delete("view");
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const [kits, setKits] = useState<Kit[]>([]);
   const [kitsLoading, setKitsLoading] = useState(false);
   const [kitLevel, setKitLevel] = useState<string>("all");
   // Chỉ giữ Maximum price (đồng bộ với filter của Products) — bỏ Min cho gọn.
   const [kitMaxPrice, setKitMaxPrice] = useState<number>(0);
 
-  // Kit level options for combo filter
-  const KIT_LEVEL_OPTIONS = [
-    { value: "all", label: "All Levels", emoji: "🎁" },
-    { value: "beginner", label: "Beginner", emoji: "🌱" },
-    { value: "intermediate", label: "Intermediate", emoji: "🌿" },
-    { value: "advanced", label: "Advanced", emoji: "🌳" },
-  ];
-
   // Check if kit level filter is active
   const hasActiveKitLevel = kitLevel !== "all";
   const hasActiveKitFilters = hasActiveKitLevel || kitMaxPrice > 0;
+  const kitFilterCount = [hasActiveKitLevel, kitMaxPrice > 0].filter(Boolean).length;
 
   // Lọc combo hoàn toàn phía client theo Level + Maximum price — chip level
   // lọc ngay trên thẻ, không phụ thuộc BE có nhận tham số `level` hay không.
@@ -229,41 +212,31 @@ export function Shop() {
     kitService
       .getAll({ page: 1, limit: 50 })
       .then((res) => setKits(res.data.data?.kits ?? []))
-      .catch(() => toast.error("Failed to load kits"))
+      .catch(() => toast.error("Không tải được danh sách combo"))
       .finally(() => setKitsLoading(false));
   }, [viewMode]);
 
-  const [recommendationsDismissed, setRecommendationsDismissed] = useState(
-    () => localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true",
-  );
+  const [recommendationsDismissed, setRecommendationsDismissed] = useState(() => {
+    try {
+      return localStorage.getItem("lenem_shop_learn_banner_dismissed") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [lessonFilterActive, setLessonFilterActive] = useState(false);
   const selectedCategory = dynamicFilters.categories.find(
     (category) => category.value === filters.category,
   );
   const meta =
-    filters.category === "all"
-      ? CATEGORY_META.all
-      : {
-          label: selectedCategory?.label ?? filters.category,
-          desc: `Products in ${selectedCategory?.label ?? filters.category}`,
-          emoji: CATEGORY_META[filters.category]?.emoji ?? "🛍️",
-        };
+    viewMode === "combo"
+      ? getCategoryMeta("kit")
+      : getCategoryMeta(filters.category, selectedCategory?.label);
   const categoryOptions = useMemo(
     () => [
-      ["all", CATEGORY_META.all] as const,
+      { value: "all", count: 0 },
       ...dynamicFilters.categories
         .filter((category) => category.value !== "kit")
-        .map(
-          (category) =>
-            [
-              category.value,
-              {
-                label: category.label,
-                desc: category.label,
-                emoji: CATEGORY_META[category.value]?.emoji ?? "🛍️",
-              },
-            ] as const,
-        ),
+        .map((category) => ({ value: category.value, count: category.count })),
     ],
     [dynamicFilters.categories],
   );
@@ -334,23 +307,25 @@ export function Shop() {
     recommendedProducts.forEach((product) =>
       addLessonProductToCart(product.id),
     );
-    toast.success("Lesson materials added to cart");
+    toast.success("Đã thêm nguyên liệu của bài học vào giỏ");
   };
 
   const dismissRecommendations = () => {
-    localStorage.setItem("lenem_shop_learn_banner_dismissed", "true");
+    try {
+      localStorage.setItem("lenem_shop_learn_banner_dismissed", "true");
+    } catch {
+      // Storage bị chặn — vẫn ẩn banner trong phiên này.
+    }
     setRecommendationsDismissed(true);
   };
 
   const getEmptyStateMessage = () => {
-    if (filters.search) return `No products found for "${filters.search}"`;
-    if (filters.color.length > 0) return "No products in the selected color";
-    if (filters.material.length > 0)
-      return "No products with the selected material";
-    if (filters.weight.length > 0) return "No products in the selected weight";
-    if (filters.difficulty.length > 0)
-      return "No products at the selected difficulty";
-    return "No products found";
+    if (filters.search) return `Không tìm thấy sản phẩm cho “${filters.search}”`;
+    if (filters.color.length > 0) return "Chưa có sản phẩm nào với màu đã chọn";
+    if (filters.material.length > 0) return "Chưa có sản phẩm nào với chất liệu đã chọn";
+    if (filters.weight.length > 0) return "Chưa có sản phẩm nào với độ dày đã chọn";
+    if (filters.difficulty.length > 0) return "Chưa có sản phẩm nào ở trình độ đã chọn";
+    return "Chưa có sản phẩm nào";
   };
 
   // Clear search function
@@ -363,51 +338,33 @@ export function Shop() {
     [currentPage, totalPages],
   );
 
-  // Kit filter content for combo view
-  const KitFilterContent = ({
-    showHeader = true,
-  }: {
-    showHeader?: boolean;
-  }) => (
+  // Render functions (không phải component) để PriceRangeFilter không bị
+  // remount mỗi lần Shop re-render — giữ nguyên focus khi đang gõ giá.
+  const renderKitFilters = () => (
     <>
-      {showHeader && (
-        <div className="filter-header">
-          <span className="filter-title">Filters</span>
-          {hasActiveKitFilters && (
-            <motion.button
-              type="button"
-              onClick={clearKitFilters}
-              className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
-              style={{
-                borderColor: "var(--clear-btn-border)",
-                background: "var(--clear-btn-bg)",
-                color: "var(--clear-btn-text)",
-              }}
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 4px 12px var(--clear-btn-glow)",
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Clear all
-            </motion.button>
-          )}
-        </div>
-      )}
-
-      {/* Level filter for kits */}
       <div className="filter-group">
-        <FilterLabel icon="level">Level</FilterLabel>
+        <FilterLabel icon="level">Trình độ</FilterLabel>
         <div className="filter-chip-group">
-          {KIT_LEVEL_OPTIONS.map((level) => (
-            <button
-              key={level.value}
-              className={`chip-filter ${kitLevel === level.value ? "active" : ""}`}
-              onClick={() => setKitLevel(level.value)}
-            >
-              {level.emoji} {level.label}
-            </button>
-          ))}
+          <button
+            className={`shop-chip ${kitLevel === "all" ? "is-active" : ""}`}
+            onClick={() => setKitLevel("all")}
+          >
+            <Gift size={13} />
+            Tất cả
+          </button>
+          {(Object.keys(SHOP_LEVELS) as ShopLevel[]).map((level) => {
+            const { label, Icon } = SHOP_LEVELS[level];
+            return (
+              <button
+                key={level}
+                className={`shop-chip ${kitLevel === level ? "is-active" : ""}`}
+                onClick={() => setKitLevel(level)}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -417,516 +374,460 @@ export function Shop() {
       {!kitsLoading && (
         <div className="filter-summary">
           <Boxes size={13} />
-          Showing <strong>{filteredKits.length}</strong> of {kits.length} combos
+          Hiển thị <strong>{filteredKits.length}</strong> / {kits.length} combo
         </div>
       )}
     </>
   );
 
-  const FilterContent = memo(
-    ({ showHeader = true }: { showHeader?: boolean }) => {
-      return (
-        <>
-          {showHeader && (
-            <div className="filter-header">
-              <span className="filter-title">Filters</span>
-              {hasActiveFilters && (
-                <motion.button
-                  type="button"
-                  onClick={clearFilters}
-                  className="px-4 py-1.5 rounded-full text-sm font-medium border-2"
-                  style={{
-                    borderColor: "var(--clear-btn-border)",
-                    background: "var(--clear-btn-bg)",
-                    color: "var(--clear-btn-text)",
-                  }}
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: "0 4px 12px var(--clear-btn-glow)",
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Clear all
-                </motion.button>
-              )}
-            </div>
-          )}
+  const renderProductFilters = () => (
+    <>
+      {/* Smart lesson filter */}
+      {currentCourseId && currentCourseComboIds.length > 0 && (
+        <div className="filter-group">
+          <button
+            className={`shop-chip ${lessonFilterActive ? "is-active" : ""}`}
+            onClick={() => {
+              setLessonFilterActive((active) => !active);
+              updateFilter("category", "all");
+            }}
+          >
+            <GraduationCap size={13} />
+            Theo bài học đang học
+          </button>
+        </div>
+      )}
 
-          {/* Smart lesson filter */}
-          {currentCourseId && currentCourseComboIds.length > 0 && (
-            <div className="filter-group">
+      {/* Category */}
+      <div className="filter-group">
+        <FilterLabel icon="category">Danh mục</FilterLabel>
+        <div className="filter-chip-group">
+          {categoryOptions.map(({ value }) => {
+            const cat = getCategoryMeta(value);
+            const Icon = cat.Icon;
+            return (
               <button
-                className={`chip-filter ${lessonFilterActive ? "active" : ""}`}
-                onClick={() => {
-                  setLessonFilterActive((active) => !active);
-                  updateFilter("category", "all");
-                }}
+                key={value}
+                className={`shop-chip ${filters.category === value ? "is-active" : ""}`}
+                onClick={() => updateFilter("category", value)}
               >
-                📚 Based on your current lesson
+                <Icon size={13} />
+                {cat.label}
               </button>
-            </div>
-          )}
-
-          {/* Category */}
-          <div className="filter-group">
-            <FilterLabel icon="category">Category</FilterLabel>
-            <div className="filter-chip-group">
-              {categoryOptions.map(([key, cat]) => (
-                <button
-                  key={key}
-                  className={`chip-filter ${filters.category === key ? "active" : ""}`}
-                  onClick={() => updateFilter("category", key)}
-                >
-                  {cat.emoji} {cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Color */}
-          {dynamicFilters.colors.length > 0 && (
-            <div className="filter-group">
-              <div className="filter-section-head">
-                <FilterLabel icon="color">Color</FilterLabel>
-                {dynamicFilters.colors.length > 6 && (
-                  <button
-                    type="button"
-                    className="filter-show-more"
-                    onClick={() => setShowAllColors((visible) => !visible)}
-                  >
-                    {showAllColors
-                      ? "Show less"
-                      : `Show all (${dynamicFilters.colors.length})`}
-                  </button>
-                )}
-              </div>
-              <div className="filter-chip-group">
-                {(showAllColors
-                  ? dynamicFilters.colors
-                  : dynamicFilters.colors.slice(0, 6)
-                ).map((c) => (
-                  <button
-                    key={c.name}
-                    className={`chip-filter ${filters.color.includes(c.name) ? "active" : ""}`}
-                    onClick={() => toggleArrayFilter("color", c.name)}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 12,
-                        height: 12,
-                        borderRadius: "50%",
-                        background: c.hex,
-                        border: "1px solid rgba(0,0,0,0.12)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Price range - standalone component with own state */}
-          <PriceRangeFilter
-            maxPrice={filters.maxPrice}
-            onApply={(max) => updatePriceRange(max)}
-          />
-
-          {!isLoading && (
-            <div className="filter-summary">
-              <Boxes size={13} />
-              Showing <strong>{displayedProducts.length}</strong> of{" "}
-              {totalCount} products
-            </div>
-          )}
-        </>
-      );
-    },
-  );
-
-  return (
-    <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-8">
-      {/* ── TOP BAR ── */}
-      <div className="shop-top">
-        <div className="shop-container">
-          <div className="shop-headline-row">
-            <div>
-              <div className="shop-headline">
-                {meta.emoji} {meta.label}
-              </div>
-              <div className="shop-subhead">{meta.desc}</div>
-            </div>
-            <div className="shop-stat-chip">
-              <Sparkles size={14} />
-              <strong>{totalCount}</strong>&nbsp;items in the shop
-            </div>
-          </div>
-          {viewMode === "products" && (
-            <div className="quick-nav">
-              {categoryOptions.map(([key, cat]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`quick-nav-pill ${filters.category === key ? "active" : ""}`}
-                  onClick={() => updateFilter("category", key)}
-                >
-                  {cat.emoji} {cat.label}
-                </button>
-              ))}
-            </div>
-          )}
+            );
+          })}
         </div>
       </div>
 
-      {/* ── BODY ── */}
-      <div className="shop-body">
-        {/* Desktop sidebar - show different filters based on viewMode */}
-        <aside className="filter-panel">
-          {viewMode === "products" ? <FilterContent /> : <KitFilterContent />}
-        </aside>
-
-        {/* Main content */}
-        <div>
-          {currentLesson &&
-            recommendedProducts.length > 0 &&
-            !recommendationsDismissed && (
-              <section className="lesson-banner">
-                <div className="lesson-banner-head">
-                  <div>
-                    <p className="lesson-banner-title">
-                      🧶 Currently learning: {currentLesson.title} — Here are
-                      the materials you need:
-                    </p>
-                  </div>
-                  <button
-                    className="drawer-close"
-                    style={{ position: "static" }}
-                    onClick={dismissRecommendations}
-                    aria-label="Dismiss lesson recommendations"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                <button
-                  onClick={() => requireAuth(addAllLessonProducts)}
-                  className="chip-filter active lesson-add-btn"
-                  style={{ marginBottom: "0.75rem" }}
-                >
-                  <span style={{ position: "relative", zIndex: 1 }}>
-                    Add to cart
-                  </span>
-                </button>
-                <div className="lesson-banner-grid">
-                  {recommendedProducts.map((product) => (
-                    <ProductCard
-                      key={`lesson-${product.id}`}
-                      product={product}
-                      relatedCourseId={currentCourseId ?? undefined}
-                      relatedLessonId={currentLessonId ?? undefined}
-                    />
-                  ))}
-                </div>
-              </section>
+      {/* Color */}
+      {dynamicFilters.colors.length > 0 && (
+        <div className="filter-group">
+          <div className="filter-section-head">
+            <FilterLabel icon="color">Màu len</FilterLabel>
+            {dynamicFilters.colors.length > 8 && (
+              <button
+                type="button"
+                className="filter-show-more"
+                onClick={() => setShowAllColors((visible) => !visible)}
+              >
+                {showAllColors ? "Thu gọn" : `Xem tất cả (${dynamicFilters.colors.length})`}
+              </button>
             )}
+          </div>
+          <div className="shop-swatch-grid">
+            {(showAllColors ? dynamicFilters.colors : dynamicFilters.colors.slice(0, 8)).map(
+              (c) => {
+                const active = filters.color.includes(c.name);
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    className={`shop-swatch ${active ? "is-active" : ""}`}
+                    onClick={() => toggleArrayFilter("color", c.name)}
+                    title={c.name}
+                    aria-pressed={active}
+                  >
+                    <span className="shop-swatch-dot" style={{ background: c.hex }} />
+                    <span className="shop-swatch-name">{c.name}</span>
+                  </button>
+                );
+              },
+            )}
+          </div>
+        </div>
+      )}
 
-          {/* View mode toggle */}
-          <div className="flex items-center gap-2 mb-3">
+      {/* Price range - standalone component with own state */}
+      <PriceRangeFilter
+        maxPrice={filters.maxPrice}
+        onApply={(max) => updatePriceRange(max)}
+      />
+
+      {!isLoading && (
+        <div className="filter-summary">
+          <Boxes size={13} />
+          Hiển thị <strong>{displayedProducts.length}</strong> / {totalCount} sản phẩm
+        </div>
+      )}
+    </>
+  );
+
+  const activeFilterCount = viewMode === "products" ? activeChips.length : kitFilterCount;
+  const canClear = viewMode === "products" ? hasActiveFilters : hasActiveKitFilters;
+  const HeroIcon = meta.Icon;
+
+  return (
+    <div className="min-h-screen bg-background px-4 pt-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+      <div className="shop-wrap">
+        {/* ── Hero: tiệm len ── */}
+        <section className="craft-hero craft-rise shop-hero">
+          <div className="shop-hero-row">
+            <div className="min-w-0">
+              <span className="craft-eyebrow">Tiệm len nhỏ của Len&amp;em</span>
+              <h1 className="craft-title shop-hero-title">
+                <span className="shop-hero-icon">
+                  <HeroIcon size={26} />
+                </span>
+                {meta.label === "Tất cả" ? (
+                  <>
+                    Mọi thứ cho <em>dự án len</em> tiếp theo
+                  </>
+                ) : (
+                  meta.label
+                )}
+              </h1>
+              <div className="craft-stitch" aria-hidden />
+              <p className="craft-subtitle">{meta.desc}</p>
+            </div>
+
+            <div className="shop-hero-stats">
+              <div className="craft-stat">
+                <span className="craft-stat-icon">
+                  <YarnBallIcon size={16} />
+                </span>
+                <div>
+                  <p className="craft-stat-num">{totalCount}</p>
+                  <p className="craft-stat-label">sản phẩm</p>
+                </div>
+              </div>
+              <div className="craft-stat">
+                <span className="craft-stat-icon">
+                  <Truck size={16} />
+                </span>
+                <div>
+                  <p className="craft-stat-num">GHN</p>
+                  <p className="craft-stat-label">giao toàn quốc</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {viewMode === "products" && (
+            <div className="shop-cat-rail">
+              {categoryOptions.map(({ value, count }) => {
+                const cat = getCategoryMeta(value);
+                const Icon = cat.Icon;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`shop-cat-pill ${filters.category === value ? "is-active" : ""}`}
+                    onClick={() => updateFilter("category", value)}
+                  >
+                    <span className="shop-cat-icon">
+                      <Icon size={15} />
+                    </span>
+                    {cat.label}
+                    {count > 0 && <span className="shop-cat-count">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ── Chế độ xem + sắp xếp ── */}
+        <div className="shop-toolbar">
+          <div className="craft-seg" role="tablist" aria-label="Chế độ xem">
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "products"}
               onClick={() => setViewMode("products")}
-              className={`px-4 py-2 rounded-full text-sm font-medium shop-mode-btn ${
-                viewMode === "products" ? "shop-mode-active" : ""
-              }`}
+              className={`craft-seg-btn ${viewMode === "products" ? "is-active" : ""}`}
             >
-              🛍️ Products
-              <span className="mode-count">{totalCount}</span>
+              <ShoppingBag size={14} />
+              Sản phẩm
+              <span className="shop-seg-count">{totalCount}</span>
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "combo"}
               onClick={() => setViewMode("combo")}
-              className={`px-4 py-2 rounded-full text-sm font-medium shop-mode-btn ${
-                viewMode === "combo" ? "shop-mode-active" : ""
-              }`}
+              className={`craft-seg-btn ${viewMode === "combo" ? "is-active" : ""}`}
             >
-              🎁 Combo
-              {kits.length > 0 && (
-                <span className="mode-count">{kits.length}</span>
-              )}
+              <Gift size={14} />
+              Combo
+              {kits.length > 0 && <span className="shop-seg-count">{kits.length}</span>}
             </button>
           </div>
 
-          {/* Products content — only show if viewMode === "products" */}
-          {viewMode === "products" && (
-            <div>
-              <div className="sort-bar">
-                <div className="sort-bar-left">
-                  <button
-                    className="filter-fab"
-                    onClick={() => setFilterOpen(true)}
-                  >
-                    <SlidersHorizontal size={14} />
-                    Filters
-                    {hasActiveFilters && (
-                      <span
-                        style={{
-                          background: "var(--primary)",
-                          color: "var(--primary-foreground)",
-                          borderRadius: "50%",
-                          width: 16,
-                          height: 16,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.65rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {activeChips.length}
-                      </span>
-                    )}
-                  </button>
-                  <div className="results-count">
-                    <span className="results-dot" />
-                    {!hasActiveFilters && resultCount === totalCount ? (
-                      <span>
-                        All <strong>{totalCount}</strong> products
-                      </span>
-                    ) : (
-                      <span>
-                        <strong>{displayedProducts.length}</strong> of{" "}
-                        {totalCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <select
-                  className="sort-select"
-                  value={filters.sort}
-                  onChange={(e) => updateFilter("sort", e.target.value)}
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <AnimatePresence>
-                {activeChips.length > 0 && (
-                  <motion.div
-                    className="filter-strip"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.22 }}
-                  >
-                    <span className="filter-group-label">Active:</span>
-                    {activeChips.map((chip) => (
-                      <motion.span
-                        key={chip.value + chip.type}
-                        className="active-chip"
-                        initial={{ opacity: 0, scale: 0.85 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.85 }}
-                        transition={{ duration: 0.18 }}
-                      >
-                        {chip.label}
-                        <span
-                          className="chip-x"
-                          onClick={() => removeChip(chip.type, chip.value)}
-                        >
-                          ×
-                        </span>
-                      </motion.span>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              {isLoading ? (
-                <div className="product-grid" aria-hidden="true">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <ProductSkeleton key={i} />
-                  ))}
-                </div>
-              ) : displayedProducts.length > 0 ? (
+          <div className="shop-toolbar-right">
+            <button className="filter-fab" onClick={() => setFilterOpen(true)}>
+              <SlidersHorizontal size={14} />
+              Bộ lọc
+              {activeFilterCount > 0 && (
+                <span className="filter-fab-count">{activeFilterCount}</span>
+              )}
+            </button>
+            <p className="results-count">
+              {viewMode === "products" ? (
+                !hasActiveFilters && resultCount === totalCount ? (
+                  <>
+                    Tất cả <strong>{totalCount}</strong> sản phẩm
+                  </>
+                ) : (
+                  <>
+                    <strong>{displayedProducts.length}</strong> / {totalCount} sản phẩm
+                  </>
+                )
+              ) : (
                 <>
-                  <div className="product-grid animate-fade-in-soft">
-                    {displayedProducts.map((product) => (
+                  <strong>{filteredKits.length}</strong> combo sẵn sàng
+                </>
+              )}
+            </p>
+            {viewMode === "products" && (
+              <select
+                className="sort-select"
+                value={filters.sort}
+                onChange={(e) => updateFilter("sort", e.target.value)}
+                aria-label="Sắp xếp"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* ── BODY ── */}
+        <div className="shop-body">
+          {/* Desktop sidebar - show different filters based on viewMode */}
+          <aside className="filter-panel">
+            <div className="filter-header">
+              <span className="filter-title">Bộ lọc</span>
+              <button
+                type="button"
+                onClick={viewMode === "products" ? clearFilters : clearKitFilters}
+                disabled={!canClear}
+                className="filter-clear"
+              >
+                <RotateCcw size={12} />
+                Xoá lọc
+              </button>
+            </div>
+            {viewMode === "products" ? renderProductFilters() : renderKitFilters()}
+          </aside>
+
+          {/* Main content */}
+          <div className="min-w-0">
+            {currentLesson &&
+              recommendedProducts.length > 0 &&
+              !recommendationsDismissed && (
+                <section className="lesson-banner">
+                  <div className="lesson-banner-head">
+                    <span className="craft-section-icon">
+                      <GraduationCap size={18} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="lesson-banner-eyebrow">Bạn đang học</p>
+                      <p className="lesson-banner-title">{currentLesson.title}</p>
+                      <p className="lesson-banner-sub">Đây là nguyên liệu bài học cần:</p>
+                    </div>
+                    <button
+                      className="lesson-banner-close"
+                      onClick={dismissRecommendations}
+                      aria-label="Ẩn gợi ý theo bài học"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="lesson-banner-grid">
+                    {recommendedProducts.map((product) => (
                       <ProductCard
-                        key={product.id}
+                        key={`lesson-${product.id}`}
                         product={product}
-                        relatedCourseId={
-                          currentCourseId &&
-                          product.linkedComboIds?.some((comboId) =>
-                            currentCourseComboIds.includes(comboId),
-                          )
-                            ? currentCourseId
-                            : undefined
-                        }
-                        relatedLessonId={
-                          currentLessonId &&
-                          currentLesson?.linkedProducts?.some(
-                            (linkedProduct) =>
-                              linkedProduct.productId === product.id,
-                          )
-                            ? currentLessonId
-                            : undefined
-                        }
+                        relatedCourseId={currentCourseId ?? undefined}
+                        relatedLessonId={currentLessonId ?? undefined}
                       />
                     ))}
                   </div>
-                  {totalPages > 1 && (
-                    <div className="pagination">
-                      <button
-                        className="page-btn"
-                        disabled={currentPage <= 1}
-                        onClick={() => goToPage(currentPage - 1)}
-                      >
-                        ‹
-                      </button>
-                      {paginationRange.map((page, i) =>
-                        page === "dots" ? (
-                          <span key={`dots-${i}`} className="page-dots">
-                            …
-                          </span>
-                        ) : (
-                          <button
-                            key={page}
-                            className={`page-btn ${currentPage === page ? "active" : ""}`}
-                            onClick={() => goToPage(page)}
-                          >
-                            {page}
-                          </button>
-                        ),
-                      )}
-                      <button
-                        className="page-btn"
-                        disabled={currentPage >= totalPages}
-                        onClick={() => goToPage(currentPage + 1)}
-                      >
-                        ›
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "4rem 1rem",
-                    color: "var(--foreground-muted)",
-                  }}
-                >
-                  <Package
-                    size={44}
-                    style={{ margin: "0 auto 1rem", opacity: 0.3 }}
-                  />
-                  <p style={{ fontWeight: 500, marginBottom: 4 }}>
-                    {getEmptyStateMessage()}
-                  </p>
-                  <p style={{ fontSize: "0.83rem" }}>
-                    Try adjusting your filters
-                  </p>
-                  <div
-                    style={{
-                      marginTop: "16px",
-                      display: "flex",
-                      gap: "8px",
-                      justifyContent: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    {hasActiveFilters && (
-                      <button
-                        type="button"
-                        className="empty-state-cta"
-                        onClick={clearFilters}
-                        style={{ marginRight: "8px" }}
-                      >
-                        Clear filters
-                      </button>
-                    )}
-                    {filters.search && (
-                      <button
-                        type="button"
-                        className="empty-state-cta"
-                        onClick={clearSearch}
-                        style={{
-                          background: "var(--accent-blush)",
-                          color: "var(--foreground)",
-                        }}
-                      >
-                        Clear search
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Combo (Kits) content — only show if viewMode === "combo" */}
-          {viewMode === "combo" && (
-            <>
-              <div className="sort-bar">
-                <div className="sort-bar-left">
                   <button
-                    className="filter-fab"
-                    onClick={() => setFilterOpen(true)}
+                    onClick={() => requireAuth(addAllLessonProducts)}
+                    className="craft-btn mt-4"
                   >
-                    <SlidersHorizontal size={14} />
-                    Filters
-                    {hasActiveKitFilters && (
-                      <span
-                        style={{
-                          background: "var(--primary)",
-                          color: "var(--primary-foreground)",
-                          borderRadius: "50%",
-                          width: 16,
-                          height: 16,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.65rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {
-                          [
-                            hasActiveKitLevel,
-                            kitMaxPrice > 0,
-                          ].filter(Boolean).length
-                        }
-                      </span>
-                    )}
+                    <ShoppingBag size={15} />
+                    Thêm tất cả vào giỏ
                   </button>
-                  <div className="results-count">
-                    <span className="results-dot" />
-                    <span>
-                      <strong>{filteredKits.length}</strong> combos available
-                    </span>
+                </section>
+              )}
+
+            {/* Products content */}
+            {viewMode === "products" && (
+              <div>
+                <AnimatePresence>
+                  {activeChips.length > 0 && (
+                    <motion.div
+                      className="filter-strip"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22 }}
+                    >
+                      <span className="filter-strip-label">Đang lọc:</span>
+                      {activeChips.map((chip) => (
+                        <motion.button
+                          type="button"
+                          key={chip.value + chip.type}
+                          className="active-chip"
+                          onClick={() => removeChip(chip.type, chip.value)}
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.85 }}
+                          transition={{ duration: 0.18 }}
+                        >
+                          {chip.type === "category"
+                            ? getCategoryMeta(chip.value, chip.label).label
+                            : chip.label}
+                          <X size={12} />
+                        </motion.button>
+                      ))}
+                      <button type="button" className="filter-strip-clear" onClick={clearFilters}>
+                        Xoá tất cả
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {isLoading ? (
+                  <div className="product-grid" aria-hidden="true">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <ProductSkeleton key={i} />
+                    ))}
                   </div>
-                </div>
+                ) : displayedProducts.length > 0 ? (
+                  <>
+                    <div className="product-grid animate-fade-in-soft">
+                      {displayedProducts.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          relatedCourseId={
+                            currentCourseId &&
+                            product.linkedComboIds?.some((comboId) =>
+                              currentCourseComboIds.includes(comboId),
+                            )
+                              ? currentCourseId
+                              : undefined
+                          }
+                          relatedLessonId={
+                            currentLessonId &&
+                            currentLesson?.linkedProducts?.some(
+                              (linkedProduct) =>
+                                linkedProduct.productId === product.id,
+                            )
+                              ? currentLessonId
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <nav className="pagination" aria-label="Phân trang">
+                        <button
+                          className="page-btn"
+                          disabled={currentPage <= 1}
+                          onClick={() => goToPage(currentPage - 1)}
+                          aria-label="Trang trước"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                        {paginationRange.map((page, i) =>
+                          page === "dots" ? (
+                            <span key={`dots-${i}`} className="page-dots">
+                              …
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              className={`page-btn ${currentPage === page ? "active" : ""}`}
+                              onClick={() => goToPage(page)}
+                              aria-current={currentPage === page ? "page" : undefined}
+                            >
+                              {page}
+                            </button>
+                          ),
+                        )}
+                        <button
+                          className="page-btn"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => goToPage(currentPage + 1)}
+                          aria-label="Trang sau"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </nav>
+                    )}
+                  </>
+                ) : (
+                  <div className="craft-empty">
+                    <EmptyHoopIllustration size={150} />
+                    <p className="craft-empty-title">{getEmptyStateMessage()}</p>
+                    <p className="craft-empty-desc">
+                      Thử bỏ bớt bộ lọc hoặc tìm một từ khoá khác nhé.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {hasActiveFilters && (
+                        <button type="button" className="craft-btn" onClick={clearFilters}>
+                          <RotateCcw size={15} />
+                          Xoá bộ lọc
+                        </button>
+                      )}
+                      {filters.search && (
+                        <button type="button" className="craft-btn-ghost" onClick={clearSearch}>
+                          Xoá tìm kiếm
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              {kitsLoading ? (
+            )}
+
+            {/* Combo (Kits) content */}
+            {viewMode === "combo" &&
+              (kitsLoading ? (
                 <div className="combo-grid">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <ProductSkeleton key={i} />
                   ))}
                 </div>
               ) : filteredKits.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Package size={44} className="mx-auto mb-3 opacity-40" />
-                  <p>No kits found</p>
+                <div className="craft-empty">
+                  <EmptyHoopIllustration size={150} />
+                  <p className="craft-empty-title">Chưa có combo phù hợp</p>
+                  <p className="craft-empty-desc">
+                    Thử chọn trình độ khác hoặc nới rộng mức giá.
+                  </p>
                   {hasActiveKitFilters && (
-                    <button
-                      type="button"
-                      className="empty-state-cta"
-                      onClick={clearKitFilters}
-                    >
-                      Clear filters
+                    <button type="button" className="craft-btn" onClick={clearKitFilters}>
+                      <RotateCcw size={15} />
+                      Xoá bộ lọc
                     </button>
                   )}
                 </div>
@@ -934,19 +835,20 @@ export function Shop() {
                 <div className="combo-grid animate-fade-in-soft">
                   {filteredKits.map((kit) => {
                     const isFavorite = isFavoriteKit(kit._id);
+                    const level = SHOP_LEVELS[kit.level as ShopLevel];
+                    const LevelIcon = level?.Icon;
 
                     return (
                       <Link
                         key={kit._id}
                         to={`/kits/${kit._id}`}
-                        className="block bg-card rounded-2xl border border-border overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="kit-card"
                         aria-label={`${t("shop.kitDetail")} ${kit.name}`}
                       >
-                        <div className="aspect-[4/3] overflow-hidden bg-muted relative">
+                        <div className="kit-card-media">
                           <ResponsiveImage
                             src={kit.thumbnail}
                             alt={kit.name}
-                            className="w-full h-full object-cover"
                             onError={(e) => {
                               const target = e.currentTarget;
                               if (!target.dataset.fallback) {
@@ -955,7 +857,6 @@ export function Shop() {
                               }
                             }}
                           />
-                          {/* Favorite button */}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -965,56 +866,30 @@ export function Shop() {
                               toast.success(
                                 isFavorite
                                   ? t("shop.removedFromFavorites")
-                                  : "Added to favorites",
+                                  : "Đã thêm vào yêu thích",
                               );
                             }}
-                            className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-                            style={{
-                              background: "var(--card-glass)",
-                              backdropFilter: "blur(14px) saturate(160%)",
-                              WebkitBackdropFilter: "blur(14px) saturate(160%)",
-                              border: "1px solid var(--border-subtle)",
-                              boxShadow: "var(--shadow-md)",
-                              touchAction: "manipulation",
-                              WebkitTapHighlightColor: "transparent",
-                            }}
+                            className={cn("pc-fav", isFavorite && "is-active")}
+                            aria-label={isFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                            aria-pressed={isFavorite}
                           >
-                            <Heart
-                              className={cn(
-                                "w-4 h-4 transition-colors",
-                                isFavorite
-                                  ? "fill-destructive text-destructive"
-                                  : "text-muted-foreground hover:text-destructive",
-                              )}
-                            />
+                            <Heart size={15} />
                           </button>
-                          <span
-                            className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold capitalize"
-                            style={{
-                              background:
-                                KIT_LEVEL_BADGES[kit.level]?.background ??
-                                "var(--primary)",
-                              color:
-                                KIT_LEVEL_BADGES[kit.level]?.color ??
-                                "var(--primary-foreground)",
-                              border: "1px solid rgba(255, 255, 255, 0.35)",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
-                            }}
-                          >
-                            {KIT_LEVEL_BADGES[kit.level]?.label ?? kit.level}
+                          {level && LevelIcon && (
+                            <span className={`kit-level ${level.tone}`}>
+                              <LevelIcon size={12} />
+                              {level.label}
+                            </span>
+                          )}
+                          {/* Mác "trong hộp có" — số món trong combo */}
+                          <span className="kit-tag">
+                            <Boxes size={12} />
+                            {(kit.products || []).length} món
                           </span>
                         </div>
-                        <div className="p-4 space-y-2">
-                          <div className="kit-card-meta">
-                            <Boxes size={12} />
-                            {(kit.products || []).length} products included
-                          </div>
-                          <h3 className="font-semibold group-hover:text-primary">
-                            {kit.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {kit.description}
-                          </p>
+                        <div className="kit-card-body">
+                          <h3 className="kit-card-title">{kit.name}</h3>
+                          <p className="kit-card-desc">{kit.description}</p>
                           {kit.totalRatings > 0 && (
                             <div className="flex items-center gap-1.5">
                               <div className="flex items-center gap-0.5">
@@ -1033,17 +908,15 @@ export function Shop() {
                                 ))}
                               </div>
                               <span className="text-xs text-muted-foreground">
-                                {kit.averageRating.toFixed(1)} (
-                                {kit.totalRatings})
+                                {kit.averageRating.toFixed(1)} ({kit.totalRatings})
                               </span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-lg font-bold text-primary">
-                              {formatPrice(kit.price)}
-                            </span>
-                            <span className="text-xs font-medium text-primary">
-                              {t("shop.viewDetails")} →
+                          <div className="kit-card-foot">
+                            <span className="kit-card-price">{formatPrice(kit.price)}</span>
+                            <span className="kit-card-cta">
+                              {t("shop.viewDetails")}
+                              <ArrowRight size={14} />
                             </span>
                           </div>
                         </div>
@@ -1051,9 +924,8 @@ export function Shop() {
                     );
                   })}
                 </div>
-              )}
-            </>
-          )}
+              ))}
+          </div>
         </div>
       </div>
 
@@ -1077,24 +949,32 @@ export function Shop() {
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
             >
               <div className="drawer-handle" />
-              <button
-                className="drawer-close"
-                onClick={() => setFilterOpen(false)}
-              >
-                <X size={20} />
-              </button>
-              {viewMode === "products" ? (
-                <FilterContent />
-              ) : (
-                <KitFilterContent />
-              )}
-              <button
-                onClick={() => setFilterOpen(false)}
-                className="drawer-cta-btn"
-              >
+              <div className="filter-header">
+                <span className="filter-title">Bộ lọc</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={viewMode === "products" ? clearFilters : clearKitFilters}
+                    disabled={!canClear}
+                    className="filter-clear"
+                  >
+                    <RotateCcw size={12} />
+                    Xoá lọc
+                  </button>
+                  <button
+                    className="drawer-close"
+                    onClick={() => setFilterOpen(false)}
+                    aria-label="Đóng bộ lọc"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+              {viewMode === "products" ? renderProductFilters() : renderKitFilters()}
+              <button onClick={() => setFilterOpen(false)} className="craft-btn mt-4 w-full">
                 {viewMode === "products"
-                  ? `Show ${resultCount} results`
-                  : `Show ${filteredKits.length} results`}
+                  ? `Xem ${resultCount} sản phẩm`
+                  : `Xem ${filteredKits.length} combo`}
               </button>
             </motion.div>
           </>
@@ -1103,3 +983,4 @@ export function Shop() {
     </div>
   );
 }
+

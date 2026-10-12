@@ -1,21 +1,14 @@
 import type { Product } from "../../app/data/products";
+import { SHOP_LEVELS } from "../../features/shop/shopMeta";
 import { cn } from "./ui/utils";
 
 type Level = NonNullable<Product["difficulty"]>;
 
-const levelConfig: Record<Level, { label: string; className: string }> = {
-  beginner: {
-    label: "🌱 Beginner",
-    className: "bg-[#E8F5E9] text-[#2E7D32]",
-  },
-  intermediate: {
-    label: "🧶 Intermediate",
-    className: "bg-[#FFF8E1] text-[#F57F17]",
-  },
-  advanced: {
-    label: "🔥 Advanced",
-    className: "bg-[#FBE9E7] text-[#BF360C]",
-  },
+// Nền đặc + chữ trắng để đọc rõ trên mọi ảnh sản phẩm (light & dark).
+const levelColors: Record<Level, string> = {
+  beginner: "bg-[#15803D] text-white",
+  intermediate: "bg-[#C2410C] text-white",
+  advanced: "bg-[#B91C1C] text-white",
 };
 
 interface LevelBadgeProps {
@@ -26,17 +19,18 @@ interface LevelBadgeProps {
 export function LevelBadge({ level, className }: LevelBadgeProps) {
   if (!level) return null;
 
-  const config = levelConfig[level];
+  const { label, Icon } = SHOP_LEVELS[level];
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm",
-        config.className,
+        "inline-flex items-center gap-1 rounded-full border border-white/50 px-2.5 py-1 text-[11px] font-bold shadow-[0_1px_4px_rgba(0,0,0,0.28)]",
+        levelColors[level],
         className,
       )}
     >
-      {config.label}
+      <Icon className="size-3" />
+      {label}
     </span>
   );
 }

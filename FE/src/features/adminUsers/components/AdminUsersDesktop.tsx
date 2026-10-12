@@ -18,6 +18,7 @@ import {
   initialsOf,
   statusLabel,
 } from "../utils/adminUsersFormat";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 function roleName(user: ApiUser, map: Record<string, string>) {
   return typeof user.roleId === "string" ? map[user.roleId] ?? "User" : user.roleId?.roleName ?? "User";
@@ -99,18 +100,18 @@ export function AdminUsersDesktop({ controller }: { controller: AdminUsersContro
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="mb-2">{t("admin.users.title")}</h1>
-          <p className="text-muted-foreground">{controller.isAdmin ? t("admin.users.manageUsers") : t("admin.users.viewRegisteredUsers")}</p>
-        </div>
-        {controller.isAdmin && (
-          <CreateButton
-            label={t("admin.users.createUser")}
-            onClick={controller.openCreateModal}
-          />
-        )}
-      </div>
+      <AdminPageHeader
+        title={t("admin.users.title")}
+        subtitle={controller.isAdmin ? t("admin.users.manageUsers") : t("admin.users.viewRegisteredUsers")}
+        actions={
+          controller.isAdmin && (
+            <CreateButton
+              label={t("admin.users.createUser")}
+              onClick={controller.openCreateModal}
+            />
+          )
+        }
+      />
 
       <section className="admin-panel-glow rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border-light)" }}>
         <div className="mb-4 flex items-center gap-2">

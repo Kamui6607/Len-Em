@@ -12,6 +12,8 @@ import { OrderDetailCard } from "../../../shared/components/order/OrderDetailCar
 import type { Order } from "../../../features/orders/types/order.types";
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { EmptyHoopIllustration } from "./CartPage";
+import "../../../styles/purchased.css";
 
 export function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -77,8 +79,15 @@ export function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-background pt-8 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="purchased-skeleton h-4 w-48 mb-6" />
+          <div className="purchased-skeleton h-64 w-full rounded-3xl mb-6" />
+          <div className="grid gap-6 md:grid-cols-[1fr_340px]">
+            <div className="purchased-skeleton h-72 rounded-3xl" />
+            <div className="purchased-skeleton h-72 rounded-3xl" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -86,15 +95,11 @@ export function OrderDetail() {
   if (!order) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <h2 className="text-2xl font-semibold mb-3">{t("orderDetail.notFoundTitle")}</h2>
-          <p className="text-muted-foreground mb-6">
-            {t("orderDetail.notFoundDesc")}
-          </p>
-          <Link
-            to="/purchased"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full hover:bg-primary/90 transition-colors"
-          >
+        <div className="purchased-empty">
+          <EmptyHoopIllustration size={160} />
+          <h2 className="purchased-empty-title">{t("orderDetail.notFoundTitle")}</h2>
+          <p className="purchased-empty-desc">{t("orderDetail.notFoundDesc")}</p>
+          <Link to="/purchased" className="purchased-empty-btn">
             <ArrowLeft className="w-4 h-4" />
             {t("orderDetail.backToList")}
           </Link>
@@ -104,12 +109,9 @@ export function OrderDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background pt-8 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-8">
-      <div className="max-w-3xl mx-auto">
-        <Link
-          to="/purchased"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors text-sm"
-        >
+    <div className="min-h-screen bg-background pt-8 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-12">
+      <div className="max-w-5xl mx-auto">
+        <Link to="/purchased" className="order-detail-back">
           <ArrowLeft className="w-4 h-4" />
           {t("orderDetail.backToOrders")}
         </Link>

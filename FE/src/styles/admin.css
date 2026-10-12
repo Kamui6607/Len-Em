@@ -1,0 +1,694 @@
+/* ============================================================
+   ADMIN — khung & lớp giao diện cho Admin / Staff / Creator
+   ------------------------------------------------------------
+   Nạp bởi DashboardShell. Đi sau globals.css nên ghi đè được
+   design system admin cũ (glow neon) bằng phong cách "craft"
+   của toàn site, nhưng tiết chế hơn cho màn hình nhiều dữ liệu:
+   - Tiêu đề trang Playfair nghiêng + gạch chỉ đứt nét
+   - Panel bo 22px, bóng mềm, không phát sáng trong dark mode
+   - Bảng thoáng, header nhỏ in hoa, hàng hover nhuộm tím nhạt
+   - Modal có đường khâu viền trên thay cho vệt gradient
+
+   Phạm vi:
+   - Class chung với trang mua sắm (.btn-*, .input, .badge...)
+     chỉ chỉnh khi nằm trong `.admin-shell`.
+   - Class riêng admin (.admin-*) chỉnh không scope vì modal của
+     admin được portal ra <body> (AdminModal, ConfirmDeleteButton).
+   Chỉ dùng token sẵn có trong theme.css → tự đổi light/dark.
+   ============================================================ */
+
+/* ── 1. Khung ── */
+.admin-shell {
+  --dash-side-w: 264px;
+  --dash-topbar-h: 60px;
+  display: flex;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--primary) 8%, transparent) 1px, transparent 0)
+      0 0 / 24px 24px,
+    radial-gradient(110% 60% at 100% 0%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 60%),
+    var(--background);
+}
+.dash-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dash-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+@media (min-width: 1024px) {
+  .dash-content {
+    padding: 32px 32px 64px;
+  }
+}
+
+.dash-icon-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--foreground-secondary);
+  transition: background 0.2s, color 0.2s;
+}
+.dash-icon-btn:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+/* ── 2. Sidebar ── */
+.dash-side {
+  display: flex;
+  flex-direction: column;
+  width: var(--dash-side-w);
+  background: var(--card);
+  border-right: 1px solid var(--border);
+}
+.dash-side.is-desktop {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  flex-shrink: 0;
+}
+.dash-side.is-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 60;
+  width: min(86vw, 300px);
+  height: 100dvh;
+  box-shadow: var(--shadow-float-lg);
+  transform: translateX(-102%);
+  transition: transform 0.3s var(--ease-out);
+}
+.dash-side.is-drawer.is-open {
+  transform: translateX(0);
+}
+.dash-side-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: var(--modal-overlay);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease-out);
+}
+.dash-side-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (max-width: 1023px) {
+  .dash-side.is-desktop {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .dash-side.is-drawer,
+  .dash-side-backdrop {
+    display: none;
+  }
+}
+
+.dash-side-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px 16px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1.5px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+}
+.dash-side-logo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  color: #fff !important;
+  background: var(--cta-gradient);
+  box-shadow: var(--cta-shadow);
+  transform: rotate(-6deg);
+  transition: transform 0.3s var(--ease-spring);
+}
+.dash-side-logo:hover {
+  transform: rotate(0deg) scale(1.05);
+}
+.dash-side-name {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+.dash-side-title {
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  line-height: 1.1;
+  color: var(--primary);
+}
+
+.dash-side-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.dash-side-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 14px;
+}
+.dash-side-group-label {
+  padding: 0 12px 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--foreground-subtle);
+}
+.dash-side-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px 0 8px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground-secondary) !important;
+  transition: background 0.18s, color 0.18s;
+}
+.dash-side-link-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: var(--foreground-muted);
+  transition: background 0.18s, color 0.18s, transform 0.25s var(--ease-spring);
+}
+.dash-side-link:hover {
+  color: var(--foreground) !important;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+.dash-side-link:hover .dash-side-link-icon {
+  color: var(--primary);
+}
+.dash-side-link.is-active {
+  color: var(--primary) !important;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.dash-side-link.is-active .dash-side-link-icon {
+  color: #fff;
+  background: var(--cta-gradient);
+  box-shadow: var(--cta-shadow);
+  transform: rotate(-6deg);
+}
+/* mũi khâu đánh dấu mục đang chọn */
+.dash-side-link.is-active::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 14px;
+  height: 0;
+  border-top: 2px dashed color-mix(in srgb, var(--primary) 55%, transparent);
+}
+.dash-side-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.dash-side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── 3. Topbar ── */
+.dash-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--dash-topbar-h);
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 1024px) {
+  .dash-topbar {
+    padding: 0 32px;
+  }
+  .dash-menu-btn {
+    display: none;
+  }
+}
+.dash-crumbs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--foreground-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.dash-crumb-root,
+.dash-crumb-group {
+  flex-shrink: 0;
+}
+.dash-crumb-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--foreground);
+}
+@media (max-width: 639px) {
+  .dash-crumb-root,
+  .dash-crumb-root + svg {
+    display: none;
+  }
+}
+.dash-store-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+  transition: background 0.2s;
+}
+.dash-store-link:hover {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+@media (max-width: 639px) {
+  .dash-store-link {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* ── 4. Tiêu đề trang ── */
+.admin-shell .admin-page-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.6rem, 3vw, 2.1rem) !important;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--foreground);
+  margin-bottom: 0 !important;
+}
+/* gạch chỉ đứt nét dưới tiêu đề */
+.admin-shell .admin-page-title::after {
+  content: "";
+  display: block;
+  width: 64px;
+  margin: 10px 0 8px;
+  border-top: 2px dashed var(--primary);
+  opacity: 0.45;
+}
+.admin-shell .admin-page-subtitle {
+  font-size: 0.9rem;
+  color: var(--foreground-muted);
+}
+.admin-page-eyebrow {
+  display: inline-block;
+  margin-bottom: 2px;
+  font-family: var(--font-script);
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--primary);
+  transform: rotate(-1.5deg);
+  transform-origin: left;
+}
+
+/* ── 4b. Cỡ chữ tiêu đề trong dashboard ──
+   theme.css đặt h1–h4 toàn cục (h2 = text-4xl…) KHÔNG nằm trong layer,
+   nên luôn thắng các class Tailwind (vd. "text-base", "text-xs") —
+   tiêu đề panel bị phóng to khổng lồ. Với tiêu đề có class cỡ chữ
+   Tailwind: `revert-layer` bỏ qua quy tắc toàn cục để class đó có hiệu lực.
+   Tiêu đề không có class cỡ chữ: dùng cỡ hợp với màn hình nhiều dữ liệu. */
+.admin-shell :is(h1, h2, h3, h4, h5, h6)[class*="text-"],
+.admin-dialog-content :is(h1, h2, h3, h4, h5, h6)[class*="text-"] {
+  font-size: revert-layer;
+  letter-spacing: revert-layer;
+}
+.admin-shell :is(h2, h3, h4):not([class*="text-"]),
+.admin-dialog-content :is(h2, h3, h4):not([class*="text-"]) {
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+/* nhãn nhỏ in hoa: dùng font thân bài, Playfair in hoa cỡ nhỏ rất khó đọc */
+.admin-shell :is(h2, h3, h4)[class*="uppercase"] {
+  font-family: var(--font-body);
+}
+
+/* ── 5. Panel ── */
+.admin-panel-glow {
+  border-radius: 22px !important;
+  border-color: var(--border) !important;
+  background: var(--card);
+  box-shadow: var(--shadow-card) !important;
+}
+.admin-panel-glow:hover,
+.dark .admin-panel-glow,
+.dark .admin-panel-glow:hover {
+  box-shadow: var(--shadow-card) !important;
+}
+.admin-section-icon {
+  border-radius: 11px !important;
+  transform: rotate(-4deg);
+}
+.admin-panel-glow:hover .admin-section-icon {
+  transform: rotate(0deg);
+}
+
+/* Thanh tìm kiếm/lọc phía trên bảng */
+.admin-toolbar {
+  padding: 18px 20px !important;
+  background: color-mix(in srgb, var(--primary) 3%, var(--card)) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.admin-toolbar::after {
+  display: none;
+}
+
+/* ── 6. Bảng ── */
+.admin-table {
+  background: var(--card);
+}
+.dark .admin-table {
+  box-shadow: none;
+}
+.admin-table thead th {
+  padding: 12px 16px !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  color: var(--foreground-muted) !important;
+  background: color-mix(in srgb, var(--primary) 4%, var(--card)) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.dark .admin-table thead th {
+  background: color-mix(in srgb, var(--primary) 7%, var(--card)) !important;
+}
+.admin-table tbody tr,
+.admin-table tbody tr:nth-child(even) {
+  background: var(--card);
+}
+.admin-table tbody tr:hover,
+.dark .admin-table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card)) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
+}
+.admin-table tbody td {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent) !important;
+  color: var(--foreground-secondary);
+}
+
+/* Nút hành động trong bảng: tròn, nhỏ gọn, không glow */
+.admin-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.admin-action-btn:hover {
+  box-shadow: none !important;
+  transform: translateY(-1px);
+}
+
+/* Empty state */
+.admin-empty-state {
+  padding: 3.5rem 1rem;
+}
+.admin-empty-state p:first-of-type {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.15rem;
+}
+.dark .admin-empty-state svg,
+.dark svg.lucide.opacity-40 {
+  filter: none;
+}
+
+/* ── 7. Thẻ số liệu ── */
+.admin-stat-card {
+  border-radius: 22px !important;
+  padding: 20px !important;
+}
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+}
+.dark .admin-stat-card:hover {
+  box-shadow: var(--shadow-card-hover) !important;
+}
+.admin-stat-icon {
+  border-radius: 13px !important;
+  transform: rotate(-5deg);
+  border: 1.5px dashed color-mix(in srgb, currentColor 35%, transparent);
+}
+.admin-stat-card:hover .admin-stat-icon {
+  transform: rotate(0deg) scale(1.06);
+}
+.dark .admin-stat-card:hover .admin-stat-icon {
+  box-shadow: none;
+}
+.admin-stat-value {
+  font-family: var(--font-heading);
+  font-size: 1.75rem !important;
+  font-weight: 700;
+}
+
+/* ── 7b. Dashboard: lưới 2 cột, đơn gần đây, lối tắt cần xử lý ── */
+.admin-dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 1100px) {
+  .admin-dash-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  }
+}
+.admin-link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary) !important;
+}
+.admin-link-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.admin-empty-inline {
+  padding: 32px 12px;
+  text-align: center;
+  font-family: var(--font-script);
+  font-size: 1.1rem;
+  color: var(--foreground-muted);
+}
+.admin-recent {
+  display: flex;
+  flex-direction: column;
+}
+.admin-recent li + li {
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 1px;
+  background-repeat: repeat-x;
+  background-position: top;
+}
+.admin-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: inherit !important;
+  transition: background 0.18s;
+}
+.admin-recent-row:hover {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+.admin-recent-id {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.admin-recent-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+.admin-recent-total {
+  flex-shrink: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.admin-section-title {
+  margin-bottom: 12px;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.admin-attention {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.admin-attention-card {
+  --tone: var(--primary);
+  --tone-bg: color-mix(in srgb, var(--primary) 10%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  color: inherit !important;
+  background: var(--card);
+  border: 1.5px dashed color-mix(in srgb, var(--tone) 30%, var(--border));
+  transition: transform 0.2s var(--ease-out), border-color 0.2s, box-shadow 0.2s;
+}
+.admin-attention-card.is-warning { --tone: var(--warning-text); --tone-bg: var(--warning-bg); }
+.admin-attention-card.is-error   { --tone: var(--error-text);   --tone-bg: var(--error-bg); }
+.admin-attention-card.is-info    { --tone: var(--info-text);    --tone-bg: var(--info-bg); }
+.admin-attention-card.is-success { --tone: var(--success-text); --tone-bg: var(--success-bg); }
+.admin-attention-card.is-muted   { --tone: var(--foreground-muted); --tone-bg: var(--muted); }
+.admin-attention-card:hover {
+  transform: translateY(-2px);
+  border-style: solid;
+  border-color: var(--tone);
+  box-shadow: var(--shadow-card);
+}
+.admin-attention-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--tone);
+  background: var(--tone-bg);
+  transform: rotate(-4deg);
+}
+.admin-attention-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.admin-attention-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+.admin-attention-arrow {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--foreground-subtle);
+  transition: transform 0.2s, color 0.2s;
+}
+.admin-attention-card:hover .admin-attention-arrow {
+  color: var(--tone);
+  transform: translateX(2px);
+}
+
+/* ── 8. Modal (portal ra body — không scope) ── */
+.admin-dialog-content {
+  border-radius: 24px !important;
+  box-shadow: var(--shadow-float-lg) !important;
+}
+.admin-dialog-content::before {
+  /* đường khâu thay cho vệt gradient phát sáng */
+  height: 0 !important;
+  top: 12px !important;
+  left: 24px !important;
+  right: 24px !important;
+  background: none !important;
+  border-top: 1.5px dashed color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  z-index: 3;
+}
+.admin-dialog-header {
+  padding: 22px 24px 18px !important;
+}
+.admin-dialog-header h2,
+.admin-dialog-header h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* ── 9. Nút & ô nhập trong dashboard ── */
+.admin-shell .btn-secondary {
+  border-radius: 999px;
+}
+.admin-shell .btn-icon {
+  border-radius: 12px;
+}
+
+/* ── 10. Chuyển động ── */
+@media (prefers-reduced-motion: reduce) {
+  .dash-side.is-drawer,
+  .dash-side-backdrop,
+  .dash-side-logo,
+  .dash-side-link-icon,
+  .admin-stat-card,
+  .admin-stat-icon {
+    transition: none !important;
+  }
+}

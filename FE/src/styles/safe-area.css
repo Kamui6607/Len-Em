@@ -4,6 +4,19 @@
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
+
+  /* "Hàng nổi" ở đáy màn hình: nút FAB "+" (ArchiveFloatingMenu) và các thanh
+     nổi đặt cạnh nó (vd. thanh mua trên /shop/product/:id) dùng chung các mốc
+     này để luôn cùng hàng. 90px = bottom nav (≈86px) + 4px; cộng thêm
+     safe-area vì bottom nav cũng tự cộng safe-area vào chiều cao. */
+  --float-row-bottom: calc(90px + var(--sab));
+  --float-row-right: max(12px, var(--sar));
+  --fab-size: 48px;
+}
+@media (min-width: 768px) {
+  :root {
+    --fab-size: 54px;
+  }
 }
 
 .safe-area-top {

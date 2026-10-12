@@ -1,44 +1,59 @@
+// ============================================================
+// Lesson Page — route /learn/:courseId/lesson/:lessonId
+// Video · tiến độ bài · chuyển bài trước/sau · cột phải gồm danh sách
+// bài của khoá học (đã học / đang học / khoá) và nguyên liệu của bài.
+// - Chỉ xem được khi: bài xem thử, đã đăng ký khoá học, hoặc Admin/Staff.
+// - Thời gian xem YouTube chỉ được cộng khi video ĐANG PHÁT (trước đây
+//   cộng mỗi giây kể cả khi dừng → để tab mở là tự "hoàn thành" bài).
+// - Không tải được YouTube IFrame API → dùng iframe nhúng thường và cho
+//   phép tự đánh dấu đã học.
+// ============================================================
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Link,
-  Navigate,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router";
+import { Link, Navigate, useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
   ArrowRight,
   Award,
+  BookOpen,
+  Check,
   CheckCircle2,
   Clock,
+  Gift,
+  Lock,
+  Package,
+  Play,
   ShoppingCart,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "../../shared/components/ui/badge";
-import { Button } from "../../shared/components/ui/button";
-import { Card, CardContent } from "../../shared/components/ui/card";
-import { Progress } from "../../shared/components/ui/progress";
 import { courseService } from "../../shared/api/courseService";
 import { lessonService } from "../../shared/api/lessonService";
 import { kitService, type Kit } from "../../shared/api/kitService";
 import { productService, type Product } from "../../shared/api/productService";
 import { materialCombos } from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../features/learn/store/learn.store";
+import { canWatchLesson } from "../../features/learn/utils/lessonAccess";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
+import { cn } from "../../shared/components/ui/utils";
 import { products } from "../data/products";
+import { YarnBallIcon } from "../../features/shop/shopMeta";
 import type {
   Course,
   CourseProgress,
   Lesson,
   MaterialCombo,
 } from "../../features/learn/types/learn.types";
+import "../../styles/craft.css";
+import "../../styles/course.css";
 
-/**
- * Extract YouTube video ID from various YouTube URL formats.
- */
+/** Tỉ lệ đã xem tối thiểu để được tự đánh dấu "đã học xong". */
+const MANUAL_COMPLETE_RATIO = 0.8;
+/** Hết thời gian này mà YouTube IFrame API chưa sẵn sàng → dùng iframe thường. */
+const YT_LOAD_TIMEOUT_MS = 8000;
+
+/** Extract YouTube video ID from various YouTube URL formats. */
 function getYouTubeVideoId(url: string): string | null {
   if (!url) return null;
   const match = url.match(
@@ -48,54 +63,19 @@ function getYouTubeVideoId(url: string): string | null {
 }
 
 /**
- * Extract YouTube video ID from various YouTube URL formats.
- */
-function getYouTubeEmbedUrl(url: string): string | null {
-  if (!url) return null;
-  const matchStandard = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-  );
-  if (matchStandard) {
-    return `https://www.youtube.com/embed/${matchStandard[1]}?autoplay=0&rel=0`;
-  }
-  if (url.match(/\.(mp4|webm|ogg)(\?|$)/i)) {
-    return url;
-  }
-  return null;
-}
-
-/**
  * Extract ID from various reference formats.
  * Handles: string ID, { comboId }, { kitId }, { productId }, { _id }, { id }, or populated objects.
  */
 function extractId(ref: unknown): string | null {
   if (!ref) return null;
-
-  // String ID
-  if (typeof ref === "string") {
-    return ref;
-  }
-
-  // Object reference
+  if (typeof ref === "string") return ref;
   if (typeof ref === "object") {
     const obj = ref as Record<string, unknown>;
-
-    // Check for common ID field names
     const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
-    if (typeof id === "string" && id.length > 0) {
-      return id;
-    }
-
-    // If object has _id or id but no specific field, it might be a populated object
-    // Return the object's _id or id as the reference ID
-    if (obj._id && typeof obj._id === "string") {
-      return obj._id;
-    }
-    if (obj.id && typeof obj.id === "string") {
-      return obj.id;
-    }
+    if (typeof id === "string" && id.length > 0) return id;
+    if (obj._id && typeof obj._id === "string") return obj._id;
+    if (obj.id && typeof obj.id === "string") return obj.id;
   }
-
   return null;
 }
 
@@ -109,20 +89,22 @@ interface MaterialItem {
   productData?: Product;
 }
 
+function formatClock(totalSeconds: number) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
 export function LessonPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addToCart, addKitToCart } = useCart();
   const { courseId, lessonId } = useParams();
-  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const ytContainerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<{ destroy: () => void } | null>(null);
+  const ytPlayingRef = useRef(false);
   const completeInFlightRef = useRef<string | null>(null);
 
-  const progress = useLearnStore((state) =>
-    lessonId ? state.videoProgress[lessonId] : undefined,
-  );
+  const progress = useLearnStore((state) => (lessonId ? state.videoProgress[lessonId] : undefined));
   const markLessonComplete = useLearnStore((state) => state.markLessonComplete);
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -131,17 +113,10 @@ export function LessonPage() {
   const [kits, setKits] = useState<Kit[]>([]);
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [watchedSeconds, setWatchedSeconds] = useState(0);
   const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
-  const watchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [ytFailed, setYtFailed] = useState(false);
 
-  // Get search query from URL
-  const searchQuery = searchParams.get("search") || "";
-
-  // Debug: log search state
-  useEffect(() => {
-    console.log("LessonPage - searchQuery:", searchQuery);
-  }, [searchQuery]);
+  const isEnrolled = Boolean(courseId && (user?.enrolled ?? []).includes(courseId));
 
   useEffect(() => {
     if (!courseId || !lessonId) return;
@@ -156,7 +131,6 @@ export function LessonPage() {
         const rawLessons = courseData.linkedLessons || [];
         const populatedLessons: Lesson[] = [];
         const lessonIdsToFetch: string[] = [];
-
         for (const item of rawLessons) {
           if (!item) continue;
           if (typeof item === "object") {
@@ -166,39 +140,29 @@ export function LessonPage() {
               continue;
             }
             const rawId = obj._id || obj.id;
-            if (typeof rawId === "string" && rawId.length > 0) {
-              lessonIdsToFetch.push(rawId);
-            }
+            if (typeof rawId === "string" && rawId.length > 0) lessonIdsToFetch.push(rawId);
             continue;
           }
-          if (typeof item === "string" && item.length > 0) {
-            lessonIdsToFetch.push(item);
-          }
+          if (typeof item === "string" && item.length > 0) lessonIdsToFetch.push(item);
         }
-
         if (lessonIdsToFetch.length > 0) {
-          const lessonPromises = lessonIdsToFetch.map((id) =>
-            lessonService
-              .getById(id)
-              .then((res) => res.data.data.lesson)
-              .catch(() => null),
-          );
-          const fetchedLessons = (await Promise.all(lessonPromises)).filter(
-            (l): l is Lesson => l !== null,
-          );
+          const fetchedLessons = (
+            await Promise.all(
+              lessonIdsToFetch.map((id) =>
+                lessonService
+                  .getById(id)
+                  .then((res) => res.data.data.lesson)
+                  .catch(() => null),
+              ),
+            )
+          ).filter((l): l is Lesson => l !== null);
           populatedLessons.push(...fetchedLessons);
         }
-
-        const courseLessons = populatedLessons.sort(
-          (a, b) => a.order - b.order,
-        );
+        const courseLessons = populatedLessons.sort((a, b) => a.order - b.order);
         setLessons(courseLessons);
 
-        // Find current lesson
-        const foundLesson =
-          courseLessons.find((l) => l._id === lessonId) ?? null;
+        const foundLesson = courseLessons.find((l) => l._id === lessonId) ?? null;
         setLesson(foundLesson);
-
         if (!foundLesson) {
           try {
             const lessonRes = await lessonService.getById(lessonId);
@@ -208,7 +172,7 @@ export function LessonPage() {
           }
         }
       } catch {
-        toast.error("Failed to load lesson");
+        toast.error("Không tải được bài học");
       } finally {
         setLoading(false);
       }
@@ -218,17 +182,16 @@ export function LessonPage() {
 
   useEffect(() => {
     if (!courseId || !lessonId) return;
-
     // Read actions from the stores without subscribing this effect to action
     // references, which prevents render/update loops when the store changes.
     useLearnStore.getState().setCurrentLesson(courseId, lessonId);
+    setYtFailed(false);
+    ytPlayingRef.current = false;
   }, [courseId, lessonId]);
 
-  // ── Server-side course progress ──────────────────────────────────────
-  // Fetch the user's persisted progress on mount (instead of relying only on
-  // the offline Zustand store) so completion survives device changes/logins.
-  // Completed lesson IDs are also synced back into the local stores so the
-  // lesson UI reflects the server truth immediately.
+  // ── Server-side course progress ──
+  // Fetch persisted progress on mount (instead of relying only on the offline
+  // Zustand store) and sync completed lesson IDs back into the local store.
   useEffect(() => {
     if (!courseId || !isAuthenticated) {
       setCourseProgress(null);
@@ -253,56 +216,53 @@ export function LessonPage() {
     };
   }, [courseId, isAuthenticated]);
 
-  // ── Persist lesson completion to the server ──────────────────────────
-  // Shared by all completion paths (native <video> onEnded, YouTube API
-  // ENDED state and the watch-simulation fallback) so progress is always
-  // recorded server-side (survives device changes / logins).
+  const canWatch = lesson ? canWatchLesson({ lesson, isEnrolled, role: user?.roleId }) : false;
+
+  // ── Persist lesson completion to the server ──
+  // Shared by every completion path (native onEnded, YouTube ENDED, the
+  // "đánh dấu đã học" button). Only enrolled learners have server progress.
   const persistLessonComplete = useCallback(() => {
     if (!course || !lesson) return;
-    // One in-flight request per lesson — ignore duplicates (e.g. the YouTube
-    // ENDED event and the watch-simulation fallback firing together).
     if (completeInFlightRef.current === lesson._id) return;
     completeInFlightRef.current = lesson._id;
 
     // Optimistic local update (existing Zustand store).
     markLessonComplete(course._id, lesson._id);
 
+    if (!isEnrolled) {
+      completeInFlightRef.current = null;
+      return;
+    }
     void courseService
       .completeLesson(course._id, lesson._id)
       .then((res) => setCourseProgress(res.data.data))
-      .catch(() => toast.error("Failed to save course progress"))
+      .catch(() => toast.error("Không lưu được tiến độ khoá học"))
       .finally(() => {
-        if (completeInFlightRef.current === lesson._id) {
-          completeInFlightRef.current = null;
-        }
+        if (completeInFlightRef.current === lesson._id) completeInFlightRef.current = null;
       });
-  }, [course, lesson, markLessonComplete]);
+  }, [course, lesson, markLessonComplete, isEnrolled]);
 
-  // ── YouTube embed: real "video ended" detection ──────────────────────
-  // Native <video> elements fire `onEnded`, but YouTube uses an <iframe>
-  // which can't. We drive the player through the YouTube IFrame API and
-  // mark the lesson complete when the actual ENDED state fires.
+  const isYouTube = Boolean(
+    lesson?.videoUrl && (lesson.videoUrl.includes("youtube") || lesson.videoUrl.includes("youtu.be")),
+  );
+  const youTubeId = lesson?.videoUrl ? getYouTubeVideoId(lesson.videoUrl) : null;
+
+  // ── YouTube IFrame API: biết khi nào ĐANG PHÁT và khi nào KẾT THÚC ──
   useEffect(() => {
-    if (!lesson?.videoUrl || !lessonId) return;
-    const isYouTube =
-      lesson.videoUrl.includes("youtube") ||
-      lesson.videoUrl.includes("youtu.be");
-    if (!isYouTube) return;
-    const videoId = getYouTubeVideoId(lesson.videoUrl);
-    if (!videoId) return;
+    if (!canWatch || !isYouTube || !youTubeId || ytFailed) return;
 
     let disposed = false;
-    // `window.YT` types aren't included in the project — access via a cast.
     const W = window as unknown as {
       YT?: {
         Player: { new (element: HTMLElement, options: object): { destroy: () => void } };
-        PlayerState: { ENDED: number };
+        PlayerState: { ENDED: number; PLAYING: number };
       };
       onYouTubeIframeAPIReady?: () => void;
     };
 
     const buildPlayer = () => {
       if (disposed || !W.YT?.Player || !ytContainerRef.current) return;
+      window.clearTimeout(timeout);
       try {
         if (ytPlayerRef.current) {
           try {
@@ -313,14 +273,13 @@ export function LessonPage() {
           ytPlayerRef.current = null;
         }
         const player = new W.YT.Player(ytContainerRef.current, {
-          videoId,
+          videoId: youTubeId,
           width: "100%",
           playerVars: { rel: 0 },
           events: {
             onStateChange: (event: { data: number }) => {
-              if (event.data === W.YT?.PlayerState.ENDED) {
-                persistLessonComplete();
-              }
+              ytPlayingRef.current = event.data === W.YT?.PlayerState.PLAYING;
+              if (event.data === W.YT?.PlayerState.ENDED) persistLessonComplete();
             },
           },
         });
@@ -334,15 +293,18 @@ export function LessonPage() {
           ytPlayerRef.current = player;
         }
       } catch {
-        // If the player can't be built, the watch-time fallback below still
-        // completes the lesson after the simulated duration elapses.
+        if (!disposed) setYtFailed(true);
       }
     };
+
+    // API không tải được (mạng chặn, adblock…) → iframe thường
+    const timeout = window.setTimeout(() => {
+      if (!disposed && !W.YT?.Player) setYtFailed(true);
+    }, YT_LOAD_TIMEOUT_MS);
 
     if (W.YT?.Player) {
       buildPlayer();
     } else {
-      // Load the IFrame API once; onYouTubeIframeAPIReady → buildPlayer().
       if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
         const tag = document.createElement("script");
         tag.src = "https://www.youtube.com/iframe_api";
@@ -353,6 +315,8 @@ export function LessonPage() {
 
     return () => {
       disposed = true;
+      window.clearTimeout(timeout);
+      ytPlayingRef.current = false;
       if (ytPlayerRef.current) {
         try {
           ytPlayerRef.current.destroy();
@@ -362,147 +326,117 @@ export function LessonPage() {
         ytPlayerRef.current = null;
       }
     };
-  }, [lesson?.videoUrl, lessonId, persistLessonComplete]);
+  }, [canWatch, isYouTube, youTubeId, ytFailed, persistLessonComplete]);
 
-  // Simulate watching progress for YouTube embeds
+  // Đếm thời gian xem YouTube — CHỈ khi đang phát
   useEffect(() => {
-    if (!lesson?.videoUrl || !lessonId) return;
-    const isYouTube =
-      lesson.videoUrl.includes("youtube") ||
-      lesson.videoUrl.includes("youtu.be");
-    if (!isYouTube) return;
-
-    // NOTE: never call store actions inside a React setState updater — the
-    // updater runs during the render phase, so a store .set() there triggers
-    // "Cannot update a component while rendering a different component"
-    // (Zustand notifies subscribers synchronously). Both the local state
-    // and the store are updated from the interval callback instead.
-    watchIntervalRef.current = setInterval(() => {
-      const next =
-        (useLearnStore.getState().videoProgress[lessonId]?.watchedSeconds ??
-          0) + 1;
+    if (!canWatch || !isYouTube || !lessonId || ytFailed) return;
+    const timer = window.setInterval(() => {
+      if (!ytPlayingRef.current) return;
+      const next = (useLearnStore.getState().videoProgress[lessonId]?.watchedSeconds ?? 0) + 1;
       useLearnStore.getState().updateProgress(lessonId, next);
-      setWatchedSeconds(next);
-
-      // Fallback completion: if the user has watched the full lesson duration
-      // (covers cases where the YouTube API can't load and no ENDED event
-      // fires), persist it so course progress is always recorded.
-      if (next >= Math.max(lesson.duration, 1) * 60) {
-        persistLessonComplete();
-      }
     }, 1000);
+    return () => window.clearInterval(timer);
+  }, [canWatch, isYouTube, lessonId, ytFailed]);
 
-    return () => {
-      if (watchIntervalRef.current) {
-        clearInterval(watchIntervalRef.current);
-        watchIntervalRef.current = null;
-      }
-    };
-  }, [lesson?.videoUrl, lesson?.duration, lessonId, persistLessonComplete]);
-
-  // Fetch linked combos from API for the lesson (when lesson is set)
+  // Fetch linked combos for the lesson
   useEffect(() => {
+    setKits([]);
     if (!lesson?.linkedCombo || lesson.linkedCombo.length === 0) return;
-
     const fetchKits = async () => {
-      const comboIds: string[] = lesson
-        .linkedCombo!.map((ref) => extractId(ref))
-        .filter((id): id is string => id !== null);
+      const comboIds = lesson.linkedCombo!.map((ref) => extractId(ref)).filter((id): id is string => id !== null);
+      if (comboIds.length === 0) return;
+      const fetchedKits = (
+        await Promise.all(
+          comboIds.map((id) =>
+            kitService
+              .getById(id)
+              .then((res) => res.data.data?.kit)
+              .catch(() => null),
+          ),
+        )
+      ).filter((k): k is Kit => k !== null && k !== undefined);
 
-      if (comboIds.length > 0) {
-        const kitPromises = comboIds.map((id) =>
-          kitService
-            .getById(id)
-            .then((res) => res.data.data?.kit)
-            .catch(() => null),
-        );
-        const fetchedKits = (await Promise.all(kitPromises)).filter(
-          (k): k is Kit => k !== null,
-        );
-
-        // If API returned no kits, try to find from mock data
-        if (fetchedKits.length === 0) {
-          const mockKits = comboIds
-            .map((id) => materialCombos.find((c) => c.id === id))
-            .filter((c): c is MaterialCombo => c !== undefined)
-            .map(
-              (c) =>
-                ({
-                  _id: c.id,
-                  name: c.name,
-                  description: c.description,
-                  thumbnail: c.thumbnail,
-                  level: c.level,
-                  price: c.price,
-                  products: c.productIds.map((pid) => {
-                    const product = products.find((p) => p.id === pid);
-                    const firstVariant = product?.variants?.[0];
-                    return {
-                      productId: {
-                        _id: pid,
-                        name: product?.name ?? pid,
-                        description: product?.description ?? "",
-                        category: product?.category ?? "",
-                        image: product?.image ?? "",
-                        tags: product?.tags ?? [],
-                        variants:
-                          product?.variants?.map((v) => ({
-                            _id: v.id,
-                            color: v.color,
-                            hexCode: v.hexCode,
-                            price: v.price,
-                            stock: v.stock,
-                            image: v.images?.[0] ?? "",
-                          })) ?? [],
-                        isActive: true,
-                        createdAt: product?.createdAt ?? "",
-                        updatedAt: product?.createdAt ?? "",
-                        __v: 0,
-                      },
-                      variantId: firstVariant?.id ?? "default",
-                      quantity: 1,
-                    };
-                  }),
-                  stock: 0,
-                  isActive: true,
-                  averageRating: 0,
-                  totalRatings: 0,
-                  ratings: [],
-                  createdAt: "",
-                  updatedAt: "",
-                  __v: 0,
-                }) as Kit,
-            );
-          setKits(mockKits);
-        } else {
-          setKits(fetchedKits);
-        }
+      if (fetchedKits.length > 0) {
+        setKits(fetchedKits);
+        return;
       }
+      // If API returned no kits, try to find from mock data
+      setKits(
+        comboIds
+          .map((id) => materialCombos.find((c) => c.id === id))
+          .filter((c): c is MaterialCombo => c !== undefined)
+          .map(
+            (c) =>
+              ({
+                _id: c.id,
+                name: c.name,
+                description: c.description,
+                thumbnail: c.thumbnail,
+                level: c.level,
+                price: c.price,
+                products: c.productIds.map((pid) => {
+                  const product = products.find((p) => p.id === pid);
+                  const firstVariant = product?.variants?.[0];
+                  return {
+                    productId: {
+                      _id: pid,
+                      name: product?.name ?? pid,
+                      description: product?.description ?? "",
+                      category: product?.category ?? "",
+                      image: product?.image ?? "",
+                      tags: product?.tags ?? [],
+                      variants:
+                        product?.variants?.map((v) => ({
+                          _id: v.id,
+                          color: v.color,
+                          hexCode: v.hexCode,
+                          price: v.price,
+                          stock: v.stock,
+                          image: v.images?.[0] ?? "",
+                        })) ?? [],
+                      isActive: true,
+                      createdAt: product?.createdAt ?? "",
+                      updatedAt: product?.createdAt ?? "",
+                      __v: 0,
+                    },
+                    variantId: firstVariant?.id ?? "default",
+                    quantity: 1,
+                  };
+                }),
+                stock: 0,
+                isActive: true,
+                averageRating: 0,
+                totalRatings: 0,
+                ratings: [],
+                createdAt: "",
+                updatedAt: "",
+                __v: 0,
+              }) as Kit,
+          ),
+      );
     };
     fetchKits();
   }, [lesson?.linkedCombo]);
 
-  // Fetch linked products from API for the lesson
+  // Fetch linked products for the lesson
   useEffect(() => {
+    setApiProducts([]);
     if (!lesson?.linkedProduct || lesson.linkedProduct.length === 0) return;
-
     const fetchProducts = async () => {
-      const productIds: string[] = lesson
-        .linkedProduct!.map((lp) => extractId(lp))
-        .filter((id): id is string => id !== null);
-
-      if (productIds.length > 0) {
-        const productPromises = productIds.map((id) =>
-          productService
-            .getById(id)
-            .then((res) => res.data.data?.product)
-            .catch(() => null),
-        );
-        const fetchedProducts = (await Promise.all(productPromises)).filter(
-          (p): p is Product => p !== null,
-        );
-        setApiProducts(fetchedProducts);
-      }
+      const productIds = lesson.linkedProduct!.map((lp) => extractId(lp)).filter((id): id is string => id !== null);
+      if (productIds.length === 0) return;
+      const fetchedProducts = (
+        await Promise.all(
+          productIds.map((id) =>
+            productService
+              .getById(id)
+              .then((res) => res.data.data?.product)
+              .catch(() => null),
+          ),
+        )
+      ).filter((p): p is Product => p !== null && p !== undefined);
+      setApiProducts(fetchedProducts);
     };
     fetchProducts();
   }, [lesson?.linkedProduct]);
@@ -510,64 +444,50 @@ export function LessonPage() {
   // Build materials list from lesson.linkedProduct + lesson.linkedCombo
   const materials = useMemo<MaterialItem[]>(() => {
     const items: MaterialItem[] = [];
-
-    // Add linked products - prefer API products, fallback to mock
-    if (lesson?.linkedProduct && lesson.linkedProduct.length > 0) {
-      for (const lp of lesson.linkedProduct) {
-        const productId = extractId(lp);
-        if (!productId) continue;
-
-        // Try to find from API products first
-        const apiProduct = apiProducts.find((p) => p._id === productId);
-        if (apiProduct) {
-          items.push({
-            type: "product",
-            id: apiProduct._id,
-            name: apiProduct.name,
-            price: apiProduct.variants[0]?.price ?? 0,
-            thumbnail: apiProduct.image || apiProduct.variants[0]?.image || "",
-            productData: apiProduct,
-          });
-          continue;
-        }
-
-        // Fallback to mock data
-        const product = products.find((p) => p.id === productId);
+    for (const lp of lesson?.linkedProduct ?? []) {
+      const productId = extractId(lp);
+      if (!productId) continue;
+      const apiProduct = apiProducts.find((p) => p._id === productId);
+      if (apiProduct) {
         items.push({
           type: "product",
-          id: productId,
-          name: product?.name ?? productId,
-          price: product?.variants?.[0]?.price ?? 0,
-          thumbnail: product?.image ?? "",
+          id: apiProduct._id,
+          name: apiProduct.name,
+          price: apiProduct.variants[0]?.price ?? 0,
+          thumbnail: apiProduct.image || apiProduct.variants[0]?.image || "",
+          productData: apiProduct,
         });
+        continue;
       }
+      const product = products.find((p) => p.id === productId);
+      if (!product) continue; // không hiện dòng "ID lạ" khi không tìm thấy sản phẩm
+      items.push({
+        type: "product",
+        id: productId,
+        name: product.name,
+        price: product.variants?.[0]?.price ?? 0,
+        thumbnail: product.image ?? "",
+      });
     }
-
-    // Add linked combos (kits)
-    if (kits && kits.length > 0) {
-      for (const kit of kits) {
-        items.push({
-          type: "kit",
-          id: kit._id,
-          name: kit.name,
-          price: kit.price,
-          thumbnail: kit.thumbnail,
-          kitData: kit,
-        });
-      }
+    for (const kit of kits) {
+      items.push({ type: "kit", id: kit._id, name: kit.name, price: kit.price, thumbnail: kit.thumbnail, kitData: kit });
     }
-
     return items;
   }, [lesson?.linkedProduct, kits, apiProducts]);
 
+  const completedSet = useMemo(() => new Set(courseProgress?.completedLessons ?? []), [courseProgress]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 overflow-hidden rounded-2xl border bg-black shadow-sm">
-            <div className="aspect-video w-full bg-muted/50 flex items-center justify-center text-muted-foreground/40 text-sm">
-              Loading lesson...
+      <div className="cd-page">
+        <div className="cd-wrap">
+          <div className="craft-skeleton mb-6 h-4 w-64" />
+          <div className="lp-grid">
+            <div className="space-y-4">
+              <div className="craft-skeleton aspect-video w-full rounded-[24px]" />
+              <div className="craft-skeleton h-24 rounded-2xl" />
             </div>
+            <div className="craft-skeleton h-96 rounded-3xl" />
           </div>
         </div>
       </div>
@@ -577,46 +497,43 @@ export function LessonPage() {
   if (!course || !lesson) return <Navigate to="/learn" replace />;
 
   const lessonIndex = lessons.findIndex((item) => item._id === lessonId);
+  const position = lessonIndex >= 0 ? lessonIndex + 1 : lesson.order;
   const previousLesson = lessonIndex > 0 ? lessons[lessonIndex - 1] : null;
-  const nextLesson =
-    lessonIndex >= 0 && lessonIndex < lessons.length - 1
-      ? lessons[lessonIndex + 1]
-      : null;
+  const nextLesson = lessonIndex >= 0 && lessonIndex < lessons.length - 1 ? lessons[lessonIndex + 1] : null;
+  const nextOpen = nextLesson ? canWatchLesson({ lesson: nextLesson, isEnrolled, role: user?.roleId }) : false;
 
-  const videoUrl = getYouTubeEmbedUrl(lesson.videoUrl);
-  const isYouTube =
-    lesson.videoUrl.includes("youtube") || lesson.videoUrl.includes("youtu.be");
+  const lessonDone = Boolean(progress?.completed) || completedSet.has(lesson._id);
+  const watched = progress?.watchedSeconds ?? 0;
+  const durationSec = Math.max(lesson.duration, 1) * 60;
+  const watchedRatio = lessonDone ? 1 : Math.min(watched / durationSec, 1);
+  const canManualComplete = !lessonDone && (watchedRatio >= MANUAL_COMPLETE_RATIO || ytFailed);
+  const courseDoneCount = lessons.filter((l) => completedSet.has(l._id)).length;
+  const coursePct = lessons.length ? Math.round((courseDoneCount / lessons.length) * 100) : 0;
 
-  const addProductToCart = (item: MaterialItem) => {
+  const addItemToCart = (item: MaterialItem, silent = false) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
     if (item.type === "kit" && item.kitData) {
-      if (!isAuthenticated) {
-        navigate("/auth/login");
-        return;
-      }
-      const kitProducts = (item.kitData.products || []).map((kitProduct) => {
-        const product = kitProduct.productId;
-        const variant = product?.variants?.[0];
-        return {
-          productId: product._id,
-          variantId: kitProduct.variantId,
-          name: product.name,
-          image: variant?.image || product.image,
-          price: variant?.price || 0,
-        };
-      });
       addKitToCart({
         kitId: item.kitData._id,
         name: item.kitData.name,
         thumbnail: item.kitData.thumbnail,
         price: item.kitData.price,
-        products: kitProducts,
+        products: (item.kitData.products || []).map((kitProduct) => {
+          const product = kitProduct.productId;
+          const variant = product?.variants?.[0];
+          return {
+            productId: product._id,
+            variantId: kitProduct.variantId,
+            name: product.name,
+            image: variant?.image || product.image,
+            price: variant?.price || 0,
+          };
+        }),
       });
-      toast.success(`Added "${item.kitData.name}" to cart`);
-      return;
-    }
-
-    // For products, use API product data if available, otherwise mock
-    if (item.type === "product" && item.productData) {
+    } else if (item.type === "product" && item.productData) {
       const variant = item.productData.variants[0];
       addToCart({
         productId: item.productData._id,
@@ -628,71 +545,12 @@ export function LessonPage() {
         price: variant?.price || 0,
         stock: variant?.stock || 999,
       });
-      toast.success(`${item.productData.name} added to cart`);
-      return;
-    }
-
-    const product = products.find((p) => p.id === item.id);
-    if (!product) {
-      toast.error("Product not found");
-      return;
-    }
-    const variant = product.variants?.[0];
-    addToCart({
-      productId: product.id,
-      variantId: variant?.id || "default",
-      name: product.name,
-      image: product.image,
-      color: variant?.color || "",
-      hexCode: variant?.hexCode || "#ccc",
-      price: variant?.price || 0,
-      stock: variant?.stock || 999,
-    });
-    toast.success(`${product.name} added to cart`);
-  };
-
-  const addAllToCart = () => {
-    materials.forEach((item) => {
-      if (item.type === "kit" && item.kitData) {
-        const kitProducts = (item.kitData.products || []).map((kitProduct) => {
-          const product = kitProduct.productId;
-          const variant = product?.variants?.[0];
-          return {
-            productId: product._id,
-            variantId: kitProduct.variantId,
-            name: product.name,
-            image: variant?.image || product.image,
-            price: variant?.price || 0,
-          };
-        });
-        addKitToCart({
-          kitId: item.kitData._id,
-          name: item.kitData.name,
-          thumbnail: item.kitData.thumbnail,
-          price: item.kitData.price,
-          products: kitProducts,
-        });
-        return;
-      }
-
-      // For products, use API product data if available
-      if (item.type === "product" && item.productData) {
-        const variant = item.productData.variants[0];
-        addToCart({
-          productId: item.productData._id,
-          variantId: variant?._idVariants || "default",
-          name: item.productData.name,
-          image: variant?.image || item.productData.image,
-          color: variant?.color || "",
-          hexCode: variant?.hexCode || "#ccc",
-          price: variant?.price || 0,
-          stock: variant?.stock || 999,
-        });
-        return;
-      }
-
+    } else {
       const product = products.find((p) => p.id === item.id);
-      if (!product) return;
+      if (!product) {
+        if (!silent) toast.error("Không tìm thấy sản phẩm");
+        return;
+      }
       const variant = product.variants?.[0];
       addToCart({
         productId: product.id,
@@ -704,383 +562,290 @@ export function LessonPage() {
         price: variant?.price || 0,
         stock: variant?.stock || 999,
       });
-    });
-    toast.success("All lesson materials added to cart");
+    }
+    if (!silent) toast.success(`Đã thêm "${item.name}" vào giỏ`);
   };
 
+  const addAllToCart = () => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    materials.forEach((item) => addItemToCart(item, true));
+    toast.success("Đã thêm toàn bộ nguyên liệu của bài vào giỏ");
+  };
+
+  const lessonLink = (l: Lesson) => `/learn/${course._id}/lesson/${l._id}`;
+
   return (
-    <div className="min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <Button asChild variant="ghost" className="mb-2 px-0">
-              <Link to={`/learn/${course._id}`}>
-                <ArrowLeft className="size-4" /> Back to course
-              </Link>
-            </Button>
-            <Badge variant="secondary" className="mb-3">
-              Lesson {lesson.order} of {lessons.length}
-            </Badge>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-4xl">
-              {lesson.title}
-            </h1>
-            <p className="mt-2 text-muted-foreground">{course.title}</p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="size-4" /> {lesson.duration} min
-          </div>
+    <div className="cd-page">
+      <div className="cd-wrap">
+        {/* ── Thanh trên ── */}
+        <div className="lp-top">
+          <Link to={`/learn/${course._id}`} className="lp-back">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="truncate">{course.title}</span>
+          </Link>
+          <span className="lp-position">
+            Bài {position}/{lessons.length || "?"}
+          </span>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-          <main className="space-y-5">
-            <div className="w-full overflow-hidden rounded-2xl border bg-black shadow-sm">
-              {isYouTube ? (
-                <div
-                  ref={ytContainerRef}
+        <div className="lp-grid">
+          <main className="min-w-0 space-y-6">
+            {/* ── Video ── */}
+            <div className="lp-player">
+              {!canWatch ? (
+                <div className="lp-locked">
+                  <span className="lp-locked-icon">
+                    <Lock className="h-6 w-6" />
+                  </span>
+                  <p className="lp-locked-title">Bài học này dành cho học viên của khoá</p>
+                  <p className="lp-locked-desc">
+                    {(course.price ?? 0) > 0
+                      ? "Mua khoá học để xem toàn bộ bài giảng và lưu tiến độ."
+                      : "Đăng ký khoá học (miễn phí) để xem bài này và lưu tiến độ."}
+                  </p>
+                  <Link to={`/learn/${course._id}`} className="craft-btn">
+                    {(course.price ?? 0) > 0 ? `Mua khoá học · ${formatPrice(course.price ?? 0)}` : "Đăng ký học miễn phí"}
+                  </Link>
+                </div>
+              ) : isYouTube && youTubeId && !ytFailed ? (
+                <div ref={ytContainerRef} className="aspect-video w-full" />
+              ) : isYouTube && youTubeId ? (
+                <iframe
                   className="aspect-video w-full"
+                  src={`https://www.youtube.com/embed/${youTubeId}?rel=0`}
+                  title={lesson.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
                 />
               ) : (
                 <video
-                  ref={videoElementRef}
-                  src={videoUrl ?? lesson.videoUrl}
+                  src={lesson.videoUrl}
                   controls
-                  className="aspect-video w-full"
+                  preload="metadata"
+                  className="aspect-video w-full bg-black"
+                  onTimeUpdate={(e) =>
+                    lessonId && useLearnStore.getState().updateProgress(lessonId, Math.floor(e.currentTarget.currentTime))
+                  }
                   onEnded={() => persistLessonComplete()}
                 />
               )}
             </div>
 
-            <Card>
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="font-semibold">Progress</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {progress?.completed
-                        ? "Completed"
-                        : `${Math.floor(progress?.watchedSeconds ?? watchedSeconds)} seconds watched`}
-                    </p>
-                  </div>
-                  {progress?.completed && (
-                    <CheckCircle2 className="size-6 text-[var(--success-text)]" />
+            {/* ── Thông tin bài + tiến độ ── */}
+            <section className="lp-info">
+              <div className="min-w-0">
+                <p className="lp-eyebrow">
+                  Bài {position}
+                  {lesson.isPreview && !isEnrolled && <span className="cd-lesson-preview ml-2">Xem thử</span>}
+                </p>
+                <h1 className="lp-title">{lesson.title}</h1>
+                <p className="lp-meta">
+                  <Clock className="h-4 w-4" /> {lesson.duration} phút
+                  {materials.length > 0 && (
+                    <>
+                      {" "}
+                      · <YarnBallIcon size={14} /> {materials.length} nguyên liệu
+                    </>
                   )}
-                </div>
-                <Progress
-                  value={
-                    progress?.completed
-                      ? 100
-                      : Math.min(
-                          ((progress?.watchedSeconds ?? watchedSeconds) /
-                            (lesson.duration * 60)) *
-                            100,
-                          100,
-                        )
-                  }
-                />
-              </CardContent>
-            </Card>
-
-            {courseProgress && (
-              <Card>
-                <CardContent className="space-y-4 p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h2 className="font-semibold">Course progress</h2>
-                      <p className="text-sm text-muted-foreground">
-                        {courseProgress.completedLessons.length}/
-                        {lessons.length} lessons completed
-                      </p>
-                    </div>
-                    {courseProgress.isCompleted && (
-                      <Badge variant="success">
-                        <Award className="size-3.5" /> Certificate
-                      </Badge>
-                    )}
-                  </div>
-                  <Progress
-                    value={
-                      (courseProgress.completedLessons.length /
-                        Math.max(1, lessons.length)) *
-                      100
-                    }
-                  />
-                  {courseProgress.isCompleted && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <CheckCircle2 className="size-4 text-[var(--success-text)]" />
-                      Course completed — claim your certificate anytime.
-                    </p>
-                  )}
-                  {courseProgress.hasNewContent && (
-                    <div
-                      className="rounded-lg border p-3 text-sm"
-                      style={{
-                        borderColor: "var(--warning-border)",
-                        background: "var(--warning-bg)",
-                        color: "var(--warning-text)",
-                      }}
-                    >
-                      🎁 This course just got a new lesson — jump back in to
-                      see what's new!
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="flex flex-wrap justify-between gap-3">
-              <Button asChild variant="outline" disabled={!previousLesson}>
-                <Link
-                  to={
-                    previousLesson
-                      ? `/learn/${course._id}/lesson/${previousLesson._id}`
-                      : "#"
-                  }
-                >
-                  <ArrowLeft className="size-4" /> Previous lesson
-                </Link>
-              </Button>
-              <Button asChild disabled={!nextLesson}>
-                <Link
-                  to={
-                    nextLesson
-                      ? `/learn/${course._id}/lesson/${nextLesson._id}`
-                      : `/learn/${course._id}`
-                  }
-                >
-                  Next lesson <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-          </main>
-
-          <aside
-            style={{
-              borderRadius: "20px",
-              border: "1px solid var(--border)",
-              background: "var(--surface)",
-              boxShadow: "var(--shadow-card)",
-              padding: "22px",
-            }}
-            className="lg:sticky lg:top-24 lg:h-fit"
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: "16px",
-                marginBottom: "18px",
-              }}
-            >
-              <div>
-                <h2
-                  style={{
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: "1.2rem",
-                    fontWeight: 600,
-                    color: "var(--foreground)",
-                    letterSpacing: "-0.015em",
-                    margin: "0 0 4px",
-                  }}
-                >
-                  Materials in this lesson
-                </h2>
-                <p
-                  style={{
-                    fontFamily: "'Caveat', cursive",
-                    fontSize: "0.85rem",
-                    color: "var(--foreground-muted)",
-                    margin: 0,
-                  }}
-                >
-                  Products and combos tagged in this lesson.
                 </p>
               </div>
-              <span
-                style={{
-                  flexShrink: 0,
-                  minWidth: "26px",
-                  height: "26px",
-                  padding: "0 8px",
-                  borderRadius: "999px",
-                  border: "1px solid var(--border)",
-                  background: "var(--background)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  color: "var(--foreground-muted)",
-                }}
-              >
-                {materials.length}
-              </span>
-            </div>
 
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              {materials.map((item) => {
-                const to =
-                  item.type === "kit"
-                    ? `/kits/${item.id}`
-                    : `/shop/product/${item.id}`;
-                return (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    style={{
-                      display: "flex",
-                      gap: "12px",
-                      alignItems: "center",
-                      padding: "12px",
-                      borderRadius: "16px",
-                      border: "1px solid var(--border)",
-                      background: "var(--background)",
-                      transition: "box-shadow 0.2s",
-                    }}
-                  >
-                    <Link to={to} style={{ flexShrink: 0 }}>
-                      {item.thumbnail ? (
-                        <img
-                          src={item.thumbnail}
-                          alt={item.name}
-                          style={{
-                            width: "64px",
-                            height: "64px",
-                            borderRadius: "12px",
-                            objectFit: "cover",
-                            border: "1px solid var(--border)",
-                            display: "block",
-                          }}
-                        />
+              {canWatch && (
+                <div className={cn("lp-progress-card", lessonDone && "is-done")}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold">
+                      {lessonDone ? (
+                        <span className="inline-flex items-center gap-1.5 text-[var(--success-text)]">
+                          <CheckCircle2 className="h-4 w-4" /> Đã học xong bài này
+                        </span>
+                      ) : ytFailed ? (
+                        "Xem hết video rồi bấm đánh dấu đã học"
                       ) : (
-                        <div
-                          style={{
-                            width: "64px",
-                            height: "64px",
-                            borderRadius: "12px",
-                            background: "var(--accent-pink)",
-                            border: "1px solid var(--border)",
-                          }}
-                        />
+                        <>Đã xem {formatClock(watched)} / {lesson.duration}:00</>
                       )}
-                    </Link>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "1px 8px",
-                          marginBottom: "4px",
-                          borderRadius: "999px",
-                          border: "1px solid var(--border)",
-                          fontFamily: "'Poppins', sans-serif",
-                          fontSize: "0.58rem",
-                          fontWeight: 700,
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          color:
-                            item.type === "kit"
-                              ? "var(--primary)"
-                              : "var(--foreground-muted)",
-                          background:
-                            item.type === "kit"
-                              ? "var(--accent-pink)"
-                              : "var(--surface)",
-                        }}
+                    </p>
+                    {!lessonDone && (
+                      <button
+                        type="button"
+                        className="craft-btn-ghost cd-small-btn"
+                        disabled={!canManualComplete}
+                        onClick={persistLessonComplete}
+                        title={
+                          canManualComplete
+                            ? "Đánh dấu bài này là đã học"
+                            : `Xem ít nhất ${Math.round(MANUAL_COMPLETE_RATIO * 100)}% video để đánh dấu`
+                        }
                       >
-                        {item.type === "kit" ? "Combo" : "Product"}
-                      </span>
-                      <Link to={to} style={{ textDecoration: "none" }}>
-                        <h3
-                          style={{
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                            color: "var(--foreground)",
-                            lineHeight: 1.3,
-                            margin: 0,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical" as const,
-                            overflow: "hidden",
-                          }}
-                        >
-                          {item.name}
-                        </h3>
-                      </Link>
-                      <p
-                        style={{
-                          fontFamily: "'Playfair Display', serif",
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                          color: "var(--primary)",
-                          margin: "4px 0 0",
-                        }}
-                      >
-                        {formatPrice(item.price)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => addProductToCart(item)}
-                      style={{
-                        flexShrink: 0,
-                        padding: "7px 14px",
-                        borderRadius: "999px",
-                        border: "1.5px solid var(--primary)",
-                        background: "var(--background)",
-                        color: "var(--primary)",
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: "0.78rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Add
-                    </button>
+                        <Check className="h-4 w-4" /> Đánh dấu đã học xong
+                      </button>
+                    )}
                   </div>
-                );
-              })}
-              {materials.length === 0 && (
-                <p
-                  style={{
-                    padding: "32px 0",
-                    textAlign: "center",
-                    fontFamily: "'Caveat', cursive",
-                    fontSize: "0.9rem",
-                    color: "var(--foreground-muted)",
-                  }}
+                  <div className="cd-progress mt-3">
+                    <span style={{ width: `${Math.round(watchedRatio * 100)}%` }} />
+                  </div>
+                  {!isEnrolled && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Bạn đang xem thử — đăng ký khoá học để lưu tiến độ trên mọi thiết bị.
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* ── Chuyển bài ── */}
+            <nav className="lp-nav" aria-label="Chuyển bài">
+              {previousLesson ? (
+                <Link to={lessonLink(previousLesson)} className="lp-nav-card">
+                  <span className="lp-nav-label">
+                    <ArrowLeft className="h-4 w-4" /> Bài trước
+                  </span>
+                  <span className="lp-nav-title">{previousLesson.title}</span>
+                </Link>
+              ) : (
+                <span />
+              )}
+              {nextLesson ? (
+                <Link
+                  to={nextOpen ? lessonLink(nextLesson) : `/learn/${course._id}`}
+                  className="lp-nav-card is-next"
                 >
-                  No materials tagged in this lesson yet.
+                  <span className="lp-nav-label">
+                    {nextOpen ? "Bài tiếp theo" : "Đăng ký để học tiếp"} <ArrowRight className="h-4 w-4" />
+                  </span>
+                  <span className="lp-nav-title">
+                    {!nextOpen && <Lock className="mr-1 inline h-3.5 w-3.5" />}
+                    {nextLesson.title}
+                  </span>
+                </Link>
+              ) : (
+                <Link to={`/learn/${course._id}`} className="lp-nav-card is-next is-finish">
+                  <span className="lp-nav-label">
+                    <Award className="h-4 w-4" /> Bài cuối
+                  </span>
+                  <span className="lp-nav-title">
+                    {courseProgress?.isCompleted ? "Bạn đã hoàn thành khoá học 🎉" : "Về trang khoá học"}
+                  </span>
+                </Link>
+              )}
+            </nav>
+          </main>
+
+          <aside className="lp-aside">
+            {/* ── Danh sách bài ── */}
+            <section className="lp-panel">
+              <div className="lp-panel-head">
+                <span className="craft-section-icon">
+                  <BookOpen className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="lp-panel-title">Nội dung khoá học</h2>
+                  <p className="lp-panel-sub">
+                    {isEnrolled ? `Đã học ${courseDoneCount}/${lessons.length} bài · ${coursePct}%` : `${lessons.length} bài học`}
+                  </p>
+                </div>
+              </div>
+              {isEnrolled && (
+                <div className="cd-progress mb-3">
+                  <span style={{ width: `${coursePct}%` }} />
+                </div>
+              )}
+              {courseProgress?.hasNewContent && (
+                <p className="cd-notice mb-3">
+                  <Gift className="h-4 w-4" /> Khoá học vừa có bài mới!
                 </p>
               )}
-            </div>
+              <ol className="lp-lessons">
+                {lessons.map((l, index) => {
+                  const current = l._id === lesson._id;
+                  const done = completedSet.has(l._id) || (current && lessonDone);
+                  const open = canWatchLesson({ lesson: l, isEnrolled, role: user?.roleId });
+                  const content = (
+                    <>
+                      <span className={cn("cd-lesson-knot is-small", done && "is-done", current && "is-next")}>
+                        {done ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : index + 1}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="lp-lesson-title">{l.title}</span>
+                        <span className="lp-lesson-meta">{l.duration} phút</span>
+                      </span>
+                      {current ? (
+                        <Play className="h-3.5 w-3.5 shrink-0 fill-current text-[var(--primary)]" />
+                      ) : !open ? (
+                        <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--foreground-subtle)]" />
+                      ) : null}
+                    </>
+                  );
+                  return (
+                    <li key={l._id}>
+                      {open && !current ? (
+                        <Link to={lessonLink(l)} className="lp-lesson">
+                          {content}
+                        </Link>
+                      ) : (
+                        <div className={cn("lp-lesson", current && "is-current", !open && "is-locked")} aria-current={current ? "step" : undefined}>
+                          {content}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
 
-            {materials.length > 0 && (
-              <button
-                onClick={addAllToCart}
-                style={{
-                  width: "100%",
-                  marginTop: "18px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  padding: "13px",
-                  borderRadius: "999px",
-                  border: "none",
-                  background: "var(--primary)",
-                  color: "var(--primary-foreground)",
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  boxShadow: "0 6px 20px rgba(107,63,160,0.28)",
-                }}
-              >
-                <ShoppingCart className="size-4" /> Add all to cart
-              </button>
-            )}
+            {/* ── Nguyên liệu ── */}
+            <section className="lp-panel">
+              <div className="lp-panel-head">
+                <span className="craft-section-icon">
+                  <YarnBallIcon size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="lp-panel-title">Nguyên liệu trong bài</h2>
+                  <p className="lp-panel-sub">Sản phẩm và combo dùng trong video</p>
+                </div>
+              </div>
+
+              {materials.length === 0 ? (
+                <p className="lp-empty">Bài này chưa gắn nguyên liệu.</p>
+              ) : (
+                <>
+                  <ul className="cd-products">
+                    {materials.map((item) => {
+                      const to = item.type === "kit" ? `/kits/${item.id}` : `/shop/product/${item.id}`;
+                      return (
+                        <li key={`${item.type}-${item.id}`} className="cd-product">
+                          <Link to={to} className="cd-product-thumb">
+                            {item.thumbnail ? <img src={item.thumbnail} alt={item.name} /> : <Package className="h-5 w-5" />}
+                          </Link>
+                          <div className="min-w-0 flex-1">
+                            {item.type === "kit" && <span className="cd-kit-tag is-inline">Combo</span>}
+                            <Link to={to} className="cd-product-name">
+                              {item.name}
+                            </Link>
+                            <span className="cd-product-price">{formatPrice(item.price)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="cd-product-add"
+                            onClick={() => addItemToCart(item)}
+                            aria-label={`Thêm ${item.name} vào giỏ`}
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {materials.length > 1 && (
+                    <button type="button" className="craft-btn mt-4 w-full" onClick={addAllToCart}>
+                      <ShoppingCart className="h-4 w-4" /> Thêm tất cả vào giỏ
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
           </aside>
         </div>
       </div>

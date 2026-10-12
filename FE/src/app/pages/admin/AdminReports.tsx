@@ -20,6 +20,7 @@ import {
   AdminListSkeleton,
   AdminTableBodySkeleton,
 } from "../../../shared/components/skeletons/AdminSkeleton";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 type ApiUser = UsersListResponse["result"]["users"][0];
 
@@ -254,12 +255,10 @@ export function AdminReports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div>
-          <h1 className="mb-2">Order Reports</h1>
-          <p className="text-muted-foreground">Customer issue reports and complaints management</p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Order Reports"
+        subtitle="Customer issue reports and complaints management"
+      />
 
       {/* Search & Filter — search dùng chung (debounce 400ms) */}
       <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>

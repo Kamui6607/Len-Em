@@ -1,12 +1,20 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { motion } from "motion/react";
-import { Heart, ShoppingBag, Bookmark, PackageOpen, Hand } from "lucide-react";
+import {
+  Heart,
+  ShoppingBag,
+  Bookmark,
+  PackageOpen,
+  HeartHandshake,
+  Sparkles,
+  Clock,
+  Flame,
+  LayoutGrid,
+  Eye,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../../shared/components/ui/avatar";
-import { Badge } from "../../shared/components/ui/badge";
-import { Button } from "../../shared/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "../../shared/components/ui/tabs";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
@@ -17,6 +25,8 @@ import type { DIYCreator, DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "../../shared/components/ui/ResponsiveImage";
 import { CreateDIYPostModal } from "../../features/diy/components/CreateDIYPostModal";
+import { EmptyHoopIllustration } from "./shop/CartPage";
+import "../../styles/craft.css";
 import "../../styles/diy-feed.css";
 
 type FeedFilter = "all" | "newest" | "purchased";
@@ -144,16 +154,6 @@ export function DIYFeedPage() {
     );
   });
 
-  // Debug: log search state
-  useEffect(() => {
-    console.log(
-      "DIYFeedPage - searchQuery:",
-      searchQuery,
-      "filteredPosts:",
-      filteredPosts.length,
-    );
-  }, [searchQuery, filteredPosts]);
-
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     if (filter === "newest") {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -168,31 +168,31 @@ export function DIYFeedPage() {
     () => approvedPosts.reduce((sum, p) => sum + (p.likeCount ?? 0), 0),
     [approvedPosts],
   );
-  const heroImages = useMemo(
-    () =>
-      approvedPosts
-        .slice(0, 3)
-        .map((p) => p.images[0])
-        .filter(Boolean),
+  // 3 bài đầu treo lên "dây phơi ảnh" trong hero
+  const heroPosts = useMemo(
+    () => approvedPosts.filter((p) => p.images[0]).slice(0, 3),
     [approvedPosts],
   );
+
+  const filterOptions: { value: FeedFilter; label: string; icon: typeof Clock }[] = [
+    { value: "all", label: t("diyFeed.all"), icon: LayoutGrid },
+    { value: "newest", label: t("diyFeed.newest"), icon: Clock },
+    { value: "purchased", label: t("diyFeed.mostPurchased"), icon: Flame },
+  ];
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
         <div className="mx-auto max-w-7xl">
-          <section className="mb-8 h-[220px] animate-pulse rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background md:h-[260px]" />
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="craft-skeleton mb-10 h-[280px] rounded-[32px] md:h-[340px]" />
+          <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="overflow-hidden rounded-2xl border bg-card shadow-sm"
-              >
-                <div className="aspect-[4/5] w-full animate-pulse bg-muted" />
-                <div className="space-y-2.5 p-3 md:p-4">
-                  <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
-                  <div className="h-4 w-full animate-pulse rounded bg-muted" />
-                  <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+              <div key={i} className="overflow-hidden rounded-[22px] border border-border bg-card">
+                <div className="craft-skeleton aspect-[4/5] w-full rounded-none" />
+                <div className="space-y-2.5 p-4">
+                  <div className="craft-skeleton h-3 w-2/3" />
+                  <div className="craft-skeleton h-4 w-full" />
+                  <div className="craft-skeleton h-3 w-1/3" />
                 </div>
               </div>
             ))}
@@ -205,104 +205,107 @@ export function DIYFeedPage() {
   return (
     <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
       <div className="mx-auto max-w-7xl">
-        {/* Hero */}
-        <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background p-6 md:p-10">
-          <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-primary/10 blur-3xl" />
-          <div className="grid items-center gap-8 lg:grid-cols-[1.3fr_1fr]">
+        {/* ── Hero: góc sáng tạo + dây phơi ảnh ── */}
+        <section className="craft-hero craft-rise mb-10">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr]">
             <div>
-              <Badge variant="secondary" className="mb-4">
-                {t("nav.diy")}
-              </Badge>
-              <h1 className="mb-3 text-3xl font-semibold tracking-tight md:text-5xl">
-                {t("diyFeed.headline")}
-              </h1>
-              <p className="max-w-xl text-muted-foreground md:text-lg">
-                {t("diyFeed.subtitle")}
-              </p>
+              <span className="craft-eyebrow">Góc sáng tạo của cộng đồng</span>
+              <h1 className="craft-title">{t("diyFeed.headline")}</h1>
+              <div className="craft-stitch" aria-hidden />
+              <p className="craft-subtitle">{t("diyFeed.subtitle")}</p>
+
+              <div className="mt-7 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => requireAuth(() => setPostOpen(true))}
+                  className="craft-btn"
+                >
+                  <Sparkles className="size-4" />
+                  Đăng tác phẩm
+                </button>
+                <Link to="/support-diy/new" className="craft-btn-ghost">
+                  <HeartHandshake className="size-4" />
+                  Cần hỗ trợ DIY?
+                </Link>
+              </div>
 
               {approvedPosts.length > 0 && (
-                <div className="mt-6 flex flex-wrap gap-6">
-                  <div>
-                    <p className="text-2xl font-semibold leading-none">
-                      {approvedPosts.length}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {t("diyFeed.all")}
-                    </p>
+                <div className="craft-stats">
+                  <div className="craft-stat">
+                    <span className="craft-stat-icon">
+                      <PackageOpen className="size-4" />
+                    </span>
+                    <div>
+                      <p className="craft-stat-num">{approvedPosts.length}</p>
+                      <p className="craft-stat-label">dự án</p>
+                    </div>
                   </div>
-                  <div className="h-9 w-px bg-border" />
-                  <div>
-                    <p className="text-2xl font-semibold leading-none">
-                      {totalLikes.toLocaleString()}
-                    </p>
-                    <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                      <Heart className="size-3.5" />{" "}
-                      {t("diyFeed.bought") ? "yêu thích" : "likes"}
-                    </p>
+                  <div className="craft-stat">
+                    <span className="craft-stat-icon">
+                      <Heart className="size-4" />
+                    </span>
+                    <div>
+                      <p className="craft-stat-num">{totalLikes.toLocaleString()}</p>
+                      <p className="craft-stat-label">lượt thích</p>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {heroImages.length > 0 && (
-              <div className="relative hidden h-56 lg:block">
-                {heroImages.map((src, i) => (
-                  <motion.img
-                    key={src + i}
-                    src={src}
-                    alt=""
-                    initial={{ opacity: 0, y: 16 }}
+            {heroPosts.length > 0 && (
+              <div className="diy-clothesline" aria-hidden>
+                <svg
+                  className="diy-clothesline-thread"
+                  viewBox="0 0 400 60"
+                  preserveAspectRatio="none"
+                >
+                  <path d="M0 14 Q200 64 400 14" />
+                </svg>
+                {heroPosts.map((post, i) => (
+                  <motion.figure
+                    key={post._id}
+                    className={`diy-polaroid diy-polaroid-${i}`}
+                    initial={{ opacity: 0, y: -18 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: i * 0.1 }}
-                    className="absolute size-40 rounded-2xl border-4 border-background object-cover shadow-xl"
-                    style={{
-                      right: `${i * 44}px`,
-                      top: `${i * 28}px`,
-                      zIndex: 3 - i,
-                      transform: `rotate(${(i - 1) * 4}deg)`,
-                    }}
-                  />
+                    transition={{ duration: 0.5, delay: 0.15 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span className="diy-polaroid-pin" />
+                    <img src={post.images[0]} alt="" loading="lazy" />
+                    <figcaption>{post.title}</figcaption>
+                  </motion.figure>
                 ))}
               </div>
             )}
           </div>
         </section>
 
-        {/* Filters */}
-        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <Tabs
-            value={filter}
-            onValueChange={(value) => setFilter(value as FeedFilter)}
-          >
-            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 sm:w-fit">
-              <TabsTrigger value="all">{t("diyFeed.all")}</TabsTrigger>
-              <TabsTrigger value="newest">{t("diyFeed.newest")}</TabsTrigger>
-              <TabsTrigger value="purchased">
-                {t("diyFeed.mostPurchased")}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link to="/support-diy/new" className="diy-support-btn">
-              <Hand className="w-5 h-5" />
-              <span>Hỗ trợ DIY</span>
-            </Link>
-            <button
-              type="button"
-              onClick={() => requireAuth(() => setPostOpen(true))}
-              className="diy-post-btn"
-            >
-              <PackageOpen className="size-4" />
-              Post sản phẩm
-            </button>
+        {/* ── Thanh sắp xếp ── */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="craft-seg" role="tablist" aria-label="Sắp xếp">
+            {filterOptions.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={filter === value}
+                onClick={() => setFilter(value)}
+                className={`craft-seg-btn ${filter === value ? "is-active" : ""}`}
+              >
+                <Icon className="size-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-3 lg:max-w-sm lg:flex-1">
-            <div className="w-full sm:w-auto" />
-            <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
-              {sortedPosts.length} kết quả
-            </span>
-          </div>
+          <p className="diy-result-count">
+            {searchQuery ? (
+              <>
+                {sortedPosts.length} kết quả cho <strong>“{searchQuery}”</strong>
+              </>
+            ) : (
+              <>{sortedPosts.length} dự án đang chờ bạn</>
+            )}
+          </p>
         </div>
 
         {postOpen && (
@@ -315,30 +318,37 @@ export function DIYFeedPage() {
           />
         )}
 
-        {/* Grid / empty state */}
+        {/* ── Lưới tác phẩm / empty state ── */}
         {sortedPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
-            <PackageOpen className="mb-3 size-10 text-muted-foreground" />
-            <p className="font-medium">Không tìm thấy công thức nào</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Thử một từ khóa khác hoặc xóa bộ lọc
+          <div className="craft-empty">
+            <EmptyHoopIllustration size={160} />
+            <p className="craft-empty-title">Chưa tìm thấy dự án nào</p>
+            <p className="craft-empty-desc">
+              {searchQuery
+                ? "Thử một từ khoá khác, hoặc xem toàn bộ dự án của cộng đồng."
+                : "Hãy là người đầu tiên chia sẻ tác phẩm handmade của bạn nhé."}
             </p>
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 type="button"
-                className="empty-state-cta"
-                onClick={() => {
-                  const newUrl = location.pathname;
-                  navigate(newUrl, { replace: true });
-                }}
-                style={{ marginTop: "16px" }}
+                className="craft-btn-ghost"
+                onClick={() => navigate(location.pathname, { replace: true })}
               >
-                Clear search
+                Xoá tìm kiếm
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="craft-btn"
+                onClick={() => requireAuth(() => setPostOpen(true))}
+              >
+                <Sparkles className="size-4" />
+                Đăng tác phẩm
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
             {sortedPosts.map((post, index) => {
               const creator = getPostCreator(post);
               const saved = isDIYPostSaved(post._id);
@@ -347,66 +357,62 @@ export function DIYFeedPage() {
                   key={post._id}
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: index * 0.045 }}
-                  className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-xl"
+                  transition={{ duration: 0.4, delay: Math.min(index, 10) * 0.045 }}
+                  className="diy-card group"
                 >
-                  <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                  <div className="diy-card-media">
                     <ResponsiveImage
                       src={post.images[0]}
                       alt={post.title}
-                      className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
 
                     <button
                       type="button"
                       onClick={() => requireAuth(() => savePost(post))}
                       aria-label={saved ? "Bỏ lưu" : "Lưu công thức"}
-                      className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-background"
+                      aria-pressed={saved}
+                      className={`diy-card-save ${saved ? "is-saved" : ""}`}
                     >
-                      <Bookmark
-                        className={
-                          saved ? "size-4 fill-primary text-primary" : "size-4"
-                        }
-                      />
+                      <Bookmark className="size-4" />
                     </button>
 
                     {post.purchaseCount != null && post.purchaseCount > 0 && (
-                      <Badge className="absolute left-2 top-2 z-10 bg-background/80 text-foreground backdrop-blur">
-                        {post.purchaseCount.toLocaleString()}{" "}
-                        {t("diyFeed.bought")}
-                      </Badge>
+                      <span className="diy-card-sold">
+                        <Flame className="size-3" />
+                        {post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}
+                      </span>
                     )}
 
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 pt-10 opacity-100 md:opacity-0 md:transition-opacity group-hover:md:opacity-100">
-                      <Button asChild size="sm" variant="secondary">
-                        <Link
-                          to={`/diy/${post._id}`}
-                          onClick={(e) => {
-                            if (!isAuthenticated) {
-                              e.preventDefault();
-                              navigate("/auth/login");
-                            }
-                          }}
-                        >
-                          {t("diyFeed.viewMaterial")}
-                        </Link>
-                      </Button>
-                      <Button
-                        size="sm"
+                    <div className="diy-card-actions">
+                      <Link
+                        to={`/diy/${post._id}`}
+                        className="diy-card-action is-light"
+                        onClick={(e) => {
+                          if (!isAuthenticated) {
+                            e.preventDefault();
+                            navigate("/auth/login");
+                          }
+                        }}
+                      >
+                        <Eye className="size-3.5" />
+                        {t("diyFeed.viewMaterial")}
+                      </Link>
+                      <button
+                        type="button"
+                        className="diy-card-action is-primary"
                         onClick={() => requireAuth(() => buyCombo(post))}
                       >
-                        <ShoppingBag className="size-4" /> {t("diyFeed.buyNow")}
-                      </Button>
+                        <ShoppingBag className="size-3.5" />
+                        {t("diyFeed.buyNow")}
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex flex-1 flex-col gap-2.5 p-3 md:p-4">
+                  <div className="diy-card-body">
                     <div className="flex items-center gap-2">
-                      <Avatar className="size-6">
-                        <AvatarImage
-                          src={creator?.avatar}
-                          alt={creator?.fullName}
-                        />
+                      <Avatar className="size-6 ring-2 ring-[var(--card)]">
+                        <AvatarImage src={creator?.avatar} alt={creator?.fullName} />
                         <AvatarFallback className="text-[10px]">
                           {creator?.fullName?.charAt(0) || "C"}
                         </AvatarFallback>
@@ -416,35 +422,27 @@ export function DIYFeedPage() {
                       </p>
                     </div>
 
-                    <Link
-                      to={`/diy/${post._id}`}
-                      className="line-clamp-2 min-h-[2.5em] font-semibold leading-tight hover:text-primary"
-                    >
+                    <Link to={`/diy/${post._id}`} className="diy-card-title">
                       {post.title}
                     </Link>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {post.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-auto flex items-center justify-between pt-1">
-                      <span className="font-semibold text-primary">
-                        {post.price != null && post.price > 0 ? (
-                          formatPrice(post.price)
-                        ) : (
-                          <span className="font-normal text-muted-foreground">
-                            {t("diyFeed.free")}
+                    {post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {post.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="craft-tag">
+                            #{tag}
                           </span>
-                        )}
-                      </span>
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="diy-card-foot">
+                      {post.price != null && post.price > 0 ? (
+                        <span className="diy-card-price">{formatPrice(post.price)}</span>
+                      ) : (
+                        <span className="diy-card-free">{t("diyFeed.free")}</span>
+                      )}
+                      <span className="diy-card-likes">
                         <Heart className="size-3.5" />
                         {post.likeCount.toLocaleString()}
                       </span>

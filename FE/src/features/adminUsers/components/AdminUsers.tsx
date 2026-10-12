@@ -7,6 +7,7 @@ import { AdminUsersDialogs } from "./AdminUsersDialogs";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { AdminSearchInput } from "../../../shared/components/admin/AdminSearch";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 export function AdminUsers() {
   const isMobile = useIsMobile();
@@ -18,22 +19,22 @@ export function AdminUsers() {
 
   const content = isMobile ? (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="mb-2">{controller.t("admin.users.title")}</h1>
-          <p className="text-muted-foreground">
-            {controller.isAdmin
-              ? controller.t("admin.users.manageUsers")
-              : controller.t("admin.users.viewRegisteredUsers")}
-          </p>
-        </div>
-        {controller.isAdmin && (
-          <CreateButton
-            label={controller.t("admin.users.createUser")}
-            onClick={controller.openCreateModal}
-          />
-        )}
-      </div>
+      <AdminPageHeader
+        title={controller.t("admin.users.title")}
+        subtitle={
+          controller.isAdmin
+            ? controller.t("admin.users.manageUsers")
+            : controller.t("admin.users.viewRegisteredUsers")
+        }
+        actions={
+          controller.isAdmin && (
+            <CreateButton
+              label={controller.t("admin.users.createUser")}
+              onClick={controller.openCreateModal}
+            />
+          )
+        }
+      />
       <section
         className="admin-panel-glow overflow-hidden rounded-2xl border"
         style={{ borderColor: "var(--border)" }}

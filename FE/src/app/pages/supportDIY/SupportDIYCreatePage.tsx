@@ -1,7 +1,18 @@
 import { useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
-import { useNavigate } from "react-router";
-import { ArrowLeft, ImagePlus, Plus, Send, Trash2, X, HelpCircle, Tag, ShoppingBag, Wallet } from "lucide-react";
+import type { ChangeEvent, ReactNode } from "react";
+import { Link, useNavigate } from "react-router";
+import {
+  ArrowLeft,
+  Check,
+  ImagePlus,
+  MessageCircleHeart,
+  Plus,
+  Send,
+  ShoppingBag,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supportDIYService } from "../../../features/supportDIY/services/supportDIY.service";
 import type { CreateSupportDIYDTO } from "../../../features/supportDIY/types/supportDIY.types";
@@ -10,6 +21,8 @@ import {
   ProductSelectDropdown,
   type ProductSelectOption,
 } from "../../../shared/components/ProductSelectDropdown";
+import { formatPrice } from "../../../lib/formatPrice";
+import "../../../styles/craft.css";
 import "../../../styles/supportDIY.css";
 
 interface ComboItem {
@@ -19,6 +32,13 @@ interface ComboItem {
   price: number;
   quantity: number;
 }
+
+/** Các bước đội ngũ hỗ trợ sau khi nhận yêu cầu — hiển thị ở cột phải */
+const SUPPORT_FLOW = [
+  { title: "Gửi yêu cầu", desc: "Kể vấn đề kèm ảnh nếu có" },
+  { title: "Len&em phản hồi", desc: "Bạn nhận thông báo khi có trả lời" },
+  { title: "Cùng hoàn thiện", desc: "Gợi ý cách làm và nguyên liệu phù hợp" },
+];
 
 export function SupportDIYCreatePage() {
   const navigate = useNavigate();
@@ -51,15 +71,15 @@ export function SupportDIYCreatePage() {
     [productsQuery.data],
   );
 
-  // Lightweight progress signal — encodes how much of the request is filled in.
-  const stepsDone = useMemo(() => {
-    let done = 0;
-    if (title.trim()) done += 1;
-    if (description.trim()) done += 1;
-    if (imagePreviews.length > 0) done += 1;
-    if (tags.length > 0) done += 1;
-    return done;
-  }, [title, description, imagePreviews, tags]);
+  // Tiến độ điền form — mỗi phần là một "mũi khâu" trên thanh tiến trình.
+  const steps = [
+    { label: "Vấn đề", done: Boolean(title.trim() && description.trim()) },
+    { label: "Hình ảnh", done: imagePreviews.length > 0 },
+    { label: "Thẻ", done: tags.length > 0 },
+    { label: "Ngân sách", done: price > 0 },
+  ];
+  const stepsDone = steps.filter((s) => s.done).length;
+  const canSubmit = Boolean(title.trim() && description.trim());
 
   const handleImagesChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -118,257 +138,340 @@ export function SupportDIYCreatePage() {
   };
 
   return (
-    <div className="diy-create-page min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-10">
-      <div className="mx-auto max-w-8xl">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-4">
-          <button onClick={() => navigate("/diy")} className="diy-btn-icon mt-1" aria-label="Quay lại">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1">
-            <div className="flex items-center justify-between gap-3">
-              <h1 className="mb-1 text-lg font-semibold">Cần hỗ trợ DIY?</h1>
-              <span className="diy-progress-pill" aria-label={`Đã hoàn thành ${stepsDone}/4 phần`}>
-                {stepsDone}/4
-              </span>
+    <div className="min-h-screen bg-background px-4 py-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+      <div className="mx-auto max-w-6xl">
+        <Link to="/diy" className="support-back">
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại Góc sáng tạo
+        </Link>
+
+        {/* ── Hero + tiến trình ── */}
+        <section className="craft-hero craft-rise support-hero">
+          <div className="support-hero-row">
+            <div className="min-w-0">
+              <span className="craft-eyebrow">Hỗ trợ DIY</span>
+              <h1 className="craft-title">
+                Đang vướng ở mũi nào? <em>Kể mình nghe.</em>
+              </h1>
+              <div className="craft-stitch" aria-hidden />
+              <p className="craft-subtitle">
+                Kể cho mình nghe bạn đang vướng ở đâu, đội ngũ Len&em sẽ đồng hành cùng bạn
+                hoàn thành dự án.
+              </p>
             </div>
-            <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
-              Kể cho mình nghe bạn đang vướng ở đâu, đội ngũ Len&em sẽ đồng hành cùng bạn hoàn thành dự án.
-            </p>
+
+            <div className="support-progress" aria-label={`Đã hoàn thành ${stepsDone}/4 phần`}>
+              <p className="support-progress-label">
+                <strong>{stepsDone}</strong>/4 phần đã điền
+              </p>
+              <ol className="support-progress-thread">
+                {steps.map((step, i) => (
+                  <li key={step.label} className={step.done ? "is-done" : ""}>
+                    {i > 0 && <span className="support-progress-line" aria-hidden />}
+                    <span className="support-progress-knot">
+                      {step.done ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}
+                    </span>
+                    <span className="support-progress-name">{step.label}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="diy-panel rounded-3xl border p-5 md:p-6 space-y-5">
-          {/* Layout chính: trái = lưới 2x2 (4 field-card), phải = 1 card lớn
-              (Sản phẩm liên quan) cao bằng đúng khối 2x2 bên trái */}
-          <div className="grid gap-5 md:grid-cols-2 md:items-stretch">
-            {/* ── Trái: 2 hàng x 2 cột ── */}
-            <div className="diy-fields-grid">
-              {/* Ô 1: thông tin cơ bản */}
-              <div className="diy-field-card diy-field-card--info">
-                <div className="diy-field-card-head">
-                  <span className="diy-card-icon">
-                    <HelpCircle className="w-4 h-4" />
-                  </span>
-                  <h2 className="text-sm font-semibold">Bạn cần giúp gì?</h2>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
-                      Tiêu đề <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="diy-input w-full"
-                      placeholder="Ví dụ: Mình đang gặp khó với túi crochet"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-medium" style={{ color: "var(--foreground-muted)" }}>
-                        Mô tả chi tiết <span className="text-destructive">*</span>
-                      </label>
-                      <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
-                        {description.trim().length} ký tự
-                      </span>
-                    </div>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="diy-input w-full resize-none"
-                      placeholder="Bạn đang làm đến bước nào, gặp vướng mắc gì? Mô tả càng cụ thể, mình hỗ trợ càng chính xác."
-                    />
-                  </div>
-
-                  <div className="diy-helper-note rounded-xl px-3.5 py-2.5 text-xs" style={{ color: "var(--foreground-muted)" }}>
-                    Không cần viết hoàn hảo — cứ kể tự nhiên như đang nhắn tin cho một người bạn biết đan len.
-                  </div>
-                </div>
-              </div>
-
-              {/* Ô 2: hình ảnh */}
-              <div className="diy-field-card">
-                <div className="diy-field-card-head">
-                  <span className="diy-card-icon">
-                    <ImagePlus className="w-4 h-4" />
-                  </span>
-                  <h2 className="text-sm font-semibold">
-                    Hình ảnh <span className="font-normal" style={{ color: "var(--foreground-muted)" }}>(không bắt buộc)</span>
-                  </h2>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <label className="diy-upload-tile flex flex-col items-center justify-center gap-1 w-20 h-20 rounded-xl border-2 border-dashed cursor-pointer">
-                    <input type="file" accept="image/*" multiple onChange={handleImagesChange} className="hidden" />
-                    <ImagePlus className="w-5 h-5 diy-upload-icon" style={{ color: "var(--foreground-muted)" }} />
-                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>Thêm ảnh</span>
+        <div className="support-layout">
+          {/* ── Cột trái: các bước điền form ── */}
+          <div className="support-steps">
+            <SupportStep
+              n={1}
+              title="Bạn cần giúp gì?"
+              hint="Bắt buộc"
+              done={steps[0].done}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="support-label" htmlFor="support-title">
+                    Tiêu đề <span className="text-destructive">*</span>
                   </label>
-                  {imagePreviews.map((preview, i) => (
-                    <div key={i} className="diy-image-thumb diy-fade-in w-20 h-20 rounded-xl overflow-hidden border">
-                      <img src={preview} alt="" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(i)}
-                        aria-label="Xoá ảnh"
-                        className="diy-image-remove absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  <input
+                    id="support-title"
+                    type="text"
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="diy-input w-full"
+                    placeholder="Ví dụ: Mình đang gặp khó với túi crochet"
+                  />
                 </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="support-label" htmlFor="support-desc">
+                      Mô tả chi tiết <span className="text-destructive">*</span>
+                    </label>
+                    <span className="support-counter">{description.trim().length} ký tự</span>
+                  </div>
+                  <textarea
+                    id="support-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={5}
+                    className="diy-input w-full resize-y"
+                    placeholder="Bạn đang làm đến bước nào, gặp vướng mắc gì? Mô tả càng cụ thể, mình hỗ trợ càng chính xác."
+                  />
+                </div>
+                <p className="support-note">
+                  <MessageCircleHeart className="w-4 h-4 flex-shrink-0" />
+                  Không cần viết hoàn hảo — cứ kể tự nhiên như đang nhắn tin cho một người bạn biết đan len.
+                </p>
               </div>
+            </SupportStep>
 
-              {/* Ô 3: gắn thẻ */}
-              <div className="diy-field-card">
-                <div className="diy-field-card-head">
-                  <span className="diy-card-icon">
-                    <Tag className="w-4 h-4" />
+            <SupportStep
+              n={2}
+              title="Hình ảnh"
+              hint="Không bắt buộc · ảnh giúp tụi mình thấy rõ mũi đan"
+              done={steps[1].done}
+            >
+              <div className="support-images">
+                <label className="support-dropzone">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImagesChange}
+                    className="hidden"
+                  />
+                  <span className="support-dropzone-icon">
+                    <ImagePlus className="w-5 h-5" />
                   </span>
-                  <h2 className="text-sm font-semibold">
-                    Gắn thẻ <span className="font-normal" style={{ color: "var(--foreground-muted)" }}>(không bắt buộc)</span>
-                  </h2>
-                </div>
-                <div className="space-y-2.5">
-                  {tags.length > 0 && (
-                    <div className="flex gap-2 flex-wrap">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="chip-filter active diy-tag-chip diy-fade-in !px-2 !py-0.5 !text-xs cursor-pointer"
-                          onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                        >
-                          #{tag} <span className="ml-1 opacity-60 hover:opacity-100">&times;</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                      className="diy-input flex-1"
-                      placeholder="Gõ thẻ rồi nhấn Enter, ví dụ: crochet, mũ len"
-                    />
-                    <button type="button" onClick={addTag} className="diy-btn-secondary px-3 rounded-xl border">
-                      <Plus className="w-4 h-4" />
+                  <span className="support-dropzone-text">
+                    {imagePreviews.length > 0 ? "Thêm ảnh" : "Chọn ảnh từ máy"}
+                  </span>
+                </label>
+                {imagePreviews.map((preview, i) => (
+                  <div key={preview} className="diy-image-thumb diy-fade-in">
+                    <img src={preview} alt="" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      aria-label="Xoá ảnh"
+                      className="diy-image-remove"
+                    >
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
+                ))}
               </div>
+            </SupportStep>
 
-              {/* Ô 4: ngân sách */}
-              <div className="diy-field-card">
-                <div className="diy-field-card-head">
-                  <span className="diy-card-icon">
-                    <Wallet className="w-4 h-4" />
-                  </span>
-                  <h2 className="text-sm font-semibold">
-                    Ngân sách dự kiến <span className="font-normal" style={{ color: "var(--foreground-muted)" }}>(không bắt buộc)</span>
-                  </h2>
+            <SupportStep
+              n={3}
+              title="Gắn thẻ"
+              hint="Không bắt buộc · ví dụ: crochet, mũ len, móc hoa"
+              done={steps[2].done}
+            >
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    className="diy-input flex-1"
+                    placeholder="Gõ thẻ rồi nhấn Enter"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    className="support-add-btn"
+                    aria-label="Thêm thẻ"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <button
+                        type="button"
+                        key={tag}
+                        className="support-tag diy-fade-in"
+                        onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                        aria-label={`Xoá thẻ ${tag}`}
+                      >
+                        #{tag}
+                        <X className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </SupportStep>
+
+            <SupportStep
+              n={4}
+              title="Ngân sách dự kiến"
+              hint="Không bắt buộc · chưa chắc thì cứ để trống"
+              done={steps[3].done}
+            >
+              <div className="support-price">
                 <input
                   type="number"
                   value={price || ""}
                   onChange={(e) => setPrice(Number(e.target.value))}
                   className="diy-input w-full"
-                  placeholder="Chưa chắc? Cứ để trống, đội ngũ sẽ tư vấn giúp bạn"
+                  placeholder="Ví dụ: 200000"
                   min={0}
                 />
+                <span className="support-price-unit">VNĐ</span>
               </div>
-            </div>
+              {price > 0 && (
+                <p className="support-price-preview">≈ {formatPrice(price)}</p>
+              )}
+            </SupportStep>
+          </div>
 
-            {/* ── Phải: 1 card lớn, cao bằng khối 2x2 bên trái ── */}
-            <div className="diy-side-card">
-              <div className="diy-side-card-head">
-                <span className="diy-card-icon diy-static-icon">
+          {/* ── Cột phải: sản phẩm liên quan + quy trình + gửi ── */}
+          <aside className="support-aside">
+            <section className="support-card">
+              <div className="support-card-head">
+                <span className="craft-section-icon">
                   <ShoppingBag className="w-4 h-4" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold">
-                    Sản phẩm liên quan <span className="font-normal" style={{ color: "var(--foreground-muted)" }}>(không bắt buộc)</span>
-                  </h2>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                  <h2 className="support-card-title">Sản phẩm liên quan</h2>
+                  <p className="support-card-sub">
                     Đính kèm sản phẩm để tụi mình hình dung đúng dự án của bạn
                   </p>
                 </div>
               </div>
 
-              <div className="diy-side-card-body">
-                {/* Wrapper keeps the dropdown as a floating overlay instead of pushing layout down */}
-                <div className="diy-search-wrapper">
-                  {/* Chọn sản phẩm liên quan từ danh sách (select), không cần gõ search */}
-                  <ProductSelectDropdown
-                    triggerClassName="diy-input w-full"
-                    options={productOptions}
-                    selectedIds={comboItems.map((item) => item.productId)}
-                    isLoading={productsQuery.isLoading}
-                    placeholder="Chọn sản phẩm liên quan..."
-                    onSelect={(option) =>
-                      setComboItems((prev) => [
-                        ...prev,
-                        {
-                          productId: option.productId,
-                          name: option.name,
-                          thumbnail: option.thumbnail,
-                          price: option.price,
-                          quantity: 1,
-                        },
-                      ])
-                    }
-                  />
-                </div>
-
-                {comboItems.length > 0 ? (
-                  <div className="diy-combo-list rounded-xl border p-3 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--foreground-muted)" }}>
-                      Đã chọn ({comboItems.length})
-                    </p>
-                    <div className="diy-combo-scroll space-y-2">
-                      {comboItems.map((item) => (
-                        <div key={item.productId} className="diy-fade-in diy-combo-row flex items-center gap-3">
-                          <img src={item.thumbnail} alt={item.name} className="w-9 h-9 rounded-lg object-cover" />
-                          <span className="flex-1 text-sm truncate">{item.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => setComboItems((prev) => prev.filter((i) => i.productId !== item.productId))}
-                            className="diy-remove-btn"
-                            title="Bỏ chọn"
-                            aria-label={`Bỏ chọn ${item.name}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="diy-side-empty">
-                    <p className="text-xs italic" style={{ color: "var(--foreground-muted)" }}>
-                      Chưa chọn sản phẩm nào — bỏ qua cũng không sao.
-                    </p>
-                  </div>
-                )}
+              {/* Wrapper keeps the dropdown as a floating overlay instead of pushing layout down */}
+              <div className="diy-search-wrapper">
+                <ProductSelectDropdown
+                  triggerClassName="diy-input w-full"
+                  options={productOptions}
+                  selectedIds={comboItems.map((item) => item.productId)}
+                  isLoading={productsQuery.isLoading}
+                  placeholder="Chọn sản phẩm liên quan..."
+                  onSelect={(option) =>
+                    setComboItems((prev) => [
+                      ...prev,
+                      {
+                        productId: option.productId,
+                        name: option.name,
+                        thumbnail: option.thumbnail,
+                        price: option.price,
+                        quantity: 1,
+                      },
+                    ])
+                  }
+                />
               </div>
-            </div>
-          </div>
 
-          <div className="flex justify-end gap-3 pt-5 border-t" style={{ borderColor: "var(--border)" }}>
-            <button type="button" onClick={() => navigate("/diy")} disabled={loading} className="diy-btn-cancel">
-              Để sau
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={loading} className="diy-btn-primary">
-              {loading ? "Đang gửi…" : <><Send className="w-4 h-4" /> Gửi yêu cầu</>}
-            </button>
-          </div>
+              {comboItems.length > 0 ? (
+                <div className="support-combo">
+                  {comboItems.map((item) => (
+                    <div key={item.productId} className="support-combo-row diy-fade-in">
+                      <img src={item.thumbnail} alt={item.name} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{item.name}</p>
+                        {item.price > 0 && (
+                          <p className="text-xs text-muted-foreground">{formatPrice(item.price)}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setComboItems((prev) => prev.filter((i) => i.productId !== item.productId))
+                        }
+                        className="diy-remove-btn"
+                        title="Bỏ chọn"
+                        aria-label={`Bỏ chọn ${item.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="support-combo-empty">
+                  Chưa chọn sản phẩm nào — bỏ qua cũng không sao.
+                </p>
+              )}
+            </section>
+
+            <section className="support-card support-flow">
+              <h2 className="support-card-title mb-3">
+                <Sparkles className="w-4 h-4 text-[var(--primary)]" />
+                Sau khi gửi
+              </h2>
+              <ol>
+                {SUPPORT_FLOW.map((item, i) => (
+                  <li key={item.title}>
+                    <span className="support-flow-knot">{i + 1}</span>
+                    <div>
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <div className="support-actions">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading || !canSubmit}
+                className="craft-btn w-full"
+              >
+                {loading ? "Đang gửi…" : <><Send className="w-4 h-4" /> Gửi yêu cầu</>}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/diy")}
+                disabled={loading}
+                className="support-later"
+              >
+                Để sau
+              </button>
+              {!canSubmit && (
+                <p className="support-actions-hint">Điền tiêu đề và mô tả để gửi nhé</p>
+              )}
+            </div>
+          </aside>
         </div>
       </div>
     </div>
+  );
+}
+
+function SupportStep({
+  n,
+  title,
+  hint,
+  done,
+  children,
+}: {
+  n: number;
+  title: string;
+  hint: string;
+  done: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`support-step ${done ? "is-done" : ""}`}>
+      <div className="support-step-head">
+        <span className="support-step-knot">
+          {done ? <Check className="w-4 h-4" strokeWidth={3} /> : n}
+        </span>
+        <div className="min-w-0">
+          <h2 className="support-step-title">{title}</h2>
+          <p className="support-step-hint">{hint}</p>
+        </div>
+      </div>
+      <div className="support-step-body">{children}</div>
+    </section>
   );
 }

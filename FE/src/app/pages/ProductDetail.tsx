@@ -4,34 +4,47 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Heart,
-  ShoppingCart,
-  Package,
   Check,
   Star,
   Truck,
   ShieldCheck,
   RotateCcw,
-  Minus,
-  Plus,
   ChevronDown,
+  ChevronRight,
+  Layers3,
+  Ruler,
+  Gauge,
+  Clock,
+  Gift,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import { products, getTotalStock } from "../data/products";
-import { ProductVariantSelector } from "../../shared/components/ProductVariantSelector";
+import {
+  ProductVariantSelector,
+  getValidHex,
+  getVariantLabel,
+  isDefaultVariant,
+  shouldHideVariantPicker,
+} from "../../shared/components/ProductVariantSelector";
+import { ProductCard } from "../../shared/components/ProductCard";
+import { LevelBadge } from "../../shared/components/LevelBadge";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { cn } from "../../shared/components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 import { fetchProductById } from "../../features/shop/services/product.service";
+import {
+  getCategoryMeta,
+  SHOP_LEVELS,
+  YarnBallIcon,
+} from "../../features/shop/shopMeta";
 import type { ProductVariantUI } from "../../shared/components/ProductVariantSelector";
 import type { Product } from "../data/products";
-
-const difficultyBadgeColors: Record<string, string> = {
-  beginner: "bg-[var(--success-bg)] text-[var(--success-text)]",
-  intermediate: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  advanced: "bg-[var(--error-bg)] text-[var(--error-text)]",
-};
+import { EmptyHoopIllustration } from "./shop/CartPage";
+import { ProductBuyControls } from "../../features/shop/components/ProductBuyControls";
+import "../../styles/craft.css";
+import "../../styles/product-detail.css";
 
 function StarRating({ rating, count }: { rating: number; count: number }) {
   return (
@@ -52,7 +65,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
         ))}
       </div>
       <span className="text-sm text-muted-foreground">
-        {rating.toFixed(1)} ({count} reviews)
+        <strong className="text-foreground">{rating.toFixed(1)}</strong> · {count} đánh giá
       </span>
     </div>
   );
@@ -107,7 +120,7 @@ function YarnStockMeter({
   return (
     <div className="flex items-center gap-3">
       <div
-        className="relative h-3 w-full max-w-[200px] overflow-hidden rounded-full"
+        className="relative h-3 w-full max-w-[220px] overflow-hidden rounded-full"
         style={{ background: "var(--muted)" }}
       >
         {/* nền dây - vân xoắn mờ */}
@@ -179,31 +192,54 @@ function YarnStockMeter({
 /** Card thông số dạng accordion — gọn hơn trên mobile, người dùng có thể thu lại. */
 function CollapsibleSpecCard({
   title,
+  icon,
   defaultOpen = true,
   children,
 }: {
   title: string;
+  icon: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+    <div className="pd-band">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
-        style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+        className="pd-band-head"
+        aria-expanded={open}
       >
-        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="pd-band-icon">{icon}</span>
+        <h3 className="pd-band-title">{title}</h3>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200",
+            "ml-auto w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200",
             open && "rotate-180",
           )}
         />
       </button>
-      {open && <div className="px-5 pb-5 -mt-1 space-y-3">{children}</div>}
+      {open && <div className="pd-band-body">{children}</div>}
+    </div>
+  );
+}
+
+function SpecItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="pd-spec">
+      <span className="pd-spec-icon">{icon}</span>
+      <div className="min-w-0">
+        <p className="pd-spec-label">{label}</p>
+        <p className="pd-spec-value">{value}</p>
+      </div>
     </div>
   );
 }
@@ -223,7 +259,11 @@ export function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [descExpanded, setDescExpanded] = useState(false);
 
-  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+  // Mobile (< md): khối mua inline bị ẩn, thay bằng thanh nổi cạnh nút FAB "+".
+  // Chỉ mount thanh nổi trên mobile để desktop không có thêm phần tử/animation nào.
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
 
   const mobileCarouselRef = useRef<HTMLDivElement>(null);
 
@@ -262,14 +302,11 @@ export function ProductDetail() {
   }, [id]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight;
-      const scrollTop = window.scrollY;
-      const clientHeight = window.innerHeight;
-      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
   const variantItems: ProductVariantUI[] = useMemo(() => {
@@ -295,12 +332,36 @@ export function ProductDetail() {
   const currentStock = selectedVariant?.stock ?? 0;
   const currentColor = selectedVariant?.color;
   const totalStock = product ? getTotalStock(product as Product) : 0;
+  const showVariantPicker = !shouldHideVariantPicker(variantItems);
+  // "X sản phẩm trên tất cả màu" chỉ có nghĩa khi ≥ 2 màu và khác số của màu đang chọn
+  const showTotalStock = variantItems.length >= 2 && totalStock !== currentStock;
 
   // Mốc "đầy dây" để so tỉ lệ: lấy biến thể có tồn kho cao nhất làm chuẩn
   const maxVariantStock = useMemo(() => {
     if (variantItems.length === 0) return currentStock || 1;
     return Math.max(...variantItems.map((v) => v.stock), 1);
   }, [variantItems, currentStock]);
+
+  // Gợi ý: cùng danh mục, hoặc trùng màu len với sản phẩm đang xem
+  const relatedProducts = useMemo(() => {
+    if (!product) return [];
+    const currentColors = new Set(
+      product.variants
+        ?.flatMap((variant) => [variant.color, variant.hexCode])
+        .filter(Boolean),
+    );
+    return products
+      .filter((related) => {
+        if (related.id === product.id) return false;
+        if (related.category === product.category) return true;
+        return related.variants?.some(
+          (variant) =>
+            Boolean(variant.color && currentColors.has(variant.color)) ||
+            Boolean(variant.hexCode && currentColors.has(variant.hexCode)),
+        );
+      })
+      .slice(0, 4);
+  }, [product]);
 
   const handleVariantChange = useCallback((variant: ProductVariantUI) => {
     setSelectedVariant(variant);
@@ -363,62 +424,98 @@ export function ProductDetail() {
     toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
 
+  const handleToggleFavorite = () => {
+    if (!product) return;
+    toggleFavorite(product.id);
+    toast.success(
+      isFavorite(product.id) ? "Đã bỏ khỏi yêu thích" : "Đã thêm vào yêu thích",
+    );
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-background px-4 pt-8">
+        <div className="pd-wrap">
+          <div className="craft-skeleton mb-6 h-4 w-56" />
+          <div className="grid gap-10 md:grid-cols-2">
+            <div className="craft-skeleton aspect-square rounded-[28px]" />
+            <div className="space-y-4">
+              <div className="craft-skeleton h-5 w-32" />
+              <div className="craft-skeleton h-10 w-4/5" />
+              <div className="craft-skeleton h-8 w-40" />
+              <div className="craft-skeleton h-24 w-full" />
+              <div className="craft-skeleton h-40 w-full rounded-3xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h2 className="mb-2">Product Not Found</h2>
-          <p className="text-muted-foreground mb-6">
-            The product you're looking for doesn't exist or has been removed.
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="craft-empty w-full max-w-lg">
+          <EmptyHoopIllustration size={150} />
+          <p className="craft-empty-title">Không tìm thấy sản phẩm</p>
+          <p className="craft-empty-desc">
+            Sản phẩm này không tồn tại hoặc đã được gỡ khỏi cửa hàng.
           </p>
-          <Link
-            to="/shop"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full hover:bg-primary/90 transition-colors"
-          >
+          <Link to="/shop" className="craft-btn">
             <ArrowLeft className="w-4 h-4" />
-            Back to Shop
+            Về cửa hàng
           </Link>
         </div>
       </div>
     );
   }
 
-  const hasMultipleImages =
-    selectedVariant?.images && selectedVariant.images.length > 1;
   const hasMultipleGalleryImages = galleryImages.length > 1;
   const isLongDescription = (product.description?.length ?? 0) > 140;
+  const category = getCategoryMeta(product.category);
+  const CategoryIcon = category.Icon;
+  const favorite = isFavorite(product.id);
+  const level = product.difficulty ? SHOP_LEVELS[product.difficulty] : null;
 
-  const glassBadgeStyle = {
-    background: "var(--card-glass)",
-    backdropFilter: "blur(14px) saturate(160%)",
-    WebkitBackdropFilter: "blur(14px) saturate(160%)",
-    border: "1px solid var(--border-subtle)",
-    boxShadow: "var(--shadow-md)",
-  } as const;
+  const favButton = (
+    <button
+      type="button"
+      onClick={handleToggleFavorite}
+      aria-label={favorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+      aria-pressed={favorite}
+      className={cn("pd-fav", favorite && "is-active")}
+    >
+      <Heart className="w-5 h-5" />
+    </button>
+  );
+
+  const chipHex =
+    selectedVariant && !isDefaultVariant(selectedVariant)
+      ? getValidHex(selectedVariant.hexCode)
+      : undefined;
+  const colorChip =
+    currentColor && chipHex && selectedVariant ? (
+      <div className="pd-color-chip">
+        <span style={{ backgroundColor: chipHex }} />
+        {getVariantLabel(selectedVariant)}
+      </div>
+    ) : null;
 
   return (
-    <div className="min-h-screen bg-background pt-0 md:pt-12 pb-[calc(env(safe-area-inset-bottom)+180px)] md:pb-12">
-      <div className="max-w-6xl mx-auto md:px-4">
-        <Link
-          to="/shop"
-          className="hidden md:inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Shop
-        </Link>
+    <div className="pd-page min-h-screen bg-background pt-0 md:pt-8">
+      <div className="pd-wrap md:px-4">
+        {/* ── Breadcrumb ── */}
+        <nav className="pd-crumbs" aria-label="Breadcrumb">
+          <Link to="/shop">Cửa hàng</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <Link to={`/shop?category=${product.category}`}>{category.label}</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span aria-current="page">{product.name}</span>
+        </nav>
 
-        <div className="grid md:grid-cols-2 gap-0 md:gap-12 lg:gap-16">
+        <div className="pd-grid">
           {/* ================= MOBILE — ảnh dạng carousel vuốt, tràn viền ================= */}
-          <div className="md:hidden relative -mx-0">
+          <div className="md:hidden relative">
             <div
               ref={mobileCarouselRef}
               onScroll={handleMobileCarouselScroll}
@@ -449,51 +546,12 @@ export function ProductDetail() {
 
             {/* favorite button — không thêm nút back ở đây vì Navigation đã hiển thị
                 sẵn nút back cho route này trên mobile, tránh 2 nút back chồng nhau */}
-            <button
-              type="button"
-              onClick={() => {
-                if (!product) return;
-                toggleFavorite(product.id);
-                toast.success(
-                  isFavorite(product.id)
-                    ? "Removed from favorites"
-                    : "Added to favorites",
-                );
-              }}
-              title={
-                isFavorite(product?.id || "")
-                  ? "Remove from favorites"
-                  : "Add to favorites"
-              }
-              className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center"
-              style={{ ...glassBadgeStyle, touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
-            >
-              <Heart
-                className={cn(
-                  "w-5 h-5 transition-colors",
-                  isFavorite(product?.id || "")
-                    ? "fill-destructive text-destructive"
-                    : "text-muted-foreground",
-                )}
-              />
-            </button>
-
-            {currentColor && selectedVariant?.hexCode && (
-              <div
-                className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-                style={glassBadgeStyle}
-              >
-                <span
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: selectedVariant.hexCode }}
-                />
-                {currentColor}
-              </div>
-            )}
+            <div className="absolute top-4 right-4">{favButton}</div>
+            {colorChip && <div className="absolute bottom-4 left-4">{colorChip}</div>}
 
             {/* dots indicator */}
             {hasMultipleGalleryImages && (
-              <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
+              <div className="absolute bottom-5 right-4 flex items-center gap-1.5">
                 {galleryImages.map((_, idx) => (
                   <button
                     key={idx}
@@ -511,13 +569,13 @@ export function ProductDetail() {
             )}
           </div>
 
-          {/* ================= DESKTOP — ảnh + dải thumbnail ================= */}
-          <div className="hidden md:block space-y-4">
-            <div className="aspect-square rounded-3xl overflow-hidden bg-muted relative group">
+          {/* ================= DESKTOP — ảnh trong khung vải + dải thumbnail ================= */}
+          <div className="pd-gallery hidden md:block">
+            <div className="pd-stage group">
               <img
                 src={currentImage}
                 alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {
                   const target = e.currentTarget;
                   if (!target.dataset.fallback) {
@@ -526,129 +584,55 @@ export function ProductDetail() {
                   }
                 }}
               />
-              <button
-                type="button"
-                onClick={() => {
-                  if (!product) return;
-                  toggleFavorite(product.id);
-                  toast.success(
-                    isFavorite(product.id)
-                      ? "Removed from favorites"
-                      : "Added to favorites",
-                  );
-                }}
-                title={
-                  isFavorite(product?.id || "")
-                    ? "Remove from favorites"
-                    : "Add to favorites"
-                }
-                className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors"
-                style={{
-                  ...glassBadgeStyle,
-                  touchAction: "manipulation",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Heart
-                  className={cn(
-                    "w-5 h-5 transition-colors",
-                    isFavorite(product?.id || "")
-                      ? "fill-destructive text-destructive"
-                      : "text-muted-foreground hover:text-destructive",
-                  )}
-                />
-              </button>
-              {currentColor && selectedVariant?.hexCode && (
-                <div
-                  className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs"
-                  style={glassBadgeStyle}
-                >
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: selectedVariant.hexCode }}
-                  />
-                  {currentColor}
-                </div>
-              )}
+              <div className="absolute top-4 right-4 z-[2]">{favButton}</div>
+              {colorChip && <div className="absolute bottom-4 left-4 z-[2]">{colorChip}</div>}
             </div>
 
-            {hasMultipleImages && (
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {selectedVariant?.images?.map((img, idx) => (
+            {hasMultipleGalleryImages && (
+              <div className="pd-thumbs">
+                {galleryImages.map((img, idx) => (
                   <button
                     type="button"
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={cn(
-                      "w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0",
-                      activeImageIndex === idx
-                        ? "border-primary"
-                        : "border-border hover:border-primary/40",
-                    )}
-                    style={{
-                      touchAction: "manipulation",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
+                    className={cn("pd-thumb", activeImageIndex === idx && "is-active")}
+                    aria-label={`Xem ảnh ${idx + 1}`}
                   >
-                    <img
-                      src={img}
-                      alt={`${product.name} view ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={img} alt="" />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* ================= Product Info (dùng chung mobile + desktop) ================= */}
-          <div className="space-y-5 md:space-y-6 px-4 pt-5 md:px-0 md:pt-0">
+          {/* ================= Thông tin (dùng chung mobile + desktop) ================= */}
+          <div className="pd-info">
             <div>
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <div>
-                  <h1 className="text-xl sm:text-3xl mb-1">{product.name}</h1>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full capitalize">
-                      {product.category}
-                    </span>
-                    {product.difficulty && (
-                      <span
-                        className={cn(
-                          "text-xs px-2.5 py-1 rounded-full capitalize",
-                          difficultyBadgeColors[product.difficulty],
-                        )}
-                      >
-                        {product.difficulty}
-                      </span>
-                    )}
-                  </div>
-                </div>
+              <span className="pd-eyebrow">
+                <CategoryIcon size={16} />
+                {category.label}
+                {product.material && <> · {product.material}</>}
+              </span>
+              <h1 className="pd-title">{product.name}</h1>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <StarRating rating={product.rating} count={product.reviewCount} />
+                <LevelBadge level={product.difficulty} />
               </div>
+            </div>
 
-              <StarRating rating={product.rating} count={product.reviewCount} />
-
-              <div className="mt-4 flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-bold text-primary">
-                  {formatPrice(currentPrice)}
-                </span>
-                {selectedVariant &&
-                  variantItems.length > 1 &&
-                  selectedVariant.price !== variantItems[0].price && (
-                    <span className="text-lg text-muted-foreground line-through">
-                      {formatPrice(variantItems[0].price)}
-                    </span>
-                  )}
-              </div>
+            {/* Giá — như mác treo trên cuộn len */}
+            <div className="pd-price-row">
+              <span className="pd-price">{formatPrice(currentPrice)}</span>
+              {selectedVariant &&
+                variantItems.length > 1 &&
+                selectedVariant.price !== variantItems[0].price && (
+                  <span className="pd-price-old">{formatPrice(variantItems[0].price)}</span>
+                )}
             </div>
 
             {/* Mô tả — rút gọn 3 dòng trên mobile, có nút "Xem thêm" */}
             <div>
-              <p
-                className={cn(
-                  "text-muted-foreground leading-relaxed",
-                  !descExpanded && "line-clamp-3 md:line-clamp-none",
-                )}
-              >
+              <p className={cn("pd-desc", !descExpanded && "line-clamp-3 md:line-clamp-none")}>
                 {product.description}
               </p>
               {isLongDescription && (
@@ -656,7 +640,6 @@ export function ProductDetail() {
                   type="button"
                   onClick={() => setDescExpanded((v) => !v)}
                   className="md:hidden mt-1 text-sm font-medium text-primary"
-                  style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
                 >
                   {descExpanded ? "Thu gọn" : "Xem thêm"}
                 </button>
@@ -665,69 +648,51 @@ export function ProductDetail() {
 
             {/* Variant Selector + Stock — một khối thống nhất, không tách rời */}
             {variantItems.length > 0 && (
-              <div className="bg-card border border-border rounded-2xl p-5">
+              <div className="pd-panel">
                 <ProductVariantSelector
                   variants={variantItems}
                   onVariantChange={handleVariantChange}
                 />
 
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="mb-2.5 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Tồn kho</span>
-                    <span className="font-medium">
-                      {currentStock > 0
-                        ? `${currentStock} sản phẩm`
-                        : "Hết hàng"}
-                    </span>
-                  </div>
-                  <YarnStockMeter
-                    stock={currentStock}
-                    maxStock={maxVariantStock}
-                  />
+                {showVariantPicker && <div className="pd-panel-divider" />}
+                <div className="mb-2.5 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Tồn kho</span>
+                  <span className="font-medium">
+                    {currentStock > 0 ? `${currentStock} sản phẩm` : "Hết hàng"}
+                  </span>
+                </div>
+                <YarnStockMeter stock={currentStock} maxStock={maxVariantStock} />
+                {showTotalStock && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {totalStock} sản phẩm trên tất cả màu
                   </p>
-                </div>
+                )}
               </div>
             )}
 
-            {/* Yarn-specific details — accordion, gọn hơn trên mobile */}
+            {/* Nhãn cuộn len — thông số dạng "ball band" */}
             {product.category === "yarn" && (
-              <CollapsibleSpecCard title="Yarn Specifications">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              <CollapsibleSpecCard title="Nhãn cuộn len" icon={<YarnBallIcon size={16} />}>
+                <div className="pd-spec-grid">
                   {product.material && (
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">
-                        Material
-                      </span>
-                      <p className="font-medium">{product.material}</p>
-                    </div>
+                    <SpecItem
+                      icon={<Layers3 size={15} />}
+                      label="Chất liệu"
+                      value={product.material}
+                    />
                   )}
                   {product.weight && (
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">
-                        Weight
-                      </span>
-                      <p className="font-medium">{product.weight}</p>
-                    </div>
+                    <SpecItem icon={<Gauge size={15} />} label="Độ dày sợi" value={product.weight} />
                   )}
                   {product.yardage && (
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">
-                        Yardage
-                      </span>
-                      <p className="font-medium">{product.yardage} yards</p>
-                    </div>
+                    <SpecItem
+                      icon={<Ruler size={15} />}
+                      label="Chiều dài"
+                      value={`${product.yardage} yards`}
+                    />
                   )}
-                  {product.difficulty && (
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground text-xs">
-                        Skill Level
-                      </span>
-                      <p className="font-medium capitalize">
-                        {product.difficulty}
-                      </p>
-                    </div>
+                  {level && (
+                    <SpecItem icon={<level.Icon size={15} />} label="Trình độ" value={level.label} />
                   )}
                 </div>
               </CollapsibleSpecCard>
@@ -735,300 +700,102 @@ export function ProductDetail() {
 
             {/* Kit-specific details — accordion */}
             {product.category === "kit" && (
-              <CollapsibleSpecCard title="Kit Details">
-                {product.difficulty && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Difficulty:</span>
-                    <span
-                      className={cn(
-                        "px-3 py-0.5 rounded-full text-xs font-medium",
-                        difficultyBadgeColors[product.difficulty],
-                      )}
-                    >
-                      {product.difficulty.charAt(0).toUpperCase() +
-                        product.difficulty.slice(1)}
-                    </span>
-                  </div>
-                )}
-                {product.estimatedTime && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">
-                      Estimated time:
-                    </span>
-                    <span className="font-medium">{product.estimatedTime}</span>
-                  </div>
-                )}
+              <CollapsibleSpecCard title="Trong hộp có gì" icon={<Gift size={16} />}>
+                <div className="pd-spec-grid">
+                  {level && (
+                    <SpecItem icon={<level.Icon size={15} />} label="Trình độ" value={level.label} />
+                  )}
+                  {product.estimatedTime && (
+                    <SpecItem
+                      icon={<Clock size={15} />}
+                      label="Thời gian dự kiến"
+                      value={product.estimatedTime}
+                    />
+                  )}
+                </div>
                 {product.materials && product.materials.length > 0 && (
-                  <div>
-                    <span className="text-sm text-muted-foreground block mb-2">
-                      What's included:
-                    </span>
-                    <ul className="space-y-1.5">
-                      {product.materials.map((material, index) => (
-                        <li
-                          key={index}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                          <span className="text-muted-foreground">
-                            {material}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <ul className="pd-materials">
+                    {product.materials.map((material, index) => (
+                      <li key={index}>
+                        <Check className="w-4 h-4 shrink-0" />
+                        <span>{material}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </CollapsibleSpecCard>
             )}
 
-            {/* Quantity + Add to cart — chỉ hiện trên desktop.
-                Trên mobile, số lượng + nút thêm giỏ đã gộp vào thanh sticky dưới cùng. */}
-            <div className="hidden md:block space-y-3 pt-2">
-              {currentStock > 0 && (
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium">Quantity</span>
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      type="button"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                      whileHover={quantity > 1 ? { scale: 1.08 } : undefined}
-                      whileTap={quantity > 1 ? { scale: 0.88 } : undefined}
-                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                      className={cn(
-                        "w-10 h-10 rounded-full border flex items-center justify-center transition-colors duration-200",
-                        quantity <= 1
-                          ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
-                          : "border-border text-foreground hover:border-primary hover:text-primary hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] active:shadow-[0_0_0_5px_var(--glow-primary)]",
-                      )}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </motion.button>
-                    <span className="w-8 text-center font-medium">
-                      {quantity}
-                    </span>
-                    <motion.button
-                      type="button"
-                      onClick={() =>
-                        setQuantity(Math.min(maxAvailableQuantity, quantity + 1))
-                      }
-                      disabled={quantity >= maxAvailableQuantity}
-                      whileHover={
-                        quantity < maxAvailableQuantity ? { scale: 1.08 } : undefined
-                      }
-                      whileTap={
-                        quantity < maxAvailableQuantity ? { scale: 0.88 } : undefined
-                      }
-                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                      className={cn(
-                        "w-10 h-10 rounded-full border flex items-center justify-center transition-colors duration-200",
-                        quantity >= maxAvailableQuantity
-                          ? "border-border/50 text-muted-foreground/50 cursor-not-allowed"
-                          : "border-border text-foreground hover:border-primary hover:text-primary hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] active:shadow-[0_0_0_5px_var(--glow-primary)]",
-                      )}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </motion.button>
-                  </div>
+            {/* Desktop (≥ md): khối mua inline. Mobile dùng thanh nổi ở cuối trang. */}
+            <ProductBuyControls
+              variant="inline"
+              quantity={quantity}
+              onChange={setQuantity}
+              onAdd={handleAddToCart}
+              price={currentPrice}
+              stock={currentStock}
+              max={maxAvailableQuantity}
+              productName={product.name}
+            />
+
+            {/* Cam kết */}
+            <div className="pd-trust">
+              <div>
+                <Truck className="w-5 h-5" />
+                <p>Giao toàn quốc qua GHN</p>
+              </div>
+              <div>
+                <RotateCcw className="w-5 h-5" />
+                <p>Đổi trả trong 30 ngày</p>
+              </div>
+              <div>
+                <ShieldCheck className="w-5 h-5" />
+                <p>Thanh toán an toàn</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Gợi ý ── */}
+        {relatedProducts.length > 0 && (
+          <section className="mt-14 px-4 md:mt-20 md:px-0">
+            <div className="craft-section-head">
+              <span className="craft-section-icon">
+                <YarnBallIcon size={20} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="craft-section-title">Có thể bạn cũng thích</h2>
+                <p className="craft-section-sub">Cùng loại hoặc cùng tông màu len</p>
+              </div>
+              <span className="craft-section-thread" aria-hidden />
+            </div>
+            <div className="pd-related">
+              {relatedProducts.map((related) => (
+                <div key={related.id} className="pd-related-item">
+                  <ProductCard product={related} />
                 </div>
-              )}
-
-              <motion.button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={currentStock === 0}
-                className="card-add-btn"
-                aria-label={`Add ${product.name} to cart`}
-                whileHover={currentStock > 0 ? { scale: 1.015 } : undefined}
-                whileTap={currentStock > 0 ? { scale: 0.97 } : undefined}
-                transition={{
-                  type: "spring",
-                  stiffness: 380,
-                  damping: 30,
-                  mass: 0.6,
-                }}
-                style={{
-                  touchAction: "manipulation",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <span className="card-add-btn__icon" aria-hidden="true">
-                  <ShoppingCart size={15} strokeWidth={2.2} />
-                </span>
-                <span className="card-add-btn__label">
-                  {currentStock > 0 ? "Add to Cart" : "Sold Out"}
-                </span>
-                <span className="card-add-btn__shine" aria-hidden="true" />
-              </motion.button>
+              ))}
             </div>
-
-            {/* Trust badges */}
-            <div className="pt-4 border-t border-border grid grid-cols-3 gap-3">
-              <div className="flex flex-col items-center text-center gap-1.5 bg-muted/50 rounded-xl py-3 px-2">
-                <Truck className="w-5 h-5 text-primary" />
-                <p className="text-[11px] leading-tight text-muted-foreground">
-                  Free shipping over $50
-                </p>
-              </div>
-              <div className="flex flex-col items-center text-center gap-1.5 bg-muted/50 rounded-xl py-3 px-2">
-                <RotateCcw className="w-5 h-5 text-primary" />
-                <p className="text-[11px] leading-tight text-muted-foreground">30-day returns</p>
-              </div>
-              <div className="flex flex-col items-center text-center gap-1.5 bg-muted/50 rounded-xl py-3 px-2">
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                <p className="text-[11px] leading-tight text-muted-foreground">Secure checkout</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-10 md:mt-16 px-4 md:px-0">
-          <h2 className="text-lg md:text-xl mb-4 md:mb-6">You Might Also Like</h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 scrollbar-none">
-            {(() => {
-              const currentColors = new Set(
-                product.variants
-                  ?.flatMap((variant) => [variant.color, variant.hexCode])
-                  .filter(Boolean),
-              );
-
-              return products
-                .filter((related) => {
-                  if (related.id === product.id) return false;
-                  if (related.category === product.category) return true;
-
-                  return related.variants?.some(
-                    (variant) =>
-                      Boolean(
-                        variant.color && currentColors.has(variant.color),
-                      ) ||
-                      Boolean(
-                        variant.hexCode && currentColors.has(variant.hexCode),
-                      ),
-                  );
-                })
-                .slice(0, 4)
-                .map((related) => {
-                  const relatedPrice =
-                    related.variants?.[0]?.price ??
-                    (related as { price?: number }).price ??
-                    0;
-                  return (
-                    <Link
-                      key={related.id}
-                      to={`/shop/product/${related.id}`}
-                      className="group bg-card rounded-2xl overflow-hidden border border-border transition-all hover:border-primary/20 shrink-0 w-[160px] sm:w-[180px] md:w-auto"
-                      style={{ boxShadow: "0 0 0 transparent" }}
-                      onMouseEnter={(event) => {
-                        event.currentTarget.style.boxShadow =
-                          "0 14px 36px color-mix(in srgb, var(--primary) 8%, transparent)";
-                      }}
-                      onMouseLeave={(event) => {
-                        event.currentTarget.style.boxShadow = "0 0 0 transparent";
-                      }}
-                    >
-                      <div className="aspect-square overflow-hidden bg-muted">
-                        <img
-                          src={related.image}
-                          alt={related.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <div className="p-3 md:p-4">
-                        <h4 className="line-clamp-2 text-sm mb-1">{related.name}</h4>
-                        {relatedPrice > 0 && (
-                          <p className="text-sm font-semibold text-primary">
-                            {formatPrice(relatedPrice)}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                });
-            })()}
-          </div>
-        </div>
+          </section>
+        )}
       </div>
 
-      {/* Thanh sticky mobile: số lượng + tạm tính + nút thêm giỏ trong CÙNG một hàng */}
-      {!scrolledToBottom && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+92px)] left-3 right-[84px] z-40 rounded-[26px] border border-[var(--border-light)] bg-background/97 backdrop-blur-xl px-3 py-2.5 md:hidden shadow-[0_10px_30px_rgba(24,24,27,0.14)]">
-          <div className="flex items-center gap-3">
-            {currentStock > 0 && (
-              <div className="flex items-center gap-1 shrink-0 rounded-full border border-border p-0.5">
-                <motion.button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                  whileHover={quantity > 1 ? { scale: 1.1 } : undefined}
-                  whileTap={quantity > 1 ? { scale: 0.85 } : undefined}
-                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                    quantity <= 1
-                      ? "text-muted-foreground/40"
-                      : "text-foreground hover:text-primary hover:bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] active:shadow-[0_0_0_4px_var(--glow-primary)]",
-                  )}
-                  style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </motion.button>
-                <span className="w-6 text-center text-sm font-semibold">
-                  {quantity}
-                </span>
-                <motion.button
-                  type="button"
-                  onClick={() =>
-                    setQuantity(Math.min(maxAvailableQuantity, quantity + 1))
-                  }
-                  disabled={quantity >= maxAvailableQuantity}
-                  whileHover={
-                    quantity < maxAvailableQuantity ? { scale: 1.1 } : undefined
-                  }
-                  whileTap={
-                    quantity < maxAvailableQuantity ? { scale: 0.85 } : undefined
-                  }
-                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                    quantity >= maxAvailableQuantity
-                      ? "text-muted-foreground/40"
-                      : "text-foreground hover:text-primary hover:bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] active:shadow-[0_0_0_4px_var(--glow-primary)]",
-                  )}
-                  style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </motion.button>
-              </div>
-            )}
-
-            <motion.button
-              onClick={handleAddToCart}
-              disabled={currentStock === 0}
-              className="card-add-btn flex-1"
-              aria-label={`Add ${product.name} to cart`}
-              whileHover={currentStock > 0 ? { scale: 1.015 } : undefined}
-              whileTap={currentStock > 0 ? { scale: 0.97 } : undefined}
-              transition={{
-                type: "spring",
-                stiffness: 380,
-                damping: 30,
-                mass: 0.6,
-              }}
-            >
-              <span className="card-add-btn__icon" aria-hidden="true">
-                <ShoppingCart size={15} strokeWidth={2.2} />
-              </span>
-              <span className="card-add-btn__label">
-                {currentStock > 0
-                  ? `Thêm · ${formatPrice(currentPrice * quantity)}`
-                  : "Sold Out"}
-              </span>
-              <span className="card-add-btn__shine" aria-hidden="true" />
-            </motion.button>
-          </div>
-        </div>
-      )}
+      {/* Mobile (< md): thanh mua nổi, cùng hàng & ngay bên trái nút FAB "+" */}
+      <AnimatePresence>
+        {isMobile && (
+          <ProductBuyControls
+            key="floating-buy"
+            variant="floating"
+            quantity={quantity}
+            onChange={setQuantity}
+            onAdd={handleAddToCart}
+            price={currentPrice}
+            stock={currentStock}
+            max={maxAvailableQuantity}
+            productName={product.name}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

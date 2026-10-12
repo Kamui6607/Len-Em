@@ -21,6 +21,7 @@ import {
   AdminTableBodySkeleton,
 } from "../../../shared/components/skeletons/AdminSkeleton";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 const STATUS_OPTIONS = ["", "Pending", "Done", "Cancel"];
 
@@ -232,14 +233,10 @@ export function AdminSupportDIYPosts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="mb-2">Support DIY Management</h1>
-          <p className="text-muted-foreground">
-            Manage all Support DIY requests from users
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Support DIY Management"
+        subtitle="Manage all Support DIY requests from users"
+      />
 
       <div
         className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"

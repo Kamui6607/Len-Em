@@ -1,35 +1,44 @@
 // ============================================================
 // Kit Detail Page — route /kits/:id
 // Fetches kit data from GET /api/v1/kits/{id}
+// Bố cục + style dùng chung với /shop/product/:id (product-detail.css);
+// phần riêng của combo (hộp nguyên liệu, giá lẻ) nằm trong kit-detail.css.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import {
   ArrowLeft,
   ShoppingCart,
-  Package,
   Star,
   Truck,
   ShieldCheck,
   RotateCcw,
   Heart,
-  X,
+  ChevronRight,
+  ChevronDown,
+  Gift,
+  Boxes,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "motion/react";
 import { formatPrice } from "../../lib/formatPrice";
-import { kitService, type Kit } from "../../shared/api/kitService";
+import { kitService, type Kit, type KitProduct } from "../../shared/api/kitService";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { cn } from "../../shared/components/ui/utils";
-import { motion, AnimatePresence } from "motion/react";
+import { LevelBadge } from "../../shared/components/LevelBadge";
+import { getValidHex, isDefaultVariant } from "../../shared/components/ProductVariantSelector";
+import { YarnBallIcon } from "../../features/shop/shopMeta";
+import { EmptyHoopIllustration } from "./shop/CartPage";
+import "../../styles/craft.css";
+import "../../styles/product-detail.css";
+import "../../styles/kit-detail.css";
 
-const levelBadgeColors: Record<string, string> = {
-  beginner: "bg-[var(--success-bg)] text-[var(--success-text)]",
-  intermediate: "bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  advanced: "bg-[var(--error-bg)] text-[var(--error-text)]",
-};
+/** Số món hiện sẵn trong hộp — phần còn lại mở bằng "Xem thêm". */
+const VISIBLE_ITEMS = 4;
 
 function StarRating({ rating, count }: { rating: number; count: number }) {
   return (
@@ -50,7 +59,13 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
         ))}
       </div>
       <span className="text-sm text-muted-foreground">
-        {rating.toFixed(1)} ({count} reviews)
+        {count > 0 ? (
+          <>
+            <strong className="text-foreground">{rating.toFixed(1)}</strong> · {count} đánh giá
+          </>
+        ) : (
+          "Chưa có đánh giá"
+        )}
       </span>
     </div>
   );
@@ -85,7 +100,7 @@ function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }
   return (
     <div className="flex items-center gap-3">
       <div
-        className="relative h-3 w-full max-w-[200px] overflow-hidden rounded-full"
+        className="relative h-3 w-full max-w-[220px] overflow-hidden rounded-full"
         style={{ background: "var(--muted)" }}
       >
         {/* nền dây - vân xoắn mờ */}
@@ -127,6 +142,63 @@ function YarnStockMeter({ stock, maxStock }: { stock: number; maxStock: number }
   );
 }
 
+/** Biến thể đã chọn trong kit (theo variantId), fallback biến thể đầu. */
+function getKitVariant(kitProduct: KitProduct) {
+  const product = kitProduct.productId;
+  return product?.variants?.find((v) => v._id === kitProduct.variantId) || product?.variants?.[0];
+}
+
+/** 1 món trong hộp: ảnh, tên, màu, số lượng, thành tiền lẻ. */
+function KitItemRow({ kitProduct, index }: { kitProduct: KitProduct; index: number }) {
+  const product = kitProduct.productId;
+  const variant = getKitVariant(kitProduct);
+  const hex =
+    variant && !isDefaultVariant(variant) ? getValidHex(variant.hexCode) : undefined;
+  const colorLabel = variant && !isDefaultVariant(variant) ? variant.color.trim() : "Mặc định";
+  const lineTotal = (variant?.price ?? 0) * kitProduct.quantity;
+
+  return (
+    <motion.li
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.25, delay: Math.min(index, 6) * 0.03 }}
+    >
+      <Link to={`/shop/product/${product._id}`} className="kd-item">
+        <span className="kd-item-thumb">
+          <img
+            src={variant?.image || product.image}
+            alt={product.name}
+            loading="lazy"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.dataset.fallback) {
+                target.dataset.fallback = "true";
+                target.src = `https://picsum.photos/seed/${product._id}/200/200`;
+              }
+            }}
+          />
+          {kitProduct.quantity > 1 && <span className="kd-item-qty">×{kitProduct.quantity}</span>}
+        </span>
+        <span className="kd-item-info">
+          <span className="kd-item-name">{product.name}</span>
+          <span className="kd-item-meta">
+            <span
+              className={cn("kd-item-dot", !hex && "is-default")}
+              style={hex ? { backgroundColor: hex } : undefined}
+            />
+            {colorLabel}
+          </span>
+        </span>
+        <span className="kd-item-price">
+          {lineTotal > 0 ? formatPrice(lineTotal) : ""}
+          <ChevronRight className="w-4 h-4" />
+        </span>
+      </Link>
+    </motion.li>
+  );
+}
+
 export function KitDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -136,8 +208,20 @@ export function KitDetail() {
   const [kit, setKit] = useState<Kit | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  // Mobile (< md): nút thêm giỏ chuyển thành thanh nổi cạnh FAB "+" (như trang sản phẩm)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
 
   const isKitFavorite = kit ? isFavoriteKit(kit._id) : false;
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const handleToggleFavorite = () => {
     if (!kit) return;
@@ -161,6 +245,16 @@ export function KitDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Tổng giá nếu mua lẻ từng món (giá biến thể × số lượng) — để hiện mức tiết kiệm
+  const retailTotal = useMemo(
+    () =>
+      (kit?.products ?? []).reduce(
+        (sum, kitProduct) => sum + (getKitVariant(kitProduct)?.price ?? 0) * kitProduct.quantity,
+        0,
+      ),
+    [kit],
+  );
+
   const handleAddAllToCart = () => {
     if (!kit || !isAuthenticated) {
       if (!isAuthenticated) navigate("/auth/login");
@@ -170,7 +264,7 @@ export function KitDetail() {
     // Use kit.products which has the correct structure
     const products = kit.products.map((kitProduct) => {
       const product = kitProduct.productId;
-      const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
+      const selectedVariant = getKitVariant(kitProduct);
 
       return {
         productId: product._id,
@@ -194,8 +288,19 @@ export function KitDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-background px-4 pt-8">
+        <div className="pd-wrap">
+          <div className="craft-skeleton mb-6 h-4 w-56" />
+          <div className="grid gap-10 md:grid-cols-2">
+            <div className="craft-skeleton aspect-square rounded-[28px]" />
+            <div className="space-y-4">
+              <div className="craft-skeleton h-5 w-32" />
+              <div className="craft-skeleton h-10 w-4/5" />
+              <div className="craft-skeleton h-16 w-full" />
+              <div className="craft-skeleton h-64 w-full rounded-3xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -203,47 +308,73 @@ export function KitDetail() {
   if (!kit) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold mb-3">Không tìm thấy kit</h2>
-          <p className="text-muted-foreground mb-6">
-            Kit không tồn tại hoặc đã bị xoá.
-          </p>
-          <Link
-            to="/shop"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full hover:bg-primary/90 transition-colors"
-          >
+        <div className="craft-empty w-full max-w-lg">
+          <EmptyHoopIllustration size={150} />
+          <p className="craft-empty-title">Không tìm thấy combo</p>
+          <p className="craft-empty-desc">Combo không tồn tại hoặc đã được gỡ khỏi cửa hàng.</p>
+          <Link to="/shop?view=combo" className="craft-btn">
             <ArrowLeft className="w-4 h-4" />
-            Quay lại shop
+            Quay lại cửa hàng
           </Link>
         </div>
       </div>
     );
   }
 
-  const displayedProducts = (kit.products || []).slice(0, 3);
-  const remainingCount = (kit.products || []).length - 3;
+  const items = kit.products || [];
+  const itemCount = items.length;
+  const visibleItems = showAllProducts ? items : items.slice(0, VISIBLE_ITEMS);
+  const hiddenCount = itemCount - VISIBLE_ITEMS;
+  const savings = retailTotal - kit.price;
+  const showSavings = savings > 0 && retailTotal > 0;
+  const soldOut = kit.stock === 0;
+
+  const addButton = (floating: boolean) => (
+    <motion.button
+      type="button"
+      onClick={handleAddAllToCart}
+      disabled={soldOut}
+      className={cn("card-add-btn pd-add", floating && "pd-float-add")}
+      aria-label={soldOut ? `${kit.name} đã hết hàng` : `Thêm combo ${kit.name} vào giỏ, ${formatPrice(kit.price)}`}
+      whileTap={!soldOut ? { scale: 0.97 } : undefined}
+      transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
+    >
+      <span className="card-add-btn__icon" aria-hidden="true">
+        <ShoppingCart size={15} strokeWidth={2.2} />
+      </span>
+      {soldOut ? (
+        <span className="card-add-btn__label">Hết hàng</span>
+      ) : (
+        <span className="card-add-btn__label pd-add-label" aria-hidden="true">
+          <span className="pd-add-label-long">Thêm combo vào giỏ · {formatPrice(kit.price)}</span>
+          <span className="pd-add-label-short">Thêm · {formatPrice(kit.price)}</span>
+          <span className="pd-add-label-tiny">{formatPrice(kit.price)}</span>
+        </span>
+      )}
+      <span className="card-add-btn__shine" aria-hidden="true" />
+    </motion.button>
+  );
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:py-12 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
-      <div className="max-w-6xl mx-auto">
-        {/* Breadcrumb */}
-        <Link
-          to="/shop"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Shop
-        </Link>
+    <div className="pd-page min-h-screen bg-background pt-0 md:pt-8">
+      <div className="pd-wrap md:px-4">
+        {/* ── Breadcrumb ── */}
+        <nav className="pd-crumbs" aria-label="Breadcrumb">
+          <Link to="/shop">Cửa hàng</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <Link to="/shop?view=combo">Combo</Link>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span aria-current="page">{kit.name}</span>
+        </nav>
 
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Left Column — Image */}
-          <div className="space-y-4">
-            <div className="aspect-square rounded-3xl overflow-hidden bg-muted relative group">
+        <div className="pd-grid">
+          {/* ── Ảnh combo trong khung vải ── */}
+          <div className="pd-gallery kd-gallery">
+            <div className="pd-stage kd-stage group">
               <img
                 src={kit.thumbnail}
                 alt={kit.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {
                   const target = e.currentTarget;
                   if (!target.dataset.fallback) {
@@ -252,320 +383,178 @@ export function KitDetail() {
                   }
                 }}
               />
-              {/* Favorite button overlay */}
-              <button
-                type="button"
-                title={
-                  isKitFavorite ? "Remove from favorites" : "Add to favorites"
-                }
-                onClick={handleToggleFavorite}
-                className="absolute top-4 right-4 w-11 h-11 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
-                style={{
-                  background: "var(--card)",
-                  opacity: 0.9,
-                  touchAction: "manipulation",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Heart
-                  className={cn(
-                    "w-5 h-5 transition-colors",
-                    isKitFavorite
-                      ? "fill-destructive text-destructive"
-                      : "text-muted-foreground hover:text-destructive",
-                  )}
-                />
-              </button>
+              <div className="absolute top-4 right-4 z-[2]">
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  aria-label={isKitFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                  aria-pressed={isKitFavorite}
+                  className={cn("pd-fav", isKitFavorite && "is-active")}
+                >
+                  <Heart className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="absolute top-4 left-4 z-[2]">
+                <LevelBadge level={kit.level} />
+              </div>
+              {/* Mác "trong hộp có N món" treo ở góc ảnh */}
+              <span className="kd-box-tag">
+                <Gift className="w-3.5 h-3.5" />
+                {itemCount} món trong hộp
+              </span>
             </div>
           </div>
 
-          {/* Right Column — Kit Info */}
-          <div className="space-y-6">
-            {/* Header */}
+          {/* ── Thông tin ── */}
+          <div className="pd-info">
             <div>
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl mb-1">{kit.name}</h1>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span
-                      className={cn(
-                        "text-xs px-2.5 py-1 rounded-full capitalize",
-                        levelBadgeColors[kit.level],
-                      )}
-                    >
-                      {kit.level}
-                    </span>
-                  </div>
+              <span className="pd-eyebrow">
+                <Gift size={16} />
+                Combo DIY · {itemCount} món
+              </span>
+              <h1 className="pd-title">{kit.name}</h1>
+              <div className="mt-3">
+                <StarRating rating={kit.averageRating} count={kit.totalRatings} />
+              </div>
+            </div>
+
+            {/* Giá combo + so với mua lẻ */}
+            <div className="pd-price-row kd-price-row">
+              <span className="pd-price">{formatPrice(kit.price)}</span>
+              {showSavings && (
+                <>
+                  <span className="pd-price-old">{formatPrice(retailTotal)}</span>
+                  <span className="kd-save">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Tiết kiệm {formatPrice(savings)}
+                  </span>
+                </>
+              )}
+            </div>
+            {showSavings && (
+              <p className="kd-price-note">so với mua lẻ từng món trong hộp</p>
+            )}
+
+            {kit.description && <p className="pd-desc">{kit.description}</p>}
+
+            {/* ── Hộp nguyên liệu ── */}
+            <section className="kd-box" aria-labelledby="kd-box-title">
+              <div className="kd-box-head">
+                <span className="pd-band-icon">
+                  <Boxes size={16} />
+                </span>
+                <div className="min-w-0">
+                  <h2 id="kd-box-title" className="pd-band-title">
+                    Trong hộp có gì
+                  </h2>
+                  <p className="kd-box-sub">
+                    {itemCount} món · bấm vào từng món để xem chi tiết
+                  </p>
                 </div>
               </div>
 
-              <StarRating rating={kit.averageRating} count={kit.totalRatings} />
+              {itemCount > 0 ? (
+                <ul className="kd-items">
+                  <AnimatePresence initial={false}>
+                    {visibleItems.map((kitProduct, index) => (
+                      <KitItemRow
+                        key={`${kitProduct.productId._id}-${kitProduct.variantId}`}
+                        kitProduct={kitProduct}
+                        index={index}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              ) : (
+                <p className="kd-box-empty">Combo này chưa có sản phẩm nào.</p>
+              )}
 
-              {/* Price */}
-              <div className="mt-4 flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-primary">
-                  {formatPrice(kit.price)}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  ({(kit.products || []).length} products)
-                </span>
-              </div>
-            </div>
-
-            {/* Description */}
-            <p className="text-muted-foreground leading-relaxed">
-              {kit.description}
-            </p>
-
-            {/* Kit Details */}
-            <div
-              className="space-y-3 p-5 rounded-2xl"
-              style={{
-                background: "color-mix(in srgb, var(--muted) 50%, transparent)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <h3 className="text-sm font-medium">Kit Details</h3>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Difficulty:</span>
-                <span
-                  className={cn(
-                    "px-3 py-0.5 rounded-full text-xs font-medium capitalize",
-                    levelBadgeColors[kit.level],
-                  )}
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  className="kd-more"
+                  onClick={() => setShowAllProducts((v) => !v)}
+                  aria-expanded={showAllProducts}
                 >
-                  {kit.level}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Products included:</span>
-                <span className="font-medium">
-                  {(kit.products || []).length} items
-                </span>
-              </div>
-            </div>
+                  {showAllProducts ? "Thu gọn" : `Xem thêm ${hiddenCount} món`}
+                  <ChevronDown
+                    className={cn("w-4 h-4 transition-transform", showAllProducts && "rotate-180")}
+                  />
+                </button>
+              )}
 
-            {/* Stock Display */}
-            <div className="bg-card border border-border rounded-2xl p-5">
+              {retailTotal > 0 && (
+                <div className="kd-box-total">
+                  <span>Tổng nếu mua lẻ</span>
+                  <span>{formatPrice(retailTotal)}</span>
+                </div>
+              )}
+            </section>
+
+            {/* Tồn kho */}
+            <div className="pd-panel">
               <div className="mb-2.5 flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Tồn kho</span>
                 <span className="font-medium">
-                  {kit.stock > 0 ? `${kit.stock} sản phẩm` : "Hết hàng"}
+                  {kit.stock > 0 ? `${kit.stock} combo` : "Hết hàng"}
                 </span>
               </div>
               <YarnStockMeter stock={kit.stock} maxStock={100} />
             </div>
 
-            {/* Products in Kit */}
-            <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Package className="w-5 h-5 text-primary" />
-                Products in this kit ({(kit.products || []).length} items)
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {displayedProducts.map((kitProduct, index) => {
-                  const isLastVisible = index === 2 && remainingCount > 0;
-                  // kitProduct.productId is the full product object (populated)
-                  const product = kitProduct.productId;
-                  const variantId = kitProduct.variantId;
-                  const quantity = kitProduct.quantity;
-                  
-                  // Find the specific variant by variantId
-                  const selectedVariant = product?.variants?.find(v => v._id === variantId) || product?.variants?.[0];
+            {/* Desktop (≥ md): nút thêm giỏ inline. Mobile dùng thanh nổi cạnh FAB. */}
+            <div className="pd-buy">{addButton(false)}</div>
 
-                  return (
-                    <div key={`${product._id}-${variantId}`} className="relative">
-                      <Link
-                        to={`/shop/product/${product._id}`}
-                        className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all block"
-                      >
-                        <div className="aspect-square overflow-hidden bg-muted relative">
-                          <img
-                            src={selectedVariant?.image || product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (!target.dataset.fallback) {
-                                target.dataset.fallback = "true";
-                                target.src = `https://picsum.photos/seed/${product._id}/300/300`;
-                              }
-                            }}
-                          />
-                          {/* Variant color swatch */}
-                          {selectedVariant && (
-                            <div
-                              className="absolute top-2 right-2 w-6 h-6 rounded-full border-2 border-white shadow-md"
-                              style={{ backgroundColor: selectedVariant.hexCode }}
-                              title={selectedVariant.color}
-                            />
-                          )}
-                        </div>
-                        <div className="p-3">
-                          <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                            {product.name}
-                          </h4>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-muted-foreground">
-                              {selectedVariant?.color || "Default"} x{quantity}
-                            </span>
-                            <span className="text-sm font-semibold text-primary">
-                              {selectedVariant?.price ? formatPrice(selectedVariant.price * quantity) : ""}
-                            </span>
-                          </div>
-                          {product.variants && product.variants.length > 1 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              +{product.variants.length - 1} more variants
-                            </p>
-                          )}
-                        </div>
-                      </Link>
-
-                      {/* +N Overlay */}
-                      {isLastVisible && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setShowAllProducts(true);
-                          }}
-                          className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/70 transition-colors"
-                        >
-                          <div className="text-center text-white">
-                            <div className="text-3xl font-bold">
-                              +{remainingCount}
-                            </div>
-                            <div className="text-xs mt-1">View all</div>
-                          </div>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+            {/* Cam kết */}
+            <div className="pd-trust">
+              <div>
+                <Truck className="w-5 h-5" />
+                <p>Giao toàn quốc qua GHN</p>
               </div>
-            </div>
-
-            {/* Add All to Cart Button — đồng bộ design "card-add-btn" với Product */}
-            <motion.button
-              type="button"
-              onClick={handleAddAllToCart}
-              className="card-add-btn"
-              aria-label="Add kit to cart"
-              whileHover={{ scale: 1.015 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{
-                type: "spring",
-                stiffness: 380,
-                damping: 30,
-                mass: 0.6,
-              }}
-              style={{
-                touchAction: "manipulation",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <span className="card-add-btn__icon" aria-hidden="true">
-                <ShoppingCart size={15} strokeWidth={2.2} />
-              </span>
-              <span className="card-add-btn__label">Add to Cart</span>
-              <span className="card-add-btn__shine" aria-hidden="true" />
-            </motion.button>
-
-            {/* Trust badges */}
-            <div className="pt-4 border-t border-border grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <Truck className="w-5 h-5 text-primary mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">
-                  Free shipping over $50
-                </p>
+              <div>
+                <RotateCcw className="w-5 h-5" />
+                <p>Đổi trả trong 30 ngày</p>
               </div>
-              <div className="text-center">
-                <RotateCcw className="w-5 h-5 text-primary mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">30-day returns</p>
-              </div>
-              <div className="text-center">
-                <ShieldCheck className="w-5 h-5 text-primary mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">Secure checkout</p>
+              <div>
+                <ShieldCheck className="w-5 h-5" />
+                <p>Thanh toán an toàn</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Gợi ý tự làm — nhắc sang Góc sáng tạo */}
+        <section className="kd-cta">
+          <span className="craft-section-icon">
+            <YarnBallIcon size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="kd-cta-title">Làm xong rồi? Khoe thành phẩm nhé!</p>
+            <p className="kd-cta-sub">
+              Chia sẻ tác phẩm từ combo này ở Góc sáng tạo để cộng đồng cùng xem.
+            </p>
+          </div>
+          <Link to="/diy" className="craft-btn-ghost">
+            Góc sáng tạo
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </section>
       </div>
 
-      {/* All Products Modal */}
+      {/* Mobile (< md): thanh mua nổi, cùng hàng & ngay bên trái nút FAB "+" */}
       <AnimatePresence>
-        {showAllProducts && (
+        {isMobile && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowAllProducts(false)}
+            key="kit-floating-buy"
+            className="pd-float kd-float md:hidden"
+            role="region"
+            aria-label="Mua combo"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-background rounded-3xl max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <div>
-                  <h2 className="text-2xl font-bold">All Products in Kit</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {(kit.products || []).length} items total
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowAllProducts(false)}
-                  className="w-10 h-10 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {(kit.products || []).map((kitProduct) => {
-                    const product = kitProduct.productId;
-                    const selectedVariant = product?.variants?.find(v => v._id === kitProduct.variantId) || product?.variants?.[0];
-                    
-                    return (
-                      <Link
-                        key={`${product._id}-${kitProduct.variantId}`}
-                        to={`/shop/product/${product._id}`}
-                        onClick={() => setShowAllProducts(false)}
-                        className="group bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                      >
-                        <div className="aspect-square overflow-hidden bg-muted">
-                          <img
-                            src={selectedVariant?.image || product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (!target.dataset.fallback) {
-                                target.dataset.fallback = "true";
-                                target.src = `https://picsum.photos/seed/${product._id}/300/300`;
-                              }
-                            }}
-                          />
-                        </div>
-                        <div className="p-3">
-                          <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                            {product.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {selectedVariant?.color} x{kitProduct.quantity}
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
+            {addButton(true)}
           </motion.div>
         )}
       </AnimatePresence>

@@ -35,6 +35,7 @@ import {
   AdminPickerSkeleton,
   SkeletonBlock,
 } from "../../../shared/components/skeletons/AdminSkeleton";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 /**
  * Bộ lọc trạng thái kit (giống /admin/products):
@@ -181,18 +182,16 @@ export function AdminKits() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="admin-page-title mb-2">{t("admin.kits.title")}</h1>
-          <p className="admin-page-subtitle text-muted-foreground">
-            {t("admin.kits.subtitle")}
-          </p>
-        </div>
-        <CreateButton
-          label={t("admin.kits.createKit")}
-          onClick={() => setShowCreateModal(true)}
-        />
-      </div>
+      <AdminPageHeader
+        title={t("admin.kits.title")}
+        subtitle={t("admin.kits.subtitle")}
+        actions={
+          <CreateButton
+            label={t("admin.kits.createKit")}
+            onClick={() => setShowCreateModal(true)}
+          />
+        }
+      />
 
       {/* Filters + Table */}
       <div

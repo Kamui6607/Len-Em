@@ -1,32 +1,55 @@
+// ============================================================
+// Course Detail — route /learn/:courseId
+// Hero (bìa + thông tin) · Nội dung khoá học (danh sách bài, đánh dấu
+// bài đã học / xem thử / khoá) · Nguyên liệu gợi ý · "vé" đăng ký bên
+// phải (desktop) hoặc thanh nổi cạnh nút FAB (mobile).
+// Nút chính đi theo trạng thái: đăng nhập → đăng ký miễn phí / mua
+// khoá học (hiện mã QR SePay ngay tại trang) → bắt đầu / học tiếp bài
+// đang dở → xem lại khi đã xong.
+// ============================================================
+
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
 import {
-  BookOpen,
-  Clock,
-  Play,
-  Star,
-  Users,
   Award,
-  ShoppingCart,
+  BookOpen,
+  Check,
+  ChevronRight,
+  Clock,
+  Eye,
+  Gift,
+  GraduationCap,
+  Leaf,
+  Lock,
   PackageSearch,
+  Play,
+  ShoppingCart,
+  Sprout,
+  Star,
+  TreeDeciduous,
+  Users,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "../../shared/components/ui/accordion";
-import { Badge } from "../../shared/components/ui/badge";
-import { Button } from "../../shared/components/ui/button";
-import { Progress } from "../../shared/components/ui/progress";
 import { courseService } from "../../shared/api/courseService";
 import { lessonService } from "../../shared/api/lessonService";
 import { kitService, type Kit } from "../../shared/api/kitService";
 import { productService, type Product } from "../../shared/api/productService";
 import { orderService } from "../../features/orders/services/order.service";
 import type { CreateOrderRequest } from "../../features/orders/types/order.types";
+import {
+  SepayQrModal,
+  createSepayQr,
+  useSepayPayment,
+  type SepayQrInfo,
+} from "../../features/orders/components/SepayQrModal";
 import { materialCombos } from "../../features/learn/data/learn.mock";
+import {
+  COURSE_LEVEL_LABELS,
+  canWatchLesson,
+  getResumeLesson,
+} from "../../features/learn/utils/lessonAccess";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
 import type {
@@ -37,86 +60,15 @@ import type {
 } from "../../features/learn/types/learn.types";
 import { cn } from "../../shared/components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
+import { YarnBallIcon } from "../../features/shop/shopMeta";
+import "../../styles/craft.css";
+import "../../styles/course.css";
 
-const levelLabels: Record<CourseLevel, string> = {
-  beginner: "Beginner",
-  mid: "Intermediate",
-  pro: "Advanced",
+const LEVEL_ICON: Record<CourseLevel, LucideIcon> = {
+  beginner: Sprout,
+  mid: Leaf,
+  pro: TreeDeciduous,
 };
-
-const levelStyles: Record<CourseLevel, string> = {
-  beginner:
-    "border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
-  mid:
-    "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  pro:
-    "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
-};
-
-// Shared page styles — rendered once, on the real content. (Previously this
-// block only existed inside the loading-skeleton branch, so the CTA button
-// below had no CSS to hook into once loading finished — it papered over that
-// with an inline style object and manual onMouseEnter/onMouseLeave handlers.
-// Now that the class is actually available, that duplication is gone.)
-const PAGE_STYLES = `
-  .learn-start-btn {
-    background: var(--accent-blush);
-    color: var(--foreground);
-    border: 2px solid var(--primary);
-    box-shadow: 0 4px 16px var(--glow-pink);
-    transition: all 0.2s ease;
-  }
-  .learn-start-btn:hover:not(:disabled) {
-    background: var(--accent-pink);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(240,196,224,0.45);
-  }
-  .learn-start-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .dark .learn-start-btn {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border-color: var(--primary);
-    box-shadow: 0 4px 16px rgba(155,111,214,0.3);
-  }
-  .dark .learn-start-btn:hover:not(:disabled) {
-    background: var(--primary-hover);
-    box-shadow: 0 8px 24px rgba(155,111,214,0.45);
-  }
-
-  /* Small stat chip next to the "Lessons" heading — keeps that header row
-     from being just a lonely title with empty space beside it. */
-  .lessons-summary-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 14px; border-radius: 999px;
-    background: var(--surface); border: 1px solid var(--border);
-    font-size: 0.78rem; font-weight: 600; color: var(--foreground-secondary);
-    white-space: nowrap;
-  }
-  .lessons-summary-chip svg { color: var(--primary); }
-
-  /* Empty-state card for "no combo linked" — replaces a single line of
-     italic text with something that actually fills the sidebar slot. */
-  .combo-empty-card {
-    text-align: center;
-    padding: 2.25rem 1.25rem;
-    border-radius: 20px;
-    border: 1px dashed var(--border);
-    background: var(--surface);
-  }
-  .combo-empty-card svg { margin: 0 auto 0.75rem; color: var(--foreground-muted); opacity: 0.5; }
-  .combo-empty-card p { font-size: 0.85rem; color: var(--foreground-muted); margin: 0 0 1rem; }
-  .combo-empty-card a {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 20px; border-radius: 999px;
-    background: var(--primary); color: var(--primary-foreground);
-    font-size: 0.82rem; font-weight: 600; text-decoration: none;
-    transition: all 0.2s ease;
-  }
-  .combo-empty-card a:hover { background: var(--primary-hover); transform: translateY(-1px); }
-`;
 
 /**
  * Extract ID from various reference formats.
@@ -124,38 +76,21 @@ const PAGE_STYLES = `
  */
 function extractId(ref: unknown): string | null {
   if (!ref) return null;
-
-  // String ID
-  if (typeof ref === "string") {
-    return ref;
-  }
-
-  // Object reference
+  if (typeof ref === "string") return ref;
   if (typeof ref === "object") {
     const obj = ref as Record<string, unknown>;
-
-    // Check for common ID field names
     const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
-    if (typeof id === "string" && id.length > 0) {
-      return id;
-    }
-
-    // If object has _id or id but no specific field, it might be a populated object
-    // Return the object's _id or id as the reference ID
-    if (obj._id && typeof obj._id === "string") {
-      return obj._id;
-    }
-    if (obj.id && typeof obj.id === "string") {
-      return obj.id;
-    }
+    if (typeof id === "string" && id.length > 0) return id;
+    if (obj._id && typeof obj._id === "string") return obj._id;
+    if (obj.id && typeof obj.id === "string") return obj.id;
   }
-
   return null;
 }
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, setUser } = useAuth();
   const { addKitToCart, addToCart } = useCart();
   const [course, setCourse] = useState<Course | null>(null);
@@ -166,16 +101,27 @@ export function CourseDetailPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [buying, setBuying] = useState(false);
   const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
+  const [sepayQr, setSepayQr] = useState<SepayQrInfo | null>(null);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches,
+  );
 
   // Get enrolled / purchased courses from user profile
   const enrolledCourses = useMemo(() => user?.enrolled || [], [user]);
   const purchasedCourses = useMemo(() => user?.purchasedCourses || [], [user]);
 
-  // Check if current course is enrolled / purchased
   const isEnrolled = courseId ? enrolledCourses.includes(courseId) : false;
   const isPurchased = courseId ? purchasedCourses.includes(courseId) : false;
   // Free course when price is missing or 0
   const isFree = course ? (course.price ?? 0) === 0 : true;
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   // Fetch the user's server-side course progress so the detail page shows
   // real completion state (and the certificate when the course is finished).
@@ -207,63 +153,44 @@ export function CourseDetailPage() {
         const courseData = courseRes.data.data.course;
         setCourse(courseData);
 
-        // linkedLessons from API may be:
-        // 1. Populated lesson objects (full data) — use directly
-        // 2. String IDs — fetch individually
+        // linkedLessons from API may be populated lesson objects or string IDs.
         const rawLessons = courseData.linkedLessons || [];
         const populatedLessons: Lesson[] = [];
         const lessonIdsToFetch: string[] = [];
-
         for (const item of rawLessons) {
           if (!item) continue;
-
-          // Case 1: It's a populated lesson object (has title/videoUrl)
           if (typeof item === "object") {
             const obj = item as Record<string, unknown>;
             if (obj.title && typeof obj.title === "string") {
               populatedLessons.push(item as unknown as Lesson);
               continue;
             }
-            // Try to extract _id from object
             const rawId = obj._id || obj.id;
-            if (typeof rawId === "string" && rawId.length > 0) {
-              lessonIdsToFetch.push(rawId);
-            }
+            if (typeof rawId === "string" && rawId.length > 0) lessonIdsToFetch.push(rawId);
             continue;
           }
-
-          // Case 2: It's a string ID
-          if (typeof item === "string" && item.length > 0) {
-            lessonIdsToFetch.push(item);
-          }
+          if (typeof item === "string" && item.length > 0) lessonIdsToFetch.push(item);
         }
-
-        // Fetch any remaining lesson IDs
         if (lessonIdsToFetch.length > 0) {
-          const lessonPromises = lessonIdsToFetch.map((id) =>
-            lessonService
-              .getById(id)
-              .then((res) => res.data.data.lesson)
-              .catch(() => null),
-          );
-          const fetchedLessons = (await Promise.all(lessonPromises)).filter(
-            (l): l is Lesson => l !== null,
-          );
+          const fetchedLessons = (
+            await Promise.all(
+              lessonIdsToFetch.map((id) =>
+                lessonService
+                  .getById(id)
+                  .then((res) => res.data.data.lesson)
+                  .catch(() => null),
+              ),
+            )
+          ).filter((l): l is Lesson => l !== null);
           populatedLessons.push(...fetchedLessons);
         }
-
-        const courseLessons = populatedLessons.sort(
-          (a, b) => a.order - b.order,
-        );
+        const courseLessons = populatedLessons.sort((a, b) => a.order - b.order);
         setLessons(courseLessons);
 
-        // Fetch linked combos from API using kitService.getById for each comboId
+        // Linked combos (kits)
         const comboRefs = courseData.linkedCombo || [];
-        const comboIds: string[] = comboRefs
-          .map((ref) => extractId(ref))
-          .filter((id): id is string => id !== null);
-        // Also check for kitId field in case API uses different naming
-        const kitIdsFromRefs: string[] = comboRefs
+        const comboIds = comboRefs.map((ref) => extractId(ref)).filter((id): id is string => id !== null);
+        const kitIdsFromRefs = comboRefs
           .map((ref) => {
             if (typeof ref === "object" && ref !== null) {
               const obj = ref as Record<string, unknown>;
@@ -272,95 +199,69 @@ export function CourseDetailPage() {
             return null;
           })
           .filter((id): id is string => id !== null);
-        // Merge comboIds and kitIds, removing duplicates
         const allComboIds = [...new Set([...comboIds, ...kitIdsFromRefs])];
-
-        // Fetch each kit by ID
         if (allComboIds.length > 0) {
           try {
-            const kitPromises = allComboIds.map((id) =>
-              kitService
-                .getById(id)
-                .then((res) => res.data.data?.kit)
-                .catch(() => null),
-            );
-            const fetchedKits = (await Promise.all(kitPromises)).filter(
-              (k): k is Kit => k !== null,
-            );
+            const fetchedKits = (
+              await Promise.all(
+                allComboIds.map((id) =>
+                  kitService
+                    .getById(id)
+                    .then((res) => res.data.data?.kit)
+                    .catch(() => null),
+                ),
+              )
+            ).filter((k): k is Kit => k !== null && k !== undefined);
             setKits(fetchedKits);
           } catch {
             // Fallback to mock data
-            const mockKits = materialCombos
-              .filter((c) => allComboIds.includes(c.id))
-              .map((c) => ({
-                _id: c.id,
-                name: c.name,
-                description: c.description,
-                thumbnail: c.thumbnail,
-                level: c.level,
-                price: c.price,
-                products: c.productIds.map((pid) => ({
-                  productId: {
-                    _id: pid,
-                    name: pid,
-                    description: "",
-                    category: "",
-                    image: "",
-                    tags: [],
-                    variants: [],
-                    isActive: true,
-                    createdAt: "",
-                    updatedAt: "",
-                    __v: 0,
-                  },
-                  variantId: "default",
-                  quantity: 1,
-                })),
-                stock: 0,
-                isActive: true,
-                averageRating: 0,
-                totalRatings: 0,
-                ratings: [],
-                createdAt: "",
-                updatedAt: "",
-                __v: 0,
-              }));
-            setKits(mockKits);
+            setKits(
+              materialCombos
+                .filter((c) => allComboIds.includes(c.id))
+                .map((c) => ({
+                  _id: c.id,
+                  name: c.name,
+                  description: c.description,
+                  thumbnail: c.thumbnail,
+                  level: c.level,
+                  price: c.price,
+                  products: [],
+                  stock: 0,
+                  isActive: true,
+                  averageRating: 0,
+                  totalRatings: 0,
+                  ratings: [],
+                  createdAt: "",
+                  updatedAt: "",
+                  __v: 0,
+                })) as unknown as Kit[],
+            );
           }
         }
 
-        // Fetch linked products from lessons' linkedProduct
+        // Linked products from the lessons
         const productIdsFromLessons = new Set<string>();
         for (const lesson of courseLessons) {
-          if (lesson.linkedProduct) {
-            for (const lp of lesson.linkedProduct) {
-              const extractedId = extractId(lp);
-              if (extractedId) {
-                productIdsFromLessons.add(extractedId);
-              }
-            }
+          for (const lp of lesson.linkedProduct ?? []) {
+            const extractedId = extractId(lp);
+            if (extractedId) productIdsFromLessons.add(extractedId);
           }
         }
-
         if (productIdsFromLessons.size > 0) {
-          try {
-            const productPromises = Array.from(productIdsFromLessons).map(
-              (id) =>
+          const fetchedProducts = (
+            await Promise.all(
+              Array.from(productIdsFromLessons).map((id) =>
                 productService
                   .getById(id)
                   .then((res) => res.data.data?.product)
                   .catch(() => null),
-            );
-            const fetchedProducts = (await Promise.all(productPromises)).filter(
-              (p): p is Product => p !== null,
-            );
-            setProducts(fetchedProducts);
-          } catch {
-            // Silently fail - products are optional
-          }
+              ),
+            )
+          ).filter((p): p is Product => p !== null && p !== undefined);
+          setProducts(fetchedProducts);
         }
       } catch {
-        toast.error("Failed to load course");
+        toast.error("Không tải được khoá học");
       } finally {
         setLoading(false);
       }
@@ -368,26 +269,34 @@ export function CourseDetailPage() {
     fetchData();
   }, [courseId]);
 
-  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+  // Bài nên học tiếp — bài đầu tiên chưa hoàn thành (xong hết thì bài 1)
+  const resumeLesson = useMemo(() => getResumeLesson(lessons, courseProgress), [lessons, courseProgress]);
+  const completedSet = useMemo(() => new Set(courseProgress?.completedLessons ?? []), [courseProgress]);
+  const completedCount = lessons.filter((lesson) => completedSet.has(lesson._id)).length;
+  const allDone = lessons.length > 0 && completedCount === lessons.length;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight;
-      const scrollTop = window.scrollY;
-      const clientHeight = window.innerHeight;
-      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const goToLesson = useCallback(
+    (lesson: Lesson | undefined) => {
+      if (lesson && courseId) navigate(`/learn/${courseId}/lesson/${lesson._id}`);
+    },
+    [courseId, navigate],
+  );
 
-  /** Buy Now — create a direct digital-order for a premium course (bypasses cart). */
+  const goToLogin = useCallback(() => {
+    navigate("/auth/login", { state: { from: location } });
+  }, [location, navigate]);
+
+  // SePay: khi webhook xác nhận đã thanh toán → sang trang cảm ơn
+  const { checking: sepayChecking, checkNow: checkSepayNow } = useSepayPayment(sepayQr, (orderId) =>
+    navigate(`/order/success?orderId=${orderId}`),
+  );
+
+  /** Mua khoá học — tạo đơn số (không qua giỏ) rồi hiện mã QR SePay ngay tại trang. */
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated || !course || !courseId) {
-      navigate("/auth/login");
+      goToLogin();
       return;
     }
-
     setBuying(true);
     try {
       const price = course.price ?? 0;
@@ -417,120 +326,76 @@ export function CourseDetailPage() {
         shippingFee: 0,
         totalPrice: price,
       };
-
       const response = await orderService.createOrder(payload);
-      const result = response.data;
-
-
-
-      toast.success("Order created! Complete payment to start the course.");
-      navigate(`/order/success?orderId=${result.order?._id ?? ""}`);
+      const orderId = response.data.order?._id;
+      if (!orderId) throw new Error("Missing order id");
+      // Trước đây chuyển thẳng sang /order/success mà KHÔNG có mã QR —
+      // khách không có cách nào thanh toán. Giờ hiện QR như ở Checkout.
+      setSepayQr(await createSepayQr(orderId));
+      toast.success("Đã tạo đơn! Quét mã QR để thanh toán khoá học.");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        err?.response?.data?.message ||
-          "Failed to create the order. Please try again.",
-      );
+      toast.error(err?.response?.data?.message || "Không tạo được đơn hàng. Vui lòng thử lại.");
     } finally {
       setBuying(false);
     }
-  }, [
-    isAuthenticated,
-    course,
-    courseId,
-    navigate,
-    user?.fullName,
-    user?.phone,
-    user?.address,
-  ]);
+  }, [isAuthenticated, course, courseId, goToLogin, user?.fullName, user?.phone, user?.address]);
 
-  const handleEnrollAndStart = useCallback(
-    async (event: React.MouseEvent) => {
-      if (!isAuthenticated) {
-        event.preventDefault();
-        navigate("/auth/login");
-        return;
+  /** Đăng ký (miễn phí hoặc đã mua) rồi vào bài học. */
+  const handleEnroll = useCallback(async () => {
+    if (!courseId) return;
+    try {
+      setEnrolling(true);
+      const res = await courseService.enroll(courseId);
+      const { enrolledCount } = res.data.data;
+      setCourse((prev) => (prev ? { ...prev, enrolledCount } : prev));
+      if (user) setUser({ ...user, enrolled: [...enrolledCourses, courseId] });
+      toast.success("Đăng ký thành công — bắt đầu học thôi!");
+      goToLesson(lessons[0]);
+    } catch (error) {
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      if (err?.response?.data?.message === "Already enrolled") {
+        goToLesson(resumeLesson);
+      } else if (err?.response?.status === 403) {
+        toast.error("Đây là khoá học trả phí. Vui lòng mua khoá học trước.");
+      } else {
+        toast.error("Không đăng ký được khoá học");
       }
+    } finally {
+      setEnrolling(false);
+    }
+  }, [courseId, enrolledCourses, goToLesson, lessons, resumeLesson, setUser, user]);
 
-      if (isEnrolled || !courseId) {
-        // Already enrolled — just navigate to first lesson
-        const fl = lessons[0];
-        if (fl) {
-          navigate(`/learn/${courseId}/lesson/${fl._id}`);
-        }
-        return;
+  // ── Nút chính theo trạng thái ──
+  const primary = (() => {
+    if (lessons.length === 0) {
+      return { label: "Sắp ra mắt", hint: "Khoá học đang được chuẩn bị bài giảng.", disabled: true, run: () => undefined };
+    }
+    if (!isAuthenticated) {
+      return { label: "Đăng nhập để bắt đầu", hint: "Đăng nhập để đăng ký và lưu tiến độ.", run: goToLogin };
+    }
+    if (isEnrolled) {
+      if (allDone) return { label: "Xem lại khoá học", hint: "Bạn đã hoàn thành khoá học 🎉", run: () => goToLesson(lessons[0]) };
+      if (completedCount > 0 && resumeLesson) {
+        return { label: `Học tiếp · Bài ${resumeLesson.order}`, hint: resumeLesson.title, run: () => goToLesson(resumeLesson) };
       }
-
-      event.preventDefault();
-
-      // Premium course the user hasn't bought yet → Buy Now checkout
-      if (!isFree && !isPurchased) {
-        await handleBuyNow();
-        return;
-      }
-
-      // Free course (or already purchased) → enroll directly
-      try {
-        setEnrolling(true);
-        const res = await courseService.enroll(courseId);
-        const { enrolledCount } = res.data.data;
-
-        // Update course enrolledCount
-        if (course) {
-          setCourse({ ...course, enrolledCount });
-        }
-
-        // Update user's enrolled array in auth store
-        if (user) {
-          setUser({
-            ...user,
-            enrolled: [...enrolledCourses, courseId],
-          });
-        }
-
-        toast.success("Enrolled successfully!");
-        const fl = lessons[0];
-        if (fl) {
-          navigate(`/learn/${courseId}/lesson/${fl._id}`);
-        }
-      } catch (error) {
-        // Check if already enrolled from error response
-        const err = error as {
-          response?: { status?: number; data?: { message?: string } };
-        };
-        if (err?.response?.data?.message === "Already enrolled") {
-          // Still navigate to course to sync with backend
-          const fl = lessons[0];
-          if (fl) {
-            navigate(`/learn/${courseId}/lesson/${fl._id}`);
-          }
-        } else if (err?.response?.status === 403) {
-          // Backend rejects enrolling in a paid course that wasn't purchased
-          toast.error(
-            "This is a paid course. Please purchase it first.",
-          );
-        } else {
-          toast.error("Failed to enroll");
-        }
-      } finally {
-        setEnrolling(false);
-      }
-    },
-    [
-      isAuthenticated,
-      isEnrolled,
-      isPurchased,
-      isFree,
-      courseId,
-      navigate,
-      lessons,
-      course,
-      user,
-      enrolledCourses,
-      setUser,
-      handleBuyNow,
-    ],
-  );
+      return { label: "Bắt đầu học", hint: "Bạn đã đăng ký khoá học này.", run: () => goToLesson(lessons[0]) };
+    }
+    if (!isFree && !isPurchased) {
+      return {
+        label: buying ? "Đang tạo đơn…" : `Mua khoá học · ${formatPrice(course?.price ?? 0)}`,
+        hint: "Thanh toán chuyển khoản VietQR, học ngay sau khi xác nhận.",
+        disabled: buying,
+        run: () => void handleBuyNow(),
+      };
+    }
+    return {
+      label: enrolling ? "Đang đăng ký…" : isPurchased ? "Bắt đầu học" : "Đăng ký học miễn phí",
+      hint: isPurchased ? "Bạn đã mua khoá học này." : "Miễn phí — học trọn bộ bài giảng.",
+      disabled: enrolling,
+      run: () => void handleEnroll(),
+    };
+  })();
 
   // Get unique products from lessons (for display)
   const uniqueProducts = useMemo(() => {
@@ -544,47 +409,17 @@ export function CourseDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
-            <main className="space-y-8">
-              <section className="overflow-hidden rounded-3xl border bg-card">
-                <div className="relative aspect-[16/9] md:h-96 bg-muted/60" />
-                <div className="space-y-6 p-6 md:p-8">
-                  <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className="h-4 w-24 rounded bg-muted/60 animate-pulse"
-                      />
-                    ))}
-                  </div>
-                  <div className="h-16 w-full rounded-lg bg-muted/60 animate-pulse" />
-                  <div className="flex flex-wrap gap-2">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="h-6 w-16 rounded-full bg-muted/60 animate-pulse"
-                      />
-                    ))}
-                  </div>
-                  <div className="h-12 w-36 rounded-full bg-muted/60 animate-pulse" />
-                </div>
-              </section>
-              <section className="rounded-2xl border bg-card p-6">
-                <div className="h-6 w-24 rounded bg-muted/60 animate-pulse mb-4" />
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-12 w-full rounded-lg bg-muted/60 animate-pulse mb-3"
-                  />
-                ))}
-              </section>
-            </main>
-            <aside className="space-y-6">
-              <div className="h-6 w-40 rounded bg-muted/60 animate-pulse mb-4" />
-              <div className="h-64 w-full rounded-2xl bg-muted/60 animate-pulse" />
-            </aside>
+      <div className="cd-page">
+        <div className="cd-wrap">
+          <div className="craft-skeleton mb-6 h-4 w-56" />
+          <div className="craft-skeleton h-[360px] rounded-[32px]" />
+          <div className="cd-grid mt-8">
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="craft-skeleton h-16 rounded-2xl" />
+              ))}
+            </div>
+            <div className="craft-skeleton h-72 rounded-3xl" />
           </div>
         </div>
       </div>
@@ -593,44 +428,51 @@ export function CourseDetailPage() {
 
   if (!course) return <Navigate to="/learn" replace />;
 
-  const firstLesson = lessons[0];
+  const LevelIcon = LEVEL_ICON[course.level] ?? Sprout;
+  const rating = Number(course.rating ?? 0);
+  const progressPct = lessons.length ? Math.round((completedCount / lessons.length) * 100) : 0;
+  const role = user?.roleId;
 
-  const handleStartLearning = (event: React.MouseEvent) => {
+  const handleLockedLesson = () => {
     if (!isAuthenticated) {
-      event.preventDefault();
-      navigate("/auth/login");
+      goToLogin();
+      return;
     }
+    toast.info(
+      !isFree && !isPurchased
+        ? "Mua khoá học để mở khoá bài này."
+        : "Đăng ký khoá học (miễn phí) để xem bài này.",
+    );
   };
 
   const handleAddKitToCart = (kit: Kit) => {
     if (!isAuthenticated) {
-      navigate("/auth/login");
+      goToLogin();
       return;
     }
-    const kitProducts = (kit.products || []).map((kitProduct) => {
-      const product = kitProduct.productId;
-      const variant = product?.variants?.[0];
-      return {
-        productId: product._id,
-        variantId: kitProduct.variantId,
-        name: product.name,
-        image: variant?.image || product.image,
-        price: variant?.price || 0,
-      };
-    });
     addKitToCart({
       kitId: kit._id,
       name: kit.name,
       thumbnail: kit.thumbnail,
       price: kit.price,
-      products: kitProducts,
+      products: (kit.products || []).map((kitProduct) => {
+        const product = kitProduct.productId;
+        const variant = product?.variants?.[0];
+        return {
+          productId: product._id,
+          variantId: kitProduct.variantId,
+          name: product.name,
+          image: variant?.image || product.image,
+          price: variant?.price || 0,
+        };
+      }),
     });
-    toast.success(`Added "${kit.name}" to cart`);
+    toast.success(`Đã thêm combo "${kit.name}" vào giỏ`);
   };
 
   const handleAddProductToCart = (product: Product) => {
     if (!isAuthenticated) {
-      navigate("/auth/login");
+      goToLogin();
       return;
     }
     const variant = product.variants[0];
@@ -644,583 +486,337 @@ export function CourseDetailPage() {
       price: variant?.price || 0,
       stock: variant?.stock || 999,
     });
-    toast.success(`Added "${product.name}" to cart`);
+    toast.success(`Đã thêm "${product.name}" vào giỏ`);
   };
 
+  const ctaButton = (extraClass?: string) => (
+    <button
+      type="button"
+      className={cn("craft-btn cd-cta", extraClass)}
+      onClick={primary.run}
+      disabled={primary.disabled}
+    >
+      {isEnrolled ? <Play className="h-4 w-4 fill-current" /> : !isFree && !isPurchased ? <ShoppingCart className="h-4 w-4" /> : <GraduationCap className="h-4 w-4" />}
+      {primary.label}
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
-      <style>{PAGE_STYLES}</style>
-      <div className="mx-auto max-w-7xl">
-        <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
-          <main className="space-y-8">
-            <section className="overflow-hidden rounded-3xl border bg-card">
-              <div
-                className="relative w-full overflow-hidden bg-muted"
-                style={{ height: "clamp(240px, 40vw, 400px)" }}
-              >
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-white/75 via-black/10 to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6 text-white">
-                  <Badge
-                    className={cn("mb-4 border", levelStyles[course.level])}
-                  >
-                    {levelLabels[course.level]}
-                  </Badge>
-                  <h1 className="max-w-4xl text-3xl font-semibold tracking-tight md:text-5xl">
-                    {course.title}
-                  </h1>
-                </div>
-              </div>
-              <div className="space-y-6 p-6 md:p-8">
-                <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-5">
-                  <Stat
-                    icon={Users}
-                    label={`${course.enrolledCount.toLocaleString()} enrolled`}
-                  />
-                  <Stat
-                    icon={Star}
-                    label={`${course.rating} rating`}
-                    className="text-[var(--rating-star)]"
-                  />
-                  <Stat icon={Clock} label={`${course.totalDuration} min`} />
-                  <Stat
-                    icon={BookOpen}
-                    label={`${course.totalLessons} lessons`}
-                  />
-                </div>
+    <div className="cd-page">
+      <div className="cd-wrap">
+        {/* ── Breadcrumb ── */}
+        <nav className="cd-crumbs" aria-label="Breadcrumb">
+          <Link to="/learn">Học</Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span aria-current="page">{course.title}</span>
+        </nav>
 
-                <p className="text-muted-foreground md:text-lg">
-                  {course.description}
+        {/* ── Hero ── */}
+        <section className="craft-hero craft-rise cd-hero">
+          <div className="cd-hero-info">
+            <span className={cn("cd-level", `is-${course.level}`)}>
+              <LevelIcon className="h-3.5 w-3.5" />
+              {COURSE_LEVEL_LABELS[course.level] ?? course.level}
+            </span>
+            <h1 className="craft-title cd-title">{course.title}</h1>
+            <div className="craft-stitch" aria-hidden />
+            {course.description && <p className="craft-subtitle">{course.description}</p>}
+
+            <div className="cd-stats">
+              <span>
+                <BookOpen className="h-4 w-4" />
+                {lessons.length || course.totalLessons} bài học
+              </span>
+              <span>
+                <Clock className="h-4 w-4" />
+                {course.totalDuration} phút
+              </span>
+              <span>
+                <Users className="h-4 w-4" />
+                {course.enrolledCount.toLocaleString("vi-VN")} học viên
+              </span>
+              {rating > 0 && (
+                <span>
+                  <Star className="h-4 w-4 fill-[var(--rating-star)] text-[var(--rating-star)]" />
+                  {rating.toFixed(1)}
+                </span>
+              )}
+            </div>
+
+            {course.tags.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {course.tags.map((tag) => (
+                  <span key={tag} className="craft-tag">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="cd-cover"
+            onClick={primary.run}
+            disabled={primary.disabled}
+            aria-label={primary.label}
+          >
+            <img src={course.thumbnail} alt="" />
+            <span className="cd-cover-play">
+              {isEnrolled || isFree || isPurchased ? <Play className="h-6 w-6 fill-current" /> : <Lock className="h-6 w-6" />}
+            </span>
+            {!isFree && <span className="cd-cover-price">{formatPrice(course.price ?? 0)}</span>}
+          </button>
+        </section>
+
+        <div className="cd-grid">
+          <main className="min-w-0 space-y-12">
+            {/* ── Nội dung khoá học ── */}
+            <section>
+              <div className="craft-section-head">
+                <span className="craft-section-icon">
+                  <BookOpen className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="craft-section-title">Nội dung khoá học</h2>
+                  <p className="craft-section-sub">
+                    {lessons.length} bài · {course.totalDuration} phút
+                    {isEnrolled && lessons.length > 0 && ` · đã học ${completedCount}/${lessons.length}`}
+                  </p>
+                </div>
+                <span className="craft-section-thread" aria-hidden />
+              </div>
+
+              {courseProgress?.hasNewContent && (
+                <p className="cd-notice">
+                  <Gift className="h-4 w-4" /> Khoá học vừa có bài mới — vào học để xem nhé!
                 </p>
+              )}
 
-                <div className="flex flex-wrap gap-2">
-                  {course.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      #{tag}
-                    </Badge>
-                  ))}
+              {lessons.length === 0 ? (
+                <div className="craft-empty">
+                  <p className="craft-empty-title">Bài giảng đang được chuẩn bị</p>
+                  <p className="craft-empty-desc">Quay lại sau ít hôm nữa nhé.</p>
                 </div>
-
-                {!isFree && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <Badge variant="outline">Premium</Badge>
-                    <span
-                      className="text-xl font-bold"
-                      style={{ color: "var(--primary)" }}
-                    >
-                      {formatPrice(course.price ?? 0)}
-                    </span>
-                  </div>
-                )}
-
-                {firstLesson && (
-                  <button
-                    type="button"
-                    disabled={enrolling || buying}
-                    onClick={(e) => handleEnrollAndStart(e)}
-                    className="learn-start-btn inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold transition-all"
-                  >
-                    <Play className="size-4" />
-                    {buying
-                      ? "Redirecting to payment..."
-                      : enrolling
-                        ? "Enrolling..."
-                        : isEnrolled
-                          ? "Start"
-                          : isFree || isPurchased
-                            ? "Enroll"
-                            : `Buy Now ${formatPrice(course.price ?? 0)}`}
-                  </button>
-                )}
-              </div>
+              ) : (
+                <ol className="cd-lessons">
+                  {lessons.map((lesson, index) => {
+                    const done = completedSet.has(lesson._id);
+                    const isNext = isEnrolled && !allDone && resumeLesson?._id === lesson._id;
+                    const open = canWatchLesson({ lesson, isEnrolled, role });
+                    const materialCount = (lesson.linkedProduct?.length ?? 0) + (lesson.linkedCombo?.length ?? 0);
+                    const body = (
+                      <>
+                        <span className={cn("cd-lesson-knot", done && "is-done", isNext && "is-next")}>
+                          {done ? <Check className="h-4 w-4" strokeWidth={3} /> : index + 1}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="cd-lesson-title">{lesson.title}</span>
+                          <span className="cd-lesson-meta">
+                            <Clock className="h-3 w-3" /> {lesson.duration} phút
+                            {materialCount > 0 && <> · {materialCount} nguyên liệu gợi ý</>}
+                            {isNext && <span className="cd-lesson-next"> · học tiếp</span>}
+                          </span>
+                        </span>
+                        {lesson.isPreview && !isEnrolled && (
+                          <span className="cd-lesson-preview">
+                            <Eye className="h-3 w-3" /> Xem thử
+                          </span>
+                        )}
+                        <span className="cd-lesson-action">
+                          {open ? <Play className="h-4 w-4 fill-current" /> : <Lock className="h-4 w-4" />}
+                        </span>
+                      </>
+                    );
+                    return (
+                      <li key={lesson._id}>
+                        {open ? (
+                          <Link
+                            to={`/learn/${course._id}/lesson/${lesson._id}`}
+                            className={cn("cd-lesson", isNext && "is-next")}
+                            onClick={(e) => {
+                              if (!isAuthenticated) {
+                                e.preventDefault();
+                                goToLogin();
+                              }
+                            }}
+                          >
+                            {body}
+                          </Link>
+                        ) : (
+                          <button type="button" className="cd-lesson is-locked" onClick={handleLockedLesson}>
+                            {body}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
             </section>
 
-            <section className="rounded-2xl border bg-card p-6 mb-20 md:mb-0">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-semibold">Lessons</h2>
-                <span className="lessons-summary-chip">
-                  <Clock size={13} />
-                  {course.totalDuration} min · {course.totalLessons} lessons
+            {/* ── Nguyên liệu ── */}
+            <section>
+              <div className="craft-section-head">
+                <span className="craft-section-icon">
+                  <YarnBallIcon size={20} />
                 </span>
+                <div className="min-w-0">
+                  <h2 className="craft-section-title">Nguyên liệu cho khoá học</h2>
+                  <p className="craft-section-sub">Combo và sản phẩm được dùng trong các bài</p>
+                </div>
+                <span className="craft-section-thread" aria-hidden />
               </div>
-              {isEnrolled && courseProgress && (
-                <div
-                  className="mb-5 rounded-xl border p-4"
-                  style={{ background: "var(--surface)" }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium">
-                      {courseProgress.completedLessons.length}/
-                      {course.totalLessons} lessons completed
-                    </p>
-                    {courseProgress.isCompleted && (
-                      <Badge variant="success">
-                        <Award className="size-3.5" /> Certificate
-                      </Badge>
-                    )}
-                  </div>
-                  <Progress
-                    className="mt-3"
-                    value={
-                      (courseProgress.completedLessons.length /
-                        Math.max(1, course.totalLessons)) *
-                      100
-                    }
-                  />
-                  {courseProgress.hasNewContent && (
-                    <p
-                      className="mt-3 rounded-lg border p-3 text-sm"
-                      style={{
-                        borderColor: "var(--warning-border)",
-                        background: "var(--warning-bg)",
-                        color: "var(--warning-text)",
-                      }}
-                    >
-                      🎁 This course just got a new lesson — jump back in to
-                      see what's new!
-                    </p>
+
+              {kits.length === 0 && uniqueProducts.length === 0 ? (
+                <div className="craft-empty">
+                  <PackageSearch size={36} className="text-[var(--foreground-subtle)]" />
+                  <p className="craft-empty-title">Chưa gắn nguyên liệu</p>
+                  <p className="craft-empty-desc">Bạn có thể tự chọn len và dụng cụ trong cửa hàng.</p>
+                  <Link to="/shop" className="craft-btn-ghost">
+                    <ShoppingCart className="h-4 w-4" /> Vào cửa hàng
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {kits.length > 0 && (
+                    <div className="cd-kits">
+                      {kits.map((kit) => (
+                        <article key={kit._id} className="cd-kit">
+                          <Link to={`/kits/${kit._id}`} className="cd-kit-media">
+                            <img
+                              src={kit.thumbnail || kit.products?.[0]?.productId?.image}
+                              alt={kit.name}
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.fallback) {
+                                  target.dataset.fallback = "true";
+                                  target.src = `https://picsum.photos/seed/${kit._id}/800/450`;
+                                }
+                              }}
+                            />
+                            <span className="cd-kit-tag">
+                              <Gift className="h-3 w-3" /> Combo
+                            </span>
+                          </Link>
+                          <div className="cd-kit-body">
+                            <Link to={`/kits/${kit._id}`} className="cd-kit-name">
+                              {kit.name}
+                            </Link>
+                            {kit.description && <p className="cd-kit-desc">{kit.description}</p>}
+                            <div className="cd-kit-foot">
+                              <span className="cd-kit-price">{formatPrice(kit.price)}</span>
+                              <button type="button" className="craft-btn-ghost cd-small-btn" onClick={() => handleAddKitToCart(kit)}>
+                                <ShoppingCart className="h-4 w-4" /> Thêm vào giỏ
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+
+                  {uniqueProducts.length > 0 && (
+                    <ul className="cd-products">
+                      {uniqueProducts.map((product) => (
+                        <li key={product._id} className="cd-product">
+                          <Link to={`/shop/product/${product._id}`} className="cd-product-thumb">
+                            <img src={product.image || product.variants[0]?.image} alt={product.name} />
+                          </Link>
+                          <div className="min-w-0 flex-1">
+                            <Link to={`/shop/product/${product._id}`} className="cd-product-name">
+                              {product.name}
+                            </Link>
+                            <span className="cd-product-price">{formatPrice(product.variants[0]?.price || 0)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="cd-product-add"
+                            onClick={() => handleAddProductToCart(product)}
+                            aria-label={`Thêm ${product.name} vào giỏ`}
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               )}
-              <Accordion
-                type="single"
-                collapsible
-                defaultValue={lessons[0]?._id}
-              >
-                {lessons.map((lesson) => (
-                  <AccordionItem key={lesson._id} value={lesson._id}>
-                    <AccordionTrigger>
-                      <div className="flex flex-1 items-center justify-between pr-4">
-                        <span>
-                          {lesson.order}. {lesson.title}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {lesson.duration} min
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex flex-wrap items-center justify-between gap-3 text-muted-foreground">
-                        <span>
-                          {lesson.linkedProduct?.length ?? 0} tagged material
-                          suggestions in this lesson.
-                        </span>
-                        <Button asChild variant="outline" size="sm">
-                          <Link
-                            to={`/learn/${course._id}/lesson/${lesson._id}`}
-                            onClick={handleStartLearning}
-                          >
-                            Watch lesson
-                          </Link>
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
             </section>
           </main>
 
-          <aside className="space-y-6 lg:sticky lg:top-24 lg:h-fit">
-            {/* ── Suggested Material Combos (Kits) ── */}
-            <div>
-              <div className="mb-4 flex items-center gap-3">
-                <h2
-                  style={{
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: "1.15rem",
-                    fontWeight: 600,
-                    color: "var(--foreground)",
-                    letterSpacing: "-0.015em",
-                    margin: 0,
-                  }}
-                >
-                  Suggested material combo
-                </h2>
-                {kits.length > 0 && (
-                  <span
-                    style={{
-                      fontFamily: "'Caveat', cursive",
-                      fontSize: "0.85rem",
-                      color: "var(--primary)",
-                    }}
-                  >
-                    {kits.length} combo{kits.length > 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-
-              {kits.length === 0 && (
-                <div className="combo-empty-card">
-                  <PackageSearch size={34} />
-                  <p>No material combos linked to this course yet.</p>
-                  <Link to="/shop">
-                    <ShoppingCart className="size-3.5" />
-                    Browse the shop
-                  </Link>
-                </div>
+          {/* ── Vé đăng ký (desktop) ── */}
+          <aside className="cd-aside">
+            <div className="cd-ticket">
+              <p className="cd-ticket-eyebrow">{isEnrolled ? "Tiến độ của bạn" : isFree ? "Khoá học miễn phí" : "Khoá học Premium"}</p>
+              {isEnrolled ? (
+                <>
+                  <p className="cd-ticket-big">{progressPct}%</p>
+                  <div className="cd-progress" role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100}>
+                    <span style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <p className="cd-ticket-note">
+                    Đã học {completedCount}/{lessons.length} bài
+                  </p>
+                </>
+              ) : (
+                <p className="cd-ticket-big">{isFree ? "Miễn phí" : formatPrice(course.price ?? 0)}</p>
               )}
 
-              <div className="space-y-4">
-                {kits.map((kit) => (
-                  <div
-                    key={kit._id}
-                    style={{
-                      borderRadius: "20px",
-                      overflow: "hidden",
-                      border: "1px solid var(--border)",
-                      background: "var(--surface)",
-                      boxShadow: "var(--shadow-card)",
-                    }}
-                  >
-                    <Link to={`/kits/${kit._id}`} style={{ display: "block" }}>
-                      <div
-                        style={{
-                          position: "relative",
-                          aspectRatio: "16 / 9",
-                          overflow: "hidden",
-                          background: "var(--background)",
-                        }}
-                      >
-                        <img
-                          src={
-                            kit.thumbnail ||
-                            kit.products?.[0]?.productId?.image ||
-                            kit.products?.[0]?.productId?.variants?.[0]?.image
-                          }
-                          alt={kit.name}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (!target.dataset.fallback) {
-                              target.dataset.fallback = "true";
-                              target.src = `https://picsum.photos/seed/${kit._id}/800/450`;
-                            }
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "10px",
-                            left: "10px",
-                            padding: "3px 10px",
-                            borderRadius: "999px",
-                            background: "var(--bg-overlay-90)",
-                            backdropFilter: "blur(6px)",
-                            border: "1px solid var(--border)",
-                            fontFamily: "'Poppins', sans-serif",
-                            fontSize: "0.62rem",
-                            fontWeight: 700,
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
-                            color: "var(--primary)",
-                          }}
-                        >
-                          {kit.level}
-                        </div>
-                      </div>
-                    </Link>
+              {ctaButton("w-full")}
+              <p className="cd-ticket-hint">{primary.hint}</p>
 
-                    <div style={{ padding: "18px 20px 20px" }}>
-                      <Link
-                        to={`/kits/${kit._id}`}
-                        style={{ textDecoration: "none" }}
-                      >
-                        <h3
-                          style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "1rem",
-                            fontWeight: 600,
-                            color: "var(--foreground)",
-                            letterSpacing: "-0.01em",
-                            lineHeight: 1.25,
-                            margin: "0 0 6px",
-                          }}
-                        >
-                          {kit.name}
-                        </h3>
-                      </Link>
-                      <p
-                        style={{
-                          fontFamily: "'Inter', sans-serif",
-                          fontSize: "0.8rem",
-                          color: "var(--foreground-muted)",
-                          lineHeight: 1.5,
-                          margin: "0 0 16px",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical" as const,
-                          overflow: "hidden",
-                        }}
-                      >
-                        {kit.description}
-                      </p>
+              {courseProgress?.isCompleted && (
+                <p className="cd-cert">
+                  <Award className="h-4 w-4" /> Đã hoàn thành — chứng nhận của bạn đã sẵn sàng.
+                </p>
+              )}
 
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "baseline",
-                          justifyContent: "space-between",
-                          marginBottom: "14px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
-                            color: "var(--foreground-muted)",
-                          }}
-                        >
-                          Total
-                        </span>
-                        <span
-                          style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "1.25rem",
-                            fontWeight: 700,
-                            color: "var(--primary)",
-                            letterSpacing: "-0.02em",
-                          }}
-                        >
-                          {formatPrice(kit.price)}
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={() => handleAddKitToCart(kit)}
-                        className="add-to-cart-btn"
-                      >
-                        <div className="btn-text">
-                          <ShoppingCart className="size-4" />
-                          Add to cart
-                        </div>
-                        <div className="btn-icon">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="9" cy="21" r="1" />
-                            <circle cx="20" cy="21" r="1" />
-                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ul className="cd-includes">
+                <li>
+                  <BookOpen className="h-4 w-4" /> {lessons.length} bài học video · {course.totalDuration} phút
+                </li>
+                <li>
+                  <YarnBallIcon size={16} /> Nguyên liệu gợi ý theo từng bài
+                </li>
+                <li>
+                  <Award className="h-4 w-4" /> Chứng nhận khi hoàn thành
+                </li>
+              </ul>
             </div>
-
-            {/* ── Linked Products ── */}
-            {uniqueProducts.length > 0 && (
-              <div>
-                <div className="mb-4 flex items-center gap-3">
-                  <h2
-                    style={{
-                      fontFamily: "'Playfair Display', Georgia, serif",
-                      fontSize: "1.15rem",
-                      fontWeight: 600,
-                      color: "var(--foreground)",
-                      letterSpacing: "-0.015em",
-                      margin: 0,
-                    }}
-                  >
-                    Suggested materials
-                  </h2>
-                  <span
-                    style={{
-                      fontFamily: "'Caveat', cursive",
-                      fontSize: "0.85rem",
-                      color: "var(--primary)",
-                    }}
-                  >
-                    {uniqueProducts.length} item
-                    {uniqueProducts.length > 1 ? "s" : ""}
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {uniqueProducts.map((product) => (
-                    <div
-                      key={product._id}
-                      style={{
-                        display: "flex",
-                        gap: "14px",
-                        alignItems: "center",
-                        padding: "12px",
-                        borderRadius: "16px",
-                        border: "1px solid var(--border)",
-                        background: "var(--surface)",
-                      }}
-                    >
-                      <Link
-                        to={`/shop/product/${product._id}`}
-                        style={{ flexShrink: 0 }}
-                      >
-                        <img
-                          src={product.image || product.variants[0]?.image}
-                          alt={product.name}
-                          style={{
-                            width: "64px",
-                            height: "64px",
-                            borderRadius: "12px",
-                            objectFit: "cover",
-                            border: "1px solid var(--border)",
-                            display: "block",
-                          }}
-                        />
-                      </Link>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Link
-                          to={`/shop/product/${product._id}`}
-                          style={{ textDecoration: "none" }}
-                        >
-                          <h3
-                            style={{
-                              fontFamily: "'Playfair Display', serif",
-                              fontSize: "0.9rem",
-                              fontWeight: 600,
-                              color: "var(--foreground)",
-                              lineHeight: 1.2,
-                              margin: "0 0 3px",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {product.name}
-                          </h3>
-                        </Link>
-                        <p
-                          style={{
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: "0.72rem",
-                            color: "var(--foreground-muted)",
-                            margin: "0 0 6px",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {product.description}
-                        </p>
-                        <span
-                          style={{
-                            fontFamily: "'Playfair Display', serif",
-                            fontSize: "0.88rem",
-                            fontWeight: 700,
-                            color: "var(--primary)",
-                          }}
-                        >
-                          {formatPrice(product.variants[0]?.price || 0)}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleAddProductToCart(product)}
-                        className="add-to-cart-btn"
-                        aria-label={`Add ${product.name} to cart`}
-                        style={{
-                          flexShrink: 0,
-                          width: "36px",
-                          height: "36px",
-                          borderRadius: "50%",
-                        }}
-                      >
-                        <div className="btn-text">
-                          <ShoppingCart className="size-4" />
-                        </div>
-                        <div className="btn-icon">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="9" cy="21" r="1" />
-                            <circle cx="20" cy="21" r="1" />
-                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </aside>
         </div>
       </div>
 
-      {/* ── Mobile sticky bottom bar ── */}
-      {!scrolledToBottom && (
-        <div className="fixed bottom-[56px] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg px-4 py-3 md:hidden safe-area-bottom">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground">
-                {course.totalLessons} lessons
-              </p>
-              <p className="text-lg font-bold text-primary">{course.level}</p>
-            </div>
-            {firstLesson && (
-              <Link
-                to={
-                  isEnrolled
-                    ? `/learn/${course._id}/lesson/${firstLesson._id}`
-                    : "#"
-                }
-                onClick={handleEnrollAndStart}
-                className="flex-1 bg-primary text-primary-foreground py-3 px-6 rounded-full font-semibold text-sm text-center"
-              >
-                {buying
-                  ? "Redirecting to payment..."
-                  : enrolling
-                    ? "Enrolling..."
-                    : isEnrolled
-                      ? "Start →"
-                      : isFree || isPurchased
-                        ? "Enroll →"
-                        : "Buy Now →"}
-              </Link>
-            )}
-          </div>
-        </div>
+      {/* ── Mobile: thanh nổi cạnh FAB ── */}
+      <AnimatePresence>
+        {isMobile && (
+          <motion.div
+            key="cd-float"
+            className="cd-float"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <span className="cd-float-label">
+              {isEnrolled ? `${progressPct}%` : isFree ? "Miễn phí" : formatPrice(course.price ?? 0)}
+            </span>
+            {ctaButton("cd-float-btn")}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {sepayQr && (
+        <SepayQrModal
+          title="Thanh toán khoá học"
+          info={sepayQr}
+          checking={sepayChecking}
+          onCheck={checkSepayNow}
+          onClose={() => setSepayQr(null)}
+        />
       )}
     </div>
-  );
-}
-
-function Stat({
-  icon: Icon,
-  label,
-  className,
-}: {
-  icon: React.ElementType;
-  label: string;
-  className?: string;
-}) {
-  return (
-    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Icon className={cn("size-4", className)} /> {label}
-    </span>
   );
 }

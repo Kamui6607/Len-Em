@@ -25,6 +25,7 @@ import {
   AdminTableBodySkeleton,
 } from "../../../shared/components/skeletons/AdminSkeleton";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 
 /** Giữ nguyên thứ tự khớp BE — không thay đổi hành vi sort đã chạy ổn định. */
 const STATUS_OPTIONS = ["", "Pending", "Done"];
@@ -233,15 +234,11 @@ export function AdminDIYPosts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="mb-2">{t("admin.diyPosts.title")}</h1>
-          <p className="text-muted-foreground">
-            {t("admin.diyPosts.subtitle")}
-          </p>
-        </div>
-        <CreateButton to="/admin/diy-posts/new" label={t("admin.diyPosts.createPost")} />
-      </div>
+      <AdminPageHeader
+        title={t("admin.diyPosts.title")}
+        subtitle={t("admin.diyPosts.subtitle")}
+        actions={<CreateButton to="/admin/diy-posts/new" label={t("admin.diyPosts.createPost")} />}
+      />
 
       <div
         className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"

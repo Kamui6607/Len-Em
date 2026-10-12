@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { Link } from "react-router";
 import {
   Users,
   Package,
@@ -6,7 +7,15 @@ import {
   TrendingUp,
   DollarSign,
   X,
+  Clock,
+  Flag,
+  RotateCcw,
+  Hand,
+  PackagePlus,
+  ChevronRight,
+  ReceiptText,
 } from "lucide-react";
+import { ORDER_STATUS_LABELS, getOrderStatusBadgeClass } from "../../../constants/orderStatus";
 import { formatPrice } from "../../../lib/formatPrice";
 import { orderService } from "../../../features/orders/services/order.service";
 import { userService } from "../../../features/users/services/user.service";
@@ -165,9 +174,29 @@ export function AdminDashboard() {
   ];
   const breakdownTotal = orderBreakdown.reduce((s, o) => s + o.value, 0) || 1;
 
+  // 6 đơn mới nhất trong khoảng ngày đang chọn
+  const recentOrders = [...rangeOrders]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 6);
+
+  const attentionLinks = [
+    {
+      to: "/admin/orders",
+      label: "Đơn chờ xác nhận",
+      hint: pendingOrders > 0 ? `${pendingOrders} đơn đang chờ` : "Không có đơn chờ",
+      icon: Clock,
+      tone: pendingOrders > 0 ? "is-warning" : "is-muted",
+    },
+    { to: "/admin/reports", label: "Báo cáo đơn hàng", hint: "Khiếu nại từ khách", icon: Flag, tone: "is-error" },
+    { to: "/admin/refunds", label: "Hoàn tiền", hint: "Hoá đơn hoàn tiền", icon: RotateCcw, tone: "is-info" },
+    { to: "/admin/support-diy", label: "Hỗ trợ DIY", hint: "Yêu cầu từ cộng đồng", icon: Hand, tone: "is-primary" },
+    { to: "/admin/products", label: "Thêm sản phẩm", hint: "Quản lý kho len", icon: PackagePlus, tone: "is-success" },
+  ];
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
+        eyebrow="Xin chào, quản trị viên"
         title={t("admin.dashboard.title")}
         subtitle={t("admin.dashboard.welcomeBack")}
         actions={
@@ -224,6 +253,7 @@ export function AdminDashboard() {
         ))}
       </AdminStatGrid>
 
+      <div className="admin-dash-grid">
       {/* Order Statistics */}
       <AdminPanel>
         <AdminPanelHeader icon={<TrendingUp className="w-4.5 h-4.5" />} title={t("admin.dashboard.orderStatistics")} />
@@ -289,6 +319,78 @@ export function AdminDashboard() {
           )}
         </AdminPanelBody>
       </AdminPanel>
+
+      {/* Đơn hàng gần đây */}
+      <AdminPanel>
+        <AdminPanelHeader
+          icon={<ReceiptText className="w-4.5 h-4.5" />}
+          title="Đơn hàng gần đây"
+          actions={
+            <Link to="/admin/orders" className="admin-link-more">
+              Xem tất cả
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          }
+        />
+        <AdminPanelBody className="!p-3">
+          {loading ? (
+            <div className="space-y-2 p-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <SkeletonBlock key={index} className="h-11 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : recentOrders.length === 0 ? (
+            <p className="admin-empty-inline">{t("admin.dashboard.noRecentActivity")}</p>
+          ) : (
+            <ul className="admin-recent">
+              {recentOrders.map((order) => (
+                <li key={order._id}>
+                  <Link to="/admin/orders" className="admin-recent-row">
+                    <span className="admin-recent-id">#{order._id.slice(-6).toUpperCase()}</span>
+                    <span className="admin-recent-who">
+                      <span className="truncate font-medium text-foreground">
+                        {order.shippingAddress?.fullName || "Khách hàng"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(order.createdAt).toLocaleString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </span>
+                    <span className={`badge ${getOrderStatusBadgeClass(order.orderStatus)} hidden sm:inline-flex`}>
+                      {ORDER_STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
+                    </span>
+                    <span className="admin-recent-total">{formatPrice(order.totalPrice)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </AdminPanelBody>
+      </AdminPanel>
+      </div>
+
+      {/* Lối tắt cần xử lý */}
+      <section aria-label="Cần xử lý">
+        <h2 className="admin-section-title">Cần xử lý</h2>
+        <div className="admin-attention">
+          {attentionLinks.map(({ to, label, hint, icon: Icon, tone }) => (
+            <Link key={to} to={to} className={`admin-attention-card ${tone}`}>
+              <span className="admin-attention-icon">
+                <Icon className="w-5 h-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="admin-attention-label">{label}</span>
+                <span className="admin-attention-hint">{hint}</span>
+              </span>
+              <ChevronRight className="admin-attention-arrow w-4 h-4" />
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
