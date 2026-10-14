@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
+import "../../../styles/fab.css";
 
 export function ArchiveFloatingMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -43,28 +44,45 @@ export function ArchiveFloatingMenu() {
   // Thứ tự xòe: 6h (dưới) → 9h (trái) → 12h (trên).
   // Nếu thêm nút mới, cứ thêm vào cuối mảng — góc sẽ tự nối tiếp
   // theo chiều kim đồng hồ (qua 3h rồi về lại 6h) nhờ công thức bên dưới.
-  const arcButtons = [
-    { id: "back-to-top", icon: "back-to-top", onClick: scrollToTop, label: "Về đầu trang" },
-    { id: "chatbot", icon: "chatbot", onClick: handleChatbotClick, label: "Chatbot" },
-    { id: "favorite", icon: "favorite", onClick: handleFavoriteClick, label: "Favorite" },
-    { id: "cart", icon: "cart", onClick: handleCartClick, label: "Cart" },
-    { id: "home", icon: "home", onClick: handleHomeClick, label: "Về trang chủ" },
-  ];
+  const backToTop = { id: "back-to-top", icon: "back-to-top", onClick: scrollToTop, label: "Về đầu trang" };
+  const chatbot = { id: "chatbot", icon: "chatbot", onClick: handleChatbotClick, label: "Trợ lý" };
+  const favorite = { id: "favorite", icon: "favorite", onClick: handleFavoriteClick, label: "Yêu thích" };
+  const cart = { id: "cart", icon: "cart", onClick: handleCartClick, label: "Giỏ hàng" };
+  const home = { id: "home", icon: "home", onClick: handleHomeClick, label: "Về trang chủ" };
+  const arcButtons = [backToTop, chatbot, favorite, cart, home];
 
   // ── Kích thước responsive: chật hơn trên mobile, thoáng hơn trên desktop ──
-  const mainSize = isMobile ? 48 : 54;
+  const mainSize = isMobile ? 52 : 54;
   const buttonSize = isMobile ? 44 : 48;
-  const radius = isMobile ? 64 : 84;      // đủ xa để 2 nút cạnh nhau không dính
-  const labelGap = isMobile ? 20 : 26;    // khoảng cách thêm để đặt nhãn ra ngoài vòng nút
+  const radius = isMobile ? 72 : 84;      // đủ xa để 2 nút cạnh nhau không dính
+  const labelGap = 12;                    // khoảng hở giữa mép nút và mép nhãn
 
   const startAngle = 180; // 6 giờ — bắt đầu từ phía dưới, gần nút chính nhất
   const angleStep = 45;   // 45° / nút → 5 nút phủ đúng nửa vòng tròn 6h→9h→12h
+
+  // Mobile: nhãn ở 12h căn giữa phía trên nút sẽ tràn mép phải → dịch vào trong.
+  const clampLabelX = (x: number, label: string) => {
+    if (!isMobile || typeof window === "undefined") return x;
+    const estWidth = label.length * 6.3 + 22;
+    const centerX = window.innerWidth - 16 - mainSize / 2 + x;
+    return x + Math.min(0, window.innerWidth - 8 - (centerX + estWidth / 2));
+  };
 
   // Quy ước góc: 0° = hướng lên (12h), 90° = phải (3h), 180° = xuống (6h), 270° = trái (9h)
   const getPoint = (angleDeg: number, r: number) => {
     const rad = (angleDeg * Math.PI) / 180;
     return { x: Math.sin(rad) * r, y: -Math.cos(rad) * r };
   };
+
+  // Escape closes the menu.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -111,10 +129,12 @@ export function ArchiveFloatingMenu() {
 
   return (
     <div
-      className="fixed z-200"
+      className="fab-dock fixed z-200"
+      data-open={isOpen || undefined}
       style={{
-        // Mốc chung với các thanh nổi cạnh FAB (xem --float-row-* trong safe-area.css)
-        bottom: "var(--float-row-bottom)",
+        // Mốc chung với các thanh nổi cạnh FAB (xem --float-row-* trong safe-area.css).
+        // Không phụ thuộc isOpen → nút chính đứng yên khi mở/đóng menu.
+        bottom: "calc(var(--float-row-bottom) + var(--float-row-lift, 0px))",
         right: "var(--float-row-right)",
       }}
     >
@@ -177,14 +197,16 @@ export function ArchiveFloatingMenu() {
                       {btn.id !== "back-to-top" && (
                         <motion.span
                           initial={{ opacity: 0, x: 0, y: 0 }}
-                          animate={{ opacity: 1, x: labelPoint.x, y: labelPoint.y }}
+                          animate={{ opacity: 1, x: clampLabelX(labelPoint.x, btn.label), y: labelPoint.y }}
                           exit={{ opacity: 0 }}
                           transition={{ delay: 0.045 * index + 0.08 }}
                           className="absolute whitespace-nowrap"
                           style={{
                             top: 0,
                             left: 0,
-                            translate: "-50% -50%",
+                            // Neo nhãn bằng cạnh gần nút nhất → nhãn nằm hẳn phía ngoài
+                            // vòng, nhãn dài không đè lên chính nút của nó
+                            translate: `${-50 + 50 * Math.sin((angle * Math.PI) / 180)}% ${-50 - 50 * Math.cos((angle * Math.PI) / 180)}%`,
                             background: "var(--card)",
                             color: "var(--foreground)",
                             border: "1px solid var(--border)",
@@ -220,7 +242,9 @@ export function ArchiveFloatingMenu() {
         }}
         whileHover={{ scale: 1.08, rotate: -8 }}
         whileTap={{ scale: 0.92 }}
-        aria-label="Archive menu"
+        aria-label={isOpen ? "Đóng tiện ích nhanh" : "Mở tiện ích nhanh: trợ lý, yêu thích, giỏ hàng"}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
       >
         <motion.svg
           width={isMobile ? 20 : 22}

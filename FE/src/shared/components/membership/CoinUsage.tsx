@@ -1,137 +1,150 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Gift, Info } from "lucide-react";
 import { cn } from "../ui/utils";
 import { formatPrice } from "../../../lib/formatPrice";
 import { useMembershipStore } from "../../../features/membership/store/membership.store";
 import { COIN_RULES, getRankConfig } from "../../../features/membership/types/membership.types";
+import "../../../styles/membership.css";
 
 interface CoinUsageProps {
+  /** Tiền hàng (KHÔNG gồm phí ship) — BE tính 20% và ngưỡng tối thiểu trên số này. */
   orderTotal: number;
   onCoinApplied?: (discountAmount: number) => void;
   onCoinRemoved?: () => void;
 }
+
+const PRESETS = [
+  { label: "25%", ratio: 0.25 },
+  { label: "50%", ratio: 0.5 },
+  { label: "Tối đa", ratio: 1 },
+];
 
 export function CoinUsage({ orderTotal, onCoinApplied, onCoinRemoved }: CoinUsageProps) {
   const { data, calculateMaxCoinUsage, calculateCoinEarn } = useMembershipStore();
   const [useCoin, setUseCoin] = useState(false);
   const [coinAmount, setCoinAmount] = useState(0);
 
+  const maxUsage = calculateMaxCoinUsage(orderTotal);
+  const usable = Math.max(0, Math.floor(Math.min(data?.coinBalance ?? 0, maxUsage)));
+
+  // Giỏ hàng / số dư đổi làm số coin đang chọn không còn hợp lệ (vượt 20%,
+  // tụt dưới ngưỡng tối thiểu, vượt số dư) → tắt dùng coin.
+  useEffect(() => {
+    if (useCoin && (usable <= 0 || coinAmount > usable)) {
+      setUseCoin(false);
+      setCoinAmount(0);
+      onCoinRemoved?.();
+    }
+  }, [useCoin, usable, coinAmount, onCoinRemoved]);
+
   if (!data) return null;
 
-  const maxUsage = calculateMaxCoinUsage(orderTotal);
-  const canUseCoin = data.coinBalance > 0 && orderTotal >= COIN_RULES.minOrderForCoin && maxUsage > 0;
+  const belowMin = orderTotal < COIN_RULES.minOrderForCoin;
+  const canUseCoin = usable > 0 && !belowMin;
   const coinEarned = calculateCoinEarn(orderTotal);
   const config = getRankConfig(data.rank);
 
+  const apply = (amount: number) => {
+    const value = Math.max(0, Math.min(usable, Math.floor(amount)));
+    setCoinAmount(value);
+    onCoinApplied?.(value);
+  };
+
   const handleToggle = () => {
     if (!useCoin) {
-      const suggested = Math.min(data.coinBalance, maxUsage);
-      setCoinAmount(suggested);
       setUseCoin(true);
-      onCoinApplied?.(suggested);
+      apply(usable);
     } else {
-      setCoinAmount(0);
       setUseCoin(false);
+      setCoinAmount(0);
       onCoinRemoved?.();
     }
   };
 
-  if (!canUseCoin && !useCoin) {
-    return (
-      <div className="bg-card rounded-xl border border-border p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🪙</span>
-            <div>
-              <p className="text-xs font-medium">Your Coins</p>
-              <p className="text-sm font-bold">{data.coinBalance.toLocaleString()} Coin</p>
-            </div>
-          </div>
-          {orderTotal < COIN_RULES.minOrderForCoin && (
-            <span className="text-[10px] text-muted-foreground">
-              Min. order {formatPrice(COIN_RULES.minOrderForCoin)}
-            </span>
-          )}
-        </div>
-        {data.coinBalance === 0 && (
-          <p className="text-[10px] text-muted-foreground mt-2">
-            Shop to earn Coin! You currently get {config.coinRewardPercent}% of order value.
-          </p>
-        )}
-      </div>
-    );
-  }
+  const reason = belowMin
+    ? `Dùng coin cho đơn từ ${formatPrice(COIN_RULES.minOrderForCoin)} tiền hàng — còn thiếu ${formatPrice(COIN_RULES.minOrderForCoin - orderTotal)}.`
+    : data.coinBalance <= 0
+      ? `Bạn chưa có coin. Mỗi đơn giao thành công được hoàn ${config.coinRewardPercent}% Coin.`
+      : null;
 
   return (
-    <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🪙</span>
-          <div>
-            <p className="text-xs font-medium">Use Coin</p>
-            <p className="text-xs text-muted-foreground">
-              Balance: {data.coinBalance.toLocaleString()} Coin ≈ {formatPrice(data.coinBalance)}
-            </p>
-          </div>
+    <section className="mb-coin co-rise" aria-labelledby="mb-coin-title">
+      <div className="mb-coin-head">
+        <span className="mb-coin-icon" aria-hidden="true">🪙</span>
+        <div className="min-w-0">
+          <h2 id="mb-coin-title" className="mb-coin-title">Dùng Len Coin</h2>
+          <p className="mb-coin-sub">
+            Số dư <b>{data.coinBalance.toLocaleString("vi-VN")} coin</b> ≈ {formatPrice(data.coinBalance)}
+          </p>
         </div>
-        <button
-          onClick={handleToggle}
-          className={cn(
-            "relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30",
-            useCoin ? "bg-primary" : "bg-border"
-          )}
-          style={{ touchAction: "manipulation" }}
-          aria-label={useCoin ? "Remove coin usage" : "Use coin"}
-        >
-          <div
-            className={cn(
-              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200",
-              useCoin ? "translate-x-5" : "translate-x-0"
-            )}
+        {canUseCoin && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={useCoin}
+            aria-label="Dùng coin cho đơn này"
+            className="mb-switch"
+            onClick={handleToggle}
           />
-        </button>
+        )}
       </div>
 
-      {useCoin && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Coin to use:</span>
-            <span className="font-semibold">{coinAmount.toLocaleString()} Coin</span>
+      {reason && (
+        <p className="mb-coin-note">
+          <Info size={15} aria-hidden="true" />
+          <span>{reason}</span>
+        </p>
+      )}
+
+      {useCoin && canUseCoin && (
+        <div className="mb-coin-body">
+          <div className="mb-coin-row">
+            <span>Coin sử dụng</span>
+            <span className="mb-coin-amount">−{formatPrice(coinAmount)}</span>
           </div>
           <input
             type="range"
             min={0}
-            max={Math.min(data.coinBalance, maxUsage)}
+            max={usable}
+            step={1}
             value={coinAmount}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              setCoinAmount(val);
-              onCoinApplied?.(val);
-            }}
-            className="w-full accent-primary"
-            style={{ height: 6, borderRadius: 4 }}
-            aria-label="Coin amount slider"
+            onChange={(e) => apply(Number(e.target.value))}
+            className="mb-range"
+            aria-label="Số coin muốn dùng"
           />
-
-          <div className="bg-muted/40 rounded-lg p-3 space-y-1.5 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Discount</span>
-              <span className="font-semibold text-primary">-{formatPrice(coinAmount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total</span>
-              <span className="font-semibold">{formatPrice(orderTotal - coinAmount)}</span>
-            </div>
+          <div className="mb-coin-row">
+            <span>0</span>
+            <span>
+              Tối đa {usable.toLocaleString("vi-VN")} coin ({COIN_RULES.maxUsagePercent}% tiền hàng)
+            </span>
+          </div>
+          <div className="mb-coin-presets">
+            {PRESETS.map((p) => {
+              const value = Math.floor(usable * p.ratio);
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  className={cn("mb-coin-preset", coinAmount === value && "is-active")}
+                  onClick={() => apply(value)}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground border-t border-border pt-3">
-        <span>🎁</span>
-        <span>
-          You'll earn <strong className="text-foreground">{coinEarned.toLocaleString()} Coin </strong> 
-          after placing this order!
-        </span>
-      </div>
-    </div>
+      {coinEarned > 0 && (
+        <p className="mb-coin-note">
+          <Gift size={15} aria-hidden="true" />
+          <span>
+            Đơn này dự kiến được hoàn <b>~{coinEarned.toLocaleString("vi-VN")} coin</b> ({config.coinRewardPercent}%
+            hạng {config.displayName}) khi giao thành công.
+          </span>
+        </p>
+      )}
+    </section>
   );
 }

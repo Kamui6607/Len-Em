@@ -51,7 +51,6 @@ import {
   getResumeLesson,
 } from "../../features/learn/utils/lessonAccess";
 import { useAuth } from "../../shared/hooks/useAuth";
-import { useCart } from "../../shared/contexts/CartContext";
 import type {
   Course,
   CourseLevel,
@@ -63,6 +62,7 @@ import { formatPrice } from "../../lib/formatPrice";
 import { YarnBallIcon } from "../../features/shop/shopMeta";
 import "../../styles/craft.css";
 import "../../styles/course.css";
+import { useAddToCart } from "../../features/cart/useAddToCart";
 
 const LEVEL_ICON: Record<CourseLevel, LucideIcon> = {
   beginner: Sprout,
@@ -92,7 +92,7 @@ export function CourseDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, setUser } = useAuth();
-  const { addKitToCart, addToCart } = useCart();
+  const { addKit, addProduct } = useAddToCart();
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
@@ -450,7 +450,7 @@ export function CourseDetailPage() {
       goToLogin();
       return;
     }
-    addKitToCart({
+    addKit({
       kitId: kit._id,
       name: kit.name,
       thumbnail: kit.thumbnail,
@@ -467,7 +467,6 @@ export function CourseDetailPage() {
         };
       }),
     });
-    toast.success(`Đã thêm combo "${kit.name}" vào giỏ`);
   };
 
   const handleAddProductToCart = (product: Product) => {
@@ -476,7 +475,7 @@ export function CourseDetailPage() {
       return;
     }
     const variant = product.variants[0];
-    addToCart({
+    addProduct({
       productId: product._id,
       variantId: variant?._idVariants || "default",
       name: product.name,
@@ -486,7 +485,6 @@ export function CourseDetailPage() {
       price: variant?.price || 0,
       stock: variant?.stock || 999,
     });
-    toast.success(`Đã thêm "${product.name}" vào giỏ`);
   };
 
   const ctaButton = (extraClass?: string) => (

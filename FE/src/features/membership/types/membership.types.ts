@@ -56,6 +56,13 @@ export interface CoinTransaction {
   expiryDate?: string;
 }
 
+// Màu hạng lấy từ token --rk-<hạng>-* trong styles/membership.css (có bản dark).
+const rankColors = (rank: RankType) => ({
+  gradient: `linear-gradient(135deg, var(--rk-${rank}-a) 0%, var(--rk-${rank}-b) 55%, var(--rk-${rank}-c) 100%)`,
+  textColor: `var(--rk-${rank}-ink)`,
+  bgColor: `var(--rk-${rank}-a)`,
+});
+
 export const RANK_CONFIGS: RankConfig[] = [
   {
     rank: "member",
@@ -63,12 +70,10 @@ export const RANK_CONFIGS: RankConfig[] = [
     icon: "⭐",
     minPoints: 0,
     coinRewardPercent: 3,
-    gradient: "linear-gradient(135deg, var(--member-grad-start, #F5F0EB) 0%, var(--member-grad-end, #EDE5DA) 100%)",
-    textColor: "var(--member-text, #8B7355)",
-    bgColor: "var(--member-bg, #F5F0EB)",
+    ...rankColors("member"),
     benefits: [
-      { id: "benefit-coin-member", icon: "🪙", title: "Earn 3% Coin", description: "Get 3% of your order value back as Coin", unlockedAtRank: "member", isLocked: false },
-      { id: "benefit-birthday-member", icon: "🎂", title: "Birthday Voucher", description: "Receive a 50,000₫ voucher on your birthday month", unlockedAtRank: "member", isLocked: false },
+      { id: "benefit-coin-member", icon: "🪙", title: "Hoàn 3% Coin", description: "Nhận lại 3% giá trị đơn hàng dưới dạng Coin", unlockedAtRank: "member", isLocked: false },
+      { id: "benefit-birthday-member", icon: "🎂", title: "Quà sinh nhật", description: "Voucher 50.000₫ trong tháng sinh nhật", unlockedAtRank: "member", isLocked: false },
     ],
   },
   {
@@ -77,13 +82,11 @@ export const RANK_CONFIGS: RankConfig[] = [
     icon: "🥈",
     minPoints: 1000,
     coinRewardPercent: 4,
-    gradient: "linear-gradient(135deg, var(--silver-grad-start, #F0F0F0) 0%, var(--silver-grad-mid, #D0D0D0) 50%, var(--silver-grad-end, #A8A8A8) 100%)",
-    textColor: "var(--silver-text, #4A4A4A)",
-    bgColor: "var(--silver-bg, #F0F0F0)",
+    ...rankColors("silver"),
     benefits: [
-      { id: "benefit-coin-silver", icon: "🪙", title: "Earn 4% Coin", description: "Get 4% of your order value back as Coin", unlockedAtRank: "silver", isLocked: false },
-      { id: "benefit-birthday-silver", icon: "🎂", title: "Birthday Voucher", description: "Receive a 100,000₫ voucher on your birthday month", unlockedAtRank: "silver", isLocked: false },
-      { id: "benefit-workshop", icon: "🎓", title: "Priority Workshops", description: "Register for workshops 24h before Members", unlockedAtRank: "silver", isLocked: false },
+      { id: "benefit-coin-silver", icon: "🪙", title: "Hoàn 4% Coin", description: "Nhận lại 4% giá trị đơn hàng dưới dạng Coin", unlockedAtRank: "silver", isLocked: false },
+      { id: "benefit-birthday-silver", icon: "🎂", title: "Quà sinh nhật", description: "Voucher 100.000₫ trong tháng sinh nhật", unlockedAtRank: "silver", isLocked: false },
+      { id: "benefit-workshop", icon: "🎓", title: "Ưu tiên workshop", description: "Đăng ký workshop sớm hơn Member 24 giờ", unlockedAtRank: "silver", isLocked: false },
     ],
   },
   {
@@ -92,14 +95,12 @@ export const RANK_CONFIGS: RankConfig[] = [
     icon: "🥇",
     minPoints: 3000,
     coinRewardPercent: 5,
-    gradient: "linear-gradient(135deg, var(--gold-grad-start, #FFF8E1) 0%, var(--gold-grad-mid, #FFD700) 50%, var(--gold-grad-end, #FFB300) 100%)",
-    textColor: "var(--gold-text, #7A5C00)",
-    bgColor: "var(--gold-bg, #FFF8E1)",
+    ...rankColors("gold"),
     benefits: [
-      { id: "benefit-coin-gold", icon: "🪙", title: "Earn 5% Coin", description: "Get 5% of your order value back as Coin", unlockedAtRank: "gold", isLocked: false },
-      { id: "benefit-birthday-gold", icon: "🎂", title: "Birthday Voucher", description: "Receive a 200,000₫ voucher on your birthday month", unlockedAtRank: "gold", isLocked: false },
-      { id: "benefit-workshop-gold", icon: "🎓", title: "Priority Workshops", description: "Register for workshops 48h before Members", unlockedAtRank: "gold", isLocked: false },
-      { id: "benefit-flashsale", icon: "🏷️", title: "Early Flash Sale", description: "Access Flash Sales 2 hours early", unlockedAtRank: "gold", isLocked: false },
+      { id: "benefit-coin-gold", icon: "🪙", title: "Hoàn 5% Coin", description: "Nhận lại 5% giá trị đơn hàng dưới dạng Coin", unlockedAtRank: "gold", isLocked: false },
+      { id: "benefit-birthday-gold", icon: "🎂", title: "Quà sinh nhật", description: "Voucher 200.000₫ trong tháng sinh nhật", unlockedAtRank: "gold", isLocked: false },
+      { id: "benefit-workshop-gold", icon: "🎓", title: "Ưu tiên workshop", description: "Đăng ký workshop sớm hơn Member 48 giờ", unlockedAtRank: "gold", isLocked: false },
+      { id: "benefit-flashsale", icon: "🏷️", title: "Flash Sale sớm", description: "Vào Flash Sale sớm 2 giờ", unlockedAtRank: "gold", isLocked: false },
     ],
   },
   {
@@ -108,18 +109,19 @@ export const RANK_CONFIGS: RankConfig[] = [
     icon: "💎",
     minPoints: 8000,
     coinRewardPercent: 6,
-    gradient: "linear-gradient(135deg, var(--diamond-grad-start, #E3F2FD) 0%, var(--diamond-grad-mid, #90CAF9) 30%, var(--diamond-grad-end, #64B5F6) 100%)",
-    textColor: "var(--diamond-text, #1565C0)",
-    bgColor: "var(--diamond-bg, #E3F2FD)",
+    ...rankColors("diamond"),
     benefits: [
-      { id: "benefit-coin-diamond", icon: "🪙", title: "Earn 6% Coin", description: "Get 6% of your order value back - the highest rate!", unlockedAtRank: "diamond", isLocked: false },
-      { id: "benefit-birthday-diamond", icon: "🎂", title: "Birthday Voucher ×2", description: "Receive a 500,000₫ voucher on your birthday month", unlockedAtRank: "diamond", isLocked: false },
-      { id: "benefit-workshop-diamond", icon: "🎓", title: "Free Premium Workshop", description: "Join premium workshops for free", unlockedAtRank: "diamond", isLocked: false },
-      { id: "benefit-flashsale-diamond", icon: "🏷️", title: "Ultra Early Flash Sale", description: "Access Flash Sales 4 hours early + bonus gift", unlockedAtRank: "diamond", isLocked: false },
+      { id: "benefit-coin-diamond", icon: "🪙", title: "Hoàn 6% Coin", description: "Nhận lại 6% giá trị đơn hàng — mức cao nhất!", unlockedAtRank: "diamond", isLocked: false },
+      { id: "benefit-birthday-diamond", icon: "🎂", title: "Quà sinh nhật ×2", description: "Voucher 500.000₫ trong tháng sinh nhật", unlockedAtRank: "diamond", isLocked: false },
+      { id: "benefit-workshop-diamond", icon: "🎓", title: "Workshop cao cấp miễn phí", description: "Tham gia miễn phí các workshop cao cấp", unlockedAtRank: "diamond", isLocked: false },
+      { id: "benefit-flashsale-diamond", icon: "🏷️", title: "Flash Sale siêu sớm", description: "Vào Flash Sale sớm 4 giờ, kèm quà tặng", unlockedAtRank: "diamond", isLocked: false },
     ],
   },
 ];
 
+// Hằng số FE = fallback. Sau khi GET /membership/config thành công,
+// applyMembershipConfig() ghi đè các giá trị này (và minPoints /
+// coinRewardPercent trong RANK_CONFIGS) bằng dữ liệu của BE.
 export const COIN_RULES = {
   exchangeRate: 1,
   maxUsagePercent: 20,
@@ -127,10 +129,58 @@ export const COIN_RULES = {
   expiryMonths: 6,
 };
 
+export const POINT_RULES = {
+  /** Số ₫ chi tiêu cho 1 điểm. */
+  vndPerPoint: 1000,
+};
+
+export const RANK_ORDER: RankType[] = ["member", "silver", "gold", "diamond"];
+
+export function rankIndex(rank: RankType): number {
+  return RANK_ORDER.indexOf(rank);
+}
+
+export interface MembershipConfigInput {
+  ranks?: { rank: RankType; displayName?: string; minPoints: number; coinRewardPercent: number }[];
+  coinRules?: Partial<typeof COIN_RULES>;
+  pointRules?: Partial<typeof POINT_RULES> & Record<string, unknown>;
+}
+
+/**
+ * Ghi đè ngưỡng điểm / % coin / luật coin bằng config từ BE. Phần hiển thị
+ * (icon, gradient, benefits) vẫn lấy từ RANK_CONFIGS của FE.
+ */
+export function applyMembershipConfig(config: MembershipConfigInput) {
+  for (const remote of config.ranks ?? []) {
+    const local = RANK_CONFIGS.find((r) => r.rank === remote.rank);
+    if (!local) continue;
+    if (Number.isFinite(remote.minPoints)) local.minPoints = remote.minPoints;
+    if (Number.isFinite(remote.coinRewardPercent)) {
+      local.coinRewardPercent = remote.coinRewardPercent;
+      // Benefit "Earn X% Coin" phải khớp % thật.
+      for (const b of local.benefits) {
+        if (!b.id.startsWith("benefit-coin-")) continue;
+        b.title = b.title.replace(/\d+(\.\d+)?%/, `${remote.coinRewardPercent}%`);
+        b.description = b.description.replace(/\d+(\.\d+)?%/, `${remote.coinRewardPercent}%`);
+      }
+    }
+  }
+  const { coinRules, pointRules } = config;
+  if (coinRules) {
+    for (const key of Object.keys(COIN_RULES) as (keyof typeof COIN_RULES)[]) {
+      if (Number.isFinite(coinRules[key])) COIN_RULES[key] = coinRules[key]!;
+    }
+  }
+  if (pointRules && Number.isFinite(pointRules.vndPerPoint) && pointRules.vndPerPoint! > 0) {
+    POINT_RULES.vndPerPoint = pointRules.vndPerPoint!;
+  }
+}
+
 export function getRankFromPoints(points: number): RankType {
-  if (points >= 8000) return "diamond";
-  if (points >= 3000) return "gold";
-  if (points >= 1000) return "silver";
+  // Duyệt từ hạng cao xuống — dùng minPoints hiện tại (đã ghi đè từ BE nếu có).
+  for (let i = RANK_ORDER.length - 1; i > 0; i--) {
+    if (points >= getRankConfig(RANK_ORDER[i]).minPoints) return RANK_ORDER[i];
+  }
   return "member";
 }
 
@@ -140,19 +190,18 @@ export function getNextRank(currentRank: RankType, _points: number): {
   currentRankPoints: number;
   nextRankPoints: number;
 } {
-  const rankOrder: RankType[] = ["member", "silver", "gold", "diamond"];
-  const currentIndex = rankOrder.indexOf(currentRank);
+  const currentIndex = rankIndex(currentRank);
 
-  if (currentIndex >= rankOrder.length - 1) {
+  if (currentIndex >= RANK_ORDER.length - 1) {
     return { nextRank: null, pointsNeeded: 0, currentRankPoints: _points, nextRankPoints: _points };
   }
 
-  const nextRankType = rankOrder[currentIndex + 1];
+  const nextRankType = RANK_ORDER[currentIndex + 1];
   const nextRankConfig = RANK_CONFIGS.find((r) => r.rank === nextRankType)!;
 
   return {
     nextRank: nextRankType,
-    pointsNeeded: nextRankConfig.minPoints - _points,
+    pointsNeeded: Math.max(0, nextRankConfig.minPoints - _points),
     currentRankPoints: RANK_CONFIGS.find((r) => r.rank === currentRank)!.minPoints,
     nextRankPoints: nextRankConfig.minPoints,
   };

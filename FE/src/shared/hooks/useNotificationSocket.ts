@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
 import { io, type Socket } from "socket.io-client";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth.store";
@@ -13,7 +14,10 @@ import {
   NOTIFICATION_CATEGORY_EMOJI,
   getNotificationCategory,
   normalizePriority,
+  resolveNotificationPath,
+  type Notification,
 } from "../types/notification.types";
+import { extractOrderId, showOrderCreatedToast } from "../../features/orders/orderToastStore";
 
 // Socket server base — mirrors the axios client's base-URL logic:
 // relative VITE_API_BASE_URL → same origin (Vite dev proxy), otherwise strip
@@ -36,7 +40,24 @@ export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const { setNotifications, addNotification } = useNotifications();
+  const { setNotifications, addNotification, markAsRead } = useNotifications();
+  const navigate = useNavigate();
+  const role = useAuthStore((s) => s.user?.roleId);
+
+  // "Xem" on a toast: mark read + go to the notification's target. Kept in a
+  // ref so the socket effect below doesn't reconnect whenever these change
+  // (useNavigate returns a new function after every navigation).
+  const openNotificationRef = useRef<(n: Notification) => void>(() => {});
+  openNotificationRef.current = (n) => {
+    markAsRead(n._id);
+    navigate(
+      resolveNotificationPath(n, role) ??
+        (role === "admin" ? "/admin/notifications" : "/notifications"),
+    );
+  };
+
+  const markAsReadRef = useRef(markAsRead);
+  markAsReadRef.current = markAsRead;
 
   // Fetch the notification history from the API as soon as the user is signed
   // in. The backend already scopes the result by role (Admin / Staff / Customer).
@@ -81,16 +102,34 @@ export function useNotificationSocket() {
       // Push it to the top of the list + bump the unread badge
       addNotification(notification);
 
+      // "Đặt hàng thành công" (customer, new order) → dedicated order toast:
+      // short order code, COD line, one toast per order (id + sessionStorage).
+      const orderId =
+        getNotificationCategory(notification.type) === "ORDER" &&
+        notification.title.trim().toLowerCase() === "đặt hàng thành công"
+          ? extractOrderId(notification.message) ?? extractOrderId(notification.targetId)
+          : null;
+      if (orderId) {
+        showOrderCreatedToast(orderId, () => markAsReadRef.current(notification._id));
+        return;
+      }
+
       // Toast popup — level and icon depend on priority / type
       const emoji = NOTIFICATION_CATEGORY_EMOJI[getNotificationCategory(notification.type)];
       const priority = normalizePriority(notification.priority);
       const options = {
+        // Same id → a re-delivered notification (e.g. after a reconnect)
+        // updates the existing toast instead of stacking a duplicate.
+        id: notification._id,
         description: notification.message,
         // Admin order notifications carry several lines (items, totals…) —
         // keep the line breaks the backend sends in `message`.
         descriptionClassName: "whitespace-pre-line",
         duration: priority === "HIGH" ? 8000 : 5000,
-        position: "top-right" as const,
+        action: {
+          label: "Xem",
+          onClick: () => openNotificationRef.current(notification),
+        },
       };
 
       if (priority === "HIGH") {

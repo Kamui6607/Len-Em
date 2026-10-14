@@ -3,11 +3,23 @@
 // Trang notifications riêng cho Admin, nằm bên trong admin panel.
 // Admin nhận TẤT CẢ loại thông báo: đơn hàng (thanh toán / COD / huỷ đơn),
 // Support DIY, bài DIY, Report và System.
-// Tab "All" chia thành từng phần theo loại; chọn chip để xem riêng 1 phần.
+// Thẻ "Tất cả" chia thành từng phần theo loại; chọn thẻ loại để xem riêng.
 // ============================================================
 
 import { useMemo, useState } from "react";
-import { CalendarClock, CheckCheck, Flag, Inbox, Trash2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarClock,
+  CheckCheck,
+  Flag,
+  Inbox,
+  LifeBuoy,
+  Layers,
+  Scissors,
+  Settings,
+  ShoppingBag,
+  Trash2,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "../../../shared/contexts/NotificationContext";
@@ -17,21 +29,48 @@ import {
 } from "../../../shared/components/NotificationRow";
 import {
   NOTIFICATION_CATEGORIES,
-  NOTIFICATION_CATEGORY_LABELS,
   getNotificationCategory,
   resolveNotificationPath,
   type Notification,
   type NotificationCategory,
 } from "../../../shared/types/notification.types";
-import { NOTIFICATION_DATE_GROUPS, getDateGroup } from "../../../lib/notificationTime";
+import {
+  NOTIFICATION_DATE_GROUPS,
+  getDateGroup,
+} from "../../../lib/notificationTime";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
-import { AdminPanel, AdminPanelBody } from "../../../shared/components/admin/AdminPanel";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import {
+  AdminStatusTabs,
+  useAdminConfirm,
+  type AdminTone,
+} from "../../../shared/components/admin/AdminDataGrid";
 
-/** How many notifications a section shows before "View all" takes over. */
+/** How many notifications a section shows before "Xem tất cả" takes over. */
 const SECTION_PREVIEW = 5;
+
+const CATEGORY_META: Record<
+  NotificationCategory,
+  { label: string; icon: LucideIcon; tone: AdminTone }
+> = {
+  ORDER: { label: "Đơn hàng", icon: ShoppingBag, tone: "blue" },
+  REPORT: { label: "Báo cáo", icon: Flag, tone: "amber" },
+  SUPPORT: { label: "Support DIY", icon: LifeBuoy, tone: "cyan" },
+  DIY: { label: "Bài DIY", icon: Scissors, tone: "violet" },
+  SYSTEM: { label: "Hệ thống", icon: Settings, tone: "neutral" },
+};
+
+const DATE_GROUP_LABELS: Record<string, string> = {
+  Today: "Hôm nay",
+  Yesterday: "Hôm qua",
+  "This week": "Tuần này",
+  Earlier: "Trước đó",
+  Older: "Cũ hơn",
+};
 
 export function AdminNotifications() {
   const navigate = useNavigate();
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
   const {
     notifications,
     markAsRead,
@@ -47,12 +86,13 @@ export function AdminNotifications() {
   const sortedNotifications = useMemo(
     () =>
       [...notifications].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       ),
     [notifications],
   );
 
-  /** Counters per category — drive the filter chips and the section headers. */
+  /** Counters per category — drive the tabs and the section headers. */
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const notif of sortedNotifications) {
@@ -74,18 +114,21 @@ export function AdminNotifications() {
 
   const unreadCount = sortedNotifications.filter((n) => !n.read).length;
   const filteredNotifications = sortedNotifications.filter((notif) => {
-    if (category !== "all" && getNotificationCategory(notif.type) !== category) return false;
+    if (category !== "all" && getNotificationCategory(notif.type) !== category)
+      return false;
     return filter === "unread" ? !notif.read : true;
   });
 
-  /** Tab "All" (no unread filter) → split into one section per notification type. */
+  /** Thẻ "Tất cả" (không lọc chưa đọc) → chia thành từng phần theo loại. */
   const isSectionedView = category === "all" && filter === "all";
 
   const sections = useMemo(
     () =>
       NOTIFICATION_CATEGORIES.map((cat) => ({
         category: cat,
-        items: sortedNotifications.filter((n) => getNotificationCategory(n.type) === cat),
+        items: sortedNotifications.filter(
+          (n) => getNotificationCategory(n.type) === cat,
+        ),
       })).filter((section) => section.items.length > 0),
     [sortedNotifications],
   );
@@ -107,173 +150,188 @@ export function AdminNotifications() {
   };
   const handleMarkAllRead = () => {
     markAllAsRead();
-    toast.success("All notifications marked as read");
+    toast.success("Đã đánh dấu tất cả là đã đọc");
   };
   const handleDelete = (notificationId: string) => {
     clearNotification(notificationId);
-    toast.success("Notification dismissed");
+    toast.success("Đã xoá thông báo");
   };
-  const handleDeleteAll = () => {
+  const handleDeleteAll = async () => {
+    const ok = await confirm({
+      title: `Xoá ${notifications.length} thông báo?`,
+      description: "Toàn bộ thông báo sẽ bị xoá khỏi danh sách của bạn.",
+      confirmLabel: "Xoá tất cả",
+      danger: true,
+      icon: Trash2,
+    });
+    if (!ok) return;
     clearAllNotifications();
-    toast.success("All notifications deleted");
+    toast.success("Đã xoá tất cả thông báo");
   };
 
+  const unreadInScope =
+    category === "all" ? unreadCount : (unreadCounts[category] ?? 0);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
-        title="Notifications"
-        subtitle="Thông báo cho Admin — đơn hàng, thanh toán, Report, Support DIY và bài DIY"
+        eyebrow="Hộp thư"
+        title="Thông báo"
+        subtitle={
+          unreadCount > 0
+            ? `${unreadCount} thông báo chưa đọc — đơn hàng, thanh toán, báo cáo, Support DIY và bài DIY`
+            : "Đơn hàng, thanh toán, báo cáo, Support DIY và bài DIY"
+        }
         actions={
           <>
             {unreadCount > 0 && (
               <button
+                type="button"
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors"
+                className="btn-secondary"
               >
                 <CheckCheck className="size-4" />
-                Mark all read
+                Đánh dấu đã đọc
               </button>
             )}
             {notifications.length > 0 && (
               <button
-                onClick={handleDeleteAll}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors"
+                type="button"
+                onClick={() => void handleDeleteAll()}
+                className="btn-secondary adm-gbtn-danger"
               >
                 <Trash2 className="size-4" />
-                Delete all
+                Xoá tất cả
               </button>
             )}
-            <Link
-              to="/admin/reports"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium bg-card border border-border hover:bg-muted transition-colors"
-            >
+            <Link to="/admin/reports" className="btn-secondary">
               <Flag className="size-4" />
-              Manage Reports
+              Quản lý báo cáo
             </Link>
           </>
         }
       />
-      <AdminPanel>
-        {/* Filter tabs — category (one part per notification type) + Unread */}
-        <div
-          className="flex flex-wrap gap-2 px-6 py-4 border-b"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <button
-            className="chip !h-9 !px-4"
-            data-active={category === "all" && filter === "all"}
-            onClick={() => {
-              setCategory("all");
-              setFilter("all");
-            }}
+
+      {notifications.length > 0 && (
+        <AdminStatusTabs<"all" | NotificationCategory>
+          ariaLabel="Lọc theo loại thông báo"
+          value={category}
+          onChange={setCategory}
+          tabs={[
+            {
+              value: "all",
+              label: "Tất cả",
+              icon: Layers,
+              count: notifications.length,
+            },
+            ...NOTIFICATION_CATEGORIES.filter((cat) => categoryCounts[cat]).map(
+              (cat) => ({
+                value: cat,
+                label: CATEGORY_META[cat].label,
+                icon: CATEGORY_META[cat].icon,
+                tone: CATEGORY_META[cat].tone,
+                count: categoryCounts[cat],
+              }),
+            ),
+          ]}
+        />
+      )}
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <div className="admin-toolbar adm-gtoolbar">
+          <div
+            className="adm-gseg"
+            role="group"
+            aria-label="Lọc theo trạng thái đọc"
           >
-            All ({notifications.length})
-          </button>
-          {NOTIFICATION_CATEGORIES.filter((cat) => categoryCounts[cat]).map((cat) => (
             <button
-              key={cat}
-              className="chip !h-9 !px-4"
-              data-active={category === cat}
-              onClick={() => setCategory(category === cat ? "all" : cat)}
+              type="button"
+              aria-pressed={filter === "all"}
+              onClick={() => setFilter("all")}
             >
-              {NOTIFICATION_CATEGORY_LABELS[cat]} ({categoryCounts[cat]})
+              Tất cả
             </button>
-          ))}
-          <button
-            className="chip !h-9 !px-4"
-            data-active={filter === "unread"}
-            onClick={() => setFilter(filter === "unread" ? "all" : "unread")}
-          >
-            Unread ({category === "all" ? unreadCount : (unreadCounts[category] ?? 0)})
-          </button>
+            <button
+              type="button"
+              aria-pressed={filter === "unread"}
+              onClick={() => setFilter("unread")}
+            >
+              Chưa đọc
+              {unreadInScope > 0 && (
+                <span className="adm-gseg-count">{unreadInScope}</span>
+              )}
+            </button>
+          </div>
+          <span className="adm-gsecondary ml-auto">
+            {filteredNotifications.length} thông báo
+            {category !== "all" ? ` · ${CATEGORY_META[category].label}` : ""}
+          </span>
         </div>
 
-        <AdminPanelBody className="p-0">
-          {notifications.length === 0 ? (
-            <div className="text-center py-16">
-              <div
-                className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+        {notifications.length === 0 ? (
+          <div className="admin-empty-state adm-gempty">
+            <Inbox size={40} />
+            <p>Chưa có thông báo</p>
+            <p className="text-sm">
+              Đơn hàng, báo cáo và yêu cầu hỗ trợ mới sẽ xuất hiện tại đây.
+            </p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="admin-empty-state adm-gempty">
+            {filter === "unread" ? (
+              <CheckCheck size={40} />
+            ) : (
+              <CalendarClock size={40} />
+            )}
+            <p>
+              {filter === "unread"
+                ? "Đã đọc hết"
+                : "Không có thông báo phù hợp"}
+            </p>
+            <div className="mt-4">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setFilter("all");
+                  setCategory("all");
+                }}
               >
-                <Inbox className="size-7" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground">No notifications</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Đơn hàng, báo cáo và yêu cầu hỗ trợ mới sẽ xuất hiện tại đây
-              </p>
+                Xem tất cả thông báo
+              </button>
             </div>
-          ) : filteredNotifications.length === 0 ? (
-            <div className="text-center py-16 text-sm text-muted-foreground">
-              <CalendarClock className="size-8 mx-auto mb-2 opacity-30" />
-              No notifications match this filter
-            </div>
-          ) : isSectionedView ? (
-            <div className="px-4 py-5 space-y-7">
-              {sections.map((section) => {
-                const unreadInSection = section.items.filter((n) => !n.read).length;
-                const preview = section.items.slice(0, SECTION_PREVIEW);
-                const hidden = section.items.length - preview.length;
+          </div>
+        ) : isSectionedView ? (
+          <div className="px-4 py-5 space-y-7">
+            {sections.map((section) => {
+              const unreadInSection = section.items.filter(
+                (n) => !n.read,
+              ).length;
+              const preview = section.items.slice(0, SECTION_PREVIEW);
+              const hidden = section.items.length - preview.length;
 
-                return (
-                  <section key={section.category}>
-                    <NotificationSectionHeader
-                      category={section.category}
-                      count={section.items.length}
-                      unreadCount={unreadInSection}
-                      actionLabel={hidden > 0 ? `View all (${section.items.length})` : undefined}
-                      onAction={hidden > 0 ? () => setCategory(section.category) : undefined}
-                    />
-
-                    <div className="space-y-1.5">
-                      {preview.map((notification, index) => (
-                        <NotificationRow
-                          key={notification._id}
-                          notification={notification}
-                          index={index}
-                          onClick={handleNotificationClick}
-                          onMarkRead={markAsRead}
-                          onDelete={handleDelete}
-                          showCategory={false}
-                        />
-                      ))}
-
-                      {hidden > 0 && (
-                        <button
-                          onClick={() => setCategory(section.category)}
-                          className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-                        >
-                          +{hidden} more{" "}
-                          {NOTIFICATION_CATEGORY_LABELS[section.category].toLowerCase()}
-                        </button>
-                      )}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="px-4 py-5 space-y-6">
-              {/* Header of the selected part — with a shortcut back to All */}
-              {category !== "all" && (
-                <NotificationSectionHeader
-                  category={category}
-                  count={filteredNotifications.length}
-                  unreadCount={unreadCounts[category] ?? 0}
-                  actionLabel="Show all"
-                  onAction={() => setCategory("all")}
-                />
-              )}
-
-              {NOTIFICATION_DATE_GROUPS.filter(
-                (group) => groupedNotifications[group]?.length,
-              ).map((group) => (
-                <div key={group} className="space-y-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
-                    {group}
-                  </h2>
+              return (
+                <section key={section.category}>
+                  <NotificationSectionHeader
+                    category={section.category}
+                    label={CATEGORY_META[section.category].label}
+                    newLabel="mới"
+                    count={section.items.length}
+                    unreadCount={unreadInSection}
+                    actionLabel={
+                      hidden > 0
+                        ? `Xem tất cả (${section.items.length})`
+                        : undefined
+                    }
+                    onAction={
+                      hidden > 0
+                        ? () => setCategory(section.category)
+                        : undefined
+                    }
+                  />
 
                   <div className="space-y-1.5">
-                    {groupedNotifications[group].map((notification, index) => (
+                    {preview.map((notification, index) => (
                       <NotificationRow
                         key={notification._id}
                         notification={notification}
@@ -281,15 +339,68 @@ export function AdminNotifications() {
                         onClick={handleNotificationClick}
                         onMarkRead={markAsRead}
                         onDelete={handleDelete}
+                        showCategory={false}
                       />
                     ))}
+
+                    {hidden > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setCategory(section.category)}
+                        className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        +{hidden}{" "}
+                        {CATEGORY_META[section.category].label.toLowerCase()}{" "}
+                        khác
+                      </button>
+                    )}
                   </div>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-4 py-5 space-y-6">
+            {/* Header of the selected part — with a shortcut back to All */}
+            {category !== "all" && (
+              <NotificationSectionHeader
+                category={category}
+                label={CATEGORY_META[category].label}
+                newLabel="mới"
+                count={filteredNotifications.length}
+                unreadCount={unreadCounts[category] ?? 0}
+                actionLabel="Xem mọi loại"
+                onAction={() => setCategory("all")}
+              />
+            )}
+
+            {NOTIFICATION_DATE_GROUPS.filter(
+              (group) => groupedNotifications[group]?.length,
+            ).map((group) => (
+              <div key={group} className="space-y-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
+                  {DATE_GROUP_LABELS[group] ?? group}
+                </h2>
+
+                <div className="space-y-1.5">
+                  {groupedNotifications[group].map((notification, index) => (
+                    <NotificationRow
+                      key={notification._id}
+                      notification={notification}
+                      index={index}
+                      onClick={handleNotificationClick}
+                      onMarkRead={markAsRead}
+                      onDelete={handleDelete}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </AdminPanelBody>
+              </div>
+            ))}
+          </div>
+        )}
       </AdminPanel>
+
+      {confirmDialog}
     </div>
   );
 }

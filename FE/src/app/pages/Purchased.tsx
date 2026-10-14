@@ -33,6 +33,7 @@ import { getOrderStatusBadgeClass, ORDER_STATUS_LABELS } from "../../constants/o
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { OrderThread } from "../../shared/components/order/OrderThread";
 import { EmptyHoopIllustration } from "./shop/CartPage";
+import { useMembershipStore } from "../../features/membership/store/membership.store";
 import "../../styles/purchased.css";
 
 const PAGE_SIZE = 10;
@@ -272,6 +273,8 @@ export function Purchased() {
       });
       toast.success(t("purchased.cancelRequestSent"));
       setCancelModal(null);
+      // Huỷ đơn → BE hoàn coin đã dùng + đổi history sang "cancelled".
+      void useMembershipStore.getState().refresh();
       const { data: response } = await orderService.getMyOrders({
         page,
         limit: PAGE_SIZE,

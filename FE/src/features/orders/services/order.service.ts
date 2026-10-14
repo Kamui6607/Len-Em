@@ -75,7 +75,11 @@ export const orderService = {
     limit?: number;
     status?: string;
     paymentStatus?: string;
+    paymentMethod?: string;
     search?: string;
+    /** yyyy-mm-dd, inclusive */
+    from?: string;
+    to?: string;
   }) =>
     axiosClient.get<AdminOrdersResponse>(ORDERS_BASE, {
       params,

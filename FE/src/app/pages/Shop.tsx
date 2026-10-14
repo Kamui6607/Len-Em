@@ -1,13 +1,13 @@
 import "../../styles/craft.css";
 import "../../styles/shop.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   SlidersHorizontal,
   X,
   Heart,
-  Tag,
   Palette,
   Gauge,
   Wallet,
@@ -21,6 +21,8 @@ import {
   ArrowRight,
   Truck,
   ShoppingBag,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../../shared/components/ProductCard";
@@ -33,7 +35,8 @@ import {
 } from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../features/learn/store/learn.store";
 import { useAuth } from "../../shared/hooks/useAuth";
-import { useCart } from "../../shared/contexts/CartContext";
+import { useAddToCart } from "../../features/cart/useAddToCart";
+import { firstAvailableVariant, toCartPayload } from "../../features/cart/VariantPickerDialog";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
@@ -49,34 +52,13 @@ import {
 import { EmptyHoopIllustration } from "./shop/CartPage";
 
 // Backend only supports: newest. Remove price-asc, price-desc, rating (cause 400)
+/** Colors shown before "+N màu khác". */
+const COLOR_PREVIEW = 10;
+
 const SORT_OPTIONS = [
   { value: "popular", label: "Phổ biến nhất" },
   { value: "newest", label: "Mới nhất" },
 ];
-
-// Small icon shown next to each filter section label — purely orientation,
-// so the sidebar reads at a glance instead of as a wall of identical text.
-const FILTER_ICONS: Record<string, React.ReactNode> = {
-  category: <Tag size={13} />,
-  color: <Palette size={13} />,
-  price: <Wallet size={13} />,
-  level: <Gauge size={13} />,
-};
-
-function FilterLabel({
-  icon,
-  children,
-}: {
-  icon: keyof typeof FILTER_ICONS;
-  children: React.ReactNode;
-}) {
-  return (
-    <span className="filter-group-label">
-      {FILTER_ICONS[icon]}
-      {children}
-    </span>
-  );
-}
 
 // Builds a compact page list with ellipses so pagination never sprawls
 // across the screen once a catalog has more than a handful of pages.
@@ -95,49 +77,129 @@ function getPaginationRange(
   return range;
 }
 
-// ── Price range filter component (standalone to preserve input focus) ──
-function PriceRangeFilter({
+// Quick "max price" presets, matched to the live catalog (items run ~250k–375k
+// today). Revisit when the price range changes — a preset that always returns
+// nothing is worse than none.
+const PRICE_PRESETS = [300_000, 400_000, 500_000, 1_000_000];
+const shortPrice = (n: number) => (n >= 1_000_000 ? `${n / 1_000_000}tr` : `${n / 1000}k`);
+
+/** One collapsible block of the filter panel (icon · title · active badge · chevron). */
+function FilterSection({
+  icon: Icon,
+  title,
+  badge = 0,
+  defaultOpen = true,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  badge?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
+  return (
+    <section className="flt-sec">
+      <button
+        type="button"
+        className="flt-sec-btn"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="flt-sec-icon">
+          <Icon size={15} />
+        </span>
+        <span className="flt-sec-title">{title}</span>
+        {badge > 0 && <span className="flt-sec-badge">{badge}</span>}
+        <ChevronDown size={16} className="flt-sec-chev" />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={contentId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="flt-sec-content">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+// ── Max price: presets + a custom amount (standalone so typing keeps focus) ──
+function PriceFilter({
   maxPrice,
   onApply,
 }: {
   maxPrice: number;
   onApply: (max: number) => void;
 }) {
-  const [maxInput, setMaxInput] = useState(maxPrice ? String(maxPrice) : "");
+  const isPreset = PRICE_PRESETS.includes(maxPrice);
+  const [draft, setDraft] = useState(maxPrice && !isPreset ? String(maxPrice) : "");
 
-  // Keep the input in sync with URL back/forward navigation.
+  // Keep the field in sync with URL back/forward navigation.
   useEffect(() => {
-    setMaxInput(maxPrice ? String(maxPrice) : "");
+    setDraft(maxPrice && !PRICE_PRESETS.includes(maxPrice) ? String(maxPrice) : "");
   }, [maxPrice]);
 
-  const apply = () => onApply(Math.max(0, Number(maxInput) || 0));
+  const digits = draft.replace(/\D/g, "");
+  const amount = Number(digits) || 0;
+  const apply = () => onApply(amount);
 
   return (
-    <div className="filter-group">
-      <FilterLabel icon="price">Giá tối đa</FilterLabel>
-      <div className="price-field">
+    <>
+      <div className="flt-chips" role="group" aria-label="Mức giá tối đa">
+        <button type="button" className="flt-chip" aria-pressed={maxPrice === 0} onClick={() => onApply(0)}>
+          Bất kỳ
+        </button>
+        {PRICE_PRESETS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            className="flt-chip"
+            aria-pressed={maxPrice === value}
+            onClick={() => onApply(value)}
+          >
+            Dưới {shortPrice(value)}
+          </button>
+        ))}
+      </div>
+      <div className="flt-price">
         <input
-          className="price-input"
-          type="number"
-          min="0"
-          placeholder="Ví dụ: 200000"
-          value={maxInput}
-          onChange={(e) => setMaxInput(e.target.value)}
+          className="flt-price-input"
+          inputMode="numeric"
+          placeholder="Hoặc nhập giá tối đa"
+          aria-label="Giá tối đa (đồng)"
+          value={digits ? Number(digits).toLocaleString("vi-VN") : ""}
+          onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && apply()}
         />
-        <span className="price-unit">đ</span>
+        <button
+          type="button"
+          className="flt-price-go"
+          onClick={apply}
+          disabled={!amount || amount === maxPrice}
+          aria-label="Áp dụng giá"
+        >
+          <ArrowRight size={15} />
+        </button>
       </div>
-      <button type="button" onClick={apply} className="price-find-btn">
-        Áp dụng
-      </button>
-    </div>
+      <p className="flt-price-hint">Đơn vị: đồng · nhấn Enter để áp dụng</p>
+    </>
   );
 }
 
 export function Shop() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { addToCart } = useCart();
+  const { addProducts } = useAddToCart();
   const { isFavoriteKit, toggleFavoriteKit } = useFavorites();
   const { t } = useLanguage();
 
@@ -286,28 +348,16 @@ export function Shop() {
         )
       : filteredProducts;
 
-  const addLessonProductToCart = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
-    const variant = product.variants?.[0];
-    if (!variant) return;
-    addToCart({
-      productId: product.id,
-      variantId: variant.id,
-      name: product.name,
-      image: variant.images?.[0] || product.image,
-      color: variant.color || "",
-      hexCode: variant.hexCode || "#ccc",
-      price: variant.price,
-      stock: variant.stock,
-    });
-  };
-
   const addAllLessonProducts = () => {
-    recommendedProducts.forEach((product) =>
-      addLessonProductToCart(product.id),
+    addProducts(
+      // Bulk add can't ask per product: take the first in-stock variant —
+      // the color can be changed afterwards right in the cart.
+      recommendedProducts.flatMap((product) => {
+        const variant = firstAvailableVariant(product.variants);
+        return variant ? [toCartPayload(product, variant)] : [];
+      }),
+      "Đã thêm nguyên liệu của bài học vào giỏ",
     );
-    toast.success("Đã thêm nguyên liệu của bài học vào giỏ");
   };
 
   const dismissRecommendations = () => {
@@ -338,15 +388,16 @@ export function Shop() {
     [currentPage, totalPages],
   );
 
-  // Render functions (không phải component) để PriceRangeFilter không bị
+  // Render functions (không phải component) để PriceFilter không bị
   // remount mỗi lần Shop re-render — giữ nguyên focus khi đang gõ giá.
   const renderKitFilters = () => (
     <>
-      <div className="filter-group">
-        <FilterLabel icon="level">Trình độ</FilterLabel>
-        <div className="filter-chip-group">
+      <FilterSection icon={Gauge} title="Trình độ" badge={hasActiveKitLevel ? 1 : 0}>
+        <div className="flt-chips" role="group" aria-label="Trình độ">
           <button
-            className={`shop-chip ${kitLevel === "all" ? "is-active" : ""}`}
+            type="button"
+            className="flt-chip"
+            aria-pressed={kitLevel === "all"}
             onClick={() => setKitLevel("all")}
           >
             <Gift size={13} />
@@ -357,7 +408,9 @@ export function Shop() {
             return (
               <button
                 key={level}
-                className={`shop-chip ${kitLevel === level ? "is-active" : ""}`}
+                type="button"
+                className="flt-chip"
+                aria-pressed={kitLevel === level}
                 onClick={() => setKitLevel(level)}
               >
                 <Icon size={13} />
@@ -366,17 +419,11 @@ export function Shop() {
             );
           })}
         </div>
-      </div>
+      </FilterSection>
 
-      {/* Maximum price cho combo — dùng chung component với filter của Products */}
-      <PriceRangeFilter maxPrice={kitMaxPrice} onApply={setKitMaxPrice} />
-
-      {!kitsLoading && (
-        <div className="filter-summary">
-          <Boxes size={13} />
-          Hiển thị <strong>{filteredKits.length}</strong> / {kits.length} combo
-        </div>
-      )}
+      <FilterSection icon={Wallet} title="Giá tối đa" badge={kitMaxPrice > 0 ? 1 : 0}>
+        <PriceFilter maxPrice={kitMaxPrice} onApply={setKitMaxPrice} />
+      </FilterSection>
     </>
   );
 
@@ -384,100 +431,128 @@ export function Shop() {
     <>
       {/* Smart lesson filter */}
       {currentCourseId && currentCourseComboIds.length > 0 && (
-        <div className="filter-group">
-          <button
-            className={`shop-chip ${lessonFilterActive ? "is-active" : ""}`}
-            onClick={() => {
-              setLessonFilterActive((active) => !active);
-              updateFilter("category", "all");
-            }}
-          >
-            <GraduationCap size={13} />
-            Theo bài học đang học
-          </button>
-        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={lessonFilterActive}
+          className="flt-lesson"
+          onClick={() => {
+            setLessonFilterActive((active) => !active);
+            updateFilter("category", "all");
+          }}
+        >
+          <span className="flt-sec-icon">
+            <GraduationCap size={15} />
+          </span>
+          <span className="min-w-0">
+            <span className="flt-lesson-title block">Theo bài học đang học</span>
+            <span className="flt-lesson-sub block">Chỉ hiện nguyên liệu khoá học cần</span>
+          </span>
+          <span className="flt-switch" aria-hidden="true" />
+        </button>
       )}
-
-      {/* Category */}
-      <div className="filter-group">
-        <FilterLabel icon="category">Danh mục</FilterLabel>
-        <div className="filter-chip-group">
-          {categoryOptions.map(({ value }) => {
-            const cat = getCategoryMeta(value);
-            const Icon = cat.Icon;
-            return (
-              <button
-                key={value}
-                className={`shop-chip ${filters.category === value ? "is-active" : ""}`}
-                onClick={() => updateFilter("category", value)}
-              >
-                <Icon size={13} />
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Color */}
       {dynamicFilters.colors.length > 0 && (
-        <div className="filter-group">
-          <div className="filter-section-head">
-            <FilterLabel icon="color">Màu len</FilterLabel>
-            {dynamicFilters.colors.length > 8 && (
-              <button
-                type="button"
-                className="filter-show-more"
-                onClick={() => setShowAllColors((visible) => !visible)}
-              >
-                {showAllColors ? "Thu gọn" : `Xem tất cả (${dynamicFilters.colors.length})`}
-              </button>
-            )}
-          </div>
-          <div className="shop-swatch-grid">
-            {(showAllColors ? dynamicFilters.colors : dynamicFilters.colors.slice(0, 8)).map(
+        <FilterSection icon={Palette} title="Màu len" badge={filters.color.length}>
+          <div className="flt-swatches">
+            {(showAllColors ? dynamicFilters.colors : dynamicFilters.colors.slice(0, COLOR_PREVIEW)).map(
               (c) => {
                 const active = filters.color.includes(c.name);
                 return (
                   <button
                     key={c.name}
                     type="button"
-                    className={`shop-swatch ${active ? "is-active" : ""}`}
+                    className="flt-swatch"
                     onClick={() => toggleArrayFilter("color", c.name)}
                     title={c.name}
                     aria-pressed={active}
                   >
-                    <span className="shop-swatch-dot" style={{ background: c.hex }} />
-                    <span className="shop-swatch-name">{c.name}</span>
+                    <span className="flt-swatch-ball" style={{ background: c.hex }}>
+                      {active && <Check size={15} strokeWidth={3} className="flt-swatch-check" />}
+                    </span>
+                    <span className="flt-swatch-name">{c.name}</span>
                   </button>
                 );
               },
             )}
           </div>
-        </div>
+          {dynamicFilters.colors.length > COLOR_PREVIEW && (
+            <button
+              type="button"
+              className="flt-more"
+              onClick={() => setShowAllColors((visible) => !visible)}
+            >
+              {showAllColors
+                ? "Thu gọn"
+                : `+${dynamicFilters.colors.length - COLOR_PREVIEW} màu khác`}
+              <ChevronDown size={14} className={showAllColors ? "rotate-180" : ""} />
+            </button>
+          )}
+        </FilterSection>
       )}
 
-      {/* Price range - standalone component with own state */}
-      <PriceRangeFilter
-        maxPrice={filters.maxPrice}
-        onApply={(max) => updatePriceRange(max)}
-      />
-
-      {!isLoading && (
-        <div className="filter-summary">
-          <Boxes size={13} />
-          Hiển thị <strong>{displayedProducts.length}</strong> / {totalCount} sản phẩm
-        </div>
-      )}
+      {/* Max price */}
+      <FilterSection icon={Wallet} title="Giá tối đa" badge={filters.maxPrice > 0 ? 1 : 0}>
+        <PriceFilter maxPrice={filters.maxPrice} onApply={(max) => updatePriceRange(max)} />
+      </FilterSection>
     </>
   );
 
-  const activeFilterCount = viewMode === "products" ? activeChips.length : kitFilterCount;
-  const canClear = viewMode === "products" ? hasActiveFilters : hasActiveKitFilters;
+  const clearAllFilters = () => {
+    if (viewMode === "products") {
+      clearFilters();
+      setLessonFilterActive(false);
+    } else {
+      clearKitFilters();
+    }
+  };
+
+  const activeFilterCount =
+    viewMode === "products"
+      ? activeChips.length + (lessonFilterActive ? 1 : 0)
+      : kitFilterCount;
+  const canClear =
+    viewMode === "products" ? hasActiveFilters || lessonFilterActive : hasActiveKitFilters;
+  // How many items match the current filters across ALL pages. `totalCount`
+  // is the server total for the active query (resultCount is only the current
+  // page); lesson mode narrows the loaded page client-side, so count that.
+  const shownCount =
+    viewMode === "products"
+      ? lessonFilterActive
+        ? displayedProducts.length
+        : totalCount
+      : filteredKits.length;
+  const resultsLoading = viewMode === "products" ? isLoading : kitsLoading;
+  const unitLabel = viewMode === "products" ? "sản phẩm" : "combo";
+
+  const renderFilterHead = (onClose?: () => void) => (
+    <div className="flt-head">
+      <span className="flt-head-icon">
+        <SlidersHorizontal size={17} />
+      </span>
+      <div className="min-w-0">
+        <p className="flt-title">Bộ lọc</p>
+        <p className="flt-sub">
+          {activeFilterCount > 0 ? `đang chọn ${activeFilterCount}` : ""}
+        </p>
+      </div>
+      <button type="button" onClick={clearAllFilters} disabled={!canClear} className="flt-clear">
+        <RotateCcw size={12} />
+        Xoá lọc
+      </button>
+      {onClose && (
+        <button className="drawer-close" onClick={onClose} aria-label="Đóng bộ lọc">
+          <X size={18} />
+        </button>
+      )}
+    </div>
+  );
+
   const HeroIcon = meta.Icon;
 
   return (
-    <div className="min-h-screen bg-background px-4 pt-8 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+    <div className="min-h-screen bg-background px-4 pt-8 pb-12">
       <div className="shop-wrap">
         {/* ── Hero: tiệm len ── */}
         <section className="craft-hero craft-rise shop-hero">
@@ -618,20 +693,21 @@ export function Shop() {
         {/* ── BODY ── */}
         <div className="shop-body">
           {/* Desktop sidebar - show different filters based on viewMode */}
-          <aside className="filter-panel">
-            <div className="filter-header">
-              <span className="filter-title">Bộ lọc</span>
-              <button
-                type="button"
-                onClick={viewMode === "products" ? clearFilters : clearKitFilters}
-                disabled={!canClear}
-                className="filter-clear"
-              >
-                <RotateCcw size={12} />
-                Xoá lọc
-              </button>
+          <aside className="flt-panel" aria-label="Bộ lọc">
+            {renderFilterHead()}
+            <div className="flt-body">
+              {viewMode === "products" ? renderProductFilters() : renderKitFilters()}
             </div>
-            {viewMode === "products" ? renderProductFilters() : renderKitFilters()}
+            <div className="flt-foot" aria-live="polite">
+              <Boxes size={14} />
+              {resultsLoading ? (
+                <span>Đang tìm…</span>
+              ) : (
+                <span>
+                  Tìm thấy <strong>{shownCount}</strong> {unitLabel}
+                </span>
+              )}
+            </div>
           </aside>
 
           {/* Main content */}
@@ -707,7 +783,7 @@ export function Shop() {
                           <X size={12} />
                         </motion.button>
                       ))}
-                      <button type="button" className="filter-strip-clear" onClick={clearFilters}>
+                      <button type="button" className="filter-strip-clear" onClick={clearAllFilters}>
                         Xoá tất cả
                       </button>
                     </motion.div>
@@ -929,7 +1005,9 @@ export function Shop() {
         </div>
       </div>
 
-      {/* ── Mobile filter drawer ── */}
+      {/* ── Mobile filter sheet — portaled so it sits above the floating
+          assistant button, which lives outside the page's stacking layer ── */}
+      {createPortal(
       <AnimatePresence>
         {filterOpen && (
           <>
@@ -942,44 +1020,31 @@ export function Shop() {
               onClick={() => setFilterOpen(false)}
             />
             <motion.div
-              className="drawer"
+              className="flt-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Bộ lọc"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
             >
               <div className="drawer-handle" />
-              <div className="filter-header">
-                <span className="filter-title">Bộ lọc</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={viewMode === "products" ? clearFilters : clearKitFilters}
-                    disabled={!canClear}
-                    className="filter-clear"
-                  >
-                    <RotateCcw size={12} />
-                    Xoá lọc
-                  </button>
-                  <button
-                    className="drawer-close"
-                    onClick={() => setFilterOpen(false)}
-                    aria-label="Đóng bộ lọc"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+              {renderFilterHead(() => setFilterOpen(false))}
+              <div className="flt-body">
+                {viewMode === "products" ? renderProductFilters() : renderKitFilters()}
               </div>
-              {viewMode === "products" ? renderProductFilters() : renderKitFilters()}
-              <button onClick={() => setFilterOpen(false)} className="craft-btn mt-4 w-full">
-                {viewMode === "products"
-                  ? `Xem ${resultCount} sản phẩm`
-                  : `Xem ${filteredKits.length} combo`}
-              </button>
+              <div className="flt-sheet-actions">
+                <button onClick={() => setFilterOpen(false)} className="craft-btn">
+                  {resultsLoading ? "Đang tìm…" : `Xem ${shownCount} ${unitLabel}`}
+                </button>
+              </div>
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
     </div>
   );
 }

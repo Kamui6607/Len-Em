@@ -1,91 +1,45 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ToasterProps } from "sonner";
-import { useTheme } from "../../contexts/ThemeContext";
 import { Toaster as Sonner } from "sonner";
+import { useTheme } from "../../contexts/ThemeContext";
+import "../../../styles/toast.css";
 
-const Toaster = ({ ...props }: ToasterProps) => {
+/**
+ * App-wide toaster. Placement and look are configured here only — styling
+ * comes from styles/toast.css via the `lt-toast` class, so per-type accents
+ * (success / error / warning / info) actually show (inline `style` on toasts
+ * used to override them).
+ *
+ * At the top of the page toasts sit BELOW the sticky navigation (desktop
+ * header is 84px tall, the mobile top bar ~72px). Once the page is scrolled
+ * they move up to the top-right corner of the viewport.
+ */
+const Toaster = (props: ToasterProps) => {
   const { theme } = useTheme();
+  const [scrolled, setScrolled] = useState(() => typeof window !== "undefined" && window.scrollY > 8);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <>
-      <style>{`
-        [data-sonner-toaster] {
-          pointer-events: none !important;
-        }
-        [data-sonner-toaster] [data-sonner-toast] {
-          pointer-events: auto !important;
-        }
-
-        @media (min-width: 769px) {
-          [data-sonner-toaster] {
-            right: 16px !important;
-            left: auto !important;
-            top: 16px !important;
-            bottom: auto !important;
-            align-items: flex-end !important;
-          }
-          [data-sonner-toaster] [data-sonner-toast] {
-            width: 380px !important;
-          }
-        }
-
-        @media (max-width: 768px) {
-          [data-sonner-toaster] {
-            left: 50% !important;
-            right: auto !important;
-            transform: translateX(-50%) !important;
-            top: max(12px, env(safe-area-inset-top, 12px)) !important;
-            bottom: auto !important;
-            align-items: center !important;
-            padding: 0 8px !important;
-          }
-          [data-sonner-toaster] [data-sonner-toast] {
-            width: 100% !important;
-            max-width: 400px !important;
-            font-size: 0.875rem !important;
-            padding: 12px 16px !important;
-            border-radius: 14px !important;
-          }
-          [data-sonner-toaster] [data-sonner-toast] [data-close-button] {
-            transform: scale(0.85) !important;
-          }
-        }
-      `}</style>
-      <Sonner
-        theme={theme as ToasterProps["theme"]}
-        className="toaster group"
-        duration={3000}
-        closeButton
-        visibleToasts={5}
-        gap={8}
-        offset={16}
-        toastOptions={{
-          style: {
-            pointerEvents: "auto",
-            background: "var(--card)",
-            color: "var(--foreground)",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-lg)",
-            borderRadius: "16px",
-            padding: "14px 18px",
-          },
-        }}
-        style={
-          {
-            "--normal-bg": "var(--card) !important",
-            "--normal-text": "var(--foreground) !important",
-            "--normal-border": "var(--border) !important",
-            "--success-bg": "var(--accent-green) !important",
-            "--success-text": "var(--accent-green-text) !important",
-            "--error-bg": "var(--accent-red) !important",
-            "--error-text": "var(--accent-red-text) !important",
-            pointerEvents: "none",
-          } as React.CSSProperties
-        }
-        {...props}
-      />
-    </>
+    <Sonner
+      theme={theme as ToasterProps["theme"]}
+      position="top-right"
+      duration={4000}
+      closeButton
+      visibleToasts={4}
+      gap={10}
+      offset={{ top: scrolled ? 16 : 96, right: 16 }}
+      mobileOffset={{ top: 80, left: 12, right: 12 }}
+      toastOptions={{ className: "lt-toast" }}
+      {...props}
+    />
   );
 };
 

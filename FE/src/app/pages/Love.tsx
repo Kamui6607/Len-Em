@@ -1,310 +1,313 @@
-import { useEffect, useState } from "react";
+// ============================================================
+// Love Page — route /love (danh sách yêu thích)
+// Products use the shared ProductCard (same as /shop); combos get a
+// matching card. Resolved items are cached so toggling a heart doesn't
+// reload the whole page.
+// ============================================================
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { motion } from "motion/react";
-import { Heart, ShoppingCart, Trash2 } from "lucide-react";
+import { Heart, Package, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
-import { useCart } from "../../shared/contexts/CartContext";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
+import { useAddToCart } from "../../features/cart/useAddToCart";
+import { kitToCartPayload } from "../../features/cart/kitPayload";
+import { SHOP_LEVELS, type ShopLevel } from "../../features/shop/shopMeta";
 import { products as mockProducts } from "../data/products";
 import { fetchProductById } from "../../features/shop/services/product.service";
 import { ProductCard } from "../../shared/components/ProductCard";
 import { kitService } from "../../shared/api/kitService";
-import { cn } from "../../shared/components/ui/utils";
 import { formatPrice } from "../../lib/formatPrice";
 import type { Product } from "../data/products";
 import type { Kit } from "../../shared/api/kitService";
+import "../../styles/love.css";
+
+type Filter = "all" | "products" | "combos";
+
+async function resolveProduct(id: string): Promise<Product | null> {
+  const mock = mockProducts.find((p) => p.id === id);
+  if (mock) return mock;
+  try {
+    return await fetchProductById(id);
+  } catch {
+    return null;
+  }
+}
+
+async function resolveKit(id: string): Promise<Kit | null> {
+  try {
+    const res = await kitService.getById(id);
+    return res.data.data?.kit ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Combo card (mirrors ProductCard's footprint) ──────────────────────
+
+function KitCard({ kit, onUnfavorite, onAdd }: { kit: Kit; onUnfavorite: () => void; onAdd: () => void }) {
+  const { t } = useLanguage();
+  const level = SHOP_LEVELS[kit.level as ShopLevel];
+  const fallback = `https://picsum.photos/seed/${kit._id}/400/400`;
+
+  return (
+    <article className="wl-kit">
+      <Link to={`/kits/${kit._id}`} className="wl-kit-media">
+        <img
+          src={kit.thumbnail || fallback}
+          alt={kit.name}
+          loading="lazy"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = "true";
+              img.src = fallback;
+            }
+          }}
+        />
+        <span className="wl-kit-tag">
+          <Package size={12} aria-hidden="true" />
+          {t("love.combo")}
+        </span>
+      </Link>
+      <button
+        type="button"
+        className="wl-heart"
+        onClick={onUnfavorite}
+        aria-label={t("love.unfavorite", { name: kit.name })}
+        aria-pressed="true"
+      >
+        <Heart size={18} fill="currentColor" />
+      </button>
+
+      <div className="wl-kit-body">
+        {level && <span className="wl-kit-level">{level.label}</span>}
+        <Link to={`/kits/${kit._id}`} className="wl-kit-name">
+          {kit.name}
+        </Link>
+        <p className="wl-kit-meta">{t("love.productsIncluded", { count: (kit.products || []).length })}</p>
+        <p className="wl-kit-price">{formatPrice(kit.price)}</p>
+        <button type="button" className="wl-btn is-soft is-block" onClick={onAdd}>
+          <ShoppingCart size={15} aria-hidden="true" />
+          {t("love.addToCart")}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────
 
 export function Love() {
   const { t } = useLanguage();
-  const { addToCart, addKitToCart } = useCart();
-  const { favorites, favoriteKits, toggleFavoriteKit, clearAllFavorites } = useFavorites();
-  const [resolvedProducts, setResolvedProducts] = useState<Product[]>([]);
-  const [resolvedKits, setResolvedKits] = useState<Kit[]>([]);
+  const { favorites, favoriteKits, toggleFavorite, toggleFavoriteKit, clearAllFavorites } = useFavorites();
+  const { addKit, addProducts } = useAddToCart();
+
+  const productCache = useRef(new Map<string, Product | null>());
+  const kitCache = useRef(new Map<string, Kit | null>());
+  const [, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
 
+  // Resolve only ids we haven't seen yet.
   useEffect(() => {
-    async function resolveFavorites() {
-      setLoading(true);
-      
-      // Fetch all products in parallel
-      const productResults = await Promise.all(
-        favorites.map(async (favId) => {
-          // Try mock data first
-          const mock = mockProducts.find((p) => p.id === favId);
-          if (mock) return mock;
-          // Fallback to API
-          try {
-            return await fetchProductById(favId);
-          } catch {
-            return null;
-          }
-        })
-      );
-      setResolvedProducts(productResults.filter((p): p is Product => p !== null));
-
-      // Fetch all kits in parallel
-      const kitResults = await Promise.all(
-        favoriteKits.map(async (kitId) => {
-          try {
-            const res = await kitService.getById(kitId);
-            return res.data.data?.kit ?? null;
-          } catch {
-            return null;
-          }
-        })
-      );
-      setResolvedKits(kitResults.filter((k): k is Kit => k !== null));
+    let cancelled = false;
+    const newProducts = favorites.filter((id) => !productCache.current.has(id));
+    const newKits = favoriteKits.filter((id) => !kitCache.current.has(id));
+    if (!newProducts.length && !newKits.length) {
       setLoading(false);
+      return;
     }
-    resolveFavorites();
+    Promise.all([
+      Promise.all(newProducts.map(async (id) => [id, await resolveProduct(id)] as const)),
+      Promise.all(newKits.map(async (id) => [id, await resolveKit(id)] as const)),
+    ]).then(([products, kits]) => {
+      if (cancelled) return;
+      products.forEach(([id, p]) => productCache.current.set(id, p));
+      kits.forEach(([id, k]) => kitCache.current.set(id, k));
+      setVersion((v) => v + 1);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [favorites, favoriteKits]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight;
-      const scrollTop = window.scrollY;
-      const clientHeight = window.innerHeight;
-      setScrolledToBottom(scrollHeight - scrollTop - clientHeight < 100);
-    };
-    
-    // Use a ref to store the handler to ensure proper cleanup
-    const scrollHandler = handleScroll;
-    window.addEventListener("scroll", scrollHandler, { passive: true });
-    return () => window.removeEventListener("scroll", scrollHandler);
-  }, []);
+  const products = favorites
+    .map((id) => productCache.current.get(id))
+    .filter((p): p is Product => !!p);
+  const kits = favoriteKits.map((id) => kitCache.current.get(id)).filter((k): k is Kit => !!k);
+  const total = products.length + kits.length;
 
-  const addAllToCart = () => {
-    resolvedProducts.forEach((product) => {
-      const variant = product.variants?.[0];
-      if (!variant) return;
-      addToCart({
-        productId: product.id,
-        variantId: variant.id,
-        name: product.name,
-        image: variant.images?.[0] || product.image,
-        color: variant.color || "",
-        hexCode: variant.hexCode || "#ccc",
-        price: variant.price,
-        stock: variant.stock,
-      });
+  // Only products with a purchasable variant can go to the cart in one tap.
+  const addable = useMemo(
+    () =>
+      products.flatMap((product) => {
+        const variant = product.variants?.find((v) => v.stock > 0) ?? product.variants?.[0];
+        if (!variant) return [];
+        return [
+          {
+            productId: product.id,
+            variantId: variant.id,
+            name: product.name,
+            image: variant.images?.[0] || product.image,
+            color: variant.color || "",
+            hexCode: variant.hexCode || "",
+            price: variant.price,
+            stock: variant.stock,
+          },
+        ];
+      }),
+    [products],
+  );
+
+  const showProducts = filter !== "combos" && products.length > 0;
+  const showKits = filter !== "products" && kits.length > 0;
+
+  const handleClearAll = () => {
+    const savedProducts = [...favorites];
+    const savedKits = [...favoriteKits];
+    clearAllFavorites();
+    toast(t("love.removedAllFavorites"), {
+      action: {
+        label: t("cart.undo"),
+        onClick: () => {
+          savedProducts.forEach(toggleFavorite);
+          savedKits.forEach(toggleFavoriteKit);
+        },
+      },
     });
-    toast.success(t("love.addedAllToCart", { count: resolvedProducts.length }));
   };
 
-  const handleRemoveAll = () => {
-    clearAllFavorites();
-    toast.success(t("love.removedAllFavorites"));
+  const handleUnfavoriteKit = (kit: Kit) => {
+    toggleFavoriteKit(kit._id);
+    toast(t("love.removedFromFavorites"), {
+      action: { label: t("cart.undo"), onClick: () => toggleFavoriteKit(kit._id) },
+    });
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (resolvedProducts.length === 0 && resolvedKits.length === 0) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
-        <div className="text-center max-w-md">
-          <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-            <Heart className="w-12 h-12 text-muted-foreground" />
+      <div className="wl-page">
+        <div className="wl-wrap" aria-busy="true" aria-label={t("love.loading")}>
+          <div className="wl-skel wl-skel-title" />
+          <div className="wl-grid">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="wl-skel wl-skel-card" />
+            ))}
           </div>
-          <h2 className="mb-3">{t("love.emptyTitle")}</h2>
-          <p className="text-muted-foreground mb-6">
-            {t("love.emptyDesc")}
-          </p>
-          <Link
-            to="/shop"
-            className="inline-block bg-primary px-8 py-3 rounded-full hover:bg-primary/90 transition-colors font-medium"
-            style={{ color: "#FFFFFF" }}
-          >
-            {t("love.browseProducts")}
-          </Link>
         </div>
       </div>
     );
   }
+
+  if (total === 0) {
+    return (
+      <div className="wl-page">
+        <div className="wl-wrap">
+          <div className="wl-empty">
+            <div className="wl-empty-art" aria-hidden="true">
+              <Heart size={44} />
+            </div>
+            <h1 className="wl-empty-title">{t("love.emptyTitle")}</h1>
+            <p className="wl-empty-desc">{t("love.emptyDesc")}</p>
+            <div className="wl-empty-actions">
+              <Link to="/shop" className="wl-btn is-primary">
+                <ShoppingBag size={16} aria-hidden="true" />
+                {t("love.browseProducts")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs: { id: Filter; label: string; count: number }[] = [
+    { id: "all", label: t("love.all"), count: total },
+    { id: "products", label: t("love.products"), count: products.length },
+    { id: "combos", label: t("love.combos"), count: kits.length },
+  ];
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+130px)] md:pb-0">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Heart className="w-8 h-8 text-primary fill-primary" />
-              <h1>{t("love.title")}</h1>
-            </div>
-              <button
-                onClick={handleRemoveAll}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-full transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                {t("love.removeAll")}
-              </button>
+    <div className="wl-page">
+      <div className="wl-wrap">
+        <header className="wl-header">
+          <div className="wl-header-text">
+            <p className="wl-eyebrow">{t("love.eyebrow")}</p>
+            <h1 className="wl-title">
+              {t("love.title")}
+              <span className="wl-count">{total}</span>
+            </h1>
           </div>
-          <p className="text-muted-foreground">
-            {t("love.itemsSaved", { count: resolvedProducts.length + resolvedKits.length })}
-          </p>
-        </div>
+          <div className="wl-actions">
+            {addable.length > 0 && (
+              <button
+                type="button"
+                className="wl-btn is-primary"
+                onClick={() => addProducts(addable, t("love.addedAllToCart", { count: addable.length }))}
+              >
+                <ShoppingCart size={16} aria-hidden="true" />
+                {t("love.addAllToCart", { count: addable.length })}
+              </button>
+            )}
+            <button type="button" className="wl-clear" onClick={handleClearAll}>
+              <Trash2 size={14} aria-hidden="true" />
+              {t("love.removeAll")}
+            </button>
+          </div>
+        </header>
 
-        {/* Products Section */}
-        {resolvedProducts.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">{t("love.products")}</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {resolvedProducts.map((product) => (
+        {products.length > 0 && kits.length > 0 && (
+          <div className="wl-tabs" role="tablist" aria-label={t("love.filter")}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={filter === tab.id}
+                className="wl-tab"
+                onClick={() => setFilter(tab.id)}
+              >
+                {tab.label}
+                <span className="wl-tab-count">{tab.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showProducts && (
+          <section aria-labelledby="wl-products" className="wl-section">
+            <h2 id="wl-products" className="wl-section-title">
+              {t("love.products")}
+            </h2>
+            <div className="wl-grid">
+              {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Kits Section */}
-        {resolvedKits.length > 0 && (
-          <div>
-              <h2 className="text-xl font-semibold mb-4">{t("love.combos")}</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resolvedKits.map((kit) => (
-                <div
+        {showKits && (
+          <section aria-labelledby="wl-kits" className="wl-section">
+            <h2 id="wl-kits" className="wl-section-title">
+              {t("love.combos")}
+            </h2>
+            <div className="wl-grid">
+              {kits.map((kit) => (
+                <KitCard
                   key={kit._id}
-                  className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                >
-                  <Link to={`/kits/${kit._id}`} className="block relative">
-                    <div className="aspect-[4/3] overflow-hidden bg-muted">
-                      <img
-                        src={kit.thumbnail}
-                        alt={kit.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (!target.dataset.fallback) {
-                            target.dataset.fallback = "true";
-                            target.src = `https://picsum.photos/seed/${kit._id}/400/300`;
-                          }
-                        }}
-                      />
-                    </div>
-                    {/* Heart button overlay */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toggleFavoriteKit(kit._id);
-                        toast.success(
-                          favoriteKits.includes(kit._id)
-                            ? t("love.removedFromFavorites")
-                            : t("love.addedToFavorites")
-                        );
-                      }}
-                      className="absolute top-3 right-3 w-10 h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors shadow-sm"
-                      style={{
-                        background: "var(--card)",
-                        opacity: 0.9,
-                        touchAction: "manipulation",
-                        WebkitTapHighlightColor: "transparent",
-                      }}
-                    >
-                      <Heart
-                        className={cn(
-                          "w-5 h-5 transition-colors",
-                          favoriteKits.includes(kit._id)
-                            ? "fill-destructive text-destructive"
-                            : "text-muted-foreground hover:text-destructive"
-                        )}
-                      />
-                    </button>
-                  </Link>
-                  <div className="p-4 space-y-2">
-                    <Link to={`/kits/${kit._id}`}>
-                      <h3 className="font-semibold group-hover:text-primary transition-colors">
-                        {kit.name}
-                      </h3>
-                    </Link>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {kit.description}
-                    </p>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-lg font-bold text-primary">
-                        {formatPrice(kit.price)}
-                      </span>
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
-                        {kit.level}
-                      </span>
-                    </div>
-                     <p className="text-xs text-muted-foreground">
-                       {(kit.products || []).length} products included
-                     </p>
-                     {/* Add to cart button */}
-                      <motion.button
-                        type="button"
-                        onClick={() => {
-                          const products = (kit.products || []).map((kitProduct) => {
-                           const product = kitProduct.productId;
-                           const variant = product?.variants?.[0];
-                            return {
-                              productId: product._id,
-                              variantId: kitProduct.variantId,
-                              name: product.name,
-                              image: variant?.image || product.image,
-                              price: variant?.price || 0,
-                            };
-                          });
-                         addKitToCart({
-                           kitId: kit._id,
-                           name: kit.name,
-                           thumbnail: kit.thumbnail,
-                           price: kit.price,
-                           products,
-                         });
-                         toast.success(t("love.addedComboToCart", { name: kit.name }));
-                       }}
-                      className="card-add-btn mt-3"
-                      aria-label={`Add ${kit.name} to cart`}
-                      whileTap={{ scale: 0.97 }}
-                      transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
-                    >
-                      <span className="card-add-btn__icon" aria-hidden="true">
-                        <ShoppingCart size={15} strokeWidth={2.2} />
-                      </span>
-                      <span className="card-add-btn__label">{t("love.addToCart")}</span>
-                      <span className="card-add-btn__shine" aria-hidden="true" />
-                    </motion.button>
-                  </div>
-                </div>
+                  kit={kit}
+                  onUnfavorite={() => handleUnfavoriteKit(kit)}
+                  onAdd={() => addKit(kitToCartPayload(kit))}
+                />
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
-
-      {/* ── Mobile sticky bottom bar ── */}
-      {!scrolledToBottom && (
-        <div className="fixed bottom-[66px] left-0 right-0 z-40 bg-background/90 backdrop-blur-xl px-4 py-4 md:hidden safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{t("love.wishlist")}</p>
-              <p className="text-base font-bold text-primary">{resolvedProducts.length} {t("love.items")}</p>
-            </div>
-             <motion.button
-               type="button"
-               onClick={addAllToCart}
-               className="card-add-btn"
-               aria-label="Add all favorites to cart"
-               whileTap={{ scale: 0.97 }}
-               transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
-             >
-                <span className="card-add-btn__icon" aria-hidden="true">
-                  <ShoppingCart size={15} strokeWidth={2.2} />
-                </span>
-                <span className="card-add-btn__label">{t("love.addToCart")}</span>
-                <span className="card-add-btn__shine" aria-hidden="true" />
-             </motion.button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

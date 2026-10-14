@@ -11,15 +11,20 @@ import {
   Phone,
   ShieldCheck,
   User as UserIcon,
-  UserPen,
   UserPlus,
   VenusAndMars,
-  X,
 } from "lucide-react";
 import type { ApiUser } from "../../users/services/user.service";
 import type { AdminUsersController } from "../hooks/useAdminUsers";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { DatePicker } from "../../../shared/components/ui/DatePicker";
+import {
+  AdminDetailGrid,
+  AdminDetailItem,
+  AdminDialogSection,
+  AdminField,
+  AdminModal,
+} from "../../../shared/components/admin/AdminModal";
 import { isFutureDate, isoToUsDisplayDate, usDisplayToIso } from "../../../lib/dateInput";
 import {
   formatDateOfBirth,
@@ -28,93 +33,6 @@ import {
   initialsOf,
   statusLabel,
 } from "../utils/adminUsersFormat";
-
-function Overlay({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="admin-dialog-overlay" onClick={onClose}>
-      <div
-        className="admin-dialog-content max-h-[90vh] w-full max-w-2xl overflow-y-auto"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function FieldShell({
-  icon: Icon,
-  label,
-  required,
-  error,
-  children,
-}: {
-  /** Small icon shown before the label (matches the detail tiles). */
-  icon?: React.ElementType;
-  label: string;
-  required?: boolean;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block text-sm font-medium">
-      <span className="mb-1.5 flex items-center gap-1.5 text-muted-foreground">
-        {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-        {label}
-        {required && <span className="text-destructive">*</span>}
-      </span>
-      {children}
-      {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
-    </label>
-  );
-}
-
-/** Modal header: leading slot (icon chip / avatar) + close button. */
-function DialogHeader({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  const { t } = useLanguage();
-  return (
-    <div className="admin-dialog-header flex items-start justify-between gap-4">
-      {children}
-      <button
-        type="button"
-        onClick={onClose}
-        className="admin-action-btn shrink-0"
-        style={{ color: "var(--foreground-muted)" }}
-        aria-label={t("admin.users.closeButton")}
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-/** Full-width section heading inside the two-column form grid. */
-function SectionTitle({
-  icon: Icon,
-  children,
-}: {
-  icon: React.ElementType;
-  children: React.ReactNode;
-}) {
-  return (
-    <h3 className="col-span-full flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      <Icon className="h-4 w-4" />
-      {children}
-    </h3>
-  );
-}
 
 function Field({
   icon,
@@ -134,14 +52,14 @@ function Field({
   error?: string;
 }) {
   return (
-    <FieldShell icon={icon} label={label} required={required} error={error}>
+    <AdminField icon={icon} label={label} required={required} error={error}>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`input w-full ${error ? "border-destructive" : ""}`}
+        className="input w-full"
       />
-    </FieldShell>
+    </AdminField>
   );
 }
 /**
@@ -168,7 +86,7 @@ function DateField({
   placeholder?: string;
 }) {
   return (
-    <FieldShell icon={icon} label={label} error={error}>
+    <AdminField icon={icon} label={label} error={error}>
       <DatePicker
         value={value}
         onChange={onChange}
@@ -176,7 +94,7 @@ function DateField({
         placeholder={placeholder}
         format="mm/dd/yyyy"
       />
-    </FieldShell>
+    </AdminField>
   );
 }
 
@@ -200,11 +118,11 @@ function SelectField({
   error?: string;
 }) {
   return (
-    <FieldShell icon={icon} label={label} required={required} error={error}>
+    <AdminField icon={icon} label={label} required={required} error={error}>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`input w-full ${error ? "border-destructive" : ""}`}
+        className="input w-full"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -212,39 +130,7 @@ function SelectField({
           </option>
         ))}
       </select>
-    </FieldShell>
-  );
-}
-
-/** Read-only label + value tile used by the user detail dialog. */
-function DetailItem({
-  icon: Icon,
-  label,
-  value,
-  span,
-  mono,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  /** Let the tile take the full width of the two-column grid. */
-  span?: boolean;
-  /** Monospace value (ids). */
-  mono?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-xl border p-3 ${span ? "sm:col-span-2" : ""}`}
-      style={{ background: "var(--surface)", borderColor: "var(--border-light)" }}
-    >
-      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 shrink-0" />
-        {label}
-      </p>
-      <p className={`mt-1 break-words text-sm font-medium ${mono ? "font-mono text-xs" : ""}`}>
-        {value || "—"}
-      </p>
-    </div>
+    </AdminField>
   );
 }
 
@@ -269,76 +155,50 @@ function ViewUserDialog({
   const dateOfBirth = formatDateOfBirth(user.dateOfBirth);
 
   return (
-    <Overlay onClose={onClose}>
-      {/* Identity block first: avatar, name and the two badges an admin looks
-          for, so the fields below only carry the details. */}
-      <div className="admin-dialog-header flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold"
-            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-          >
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold">
-              {user.fullName || user.username || "—"}
-            </h2>
-            {user.username && (
-              <p className="truncate text-sm text-muted-foreground">@{user.username}</p>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className={`badge ${getRoleBadgeClass(roleName)}`}>{roleName}</span>
-              <span className={`badge ${getStatusBadgeClass(status)}`}>
-                {statusLabel(status, t)}
-              </span>
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="admin-action-btn shrink-0"
-          style={{ color: "var(--foreground-muted)" }}
-          aria-label={t("admin.users.closeButton")}
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="admin-dialog-body">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t("admin.users.accountInfo")}
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <DetailItem icon={Mail} label={t("admin.users.emailLabel")} value={user.email ?? ""} />
-          <DetailItem icon={Phone} label={t("admin.users.phoneLabel")} value={user.phone ?? ""} />
-          <DetailItem
-            icon={VenusAndMars}
-            label={t("admin.users.genderLabel")}
-            value={genderLabel}
-          />
-          <DetailItem
-            icon={CalendarDays}
-            label={t("admin.users.dateOfBirth")}
-            value={dateOfBirth}
-          />
-          <DetailItem
-            icon={MapPin}
-            label={t("admin.users.addressLabel")}
-            value={user.address ?? ""}
-            span
-          />
-          <DetailItem icon={IdCard} label={t("admin.users.userId")} value={user.userId} span mono />
-        </div>
-      </div>
-
-      <div className="admin-dialog-footer">
+    <AdminModal
+      variant="view"
+      onClose={onClose}
+      title={user.fullName || user.username || "—"}
+      subtitle={user.username ? `@${user.username}` : undefined}
+      // Identity first: avatar, name and the two badges an admin looks for,
+      // so the tiles below only carry the details.
+      media={<span className="adm-dlg-avatar">{initials}</span>}
+      badges={
+        <>
+          <span className={`badge ${getRoleBadgeClass(roleName)}`}>{roleName}</span>
+          <span className={`badge ${getStatusBadgeClass(status)}`}>{statusLabel(status, t)}</span>
+        </>
+      }
+      footer={
         <button type="button" onClick={onClose} className="btn-modal-primary">
           {t("admin.users.closeButton")}
         </button>
+      }
+    >
+      <div className="admin-dialog-body">
+        <AdminDialogSection icon={ShieldCheck}>{t("admin.users.accountInfo")}</AdminDialogSection>
+        <AdminDetailGrid>
+          <AdminDetailItem icon={Mail} label={t("admin.users.emailLabel")}>
+            {user.email}
+          </AdminDetailItem>
+          <AdminDetailItem icon={Phone} label={t("admin.users.phoneLabel")}>
+            {user.phone}
+          </AdminDetailItem>
+          <AdminDetailItem icon={VenusAndMars} label={t("admin.users.genderLabel")}>
+            {genderLabel}
+          </AdminDetailItem>
+          <AdminDetailItem icon={CalendarDays} label={t("admin.users.dateOfBirth")}>
+            {dateOfBirth}
+          </AdminDetailItem>
+          <AdminDetailItem icon={MapPin} label={t("admin.users.addressLabel")} span>
+            {user.address}
+          </AdminDetailItem>
+          <AdminDetailItem icon={IdCard} label={t("admin.users.userId")} span mono>
+            {user.userId}
+          </AdminDetailItem>
+        </AdminDetailGrid>
       </div>
-    </Overlay>
+    </AdminModal>
   );
 }
 
@@ -431,38 +291,32 @@ function UpdateUserDialog({
   }));
 
   return (
-    <Overlay onClose={onCancel}>
-      <DialogHeader onClose={onCancel}>
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold"
-            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-          >
-            {initialsOf(user.fullName || user.username || "?")}
-          </span>
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold">
-              {user.fullName || user.username || t("admin.users.updateUser")}
-            </h2>
-            <p className="flex items-center gap-1.5 truncate text-sm text-muted-foreground">
-              <UserPen className="h-3.5 w-3.5 shrink-0" />
-              {t("admin.users.updateUser")} · @{user.username}
-            </p>
-          </div>
-        </div>
-      </DialogHeader>
-      <form className="admin-dialog-body admin-dialog-grid" onSubmit={handleSubmit} noValidate>
+    <AdminModal
+      variant="edit"
+      onClose={onCancel}
+      title={user.fullName || user.username || t("admin.users.updateUser")}
+      eyebrow={t("admin.users.updateUser")}
+      subtitle={user.username ? `@${user.username}` : undefined}
+      media={<span className="adm-dlg-avatar">{initialsOf(user.fullName || user.username || "?")}</span>}
+      footer={
+        <>
+          <button type="button" onClick={onCancel} className="btn-modal-cancel">
+            {t("admin.users.cancelButton")}
+          </button>
+          <button type="submit" form="admin-user-update-form" disabled={loading} className="btn-modal-primary">
+            {loading ? t("admin.users.updatingButton") : t("admin.users.updateUserButton")}
+          </button>
+        </>
+      }
+    >
+      <form id="admin-user-update-form" className="admin-dialog-body admin-dialog-grid" onSubmit={handleSubmit} noValidate>
         {hasErrors && (
-          <p
-            className="col-span-full rounded-md border px-3 py-2 text-xs font-medium"
-            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}
-            role="alert"
-          >
+          <p className="adm-dlg-alert" role="alert">
             {t("admin.users.fixErrorsBelow")}
           </p>
         )}
 
-        <SectionTitle icon={ShieldCheck}>{t("admin.users.accountInfo")}</SectionTitle>
+        <AdminDialogSection icon={ShieldCheck}>{t("admin.users.accountInfo")}</AdminDialogSection>
         <Field
           icon={UserIcon}
           label={t("admin.users.fullName")}
@@ -488,7 +342,7 @@ function UpdateUserDialog({
           required
           error={errorOf("email")}
         />
-        <SectionTitle icon={ContactRound}>{t("admin.users.contactInfo")}</SectionTitle>
+        <AdminDialogSection icon={ContactRound}>{t("admin.users.contactInfo")}</AdminDialogSection>
         <Field
           icon={Phone}
           label={t("admin.users.phoneLabel")}
@@ -521,16 +375,8 @@ function UpdateUserDialog({
           error={errorOf("address")}
         />
 
-        <div className="admin-dialog-footer col-span-full">
-          <button type="button" onClick={onCancel} className="btn-modal-cancel">
-            {t("admin.users.cancelButton")}
-          </button>
-          <button type="submit" disabled={loading} className="btn-modal-primary">
-            {loading ? t("admin.users.updatingButton") : t("admin.users.updateUserButton")}
-          </button>
-        </div>
       </form>
-    </Overlay>
+    </AdminModal>
   );
 }
 
@@ -608,30 +454,30 @@ function CreateUserDialog({
   const close = () => controller.setShowCreateModal(false);
 
   return (
-    <Overlay onClose={close}>
-      <DialogHeader onClose={close}>
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-          >
-            <UserPlus className="h-5 w-5" />
-          </span>
-          <h2 className="truncate text-lg font-semibold">{t("admin.users.createUser")}</h2>
-        </div>
-      </DialogHeader>
-      <form className="admin-dialog-body admin-dialog-grid" onSubmit={handleSubmit} noValidate>
+    <AdminModal
+      variant="create"
+      icon={UserPlus}
+      onClose={close}
+      title={t("admin.users.createUser")}
+      footer={
+        <>
+          <button type="button" onClick={close} className="btn-modal-cancel">
+            {t("admin.users.cancelButton")}
+          </button>
+          <button type="submit" form="admin-user-create-form" disabled={controller.creating} className="btn-modal-primary">
+            {controller.creating ? t("admin.users.creatingButton") : t("admin.users.createUser")}
+          </button>
+        </>
+      }
+    >
+      <form id="admin-user-create-form" className="admin-dialog-body admin-dialog-grid" onSubmit={handleSubmit} noValidate>
         {hasErrors && (
-          <p
-            className="col-span-full rounded-md border px-3 py-2 text-xs font-medium"
-            style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}
-            role="alert"
-          >
+          <p className="adm-dlg-alert" role="alert">
             {t("admin.users.fixErrorsBelow")}
           </p>
         )}
 
-        <SectionTitle icon={ShieldCheck}>{t("admin.users.accountInfo")}</SectionTitle>
+        <AdminDialogSection icon={ShieldCheck}>{t("admin.users.accountInfo")}</AdminDialogSection>
         <Field
           icon={UserIcon}
           label={t("admin.users.fullName")}
@@ -676,7 +522,7 @@ function CreateUserDialog({
           error={errorOf("roleId")}
         />
 
-        <SectionTitle icon={ContactRound}>{t("admin.users.contactInfo")}</SectionTitle>
+        <AdminDialogSection icon={ContactRound}>{t("admin.users.contactInfo")}</AdminDialogSection>
         <Field
           icon={Phone}
           label={t("admin.users.phoneLabel")}
@@ -711,16 +557,8 @@ function CreateUserDialog({
           error={errorOf("dateOfBirth")}
           placeholder={t("admin.users.dateOfBirthPlaceholder")}
         />
-        <div className="admin-dialog-footer col-span-full">
-          <button type="button" onClick={close} className="btn-modal-cancel">
-            {t("admin.users.cancelButton")}
-          </button>
-          <button type="submit" disabled={controller.creating} className="btn-modal-primary">
-            {controller.creating ? t("admin.users.creatingButton") : t("admin.users.createUser")}
-          </button>
-        </div>
       </form>
-    </Overlay>
+    </AdminModal>
   );
 }
 

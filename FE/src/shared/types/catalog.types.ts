@@ -34,4 +34,6 @@ export interface Product {
   createdAt: string;
   linkedComboIds?: string[];
   variants?: ProductVariant[];
+  /** Có khi lấy từ API (adaptBackendProduct); false = sản phẩm đã bị ẩn / ngừng bán. */
+  isActive?: boolean;
 }

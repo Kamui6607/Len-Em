@@ -399,7 +399,7 @@ export function LearnPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
+    <div className="min-h-screen bg-background px-4 py-10 pb-12">
       <div className="mx-auto max-w-7xl">
         {/* ── Hero: lớp học len ── */}
         <section className="craft-hero craft-rise mb-10">

@@ -45,6 +45,7 @@ import { EmptyHoopIllustration } from "./shop/CartPage";
 import { ProductBuyControls } from "../../features/shop/components/ProductBuyControls";
 import "../../styles/craft.css";
 import "../../styles/product-detail.css";
+import { useAddToCart } from "../../features/cart/useAddToCart";
 
 function StarRating({ rating, count }: { rating: number; count: number }) {
   return (
@@ -248,7 +249,8 @@ export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { addToCart, cartItems } = useCart();
+  const { cartItems } = useCart();
+  const { addProduct } = useAddToCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -393,7 +395,7 @@ export function ProductDetail() {
     }
     const variant = selectedVariant || product.variants?.[0];
     if (variant) {
-      addToCart(
+      addProduct(
         {
           productId: product.id,
           variantId: variant.id,
@@ -407,7 +409,7 @@ export function ProductDetail() {
         quantity,
       );
     } else {
-      addToCart(
+      addProduct(
         {
           productId: product.id,
           variantId: "default",
@@ -421,7 +423,6 @@ export function ProductDetail() {
         quantity,
       );
     }
-    toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`);
   };
 
   const handleToggleFavorite = () => {

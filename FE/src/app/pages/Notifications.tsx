@@ -1,25 +1,151 @@
-import { useMemo, useState } from "react";
-import { ArrowLeft, CheckCheck, Inbox, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowRight, Bell, BellDot, Check, CheckCheck, Inbox, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNotifications } from "../../shared/contexts/NotificationContext";
-import {
-  NotificationRow,
-  NotificationSectionHeader,
-} from "../../shared/components/NotificationRow";
+import { getNotificationCategoryTint, getNotificationIcon } from "../../shared/components/NotificationIcon";
+import { useHoldToDelete } from "../../shared/hooks/useHoldToDelete";
 import { useAuthStore } from "../../shared/store/auth.store";
 import {
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORY_LABELS,
   getNotificationCategory,
+  isHighPriority,
   resolveNotificationPath,
   type Notification,
   type NotificationCategory,
 } from "../../shared/types/notification.types";
-import { NOTIFICATION_DATE_GROUPS, getDateGroup } from "../../lib/notificationTime";
+import { NOTIFICATION_DATE_GROUPS, formatRelativeTime, getDateGroup } from "../../lib/notificationTime";
+import "../../styles/craft.css";
+import "../../styles/notifications.css";
 
 /** How many notifications a section shows before "View all" takes over. */
 const SECTION_PREVIEW = 4;
+
+/** Hold-to-delete (2s) action with a progress ring. */
+function DeleteAction({ id, onDelete }: { id: string; onDelete: (id: string) => void }) {
+  const { isHolding, holdProgress, startHold, cancelHold, cancelHoldOnLeave } = useHoldToDelete({
+    onDelete: () => onDelete(id),
+  });
+  return (
+    <button
+      type="button"
+      className="ntf-act is-delete"
+      data-holding={isHolding}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        startHold();
+      }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        cancelHold();
+      }}
+      onPointerLeave={() => cancelHoldOnLeave()}
+      onContextMenu={(e) => e.preventDefault()}
+      aria-label="Hold to dismiss"
+      title="Hold 2s to dismiss"
+    >
+      <Trash2 className="size-4" />
+      {isHolding && (
+        <svg className="ntf-ring" width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+          <circle
+            cx="17"
+            cy="17"
+            r="15"
+            fill="none"
+            stroke="var(--destructive)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeDasharray={`${holdProgress * 94.2} 94.2`}
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function NotificationItem({
+  notification,
+  showCategory,
+  onOpen,
+  onMarkRead,
+  onDelete,
+}: {
+  notification: Notification;
+  showCategory: boolean;
+  onOpen: (n: Notification) => void;
+  onMarkRead: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const Icon = getNotificationIcon(notification.type);
+  const unread = !notification.read;
+  const tint = unread ? getNotificationCategoryTint(notification.type) : "bg-muted text-muted-foreground";
+
+  return (
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <div
+        role="link"
+        tabIndex={0}
+        onClick={() => onOpen(notification)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen(notification);
+          }
+        }}
+        className={`ntf-row${unread ? " is-unread" : ""}`}
+      >
+        <span className={`ntf-icon ${tint}`} aria-hidden="true">
+          <Icon className="size-[18px]" />
+        </span>
+
+        <div className="ntf-body">
+          <div className="ntf-title-row">
+            {unread && <span className="ntf-dot" aria-label="Unread" />}
+            {isHighPriority(notification.priority) && <span className="ntf-urgent">Urgent</span>}
+            <h3 className="ntf-title">{notification.title}</h3>
+          </div>
+          <p className="ntf-msg">{notification.message}</p>
+          <div className="ntf-meta">
+            {showCategory && (
+              <span className="craft-tag">
+                {NOTIFICATION_CATEGORY_LABELS[getNotificationCategory(notification.type)]}
+              </span>
+            )}
+            <time dateTime={notification.createdAt}>{formatRelativeTime(notification.createdAt)}</time>
+          </div>
+        </div>
+
+        <div className="ntf-row-actions">
+          {unread && (
+            <button
+              type="button"
+              className="ntf-act"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkRead(notification._id);
+              }}
+              aria-label="Mark as read"
+              title="Mark as read"
+            >
+              <Check className="size-4" />
+            </button>
+          )}
+          <DeleteAction id={notification._id} onDelete={onDelete} />
+        </div>
+      </div>
+    </motion.li>
+  );
+}
 
 export function NotificationsPage() {
   const navigate = useNavigate();
@@ -27,8 +153,16 @@ export function NotificationsPage() {
   const role = useAuthStore((s) => s.user?.roleId);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [category, setCategory] = useState<"all" | NotificationCategory>("all");
+  // "Delete all" needs a second click within 3s — it can't be undone.
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
-  /** How many notifications per category — shown on the filter chips. */
+  useEffect(() => {
+    if (!confirmDeleteAll) return;
+    const id = window.setTimeout(() => setConfirmDeleteAll(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [confirmDeleteAll]);
+
+  /** How many notifications per category — shown on the filter tabs. */
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const notif of notifications) {
@@ -38,7 +172,7 @@ export function NotificationsPage() {
     return counts;
   }, [notifications]);
 
-  /** Unread per category so the Unread chip can respect the selected tab. */
+  /** Unread per category so the Unread switch can respect the selected tab. */
   const unreadCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const notif of notifications) {
@@ -103,205 +237,248 @@ export function NotificationsPage() {
   };
 
   const handleDeleteAll = () => {
+    if (!confirmDeleteAll) {
+      setConfirmDeleteAll(true);
+      return;
+    }
+    setConfirmDeleteAll(false);
     clearAllNotifications();
     toast.success("All notifications deleted");
   };
 
+  const selectCategory = (next: "all" | NotificationCategory) => {
+    setCategory(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const tabs: { key: "all" | NotificationCategory; label: string; count: number }[] = [
+    { key: "all", label: "All", count: notifications.length },
+    ...NOTIFICATION_CATEGORIES.filter((cat) => categoryCounts[cat]).map((cat) => ({
+      key: cat,
+      label: NOTIFICATION_CATEGORY_LABELS[cat],
+      count: categoryCounts[cat],
+    })),
+  ];
+  const visibleUnread = category === "all" ? unreadCount : (unreadCounts[category] ?? 0);
+
+  const itemProps = {
+    onOpen: handleNotificationClick,
+    onMarkRead: markAsRead,
+    onDelete: handleDelete,
+  };
+
   return (
-    <div className="max-w-3xl mx-auto pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
-      {/* Back button sits outside the panel */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        Back
-      </button>
-
-      {/* One unified panel — header, filters, and list all share these edges */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        {/* Header row */}
-        <div className="flex items-center justify-between gap-4 flex-wrap px-6 py-5">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Notifications</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up"}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {notifications.length > 0 && (
-              <button
-                onClick={handleDeleteAll}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors"
-              >
-                <Trash2 className="size-4" />
-                Delete all
-              </button>
-            )}
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium text-primary bg-primary/10 hover:bg-primary/15 transition-colors"
-              >
-                <CheckCheck className="size-4" />
-                Mark all as read
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Filter tabs — category (Orders / Reports / Support DIY / DIY / System)
-            + Unread toggle, so each kind of notification can be viewed separately */}
-        <div className="flex flex-wrap gap-2 px-6 pb-4 border-b border-border">
-          <button
-            className="chip !h-9 !px-4"
-            data-active={category === "all" && filter === "all"}
-            onClick={() => {
-              setCategory("all");
-              setFilter("all");
-            }}
-          >
-            All <span className="opacity-60">{notifications.length}</span>
-          </button>
-
-          {NOTIFICATION_CATEGORIES.filter((cat) => categoryCounts[cat]).map((cat) => (
-            <button
-              key={cat}
-              className="chip !h-9 !px-4"
-              data-active={category === cat}
-              onClick={() => setCategory(category === cat ? "all" : cat)}
-            >
-              {NOTIFICATION_CATEGORY_LABELS[cat]}
-              <span className="opacity-60">{categoryCounts[cat]}</span>
-            </button>
-          ))}
-
-          <button
-            className="chip !h-9 !px-4"
-            data-active={filter === "unread"}
-            onClick={() => setFilter(filter === "unread" ? "all" : "unread")}
-          >
-            Unread
-            <span className="opacity-60">
-              {category === "all" ? unreadCount : (unreadCounts[category] ?? 0)}
-            </span>
-          </button>
-        </div>
-
-        {/* List / empty state */}
-        {filteredNotifications.length === 0 ? (
-          <div className="text-center py-14 px-6">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center bg-muted">
-              <Inbox className="size-6 text-muted-foreground/60" />
+    <div className="ntf-page">
+      <div className="ntf-wrap">
+        {/* ── Hero ── */}
+        <section className="craft-hero craft-rise ntf-hero">
+          <div className="ntf-hero-row">
+            <div>
+              <span className="craft-eyebrow">Hộp thư của bạn</span>
+              <h1 className="craft-title">
+                Your <em>notifications</em>
+              </h1>
+              <div className="craft-stitch" aria-hidden="true" />
+              <div className="craft-stats">
+                <div className="craft-stat">
+                  <span className="craft-stat-icon">
+                    <BellDot className="size-4" />
+                  </span>
+                  <div>
+                    <p className="craft-stat-num">{unreadCount}</p>
+                    <p className="craft-stat-label">{unreadCount > 0 ? "unread" : "all caught up"}</p>
+                  </div>
+                </div>
+                <div className="craft-stat">
+                  <span className="craft-stat-icon">
+                    <Bell className="size-4" />
+                  </span>
+                  <div>
+                    <p className="craft-stat-num">{notifications.length}</p>
+                    <p className="craft-stat-label">total</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="font-medium text-foreground">
+
+            {notifications.length > 0 && (
+              <div className="ntf-actions">
+                {unreadCount > 0 && (
+                  <button type="button" onClick={handleMarkAllRead} className="craft-btn">
+                    <CheckCheck className="size-4" />
+                    Mark all as read
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleDeleteAll}
+                  className="ntf-btn-danger"
+                  data-armed={confirmDeleteAll}
+                  aria-live="polite"
+                >
+                  <Trash2 className="size-4" />
+                  {confirmDeleteAll ? "Tap again to delete" : "Delete all"}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── Filters: category tabs + Unread switch ── */}
+        {notifications.length > 0 && (
+          <div className="ntf-toolbar">
+            <div className="ntf-tabs" role="tablist" aria-label="Notification type">
+              {tabs.map((tab) => {
+                const active = category === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className="ntf-tab"
+                    onClick={() => selectCategory(tab.key)}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="ntf-tab-patch"
+                        className="ntf-tab-patch"
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    )}
+                    {tab.label}
+                    <span className="ntf-tab-count">{tab.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={filter === "unread"}
+              className="ntf-switch"
+              onClick={() => setFilter(filter === "unread" ? "all" : "unread")}
+            >
+              <span className="ntf-switch-label">Unread ({visibleUnread})</span>
+              <span className="ntf-switch-track" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {/* ── List / empty state ── */}
+        {filteredNotifications.length === 0 ? (
+          <div className="craft-empty ntf-empty craft-rise">
+            <img src="/mascot.png" alt="" aria-hidden="true" className="ntf-empty-mascot" draggable={false} />
+            <p className="craft-empty-title">
               {filter === "unread"
                 ? "No unread notifications"
                 : category === "all"
                   ? "Nothing here yet"
                   : `No ${NOTIFICATION_CATEGORY_LABELS[category].toLowerCase()} notifications`}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="craft-empty-desc">
               {filter === "unread"
-                ? "Switch to All to see everything you've received."
+                ? "You're all caught up — switch Unread off to see everything you've received."
                 : category === "all"
-                  ? "New notifications will show up here."
+                  ? "Order updates, replies and news will show up here."
                   : "Những thông báo thuộc loại khác vẫn còn ở tab All."}
             </p>
             {(filter === "unread" || category !== "all") && (
               <button
+                type="button"
                 onClick={() => {
                   setFilter("all");
                   setCategory("all");
                 }}
-                className="mt-4 text-sm font-medium text-primary hover:underline"
+                className="craft-btn-ghost"
               >
+                <Inbox className="size-4" />
                 View all notifications
               </button>
             )}
           </div>
-        ) : (
-          isSectionedView ? (
-            <div className="px-4 py-4 space-y-7">
-              {sections.map((section) => {
-                const unreadInSection = section.items.filter((n) => !n.read).length;
-                const preview = section.items.slice(0, SECTION_PREVIEW);
-                const hidden = section.items.length - preview.length;
+        ) : isSectionedView ? (
+          <div className="ntf-sections">
+            {sections.map((section) => {
+              const unreadInSection = section.items.filter((n) => !n.read).length;
+              const preview = section.items.slice(0, SECTION_PREVIEW);
+              const hidden = section.items.length - preview.length;
+              const SectionIcon = getNotificationIcon(section.category);
 
-                return (
-                  <section key={section.category}>
-                    {/* Section header — one block per notification type */}
-                    <NotificationSectionHeader
-                      category={section.category}
-                      count={section.items.length}
-                      unreadCount={unreadInSection}
-                      actionLabel={hidden > 0 ? `View all (${section.items.length})` : undefined}
-                      onAction={hidden > 0 ? () => setCategory(section.category) : undefined}
-                    />
+              return (
+                <section key={section.category} className="ntf-card craft-rise">
+                  <header className="ntf-card-head">
+                    <span className="craft-section-icon">
+                      <SectionIcon className="size-[18px]" />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="ntf-card-title">{NOTIFICATION_CATEGORY_LABELS[section.category]}</h2>
+                      <p className="ntf-card-sub">
+                        {section.items.length} total
+                        {unreadInSection > 0 && (
+                          <>
+                            {" · "}
+                            <b>{unreadInSection} new</b>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    {hidden > 0 && (
+                      <button type="button" className="ntf-link" onClick={() => selectCategory(section.category)}>
+                        View all <ArrowRight className="size-3.5" />
+                      </button>
+                    )}
+                  </header>
 
-                    <div className="space-y-1.5">
-                      {preview.map((notification, index) => (
-                        <NotificationRow
+                  <ul className="ntf-list">
+                    <AnimatePresence initial={false}>
+                      {preview.map((notification) => (
+                        <NotificationItem
                           key={notification._id}
                           notification={notification}
-                          index={index}
-                          onClick={handleNotificationClick}
-                          onMarkRead={markAsRead}
-                          onDelete={handleDelete}
                           showCategory={false}
+                          {...itemProps}
                         />
                       ))}
+                    </AnimatePresence>
+                  </ul>
 
-                      {hidden > 0 && (
-                        <button
-                          onClick={() => setCategory(section.category)}
-                          className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-                        >
-                          +{hidden} more{" "}
-                          {NOTIFICATION_CATEGORY_LABELS[section.category].toLowerCase()}
-                        </button>
-                      )}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="px-4 py-4 space-y-6">
-              {/* Header of the selected part — with a shortcut back to All */}
-              {category !== "all" && (
-                <NotificationSectionHeader
-                  category={category}
-                  count={filteredNotifications.length}
-                  unreadCount={unreadCounts[category] ?? 0}
-                  actionLabel="Show all"
-                  onAction={() => setCategory("all")}
-                />
-              )}
-
-              {NOTIFICATION_DATE_GROUPS.filter((group) => groupedNotifications[group]?.length).map((group) => (
-                <div key={group} className="space-y-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
-                    {group}
-                  </h2>
-
-                  <div className="space-y-1.5">
-                    {groupedNotifications[group].map((notification, index) => (
-                      <NotificationRow
-                        key={notification._id}
-                        notification={notification}
-                        index={index}
-                        onClick={handleNotificationClick}
-                        onMarkRead={markAsRead}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                  </div>
+                  {hidden > 0 && (
+                    <button type="button" className="ntf-more" onClick={() => selectCategory(section.category)}>
+                      +{hidden} more {NOTIFICATION_CATEGORY_LABELS[section.category].toLowerCase()}
+                      <ArrowRight className="size-3.5" />
+                    </button>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div>
+            {NOTIFICATION_DATE_GROUPS.filter((group) => groupedNotifications[group]?.length).map((group) => (
+              <section key={group} className="ntf-day craft-rise">
+                <div className="ntf-day-head">
+                  <h2 className="ntf-day-label">{group}</h2>
+                  <span className="craft-section-thread" aria-hidden="true" />
                 </div>
-              ))}
-            </div>
-          )
+                <div className="ntf-card">
+                  <ul className="ntf-list">
+                    <AnimatePresence initial={false}>
+                      {groupedNotifications[group].map((notification) => (
+                        <NotificationItem
+                          key={notification._id}
+                          notification={notification}
+                          showCategory={category === "all"}
+                          {...itemProps}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                </div>
+              </section>
+            ))}
+          </div>
         )}
       </div>
     </div>

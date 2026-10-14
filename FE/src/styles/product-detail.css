@@ -567,7 +567,8 @@ body:has(.pd-float) {
   position: fixed;
   left: max(16px, var(--sal));
   right: calc(var(--float-row-right) + var(--fab-size) + 10px);
-  bottom: var(--float-row-bottom);
+  bottom: calc(var(--float-row-bottom) + var(--float-row-lift, 0px));
+  transition: bottom 0.25s var(--ease-out);
   z-index: 60;
   height: var(--fab-size);
   display: flex;

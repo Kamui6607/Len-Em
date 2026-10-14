@@ -18,14 +18,18 @@ export interface DIYPost {
   description: string;
   images: string[];
   tags: string[];
-  linkedProduct: { productId: string }[];
+  /** Creator's exact pick: variant + quantity (model BE: linkedProductSchema). */
+  linkedProduct: { productId: string; variantId?: string; quantity?: number }[];
   linkedCombo: { comboId: string }[];
   likeCount: number;
   saveCount?: number;
   purchaseCount: number;
   price?: number;
-  /** Backend chỉ có 2 trạng thái: "Pending" (chờ duyệt) và "Done" (đã duyệt). */
-  status: "Pending" | "Done";
+  /** "Pending" (chờ duyệt) · "Done" (đã duyệt) · "Cancel" (bị từ chối). */
+  status: "Pending" | "Done" | "Cancel";
+  /** Mỗi người 1 lượt chấm 1–5 sao (POST /diy-posts/:id/rate). */
+  ratings?: { userId: string; score: number }[];
+  averageRating?: number;
   createdAt: string;
   updatedAt: string;
 }

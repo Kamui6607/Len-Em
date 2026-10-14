@@ -1,313 +1,303 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { Mail, ArrowLeft, CircleCheck as CheckCircle2, Loader as Loader2, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  Mail,
+  MailCheck,
+  ArrowLeft,
+  ArrowRight,
+  Loader as Loader2,
+  RotateCw,
+  LogIn,
+} from "lucide-react";
 import { toast } from "sonner";
 import { authService } from "../../../shared/api/authService";
+import { AuthError } from "../../../shared/components/auth/AuthError";
+import { AuthBrand } from "../../../shared/components/auth/AuthBrand";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
+import "../../../styles/auth.css";
+
+const RESEND_COOLDOWN = 30;
+
+const steps = [
+  { title: "Nhập email của bạn", desc: "Email bạn đã dùng để đăng ký Len&Em" },
+  { title: "Mở hộp thư", desc: "Bấm vào liên kết đặt lại mật khẩu chúng tôi gửi" },
+  { title: "Đặt mật khẩu mới", desc: "Rồi quay lại đan tiếp thôi!" },
+];
+
+const swap = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+  transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+} as const;
 
 export function ForgotPasswordPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [cooldown]);
+
+  const sendEmail = async () => {
+    setError("");
     setLoading(true);
     try {
-      await authService.sendForgotPasswordEmail(email);
-      setSent(true);
-    } catch (error: unknown) {
+      await authService.sendForgotPasswordEmail(email.trim());
+      return true;
+    } catch (err: unknown) {
       // Hiển thị thông báo lỗi THẬT từ backend (vd: "User not found") thay vì
       // nuốt mất nó bằng một câu tĩnh — chỉ fallback khi BE không trả message.
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      toast.error(
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      setError(
         axiosError?.response?.data?.message ||
           "Failed to send reset email. Please try again.",
       );
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  if (sent) {
-    return (
-      <>
-        <AnimatedBackgroundAuth />
-        <div style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "48px 24px",
-          position: "relative",
-          overflow: "hidden",
-        }}>
-          <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-            <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 40, textDecoration: "none" }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 14,
-                background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 20, fontWeight: 700, color: "var(--primary)",
-              }}>
-                L
-              </div>
-              <span style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 22, fontWeight: 700, color: "var(--foreground)",
-              }}>
-                Len&Em
-              </span>
-            </Link>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    if (await sendEmail()) {
+      setSent(true);
+      setCooldown(RESEND_COOLDOWN);
+    }
+  };
 
-            <div style={{
-              background: "var(--dropdown-bg)",
-              border: "1px solid var(--border)",
-              borderRadius: 24,
-              padding: 40,
-              boxShadow: "var(--shadow-float)",
-              backdropFilter: "blur(20px) saturate(180%)",
-              WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            }}>
-              <div style={{
-                width: 64, height: 64, borderRadius: 16,
-                background: "color-mix(in srgb, var(--primary) 8%, transparent)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 20px",
-              }}>
-                <CheckCircle2 style={{ width: 32, height: 32, color: "var(--primary)" }} />
-              </div>
-              <h2 style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 22, fontWeight: 700, color: "var(--foreground)",
-                margin: "0 0 8px",
-              }}>
-                Check your email
-              </h2>
-              <p style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 14, color: "var(--foreground-muted)",
-                lineHeight: 1.6, marginBottom: 24,
-              }}>
-                We've sent a password reset link to <strong style={{ color: "var(--primary)" }}>{email}</strong>
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  color: "var(--primary)", background: "none", border: "none",
-                  fontFamily: "'Caveat', cursive",
-                  fontSize: 16, cursor: "pointer", padding: 0,
-                }}
-              >
-                <ArrowLeft style={{ width: 16, height: 16 }} />
-                Back
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const handleResend = async () => {
+    if (cooldown > 0 || loading) return;
+    if (await sendEmail()) {
+      setCooldown(RESEND_COOLDOWN);
+      toast.success("Reset link sent again");
+    }
+  };
+
+  const stepState = (i: number) => {
+    const current = sent ? 1 : 0;
+    return i < current ? "done" : i === current ? "current" : "todo";
+  };
 
   return (
-    <>
+    <div className="auth-shell">
       <AnimatedBackgroundAuth />
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "48px 24px",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        <div style={{ width: "100%", maxWidth: 420 }}>
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 14,
-                background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 22, fontWeight: 700, color: "var(--primary)",
-                transition: "transform 0.2s",
-              }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.05)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-              >
-                L
-              </div>
-              <span style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 24, fontWeight: 700, color: "var(--foreground)",
-                letterSpacing: "-0.3px",
-              }}>
-                Len&Em
-              </span>
-            </Link>
-          </div>
 
-          <form onSubmit={handleSubmit} style={{
-            background: "var(--dropdown-bg)",
-            border: "1px solid var(--border)",
-            borderRadius: 24,
-            padding: 36,
-            boxShadow: "var(--shadow-float)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          }}>
-            <div style={{ textAlign: "center", marginBottom: 28 }}>
-              <div style={{
-                fontFamily: "'Caveat', cursive",
-                fontSize: 15, color: "var(--primary)",
-                marginBottom: 10,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}>
-                <Sparkles size={14} />
-                Reset password
-              </div>
-              <h1 style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 26, fontWeight: 700, color: "var(--foreground)",
-                margin: "0 0 8px", letterSpacing: "-0.02em",
-              }}>
-                Forgot password?
-              </h1>
-              <p style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 14, color: "var(--foreground-muted)",
-                lineHeight: 1.6, margin: 0,
-              }}>
-                No worries. Enter your email and we'll send you a reset link.
-              </p>
-            </div>
+      {/* ── Left: stitched story panel (lg and up) ── */}
+      <aside className="auth-story">
+        <span className="auth-ring" aria-hidden="true" />
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12, fontWeight: 600, color: "var(--foreground)",
-                marginBottom: 6, letterSpacing: "0.04em",
-              }}>
-                Email
-              </label>
-              <div style={{ position: "relative" }}>
-                <Mail style={{
-                  position: "absolute", left: 14, top: "50%",
-                  transform: "translateY(-50%)",
-                  width: 18, height: 18,
-                  color: "var(--foreground-muted)", pointerEvents: "none",
-                }} />
-                <input
-                  type="email"
-                  placeholder="your@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    padding: "13px 14px 13px 44px",
-                    background: "var(--background)",
-                    border: "1.5px solid var(--border)",
-                    borderRadius: 12,
-                    fontSize: 14,
-                    color: "var(--foreground)",
-                    fontFamily: "'Inter', sans-serif",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    transition: "border-color 0.2s, box-shadow 0.2s",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "var(--primary)";
-                    e.target.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "var(--border)";
-                    e.target.style.boxShadow = "none";
-                  }}
-                />
-              </div>
-            </div>
+        <AuthBrand />
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: 14,
-                borderRadius: 999,
-                border: "none",
-                background: "var(--primary)",
-                color: "var(--primary-foreground)",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 15, fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1,
-                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-                boxShadow: "var(--shadow-md)",
-                transition: "transform 0.22s, box-shadow 0.22s",
-                marginBottom: 16,
-              }}
-              onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-lg)"; } }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "var(--shadow-md)"; }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 style={{ width: 16, height: 16, animation: "spin 0.8s linear infinite" }} />
-                  Sending...
-                </>
-              ) : (
-                "Send reset link"
-              )}
-            </button>
-
-            <p style={{ textAlign: "center", margin: 0 }}>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                style={{
-                  fontFamily: "'Caveat', cursive",
-                  fontSize: 15, color: "var(--primary)",
-                  background: "none", border: "none",
-                  cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
-                  padding: 0,
-                }}
-              >
-                <ArrowLeft style={{ width: 14, height: 14 }} />
-                Back
-              </button>
-            </p>
-          </form>
-
-          {/* Divider + Login link */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "24px 0 12px" }}>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            <span style={{ fontFamily: "'Caveat', cursive", fontSize: 13, color: "var(--foreground-muted)", whiteSpace: "nowrap" }}>
-              Remember your password?
-            </span>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-          </div>
-          <p style={{ textAlign: "center", fontSize: 14, color: "var(--foreground-muted)", margin: 0 }}>
-            <Link to="/auth/login" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
-              Sign in here
-            </Link>
+        <div>
+          <span className="auth-eyebrow">Lỡ quên mật khẩu?</span>
+          <h1 className="auth-story-title">
+            Tuột mũi một chút, <em>mình khâu lại nhé</em>
+          </h1>
+          <div className="auth-stitch" aria-hidden="true" />
+          <p className="auth-story-sub">
+            Chuyện thường thôi — chỉ ba bước nhỏ là bạn đã quay lại với những
+            dự án đang dang dở.
           </p>
+
+          <ol className="auth-steps" aria-label="Các bước đặt lại mật khẩu">
+            {steps.map((s, i) => (
+              <li className="auth-step" data-state={stepState(i)} key={s.title}>
+                <span className="auth-step-num">{i + 1}</span>
+                <div className="auth-step-card">
+                  <div className="auth-feature-title">{s.title}</div>
+                  <div className="auth-feature-desc">{s.desc}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
 
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    </>
+        <figure className="auth-quote">
+          <blockquote className="auth-quote-text">
+            “Không mũi đan nào hỏng mà không gỡ lại được.”
+          </blockquote>
+          <figcaption className="auth-quote-by">— Len&amp;Em</figcaption>
+        </figure>
+
+        <img
+          src="/mascot.png"
+          alt=""
+          aria-hidden="true"
+          className="auth-mascot"
+          draggable={false}
+        />
+      </aside>
+
+      {/* ── Right: form / sent state ── */}
+      <main className="auth-main">
+        <div className="auth-topbar">
+          <Link to="/auth/login" className="auth-back">
+            <ArrowLeft size={16} />
+            Back to sign in
+          </Link>
+          <div className="auth-topbar-brand">
+            <AuthBrand />
+          </div>
+        </div>
+
+        <div className="auth-form-wrap">
+          <AnimatePresence mode="wait" initial={false}>
+            {!sent ? (
+              <motion.div key="request" {...swap}>
+                <img
+                  src="/mascot.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="auth-mobile-mascot"
+                  draggable={false}
+                />
+                <span className="auth-eyebrow">Reset password</span>
+                <h2 className="auth-title">
+                  Forgot your <em>password?</em>
+                </h2>
+                <div className="auth-stitch" aria-hidden="true" />
+                <p className="auth-sub mb-7">
+                  No worries. Enter the email on your account and we&apos;ll
+                  send you a link to set a new one.
+                </p>
+
+                <form onSubmit={handleSubmit}>
+                  <AuthError error={error} />
+
+                  <div className="auth-field mb-5">
+                    <div className="auth-label-row">
+                      <label htmlFor="forgot-email" className="auth-label">
+                        Email
+                      </label>
+                    </div>
+                    <div className="auth-input-wrap">
+                      <Mail size={17} className="auth-input-icon" />
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        className="auth-input"
+                        placeholder="you@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="auth-submit"
+                    disabled={loading || !email.trim()}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={18} className="auth-spin" />
+                        Sending…
+                      </>
+                    ) : (
+                      <>
+                        Send reset link{" "}
+                        <ArrowRight size={18} className="auth-arrow" />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <Link to="/auth/login" className="auth-switch">
+                  <span className="auth-switch-icon">
+                    <LogIn size={18} />
+                  </span>
+                  <span>
+                    <span className="auth-switch-title block">
+                      Remembered it?
+                    </span>
+                    <span className="auth-switch-sub block">
+                      Head back and sign in
+                    </span>
+                  </span>
+                  <ArrowRight size={18} className="auth-switch-arrow" />
+                </Link>
+              </motion.div>
+            ) : (
+              <motion.div key="sent" {...swap} aria-live="polite">
+                <div className="auth-sent-icon">
+                  <MailCheck size={34} />
+                </div>
+                <span className="auth-eyebrow">Almost there</span>
+                <h2 className="auth-title">
+                  Check your <em>inbox</em>
+                </h2>
+                <div className="auth-stitch" aria-hidden="true" />
+                <p className="auth-sub mb-3">
+                  We&apos;ve sent a password reset link to
+                </p>
+                <span className="auth-email-chip">
+                  <Mail size={15} className="shrink-0 text-[var(--primary)]" />
+                  <span>{email.trim()}</span>
+                </span>
+
+                <ul className="auth-tips">
+                  <li>The link may take a minute or two to arrive.</li>
+                  <li>Can&apos;t find it? Check your Spam or Promotions folder.</li>
+                </ul>
+
+                <AuthError error={error} />
+
+                <button
+                  type="button"
+                  className="auth-btn-outline"
+                  onClick={handleResend}
+                  disabled={cooldown > 0 || loading}
+                >
+                  {loading ? (
+                    <Loader2 size={17} className="auth-spin" />
+                  ) : (
+                    <RotateCw size={17} />
+                  )}
+                  {cooldown > 0
+                    ? `Resend link in ${cooldown}s`
+                    : "Resend link"}
+                </button>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="auth-text-btn"
+                    onClick={() => {
+                      setSent(false);
+                      setError("");
+                    }}
+                  >
+                    Use a different email
+                  </button>
+                  <Link to="/auth/login" className="auth-link">
+                    Back to sign in
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <p className="auth-footnote">
+          © {new Date().getFullYear()} Len&amp;Em · Made with yarn &amp; love
+        </p>
+      </main>
+    </div>
   );
 }
+

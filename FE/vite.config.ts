@@ -189,7 +189,19 @@ export default defineConfig({
   },
 
   optimizeDeps: {
+    // Scan every source file at startup, not just what index.html reaches.
+    // Lazy routes (admin/staff pages) pull in deps like date-fns that the
+    // default scan misses; Vite then re-optimizes mid-session, bumps the dep
+    // hash, and the open tab fails with "504 Outdated Optimize Dep" /
+    // "Failed to fetch dynamically imported module".
+    entries: ['index.html', 'src/**/*.{ts,tsx}'],
     include: [
+      'date-fns',
+      // Checkout form (lazy route) — pre-bundle so the first visit to /order
+      // doesn't trigger a mid-session re-optimize.
+      'react-hook-form',
+      'yup',
+      '@hookform/resolvers/yup',
       'react',
       'react-dom',
       'react-router',

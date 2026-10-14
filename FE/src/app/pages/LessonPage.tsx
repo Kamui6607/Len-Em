@@ -35,7 +35,8 @@ import { useLearnStore } from "../../features/learn/store/learn.store";
 import { canWatchLesson } from "../../features/learn/utils/lessonAccess";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../shared/hooks/useAuth";
-import { useCart } from "../../shared/contexts/CartContext";
+import { useAddToCart, type AddResult } from "../../features/cart/useAddToCart";
+import { useCartToastStore } from "../../features/cart/cartToastStore";
 import { cn } from "../../shared/components/ui/utils";
 import { products } from "../data/products";
 import { YarnBallIcon } from "../../features/shop/shopMeta";
@@ -97,7 +98,8 @@ function formatClock(totalSeconds: number) {
 export function LessonPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  const { addToCart, addKitToCart } = useCart();
+  const { addProduct, addKit } = useAddToCart();
+  const pushCartToast = useCartToastStore((s) => s.push);
   const { courseId, lessonId } = useParams();
   const ytContainerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<{ destroy: () => void } | null>(null);
@@ -510,13 +512,13 @@ export function LessonPage() {
   const courseDoneCount = lessons.filter((l) => completedSet.has(l._id)).length;
   const coursePct = lessons.length ? Math.round((courseDoneCount / lessons.length) * 100) : 0;
 
-  const addItemToCart = (item: MaterialItem, silent = false) => {
+  const addItemToCart = (item: MaterialItem, silent = false): AddResult | null => {
     if (!isAuthenticated) {
       navigate("/auth/login");
-      return;
+      return null;
     }
     if (item.type === "kit" && item.kitData) {
-      addKitToCart({
+      return addKit({
         kitId: item.kitData._id,
         name: item.kitData.name,
         thumbnail: item.kitData.thumbnail,
@@ -532,10 +534,10 @@ export function LessonPage() {
             price: variant?.price || 0,
           };
         }),
-      });
+      }, { silent });
     } else if (item.type === "product" && item.productData) {
       const variant = item.productData.variants[0];
-      addToCart({
+      return addProduct({
         productId: item.productData._id,
         variantId: variant?._idVariants || "default",
         name: item.productData.name,
@@ -544,15 +546,15 @@ export function LessonPage() {
         hexCode: variant?.hexCode || "#ccc",
         price: variant?.price || 0,
         stock: variant?.stock || 999,
-      });
+      }, 1, { silent });
     } else {
       const product = products.find((p) => p.id === item.id);
       if (!product) {
         if (!silent) toast.error("Không tìm thấy sản phẩm");
-        return;
+        return null;
       }
       const variant = product.variants?.[0];
-      addToCart({
+      return addProduct({
         productId: product.id,
         variantId: variant?.id || "default",
         name: product.name,
@@ -561,9 +563,8 @@ export function LessonPage() {
         hexCode: variant?.hexCode || "#ccc",
         price: variant?.price || 0,
         stock: variant?.stock || 999,
-      });
+      }, 1, { silent });
     }
-    if (!silent) toast.success(`Đã thêm "${item.name}" vào giỏ`);
   };
 
   const addAllToCart = () => {
@@ -571,8 +572,17 @@ export function LessonPage() {
       navigate("/auth/login");
       return;
     }
-    materials.forEach((item) => addItemToCart(item, true));
-    toast.success("Đã thêm toàn bộ nguyên liệu của bài vào giỏ");
+    const results = materials
+      .map((item) => addItemToCart(item, true))
+      .filter(Boolean) as AddResult[];
+    if (!results.length) return;
+    pushCartToast({
+      variant: "success",
+      title: "Đã thêm toàn bộ nguyên liệu của bài vào giỏ",
+      items: results.map((r) => r.item),
+      added: true,
+      undo: () => results.forEach((r) => r.undo()),
+    });
   };
 
   const lessonLink = (l: Lesson) => `/learn/${course._id}/lesson/${l._id}`;

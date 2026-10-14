@@ -1,41 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { Edit, Eye, Star, Video as VideoIcon } from "lucide-react";
+import { useNavigate } from "react-router";
+import { Clapperboard, Crown, Edit, Eye, Layers, RefreshCw, Star, Trash2, Users, Video as VideoIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "../../../shared/components/ui/button";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
-import { AdminModal } from "../../../shared/components/admin/AdminModal";
+import { AdminDetailGrid, AdminDetailItem, AdminModal } from "../../../shared/components/admin/AdminModal";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
+import { AdminSearchMeta } from "../../../shared/components/admin/AdminSearch";
 import {
-  AdminTableScroll,
-  AdminSortableHeader,
-  AdminTableHeaderCell,
-  AdminTableEmptyRow,
-} from "../../../shared/components/admin/AdminDataTable";
-import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-} from "../../../shared/components/admin/AdminSearch";
-import { AdminTableSkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminConfirm,
+  useAdminGridSort,
+  type AdminGridColumn,
+} from "../../../shared/components/admin/AdminDataGrid";
 import { videoService, type Video } from "../../../shared/api/videoService";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 
-type SortField = "title" | "type" | "category" | "views" | "rating";
-type SortDirection = "asc" | "desc";
 
 /** Records per page — every admin list uses the same page size. */
 const PAGE_SIZE = 10;
 
-const TYPE_OPTIONS = [
-  { value: "", label: "All types" },
-  { value: "community", label: "Community" },
-  { value: "premium", label: "Premium" },
-];
+const vnNumber = new Intl.NumberFormat("vi-VN");
 
 /**
  * BE có thể trả các trường dạng object thay vì chuỗi (vd. category được
@@ -64,11 +59,6 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "popular", label: "Most viewed" },
-];
 
 export function AdminVideos() {
   const { t } = useLanguage();
@@ -83,8 +73,8 @@ export function AdminVideos() {
   const [sort, setSort] = useState("newest");
   const [viewingVideo, setViewingVideo] = useState<Video | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({});
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
   const {
     inputValue: searchTerm,
     debouncedValue: debouncedSearchTerm,
@@ -129,39 +119,27 @@ export function AdminVideos() {
     setPage(1);
   }, [debouncedSearchTerm, typeFilter, sort]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
-
   const hasActiveFilters = Boolean(debouncedSearchTerm || typeFilter);
 
-  // Sorting happens client-side on the current page (BE sort covers whole list).
-  const sortedVideos = [...videos].sort((a, b) => {
-    if (!sortField) return 0;
-    const getValue = (video: Video) => {
-      switch (sortField) {
-        case "title":
-          return toText(video.title);
-        case "type":
-          return toText(video.type);
-        case "category":
-          return toText(video.category);
-        case "views":
-          return toNumber(video.viewCount) ?? 0;
-        case "rating":
-          return toNumber(video.rating) ?? 0;
+  // Số lượng cho thẻ loại video (limit=1, chỉ đọc total).
+  const fetchCounts = useCallback(async () => {
+    const keys = ["", "community", "premium"];
+    const results = await Promise.allSettled(
+      keys.map((type) => videoService.getAll({ page: 1, limit: 1, type: type || undefined })),
+    );
+    const next: Record<string, number | undefined> = {};
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") {
+        const data = r.value.data.data;
+        next[keys[i] || "all"] = data?.pagination?.total ?? data?.total;
       }
-    };
-    const cmp = String(getValue(a)).localeCompare(String(getValue(b)), undefined, {
-      numeric: true,
     });
-    return sortDirection === "asc" ? cmp : -cmp;
-  });
+    setCounts(next);
+  }, []);
+
+  useEffect(() => {
+    void fetchCounts();
+  }, [fetchCounts]);
 
   // Opening the detail dialog fetches the latest data — GET /videos/{id}
   // also refreshes the view count on the BE.
@@ -179,41 +157,182 @@ export function AdminVideos() {
     }
   };
 
-  if (loading) {
-    // Giữ nguyên header + nút "Create" thật, chỉ bảng là skeleton.
+  const handleDelete = async (video: Video) => {
+    const ok = await confirm({
+      title: t("admin.confirmDelete.title", { name: toText(video.title) }),
+      description: t("admin.videos.deleteWarning"),
+      confirmLabel: t("admin.videos.delete"),
+      danger: true,
+      icon: Trash2,
+    });
+    if (!ok) return;
+    // Admin dùng endpoint admin-delete để xóa được mọi video.
+    try {
+      await videoService.adminDelete(video._id);
+      toast.success(t("admin.videos.deleteSuccess"));
+      void fetchVideos(page, true);
+      void fetchCounts();
+    } catch {
+      toast.error(t("admin.videos.deleteError"));
+    }
+  };
+
+  const typePill = (video: Video) => {
+    const type = toText(video.type);
     return (
-      <div className="space-y-6">
-        <AdminPageHeader
-          title={t("admin.videos.title")}
-          subtitle={t("admin.videos.subtitle")}
-          actions={<CreateButton to="/admin/videos/new" label={t("admin.videos.create")} />}
-        />
-        <AdminTableSkeleton
-          rows={6}
-          columns={[
-            { type: "media", className: "w-[320px]" },
-            { type: "badge", align: "center" },
-            { type: "text", align: "center" },
-            { type: "number", align: "center" },
-            { type: "number", align: "center" },
-            { type: "actionsWide", align: "center" },
-          ]}
-        />
-      </div>
+      <AdminPill tone={type === "premium" ? "violet" : "cyan"}>
+        {type === "premium" ? t("admin.videos.typePremium") : t("admin.videos.typeCommunity")}
+      </AdminPill>
     );
-  }
+  };
+
+  // Sorting happens client-side on the current page (BE sort covers whole list).
+  const { sort: gridSort, apply: applySort } = useAdminGridSort<Video>((video, field) => {
+    if (field === "title") return toText(video.title);
+    if (field === "type") return toText(video.type);
+    if (field === "category") return toText(video.category);
+    if (field === "views") return toNumber(video.viewCount) ?? 0;
+    if (field === "rating") return toNumber(video.rating) ?? 0;
+    return null;
+  });
+  const rows = applySort(videos);
+
+  const columns: AdminGridColumn<Video>[] = [
+    {
+      key: "title",
+      header: t("admin.videos.video"),
+      width: "minmax(260px, 2.2fr)",
+      minWidth: 260,
+      sortable: true,
+      card: "title",
+      render: (video) => {
+        const url = toText(video.url);
+        let host = url;
+        try {
+          host = new URL(url).hostname.replace(/^www\./, "");
+        } catch {
+          host = url.slice(0, 40);
+        }
+        return <AdminCellStack media={<VideoIcon />} primary={toText(video.title)} secondary={host} />;
+      },
+    },
+    {
+      key: "type",
+      header: t("admin.videos.type"),
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      sortable: true,
+      card: "aside",
+      render: typePill,
+    },
+    {
+      key: "category",
+      header: t("admin.videos.category"),
+      width: "minmax(110px, 1fr)",
+      minWidth: 110,
+      sortable: true,
+      render: (video) => <span className="adm-gprimary">{toText(video.category) || "—"}</span>,
+    },
+    {
+      key: "views",
+      header: t("admin.videos.views"),
+      width: "100px",
+      minWidth: 100,
+      align: "right",
+      sortable: true,
+      render: (video) => <span className="adm-gnum">{vnNumber.format(toNumber(video.viewCount) ?? 0)}</span>,
+    },
+    {
+      key: "rating",
+      header: t("admin.videos.rating"),
+      width: "100px",
+      minWidth: 100,
+      align: "right",
+      sortable: true,
+      render: (video) => {
+        const rating = toNumber(video.rating);
+        return rating != null ? (
+          <span className="adm-gnum inline-flex items-center gap-1">
+            <Star className="size-3.5 text-[var(--warning-text)]" fill="currentColor" />
+            {rating.toFixed(1)}
+          </span>
+        ) : (
+          <span className="adm-gsecondary">—</span>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: t("admin.videos.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (video) => (
+        <AdminRowActions>
+          <AdminActionButton
+            icon={Edit}
+            label={t("admin.videos.edit")}
+            onClick={() => navigate(`/admin/videos/${video._id}`)}
+          />
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.videos.view"), icon: Eye, onSelect: () => void openDetail(video) },
+              {
+                label: t("admin.videos.delete"),
+                icon: Trash2,
+                danger: true,
+                separated: true,
+                onSelect: () => void handleDelete(video),
+              },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
+        eyebrow={t("admin.courses.eyebrow")}
         title={t("admin.videos.title")}
         subtitle={t("admin.videos.subtitle")}
-        actions={<CreateButton to="/admin/videos/new" label={t("admin.videos.create")} />}
+        actions={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                void fetchVideos(page, true);
+                void fetchCounts();
+              }}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              {t("admin.grid.refresh")}
+            </button>
+            <CreateButton to="/admin/videos/new" label={t("admin.videos.create")} />
+          </>
+        }
       />
 
-      <AdminPanel>
-        {/* Search (debounce 400ms) + type filter + sort — all server-side. */}
-        <AdminSearchToolbar
+      <AdminStatusTabs<string>
+        ariaLabel={t("admin.videos.type")}
+        value={typeFilter}
+        onChange={setTypeFilter}
+        tabs={[
+          { value: "", label: t("admin.videos.allTypes"), icon: Layers, count: counts.all },
+          { value: "community", label: t("admin.videos.typeCommunity"), icon: Users, tone: "cyan", count: counts.community },
+          { value: "premium", label: t("admin.videos.typePremium"), icon: Crown, tone: "violet", count: counts.premium },
+        ]}
+      />
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        {/* Search (debounce 400ms) + sort — all server-side. */}
+        <AdminGridToolbar
           search={{
             value: searchTerm,
             onChange: setSearchTerm,
@@ -221,30 +340,15 @@ export function AdminVideos() {
             isSearching: searchIsWaiting,
           }}
           filters={
-            <>
-              <AdminSelect
-                value={typeFilter}
-                options={TYPE_OPTIONS.map((option) =>
-                  option.value === ""
-                    ? { ...option, label: t("admin.videos.allTypes") }
-                    : option,
-                )}
-                onChange={setTypeFilter}
-                className="w-40"
-              />
-              <AdminSelect
-                value={sort}
-                options={SORT_OPTIONS.map((option) =>
-                  option.value === "newest"
-                    ? { ...option, label: t("admin.videos.sortNewest") }
-                    : option.value === "oldest"
-                      ? { ...option, label: t("admin.videos.sortOldest") }
-                      : { ...option, label: t("admin.videos.sortPopular") },
-                )}
-                onChange={setSort}
-                className="w-40"
-              />
-            </>
+            <AdminSelect
+              value={sort}
+              options={[
+                { value: "newest", label: t("admin.videos.sortNewest") },
+                { value: "oldest", label: t("admin.videos.sortOldest") },
+                { value: "popular", label: t("admin.videos.sortPopular") },
+              ]}
+              onChange={setSort}
+            />
           }
           onReset={
             hasActiveFilters || searchTerm
@@ -254,9 +358,8 @@ export function AdminVideos() {
                 }
               : undefined
           }
-          resetLabel={t("admin.clearFilters")}
           meta={
-            searchTerm || debouncedSearchTerm || typeFilter ? (
+            debouncedSearchTerm ? (
               <AdminSearchMeta searching={searchIsWaiting}>
                 {total === 0
                   ? t("admin.search.noResults")
@@ -266,248 +369,112 @@ export function AdminVideos() {
           }
         />
 
-        <AdminTableScroll>
-          <thead className="bg-muted">
-            <tr>
-              <AdminSortableHeader
-                label={t("admin.videos.video")}
-                field="title"
-                activeField={sortField}
-                direction={sortDirection}
-                onSort={handleSort}
-              />
-              <AdminSortableHeader
-                label={t("admin.videos.type")}
-                field="type"
-                activeField={sortField}
-                direction={sortDirection}
-                onSort={handleSort}
-                align="center"
-              />
-              <AdminSortableHeader
-                label={t("admin.videos.category")}
-                field="category"
-                activeField={sortField}
-                direction={sortDirection}
-                onSort={handleSort}
-                align="center"
-              />
-              <AdminSortableHeader
-                label={t("admin.videos.views")}
-                field="views"
-                activeField={sortField}
-                direction={sortDirection}
-                onSort={handleSort}
-                align="center"
-              />
-              <AdminSortableHeader
-                label={t("admin.videos.rating")}
-                field="rating"
-                activeField={sortField}
-                direction={sortDirection}
-                onSort={handleSort}
-                align="center"
-              />
-              <AdminTableHeaderCell label={t("admin.videos.actions")} align="center" />
-            </tr>
-          </thead>
-          <tbody className={refreshing ? "opacity-60 transition-opacity" : "transition-opacity"}>
-            {sortedVideos.length > 0 ? (
-              sortedVideos.map((video) => (
-                <tr
-                  key={video._id}
-                  className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted">
-                        <VideoIcon className="size-5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="block truncate font-medium text-sm max-w-[320px]">
-                          {toText(video.title)}
-                        </span>
-                        <span className="block text-xs text-muted-foreground truncate max-w-[320px]">
-                          {toText(video.url).slice(0, 60)}
-                          {toText(video.url).length > 60 ? "…" : ""}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`badge ${toText(video.type) === "premium" ? "badge-orange" : "badge-green"}`}
-                    >
-                      {toText(video.type)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {toText(video.category) || "—"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {toNumber(video.viewCount) ?? 0}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {toNumber(video.rating) != null ? toNumber(video.rating)!.toFixed(1) : "—"}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="admin-action-btn view"
-                        title={t("admin.videos.view")}
-                        onClick={() => void openDetail(video)}
-                      >
-                        <Eye className="size-4" />
-                      </Button>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="admin-action-btn edit"
-                        title={t("admin.videos.edit")}
-                      >
-                        <Link to={`/admin/videos/${video._id}`}>
-                          <Edit className="size-4" />
-                        </Link>
-                      </Button>
-                      {/* Admin dùng endpoint admin-delete để xóa được mọi video. */}
-                      <ConfirmDeleteButton
-                        onDelete={async () => {
-                          try {
-                            await videoService.adminDelete(video._id);
-                            toast.success(t("admin.videos.deleteSuccess"));
-                            void fetchVideos(page, true);
-                          } catch {
-                            toast.error(t("admin.videos.deleteError"));
-                          }
-                        }}
-                        itemName={toText(video.title)}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <AdminTableEmptyRow colSpan={6} message={t("admin.videos.noVideos")} />
-            )}
-          </tbody>
-        </AdminTableScroll>
+        <AdminDataGrid<Video>
+          ariaLabel={t("admin.videos.title")}
+          rows={rows}
+          rowKey={(v) => v._id}
+          columns={columns}
+          loading={loading}
+          refreshing={refreshing}
+          sort={gridSort}
+          onRowClick={(v) => void openDetail(v)}
+          empty={{ icon: Clapperboard, title: t("admin.videos.noVideos") }}
+        />
+
+        <AdminGridFooter
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+          disabled={refreshing}
+        />
       </AdminPanel>
 
-      <AdminPagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={total}
-        pageSize={PAGE_SIZE}
-        disabled={refreshing}
-      />
+      {confirmDialog}
 
       {/* ── Read dialog: xem chi tiết + phát video ngay tại trang admin ── */}
       {viewingVideo && (
         <AdminModal
+          variant="view"
+          size="xl"
+          icon={Clapperboard}
+          eyebrow="Video"
           title={toText(viewingVideo.title)}
-          onClose={() => setViewingVideo(null)}
-          className="max-w-3xl w-full"
-        >
-          <div className="admin-dialog-body space-y-4">
-            <video
-              src={toText(viewingVideo.url)}
-              controls
-              preload="metadata"
-              className="aspect-video w-full rounded-xl bg-black"
-            />
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`badge ${toText(viewingVideo.type) === "premium" ? "badge-orange" : "badge-green"}`}
-              >
-                {toText(viewingVideo.type)}
-              </span>
+          badges={
+            <>
+              {typePill(viewingVideo)}
               {toText(viewingVideo.category) && (
-                <span className="badge badge-green">{toText(viewingVideo.category)}</span>
+                <AdminPill tone="neutral" fixed={false}>{toText(viewingVideo.category)}</AdminPill>
               )}
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Star className="size-3.5" />
                 {toNumber(viewingVideo.viewCount) ?? 0} {t("admin.videos.views")}
               </span>
-            </div>
+            </>
+          }
+          onClose={() => setViewingVideo(null)}
+          footer={
+            <>
+              <button type="button" onClick={() => setViewingVideo(null)} className="btn-modal-cancel">
+                {t("common.close")}
+              </button>
+              <button
+                type="button"
+                className="btn-modal-primary"
+                onClick={() => navigate(`/admin/videos/${viewingVideo._id}`)}
+              >
+                {t("admin.videos.edit")}
+              </button>
+            </>
+          }
+        >
+          <div className="admin-dialog-body">
+            <video
+              src={toText(viewingVideo.url)}
+              controls
+              preload="metadata"
+              className="adm-video"
+            />
 
             {toText(viewingVideo.description) && (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {toText(viewingVideo.description)}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{toText(viewingVideo.description)}</p>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">
-                  {t("admin.videos.attachedProducts")}
-                </p>
-                <p className="text-sm font-medium">
-                  {viewingVideo.attachedProducts?.length ?? 0}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">
-                  {t("admin.videos.attachedKits")}
-                </p>
-                <p className="text-sm font-medium">{viewingVideo.attachedKits?.length ?? 0}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.videos.rating")}</p>
-                <p className="text-sm font-medium">
-                  {toNumber(viewingVideo.rating) != null
-                    ? `${toNumber(viewingVideo.rating)!.toFixed(1)} / 5`
-                    : "—"}
-                </p>
-              </div>
-            </div>
+            <AdminDetailGrid className="cols-3">
+              <AdminDetailItem label={t("admin.videos.attachedProducts")}>
+                {viewingVideo.attachedProducts?.length ?? 0}
+              </AdminDetailItem>
+              <AdminDetailItem label={t("admin.videos.attachedKits")}>
+                {viewingVideo.attachedKits?.length ?? 0}
+              </AdminDetailItem>
+              <AdminDetailItem label={t("admin.videos.rating")}>
+                {toNumber(viewingVideo.rating) != null ? `${toNumber(viewingVideo.rating)!.toFixed(1)} / 5` : null}
+              </AdminDetailItem>
+            </AdminDetailGrid>
 
             {Array.isArray(viewingVideo.tags) && viewingVideo.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="adm-chips">
                 {viewingVideo.tags.map((tag, index) => (
-                  <span key={`${toText(tag)}-${index}`} className="badge badge-green">
+                  <span key={`${toText(tag)}-${index}`} className="adm-chip">
                     #{toText(tag)}
                   </span>
                 ))}
               </div>
             )}
 
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">{t("admin.videos.url")}</p>
+            <AdminDetailItem label={t("admin.videos.url")}>
               <a
                 href={toText(viewingVideo.url)}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-[var(--primary)] break-all hover:underline"
+                className="text-[var(--primary)] break-all hover:underline"
               >
                 {toText(viewingVideo.url)}
               </a>
-            </div>
+            </AdminDetailItem>
 
-            {detailLoading && (
-              <p className="text-xs text-muted-foreground">{t("admin.videos.loading")}</p>
-            )}
-          </div>
-
-          <div className="admin-dialog-footer">
-            <button
-              type="button"
-              onClick={() => setViewingVideo(null)}
-              className="btn-modal-cancel"
-            >
-              {t("common.close")}
-            </button>
-            <button
-              type="button"
-              className="btn-modal-primary"
-              onClick={() => navigate(`/admin/videos/${viewingVideo._id}`)}
-            >
-              {t("admin.videos.edit")}
-            </button>
+            {detailLoading && <p className="text-xs text-muted-foreground">{t("admin.videos.loading")}</p>}
           </div>
         </AdminModal>
       )}

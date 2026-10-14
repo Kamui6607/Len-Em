@@ -1,0 +1,330 @@
+/* ============================================================
+   AUTH FIT — bố cục "vừa khít 1 màn hình" cho /auth/login, /auth/register
+   Dựng trên auth.css (giữ nguyên ngôn ngữ craft), nhưng:
+   - Khung cao đúng 100dvh, KHÔNG cuộn trang
+   - Mọi khoảng cách/kích thước dọc co giãn theo chiều cao màn hình
+     (clamp + dvh), rồi bỏ dần phần trang trí khi màn hình thấp
+   - Điện thoại xoay ngang: form chia 2 cột
+   ============================================================ */
+
+.auth-fit {
+  /* Thước đo dọc dùng chung — co theo chiều cao viewport */
+  --lf-pad:    clamp(8px, 1.6dvh, 16px);
+  --lf-gap-xs: clamp(4px, 0.8dvh, 8px);
+  --lf-gap-sm: clamp(8px, 1.5dvh, 14px);
+  --lf-gap-md: clamp(12px, 2.6dvh, 24px);
+  --lf-input:  clamp(42px, 6.2dvh, 50px);
+  --lf-btn:    clamp(44px, 6.6dvh, 52px);
+  --lf-title:  clamp(1.75rem, 5.2dvh, 2.6rem);
+
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--lf-pad);
+  gap: var(--lf-pad);
+}
+@media (min-width: 1024px) {
+  .auth-fit { padding: var(--lf-pad); }
+}
+
+/* ── Panel trái: co theo chiều cao ── */
+.auth-fit .auth-story {
+  padding: clamp(20px, 4dvh, 48px) clamp(24px, 3.2vw, 48px);
+  gap: var(--lf-gap-md);
+}
+.auth-fit .auth-story-title {
+  font-size: clamp(1.7rem, min(3.2vw, 5.6dvh), 3rem);
+}
+.auth-fit .auth-story .auth-stitch { margin: var(--lf-gap-sm) 0; }
+.auth-fit .auth-features { margin-top: var(--lf-gap-md); gap: var(--lf-gap-xs); }
+.auth-fit .auth-mascot { width: clamp(110px, min(15vw, 24dvh), 210px); }
+/* chừa chỗ cho linh vật ở góc phải dưới */
+.auth-fit .auth-story > div { max-width: min(600px, 64%); }
+.auth-fit .auth-story-title { text-wrap: balance; }
+.auth-fit .auth-story-sub,
+.auth-fit .auth-features { max-width: none; }
+/* auth.css ẩn features/quote ở ≤700px — trang login tự quản lý các bậc riêng */
+@media (min-width: 1024px) and (max-height: 700px) {
+  .auth-fit .auth-features { display: grid; }
+  .auth-fit .auth-quote { display: block; }
+}
+
+/* ── Cột form ── */
+.fit-main {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  /* lưới an toàn cuối cùng — bình thường nội dung luôn vừa nên không hiện */
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.fit-main::-webkit-scrollbar { display: none; }
+@media (min-width: 1024px) {
+  .fit-main { padding: 0 clamp(8px, 2vw, 24px); }
+}
+
+.fit-top {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fit-top .auth-back { padding-block: 6px; }
+@media (max-width: 1023px) {
+  .fit-top .auth-brand-mark { width: 38px; height: 38px; border-radius: 12px; }
+  .fit-top .auth-brand-mark img { width: 26px; height: 26px; }
+  .fit-top .auth-brand-name { font-size: 1.35rem; }
+}
+
+.fit-center {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  flex-direction: column;
+  padding: var(--lf-gap-sm) 2px;
+  animation: auth-rise 0.5s var(--ease-out) both;
+}
+
+/* Căn giữa dọc bằng 2 "miếng đệm" co giãn thay vì justify-content:center —
+   nếu nội dung lỡ dài hơn khung, nó tràn xuống dưới (còn cuộn được)
+   chứ không tràn lên che thanh trên cùng. */
+.fit-center::before,
+.fit-center::after {
+  content: "";
+  flex: 1 0 0;
+}
+
+/* Đầu form: chữ bên trái, linh vật ló ra bên phải (mobile) */
+.fit-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--lf-gap-md);
+}
+.fit-head .auth-eyebrow { margin-bottom: var(--lf-gap-xs); font-size: clamp(1.1rem, 2.6dvh, 1.35rem); }
+.fit-head .auth-title { font-size: var(--lf-title); }
+.fit-head .auth-stitch { margin: var(--lf-gap-sm) 0 var(--lf-gap-xs); }
+.fit-sub {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--foreground-muted);
+}
+.fit-mascot {
+  flex-shrink: 0;
+  width: clamp(64px, 12dvh, 96px);
+  height: auto;
+  margin-bottom: -4px;
+  pointer-events: none;
+  user-select: none;
+  animation: auth-bob 5s ease-in-out infinite;
+}
+@media (min-width: 1024px) {
+  .fit-mascot { display: none; }
+}
+/* Có lỗi → nhường chỗ cho banner bằng cách ẩn dòng phụ */
+.fit-center.has-error .fit-sub { display: none; }
+
+/* Form: 1 cột (mặc định) — 2 cột khi điện thoại xoay ngang */
+.fit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--lf-gap-sm);
+}
+.fit-fields,
+.fit-actions {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.auth-fit .auth-field { margin-bottom: var(--lf-gap-sm); }
+.auth-fit .auth-label-row { margin-bottom: var(--lf-gap-xs); }
+.auth-fit .auth-input { height: var(--lf-input); border-radius: 14px; }
+.auth-fit .auth-check { margin: 0; }
+.auth-fit .auth-submit { height: var(--lf-btn); }
+.auth-fit .auth-error { margin-bottom: var(--lf-gap-sm); padding: 10px 12px; }
+.auth-fit .auth-divider { margin: var(--lf-gap-sm) 0; }
+
+.fit-register {
+  margin-top: var(--lf-gap-md);
+  padding-top: var(--lf-gap-sm);
+  border-top: 1.5px dashed var(--border);
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--foreground-muted);
+}
+.fit-register a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.fit-register a svg { transition: transform 0.2s var(--ease-out); }
+.fit-register a:hover svg { transform: translateX(3px); }
+
+.fit-foot {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--foreground-muted);
+  opacity: 0.8;
+}
+
+/* ============================================================
+   Bậc chiều cao — bỏ dần phần trang trí để luôn vừa 1 màn hình
+   ============================================================ */
+
+/* Laptop thấp: panel trái gọn lại */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .auth-fit .auth-feature { padding: 7px 12px 7px 7px; }
+  .auth-fit .auth-feature-icon { width: 30px; height: 30px; border-radius: 10px; }
+  .auth-fit .auth-feature-desc { display: none; }
+  .auth-fit .auth-quote { padding: 10px 14px; }
+  .auth-fit .auth-quote-text { font-size: 1.2rem; }
+}
+@media (min-width: 1024px) and (max-height: 720px) {
+  .auth-fit .auth-quote { display: none; }
+}
+@media (min-width: 1024px) and (max-height: 580px) {
+  .auth-fit .auth-features { display: none; }
+}
+
+/* Điện thoại / màn thấp */
+@media (max-height: 700px) {
+  .fit-foot { display: none; }
+}
+@media (max-height: 640px) {
+  .fit-sub { display: none; }
+  .fit-head .auth-stitch { display: none; }
+}
+@media (max-height: 540px) {
+  .fit-mascot { display: none; }
+  .fit-head .auth-eyebrow { display: none; }
+  .fit-register { border-top: 0; padding-top: 0; margin-top: var(--lf-gap-sm); }
+}
+
+/* Rất thấp (điện thoại ngang, cửa sổ nhỏ): ẩn panel trái, form 2 cột */
+@media (max-height: 520px) {
+  .auth-fit { grid-template-columns: minmax(0, 1fr); }
+  .auth-fit .auth-story { display: none; }
+  .auth-fit .auth-topbar-brand { display: inline-flex; }
+  .fit-center { max-width: 760px; }
+  .fit-head { margin-bottom: var(--lf-gap-sm); }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  .fit-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(16px, 4vw, 40px);
+    align-items: center;
+  }
+  .auth-fit .auth-divider { margin: 6px 0; }
+  .fit-register { margin-top: 8px; }
+}
+@media (max-height: 400px) {
+  .fit-top .auth-back span { display: none; }
+  .auth-fit .auth-label-row { margin-bottom: 4px; }
+  .auth-fit .auth-field { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fit-mascot, .fit-center { animation: none; }
+}
+
+/* ============================================================
+   REGISTER — 3 bước ngắn, mỗi bước vừa 1 màn hình
+   ============================================================ */
+.fit-center.is-wide { max-width: 460px; }
+
+.auth-fit .auth-progress {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: var(--lf-gap-md);
+}
+.auth-fit .auth-progress-item { gap: 5px; font-size: 0.72rem; }
+
+/* Khi panel trái đang hiện, thanh tiến trình lặp lại thông tin → chỉ giữ vạch */
+@media (min-width: 1024px) and (min-height: 521px) {
+  .auth-fit .auth-progress-item { font-size: 0; gap: 0; }
+}
+
+.auth-fit .auth-seg { padding: 3px; border-radius: 14px; }
+.auth-fit .auth-seg-btn { height: calc(var(--lf-input) - 8px); }
+.auth-fit .auth-select { height: var(--lf-input); border-radius: 14px; }
+.auth-fit .auth-field-msg { margin-top: 4px; font-size: 0.74rem; }
+.auth-fit .auth-btn-row .auth-btn-outline { height: var(--lf-btn); }
+
+.auth-fit .auth-strength { margin-top: var(--lf-gap-xs); }
+.auth-fit .auth-rules {
+  margin-top: var(--lf-gap-xs);
+  padding: clamp(6px, 1.2dvh, 12px) 12px;
+  gap: clamp(3px, 0.7dvh, 6px) 12px;
+}
+.auth-fit .auth-legal { margin-top: var(--lf-gap-xs); font-size: 0.72rem; line-height: 1.45; }
+
+/* Panel trái: các bước co lại giống features của trang login */
+.auth-fit .auth-steps { margin-top: var(--lf-gap-md); gap: var(--lf-gap-xs); }
+@media (min-width: 1024px) and (max-height: 820px) {
+  .auth-fit .auth-step-num { width: 34px; height: 34px; }
+  .auth-fit .auth-steps::before { left: 16px; }
+  .auth-fit .auth-step-card { padding: 7px 12px; }
+}
+@media (min-width: 1024px) and (max-height: 700px) {
+  .auth-fit .auth-steps { display: grid; }
+}
+@media (min-width: 1024px) and (max-height: 580px) {
+  .auth-fit .auth-steps { display: none; }
+}
+
+/* Màn thấp */
+@media (max-height: 640px) {
+  .auth-fit .auth-legal { display: none; }
+}
+@media (max-height: 700px) {
+  .auth-fit .auth-progress-item { font-size: 0; gap: 0; }
+  .auth-fit .auth-progress { margin-bottom: var(--lf-gap-sm); }
+}
+@media (max-height: 520px) {
+  .auth-fit .auth-strength { display: none; }
+  .auth-fit .auth-progress { margin-bottom: 6px; }
+  .auth-fit .fit-register { margin-top: 6px; }
+}
+
+/* Điện thoại ngang: lưới trường thành 2 cột, nút xếp cạnh nhau */
+@media (max-height: 520px) and (min-width: 560px) {
+  .fit-center.is-wide { max-width: 760px; }
+  .auth-fit .auth-grid-2,
+  .fit-grid-landscape {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(12px, 3vw, 24px);
+  }
+  .auth-fit .auth-rules { grid-template-columns: repeat(3, 1fr); }
+  .fit-inline-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(12px, 3vw, 24px);
+  }
+  .fit-inline-actions .auth-divider { display: none; }
+}
+
+/* Register có nhiều trường hơn login → màn rất thấp cần siết thêm */
+@media (max-height: 500px) {
+  .auth-fit.is-steps {
+    --lf-gap-sm: 6px;
+    --lf-gap-md: 10px;
+    --lf-input: 40px;
+    --lf-btn: 42px;
+  }
+  .auth-fit.is-steps .auth-divider { margin: 4px 0; }
+}
+@media (max-height: 400px) {
+  .auth-fit.is-steps .fit-top { display: none; }
+}

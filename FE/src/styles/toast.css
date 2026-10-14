@@ -1,0 +1,139 @@
+/* ============================================================
+   TOAST (Sonner) — thẻ nhỏ theo ngôn ngữ "craft"
+   - Nền thẻ + viền màu bên trái theo loại (success/error/warning/info)
+   - Ô icon nghiêng nhẹ, nút đóng góc phải, nút hành động gradient
+   Không dùng richColors / inline style của Sonner (chúng đè lẫn nhau):
+   mọi màu lấy từ token theme.css → tự đổi light/dark.
+   ============================================================ */
+
+/* Sonner re-declares --success-text / --warning-text / … on its container,
+   shadowing the theme tokens of the same name. Capture the theme values at
+   :root under our own names (resolved here, then inherited unchanged). */
+:root,
+.dark {
+  --lt-success: var(--success-text);
+  --lt-warning: var(--warning-text);
+  --lt-info: var(--info-text);
+  --lt-error: var(--destructive);
+}
+
+/* Sonner injects its own stylesheet at runtime, after this file, with selectors
+   of equal specificity — so every rule below is scoped under the toaster and
+   doubles the class to reliably win. */
+[data-sonner-toaster] {
+  --width: 372px;
+  font-family: var(--font-body);
+}
+
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast {
+  --lt-accent: var(--primary);
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 40px 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  /* viền màu bên trái + bóng nổi */
+  box-shadow:
+    inset 4px 0 0 var(--lt-accent),
+    0 12px 32px -8px rgba(24, 24, 27, 0.18),
+    0 2px 6px rgba(24, 24, 27, 0.06);
+}
+.dark [data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast {
+  box-shadow:
+    inset 4px 0 0 var(--lt-accent),
+    0 14px 36px -8px rgba(0, 0, 0, 0.6),
+    0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast[data-type="success"] { --lt-accent: var(--lt-success); }
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast[data-type="error"]   { --lt-accent: var(--lt-error); }
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast[data-type="warning"] { --lt-accent: var(--lt-warning); }
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast[data-type="info"]    { --lt-accent: var(--lt-info); }
+
+/* Ô icon */
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-icon] {
+  display: flex;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border-radius: 10px;
+  color: var(--lt-accent);
+  background: color-mix(in srgb, var(--lt-accent) 14%, transparent);
+  transform: rotate(-4deg);
+}
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-icon] > * {
+  width: 16px;
+  height: 16px;
+}
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-content] {
+  min-width: 0;
+  gap: 2px;
+  padding-top: 5px;
+}
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-title] {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--foreground);
+}
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-description] {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--foreground-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Nút hành động ("Xem") */
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-button] {
+  align-self: center;
+  height: 30px;
+  margin-left: 4px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary-foreground);
+  background: var(--cta-gradient);
+  box-shadow: var(--cta-shadow);
+  transition: transform 0.2s var(--ease-out);
+}
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-button]:hover { transform: translateY(-1px); }
+
+/* Nút đóng: góc phải trên, phẳng */
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-close-button] {
+  left: auto;
+  right: 8px;
+  top: 8px;
+  width: 24px;
+  height: 24px;
+  transform: none;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground-muted);
+  opacity: 0.7;
+  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+}
+[data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast [data-close-button]:hover {
+  opacity: 1;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+/* Mobile: thẻ chiếm gần hết bề ngang (Sonner tự xử lý ≤600px) */
+@media (max-width: 600px) {
+  [data-sonner-toaster] [data-sonner-toast].lt-toast.lt-toast {
+    padding: 12px 38px 12px 14px;
+    border-radius: 16px;
+  }
+}

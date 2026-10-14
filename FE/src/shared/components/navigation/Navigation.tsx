@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useCart } from "../../contexts/CartContext";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { useMobileChrome } from "../../hooks/useMobileChrome";
 import { NavigationDesktop } from "./NavigationDesktop";
 import { NavigationMobile } from "./NavigationMobile";
 import { navLinks, homeNavLinks, type NavLink } from "./nav-links";
@@ -12,7 +13,8 @@ import { navLinks, homeNavLinks, type NavLink } from "./nav-links";
 /**
  * Orchestrates the shared navigation state used by both the desktop and mobile
  * bars: active section tracking (Home), scroll/floating detection, search, auth
- * and mobile-drawer state. Renders either NavigationDesktop or NavigationMobile.
+ * and the mobile chrome (scroll collapse, keyboard). Renders either
+ * NavigationDesktop or NavigationMobile.
  */
 export function Navigation({ cartCount }: { cartCount: number }) {
   const { t } = useLanguage();
@@ -20,25 +22,16 @@ export function Navigation({ cartCount }: { cartCount: number }) {
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const { favorites, favoriteKits } = useFavorites();
-  const { isAuthenticated, isLoading, signOut } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { totalItems } = useCart();
 
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("top");
 
-  // Detect keyboard open to hide the bottom nav on mobile.
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const onResize = () =>
-      setKeyboardOpen(window.innerHeight - viewport.height > 150);
-    viewport.addEventListener("resize", onResize);
-    return () => viewport.removeEventListener("resize", onResize);
-  }, []);
+  // Keyboard detection + collapse-on-scroll for the mobile header/tab bar.
+  const { keyboardOpen } = useMobileChrome(isMobile);
 
   const isHomePage = location.pathname === "/";
   const isAboutPage = location.pathname === "/about";
@@ -147,13 +140,6 @@ export function Navigation({ cartCount }: { cartCount: number }) {
     };
   }, [location.pathname]);
 
-  useEffect(() => {
-    document.body.style.overflow = mobileOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileOpen]);
-
   // Close search on Escape.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -181,8 +167,6 @@ export function Navigation({ cartCount }: { cartCount: number }) {
   };
 
   const navigateTo = (href: string, sectionId?: string) => {
-    setMobileOpen(false);
-
     // Clicking HOME (href="/", no section) always scrolls to top.
     if (href === "/" && !sectionId) {
       if (!isHomePage) {
@@ -241,53 +225,23 @@ export function Navigation({ cartCount }: { cartCount: number }) {
   if (isMobile)
     return (
       <NavigationMobile
-        open={mobileOpen}
-        links={displayedNavLinks}
         isHomePage={isHomePage}
         isAboutPage={isAboutPage}
-        isAuthenticated={isAuthenticated}
-        isLoading={isLoading}
         isFloating={isFloating}
         showBackButton={showBackButton}
         keyboardOpen={keyboardOpen}
         searchOpen={searchOpen}
         searchQuery={searchQuery}
         searchPlaceholder={searchPlaceholder}
-        favoriteCount={favoriteCount}
         cartCount={cartTotal}
         showFullActions={showFullActions}
-        showAuthButtons={showAuthButtons}
-        showAuthPlaceholder={showAuthPlaceholder}
-        onOpen={() => setMobileOpen(true)}
-        onClose={() => setMobileOpen(false)}
         onBack={() => navigate(-1)}
-        onLogin={() => {
-          setMobileOpen(false);
-          navigate("/auth/login");
-        }}
-        onRegister={() => {
-          setMobileOpen(false);
-          navigate("/auth/register");
-        }}
-        onLogout={() => {
-          signOut();
-          navigate("/auth/login", { replace: true });
-        }}
         onSearchToggle={toggleSearch}
         onSearchChange={setSearchQuery}
         onSearchClear={clearSearch}
         onSearchSubmit={handleSearch}
-        onNavigate={navigateTo}
-        isActive={isActive}
-        onStart={() => {
-          setMobileOpen(false);
-          navigate("/learn");
-        }}
-        t={t}
       />
     );
-
-  if (keyboardOpen) return null;
 
   return (
     <NavigationDesktop

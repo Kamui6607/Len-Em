@@ -13,6 +13,7 @@ import type { Order } from "../../../features/orders/types/order.types";
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { EmptyHoopIllustration } from "./CartPage";
+import { useMembershipStore } from "../../../features/membership/store/membership.store";
 import "../../../styles/purchased.css";
 
 export function OrderDetail() {
@@ -49,6 +50,8 @@ export function OrderDetail() {
   const handleCancel = async (orderId: string, reason: string) => {
     try {
       await orderService.cancelOrder(orderId, { cancelReason: reason });
+      // Huỷ đơn → BE hoàn coin đã dùng + đổi history sang "cancelled".
+      void useMembershipStore.getState().refresh();
       // Refresh order data
       const { data } = await orderService.getOrderById(orderId);
       setOrder(data.order ?? null);

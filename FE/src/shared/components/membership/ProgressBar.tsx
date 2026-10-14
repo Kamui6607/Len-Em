@@ -1,94 +1,70 @@
-import { cn } from "../ui/utils";
 import type { RankType } from "../../../features/membership/types/membership.types";
-import { getNextRank, getRankConfig } from "../../../features/membership/types/membership.types";
+import { getNextRank, getRankConfig, POINT_RULES } from "../../../features/membership/types/membership.types";
 import { formatPrice } from "../../../lib/formatPrice";
+import "../../../styles/membership.css";
 
 interface ProgressBarProps {
   points: number;
   currentRank: RankType;
-  animate?: boolean;
   showTooltip?: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md";
 }
 
-const heightClasses = {
-  sm: "h-1.5",
-  md: "h-2.5",
-  lg: "h-3.5",
-};
+/**
+ * Sợi chỉ tiến độ tới hạng kế tiếp. Màu lấy theo [data-rank] gần nhất
+ * (thường là thẻ thành viên bao ngoài).
+ */
+export function ProgressBar({ points, currentRank, showTooltip = true, size = "md" }: ProgressBarProps) {
+  const current = getRankConfig(currentRank);
+  const next = getNextRank(currentRank, points);
 
-export function ProgressBar({
-  points,
-  currentRank,
-  showTooltip = true,
-  size = "md",
-}: ProgressBarProps) {
-  const nextRankInfo = getNextRank(currentRank, points);
-
-  if (!nextRankInfo.nextRank) {
-    const nextConfig = getRankConfig("diamond");
+  if (!next.nextRank) {
     return (
-      <div className="space-y-1.5">
-        <div className={cn("w-full rounded-full overflow-hidden", heightClasses[size])}
-          style={{ background: "rgba(255,255,255,0.3)" }}
-        >
-          <div
-            className={cn("h-full rounded-full", heightClasses[size])}
-            style={{
-              width: "100%",
-              background: nextConfig.gradient,
-            }}
-          />
-        </div>
+      <div className="mb-progress" data-size={size}>
         {showTooltip && (
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium flex items-center gap-1 text-primary/70">
-              💎 Max rank
-            </span>
-            <span className="text-[10px] opacity-70">{points.toLocaleString()} pts</span>
+          <div className="mb-progress-labels">
+            <span>{current.icon} {current.displayName}</span>
+            <span>Hạng cao nhất</span>
           </div>
         )}
+        <div className="mb-progress-track" role="progressbar" aria-valuenow={100} aria-valuemin={0} aria-valuemax={100}>
+          <div className="mb-progress-fill" style={{ width: "calc(100% - 2px)" }} />
+        </div>
+        {showTooltip && <p className="mb-progress-hint">Bạn đã chạm tới hạng cao nhất của Len&amp;em Club ✨</p>}
       </div>
     );
   }
 
-  const nextConfig = getRankConfig(nextRankInfo.nextRank);
-  const totalRange = nextRankInfo.nextRankPoints - nextRankInfo.currentRankPoints;
-  const progress = Math.min(
-    ((points - nextRankInfo.currentRankPoints) / totalRange) * 100,
-    100,
-  );
+  const nextConfig = getRankConfig(next.nextRank);
+  const range = Math.max(1, next.nextRankPoints - next.currentRankPoints);
+  const progress = Math.min(100, Math.max(0, ((points - next.currentRankPoints) / range) * 100));
 
   return (
-    <div className="space-y-1.5">
-      <div
-        className={cn("w-full rounded-full overflow-hidden", heightClasses[size])}
-        style={{ background: "rgba(255,255,255,0.3)" }}
-      >
-        <div
-          className={cn("h-full rounded-full transition-all duration-1000 ease-out", heightClasses[size])}
-          style={{
-            width: `${Math.max(progress, 2)}%`,
-            background: nextConfig.gradient,
-            transition: "width 1s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        />
-      </div>
-
+    <div className="mb-progress" data-size={size}>
       {showTooltip && (
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium opacity-80" style={{ color: nextConfig.textColor }}>
-              {`${nextConfig.icon} ${nextConfig.displayName}`}
-            </span>
-            <span className="text-[10px] opacity-60">
-              {points.toLocaleString()} / {nextRankInfo.nextRankPoints.toLocaleString()}
-            </span>
-          </div>
-          <p className="text-[9px] opacity-60">
-            Còn <span className="font-semibold">{formatPrice(nextRankInfo.pointsNeeded * 1000)}</span> để lên {nextConfig.icon}
-          </p>
+        <div className="mb-progress-labels">
+          <span>{current.icon} {current.displayName}</span>
+          <span>
+            {nextConfig.icon} {nextConfig.displayName} · {next.nextRankPoints.toLocaleString("vi-VN")}
+          </span>
         </div>
+      )}
+      <div
+        className="mb-progress-track"
+        role="progressbar"
+        aria-label={`Tiến độ lên hạng ${nextConfig.displayName}`}
+        aria-valuenow={Math.round(progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className="mb-progress-fill" style={{ width: `max(8px, calc(${progress}% - 2px))` }} />
+      </div>
+      {showTooltip && (
+        <p className="mb-progress-hint">
+          Còn <b>{next.pointsNeeded.toLocaleString("vi-VN")} điểm</b>
+          {" "}(≈ {formatPrice(next.pointsNeeded * POINT_RULES.vndPerPoint)} mua sắm) để lên {nextConfig.icon}{" "}
+          {nextConfig.displayName}
+        </p>
       )}
     </div>
   );

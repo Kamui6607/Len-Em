@@ -21,11 +21,21 @@ import {
   ZoomIn,
   ZoomOut,
   ChevronDown,
+  UserRound,
+  Package,
+  Heart,
+  Flag,
+  Crown,
+  Circle,
+  type LucideIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { authService } from "../../shared/api/authService";
-import { userService } from "../../features/users/services/user.service";
+import {
+  userService,
+  type UpdateUserRequest,
+} from "../../features/users/services/user.service";
 import { MembershipCard } from "../../shared/components/membership/MembershipCard";
 import { RankBadge } from "../../shared/components/membership/RankBadge";
 import { normalizeApiUserProfile } from "../../shared/types/auth.types";
@@ -41,6 +51,17 @@ import {
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { DatePicker } from "../../shared/components/ui/DatePicker";
 import { isoToUsDisplayDate } from "../../lib/dateInput";
+import {
+  AddressSelector,
+  isPickComplete,
+  isPickStarted,
+  pickToLocation,
+  sameLocation,
+  type AddressPick,
+} from "../../shared/components/address/AddressSelector";
+import type { User } from "../../shared/types/auth.types";
+import "../../styles/craft.css";
+import "../../styles/profile.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,21 +78,44 @@ function formatDateForDisplay(iso: string): string {
   return isoToUsDisplayDate(iso);
 }
 
+/** "12 Lê Lợi, Phường Bến Nghé, Quận 1, Hồ Chí Minh" — bỏ phần trống. */
+function formatFullAddress(user: Pick<User, "address" | "addressLocation">): string {
+  const loc = user.addressLocation;
+  return [user.address, loc?.wardName, loc?.districtName, loc?.provinceName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** Label của các field trong modal Profile. */
+const fieldLabelClass = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+
 /** Style input / select / date-trigger dùng chung cho các modal của Profile. */
 const fieldInputClass =
   "w-full rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-sm transition-all placeholder:text-muted-foreground/60 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25";
 
-/** Tiêu đề section đồng bộ cho mọi panel profile — chấm primary phát sáng + slot action bên phải. */
-function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+/** Tiêu đề panel theo craft: ô icon nghiêng + tên + đường chỉ kéo dài (+ action bên phải). */
+function PanelHead({
+  icon: Icon,
+  title,
+  sub,
+  action,
+}: {
+  icon: LucideIcon;
+  title: ReactNode;
+  sub?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
-    <div className="px-5 pt-4 pb-1 flex items-center justify-between gap-3">
-      <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <span
-          className="size-1.5 rounded-full bg-primary shadow-[0_0_6px_var(--glow-primary)]"
-          aria-hidden
-        />
-        {children}
-      </h3>
+    <div className="craft-section-head">
+      <span className="craft-section-icon">
+        <Icon size={18} aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <h2 className="craft-section-title">{title}</h2>
+        {sub && <p className="craft-section-sub">{sub}</p>}
+      </div>
+      <span className="craft-section-thread" aria-hidden="true" />
       {action}
     </div>
   );
@@ -86,33 +130,41 @@ function AccountActions({
   onSignOut: () => void;
 }) {
   const { t } = useLanguage();
-  const rowBase =
-    "group flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:translate-x-0.5 active:scale-[0.98] cursor-pointer";
   return (
-    <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
-      <SectionTitle>{t("profile.accountActions")}</SectionTitle>
-      <div className="px-3 pb-3 pt-1 space-y-0.5">
-        <button
-          type="button"
-          onClick={onChangePassword}
-          className={`${rowBase} hover:bg-[var(--surface-secondary)]`}
-        >
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-primary bg-primary/10 transition-all duration-200 group-hover:scale-110 group-hover:-rotate-6">
-            <KeyRound className="w-4 h-4" />
-          </div>
-          <span className="flex-1 text-sm font-medium">{t("profile.changePassword")}</span>
-          <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+    <section className="pf-panel">
+      <PanelHead icon={ShieldCheck} title={t("profile.accountActions")} />
+      <div className="pf-actions">
+        <button type="button" onClick={onChangePassword} className="pf-action">
+          <span className="pf-action-icon">
+            <KeyRound size={17} aria-hidden="true" />
+          </span>
+          <span>
+            {t("profile.changePassword")}
+            <span className="pf-action-sub">{t("profile.changePasswordSub")}</span>
+          </span>
+          <ChevronRight size={16} className="pf-action-chev" aria-hidden="true" />
         </button>
-        <button type="button" onClick={onSignOut} className={`${rowBase} hover:bg-rose-500/10`}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-rose-500 bg-rose-500/10 transition-all duration-200 group-hover:scale-110 group-hover:rotate-6">
-            <LogOut className="w-4 h-4" />
-          </div>
-          <span className="flex-1 text-sm font-medium text-rose-500">{t("profile.signOut")}</span>
-          <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-rose-500" />
+        <button type="button" onClick={onSignOut} className="pf-action is-danger">
+          <span className="pf-action-icon">
+            <LogOut size={17} aria-hidden="true" />
+          </span>
+          <span>
+            {t("profile.signOut")}
+            <span className="pf-action-sub">{t("profile.signOutSub")}</span>
+          </span>
+          <ChevronRight size={16} className="pf-action-chev" aria-hidden="true" />
         </button>
       </div>
     </section>
   );
+}
+
+/** Lời chào theo giờ trong ngày. */
+function greetingKey(): string {
+  const h = new Date().getHours();
+  if (h < 11) return "profile.greetingMorning";
+  if (h < 18) return "profile.greetingAfternoon";
+  return "profile.greetingEvening";
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -124,7 +176,7 @@ interface ProfileProps {
 export function Profile({ embedded = false }: ProfileProps) {
   const { t } = useLanguage();
   const { user, signOut } = useAuth();
-  const { data } = useMembershipStore();
+  const { data, loading: membershipLoading } = useMembershipStore();
   const navigate = useNavigate();
   const setUser = useAuthStore((s) => s.setUser);
 
@@ -138,6 +190,10 @@ export function Profile({ embedded = false }: ProfileProps) {
     gender: "OTHER" as "MALE" | "FEMALE" | "OTHER",
     dateOfBirth: "",
   });
+  // Khu vực tỉnh/huyện/xã (± toạ độ) đang chọn trong modal — AddressSelector báo lên.
+  const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
+  // Tăng mỗi lần mở modal → AddressSelector mount lại và điền sẵn từ user mới nhất.
+  const [editSession, setEditSession] = useState(0);
 
   // ── Change Password Modal ──
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -176,19 +232,34 @@ export function Profile({ embedded = false }: ProfileProps) {
       gender: user.gender || "OTHER",
       dateOfBirth: formatDateForInput(user.dateOfBirth),
     });
+    setAddressPick(null);
+    setEditSession((n) => n + 1);
     setEditOpen(true);
   }, [user]);
 
   // ── Submit edit profile (sends only changed fields) ──
   const handleEditSubmit = useCallback(async () => {
     if (!user) return;
+
+    // Đã bắt đầu chọn khu vực thì phải đủ cả 3 cấp; bỏ trống cả 3 = xoá khu vực.
+    if (addressPick && isPickStarted(addressPick) && !isPickComplete(addressPick)) {
+      toast.error(t("profile.toastAddressIncomplete"));
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload: Record<string, string> = {};
+      const payload: UpdateUserRequest = {};
       if (editForm.fullName !== user.fullName)
         payload.fullName = editForm.fullName;
       if (editForm.phone !== user.phone) payload.phone = editForm.phone;
       if (editForm.address !== user.address) payload.address = editForm.address;
+      if (addressPick) {
+        const nextLocation = pickToLocation(addressPick);
+        if (!sameLocation(nextLocation, user.addressLocation)) {
+          payload.addressLocation = nextLocation;
+        }
+      }
       if (editForm.gender !== user.gender) payload.gender = editForm.gender;
       if (editForm.dateOfBirth !== formatDateForInput(user.dateOfBirth)) {
         // The API receives MM/DD/YYYY — the exact order the signup form sends
@@ -219,7 +290,7 @@ export function Profile({ embedded = false }: ProfileProps) {
     } finally {
       setSaving(false);
     }
-  }, [user, editForm, setUser, t]);
+  }, [user, editForm, addressPick, setUser, t]);
 
   // ── Avatar crop logic ──
   const handleAvatarClick = useCallback(() => {
@@ -423,247 +494,259 @@ export function Profile({ embedded = false }: ProfileProps) {
       .join("")
       .toUpperCase() || "?";
 
-  const infoRows = [
-    {
-      icon: <Mail className="w-4 h-4" />,
-      label: t("profile.emailLabel"),
-      value: user.email,
-      color: "text-primary bg-primary/10",
-    },
-    {
-      icon: <Phone className="w-4 h-4" />,
-      label: t("profile.phoneLabel"),
-      value: user.phone || t("profile.notSet"),
-      color: "text-secondary-foreground bg-secondary",
-    },
-    {
-      icon: <MapPin className="w-4 h-4" />,
-      label: t("profile.addressLabel"),
-      value: user.address || t("profile.notSet"),
-      color: "text-warm bg-warm/10",
-    },
-    {
-      icon: <Calendar className="w-4 h-4" />,
-      label: t("profile.dobLabel"),
-      value: formatDateForDisplay(user.dateOfBirth) || t("profile.notSet"),
-      color: "text-info-foreground bg-info",
-    },
+  const genderLabel: Record<User["gender"], string> = {
+    MALE: t("profile.maleOption"),
+    FEMALE: t("profile.femaleOption"),
+    OTHER: t("profile.otherOption"),
+  };
+  const fullAddress = formatFullAddress(user);
+  const dob = formatDateForDisplay(user.dateOfBirth);
+
+  const infoRows: { icon: LucideIcon; label: string; value: string; wide?: boolean }[] = [
+    { icon: Mail, label: t("profile.emailLabel"), value: user.email },
+    { icon: Phone, label: t("profile.phoneLabel"), value: user.phone },
+    { icon: Calendar, label: t("profile.dobLabel"), value: dob },
+    { icon: UserRound, label: t("profile.genderLabel"), value: user.gender ? genderLabel[user.gender] : "" },
+    { icon: MapPin, label: t("profile.addressLabel"), value: fullAddress, wide: true },
+  ];
+
+  // Hồ sơ hoàn thiện: ảnh đại diện, SĐT, địa chỉ đầy đủ, ngày sinh.
+  const completeness = [
+    Boolean(user.avatar),
+    Boolean(user.phone?.trim()),
+    Boolean(user.address?.trim() && user.addressLocation?.wardName),
+    Boolean(dob),
+  ];
+  const completePercent = Math.round((completeness.filter(Boolean).length / completeness.length) * 100);
+
+  // Tên gọi (từ cuối) tô màu primary: "Nguyễn Thị *Lan*".
+  const nameParts = (user.fullName || "").trim().split(/\s+/);
+  const givenName = nameParts.length > 1 ? nameParts.pop() : null;
+
+  const shortcuts: { icon: LucideIcon; label: string; sub: string; to: string }[] = [
+    { icon: Package, label: t("profile.shortcutOrders"), sub: t("profile.shortcutOrdersSub"), to: "/purchased" },
+    { icon: Heart, label: t("profile.shortcutLove"), sub: t("profile.shortcutLoveSub"), to: "/love" },
+    { icon: MapPin, label: t("profile.shortcutAddresses"), sub: t("profile.shortcutAddressesSub"), to: "/addresses" },
+    { icon: Flag, label: t("profile.shortcutReports"), sub: t("profile.shortcutReportsSub"), to: "/orders/reports" },
   ];
 
   return (
-    <div
-      className={
-        embedded
-          ? "w-full"
-          : "min-h-screen bg-background py-6 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:py-8 md:px-6 md:pb-8"
-      }
-    >
-      <div className="max-w-4xl mx-auto space-y-5">
-        {/* Header */}
-        <div>
-          <h1 className="flex items-center gap-3 text-xl font-bold md:text-2xl">
-            <span
-              className="h-6 w-1 rounded-full bg-gradient-to-b from-primary to-primary/40"
-              aria-hidden
+    <div className="pf-page" data-embedded={embedded}>
+      <div className="pf-wrap">
+        {/* ── Hero: avatar + lời chào + thao tác chính ── */}
+        <section className="craft-hero craft-rise" aria-label={t("profile.title")}>
+          <div className="pf-hero-grid">
+            <button
+              type="button"
+              onClick={handleAvatarClick}
+              className="pf-avatar"
+              title={t("profile.changeAvatar")}
+              aria-label={t("profile.changeAvatar")}
+            >
+              <span className="pf-avatar-inner">
+                {user.avatar ? <img src={user.avatar} alt="" /> : initials}
+              </span>
+              <span className="pf-avatar-cam" aria-hidden="true">
+                <Camera size={15} />
+              </span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/jpg"
+              className="hidden"
+              onChange={handleAvatarChange}
             />
-            {t("profile.title")}
-          </h1>
-          <p className="mt-1 pl-4 text-sm text-muted-foreground">
-            {isDashboardUser ? t("profile.subtitleAdmin") : t("profile.subtitleUser")}
-          </p>
-        </div>
 
-        {/* On mobile: stacked. On lg: side-by-side */}
-        <div className="grid gap-5 lg:grid-cols-5">
-          {/* ── Left column ── */}
-          <div className="lg:col-span-3 space-y-4">
-            {/* Identity card */}
-            <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
-              {/* Banner — gradient ấm + vệt chỉ chạy (brand seam) ở đáy */}
-              <div className="h-28 bg-gradient-to-br from-primary/30 via-primary/12 to-transparent relative overflow-hidden">
-                <div className="absolute inset-0 opacity-40" style={{ background: "radial-gradient(400px 160px at 20% 0%, var(--glow-primary), transparent 70%)" }} />
-                <div
-                  className="absolute inset-x-6 bottom-0 h-px opacity-40"
-                  aria-hidden
-                  style={{ backgroundImage: "repeating-linear-gradient(90deg, var(--primary) 0 6px, transparent 6px 12px)" }}
-                />
-              </div>
-
-              {/* Avatar + name row */}
-              <div className="px-5 pb-5">
-                <div className="flex items-end justify-between -mt-10 mb-3">
-                  <button
-                    type="button"
-                    onClick={handleAvatarClick}
-                    className="group relative w-20 h-20 rounded-2xl bg-primary/15 border-4 border-card flex items-center justify-center text-xl font-bold text-primary shadow-[var(--shadow-card-elevated)] overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_10px_28px_rgba(107,63,160,0.35)] active:scale-95"
-                    title={t("profile.changeAvatar")}
-                  >
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.fullName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      initials
-                    )}
-                    <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <Camera className="w-5 h-5 text-white" />
-                    </div>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/jpg"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                  <button
-                    type="button"
-                    onClick={openEditModal}
-                    className="group/edit mb-0.5 flex items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-2 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:shadow-primary/25 active:scale-95"
-                  >
-                    <Pencil className="w-3 h-3 transition-transform duration-200 group-hover/edit:rotate-12" />
-                    {t("profile.editButton")}
-                  </button>
-                </div>
-
-                <h2 className="text-lg font-bold leading-tight">
-                  {user.fullName}
-                </h2>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <span
-                    className={`capitalize rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                      isDashboardUser
-                        ? "border-primary/20 bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground"
-                    }`}
-                  >
+            <div className="min-w-0">
+              <span className="craft-eyebrow">{t(greetingKey())}</span>
+              <h1 className="pf-hero-name">
+                {givenName ? (
+                  <>
+                    {nameParts.join(" ")} <em>{givenName}</em>
+                  </>
+                ) : (
+                  user.fullName
+                )}
+              </h1>
+              <div className="pf-hero-meta">
+                {isDashboardUser && (
+                  <span className="pf-chip is-role">
+                    <ShieldCheck size={13} aria-hidden="true" />
                     {user.roleId}
                   </span>
-                  {!isDashboardUser && data && (
+                )}
+                {!isDashboardUser && membershipLoading && (
+                  <span className="craft-skeleton h-7 w-28 rounded-full" aria-hidden="true" />
+                )}
+                {!isDashboardUser && !membershipLoading && data && (
+                  <Link to="/my-account/membership" className="pf-chip is-rank">
                     <RankBadge rank={data.rank} size="sm" showLabel />
-                  )}
-                </div>
+                  </Link>
+                )}
+                <span className="pf-chip">
+                  <Mail size={13} aria-hidden="true" />
+                  {user.email}
+                </span>
               </div>
-            </section>
+              <p className="craft-subtitle mt-3">
+                {isDashboardUser ? t("profile.subtitleAdmin") : t("profile.subtitleUser")}
+              </p>
+            </div>
 
-            {/* Info card — click vào hàng để sao chép giá trị */}
-            <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
-              <SectionTitle>{t("profile.personalInfo")}</SectionTitle>
-              <div className="space-y-0.5 px-3 pb-3 pt-1">
+            <div className="pf-hero-actions">
+              <button type="button" onClick={openEditModal} className="craft-btn">
+                <Pencil size={15} aria-hidden="true" />
+                {t("profile.editButton")}
+              </button>
+              <button type="button" onClick={() => setPwdOpen(true)} className="craft-btn-ghost">
+                <KeyRound size={15} aria-hidden="true" />
+                {t("profile.changePassword")}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="pf-layout">
+          {/* ── Cột trái: thông tin + lối tắt ── */}
+          <div className="pf-col">
+            <section className="pf-panel craft-rise" style={{ animationDelay: "60ms" }}>
+              <PanelHead
+                icon={UserRound}
+                title={t("profile.personalInfo")}
+                sub={t("profile.personalInfoSub")}
+                action={
+                  <button type="button" onClick={openEditModal} className="pf-panel-link">
+                    <Pencil size={13} aria-hidden="true" /> {t("profile.editButton")}
+                  </button>
+                }
+              />
+              <div className="pf-info">
                 {infoRows.map((row) => {
-                  const empty = row.value === t("profile.notSet");
+                  const Icon = row.icon;
+                  const empty = !row.value?.trim();
                   return (
                     <button
                       key={row.label}
                       type="button"
                       disabled={empty}
                       onClick={() => handleCopy(row.value)}
-                      className={`group flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:translate-x-0.5 active:scale-[0.99] ${
-                        empty
-                          ? "cursor-default"
-                          : "cursor-pointer hover:bg-[var(--surface-secondary)]"
-                      }`}
+                      className={`pf-info-item${row.wide ? " is-wide" : ""}${empty ? " is-empty" : ""}`}
+                      title={empty ? undefined : t("profile.copyHint")}
                     >
-                      <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:-rotate-6 ${row.color}`}
-                      >
-                        {row.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground leading-none mb-0.5">
-                          {row.label}
-                        </p>
-                        <p className="text-sm font-medium truncate">{row.value}</p>
-                      </div>
-                      {!empty && (
-                        <Copy className="w-3.5 h-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-                      )}
+                      <span className="pf-info-icon" aria-hidden="true">
+                        <Icon size={16} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="pf-info-label block">{row.label}</span>
+                        <span className="pf-info-value block">{empty ? t("profile.notSet") : row.value}</span>
+                      </span>
+                      {!empty && <Copy size={13} className="pf-info-copy" aria-hidden="true" />}
                     </button>
                   );
                 })}
               </div>
+
+              <div className="pf-complete">
+                <span className="pf-complete-num">{completePercent}%</span>
+                <div className="pf-complete-body">
+                  <p className="pf-complete-title">
+                    {completePercent === 100 ? t("profile.completeDone") : t("profile.completeTitle")}
+                  </p>
+                  {completePercent < 100 && <p className="pf-complete-hint">{t("profile.completeHint")}</p>}
+                  <div
+                    className="pf-complete-track"
+                    role="progressbar"
+                    aria-valuenow={completePercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={t("profile.completeTitle")}
+                  >
+                    <div className="pf-complete-fill" style={{ width: `${completePercent}%` }} />
+                  </div>
+                </div>
+                {completePercent < 100 && (
+                  <button type="button" onClick={openEditModal} className="pf-complete-btn">
+                    {t("profile.completeAction")}
+                  </button>
+                )}
+              </div>
             </section>
+
+            {!isDashboardUser && (
+              <section className="pf-panel craft-rise" style={{ animationDelay: "120ms" }}>
+                <PanelHead icon={Package} title={t("profile.shortcuts")} />
+                <div className="pf-shortcuts">
+                  {shortcuts.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.to} to={item.to} className="pf-shortcut">
+                        <span className="pf-shortcut-icon" aria-hidden="true">
+                          <Icon size={18} />
+                        </span>
+                        <span className="pf-shortcut-label">{item.label}</span>
+                        <span className="pf-shortcut-sub">{item.sub}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </div>
 
-          {/* ── Right column — /profile: Thành viên + Thao tác · admin/staff: Vai trò + Thao tác ── */}
-          <div className="lg:col-span-2 space-y-4">
+          {/* ── Cột phải — /profile: Thành viên + Thao tác · admin/staff: Vai trò + Thao tác ── */}
+          <div className="pf-col">
             {!isDashboardUser ? (
-              <>
-                {/* Membership — giữ cho /profile, đóng khung đồng bộ các panel */}
-                <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
-                  <SectionTitle
-                    action={
-                      <Link
-                        to="/my-account/membership"
-                        className="flex items-center gap-1 text-xs font-medium text-primary transition-all hover:underline"
-                      >
-                        {t("profile.viewDetails")} <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    }
-                  >
-                    {t("profile.membership")}
-                  </SectionTitle>
-                  <div className="px-4 pb-4 pt-1">
-                    <MembershipCard
-                      onViewHistory={() => navigate("/my-account/membership?tab=history")}
-                      onViewBenefits={() => navigate("/my-account/membership?tab=benefits")}
-                      onViewTimeline={() => navigate("/my-account/membership?tab=timeline")}
-                    />
-                  </div>
-                </section>
-
-                <AccountActions
-                  onChangePassword={() => setPwdOpen(true)}
-                  onSignOut={handleLogout}
+              <section className="pf-panel craft-rise" style={{ animationDelay: "90ms" }}>
+                <PanelHead
+                  icon={Crown}
+                  title={t("profile.membership")}
+                  action={
+                    <Link to="/my-account/membership" className="pf-panel-link">
+                      {t("profile.viewDetails")} <ChevronRight size={14} aria-hidden="true" />
+                    </Link>
+                  }
                 />
-              </>
+                <MembershipCard
+                  onViewHistory={() => navigate("/my-account/membership?tab=history")}
+                  onViewBenefits={() => navigate("/my-account/membership?tab=benefits")}
+                  onViewTimeline={() => navigate("/my-account/membership?tab=timeline")}
+                />
+              </section>
             ) : (
-              <>
-                {/* Role card — CHỈ admin/staff (không đưa xuống /profile) */}
-                <section className="glass-panel-solid rounded-2xl border border-[var(--border)]/60 overflow-hidden transition-all duration-300 hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]">
-                  <SectionTitle>{t("profile.roleAccess")}</SectionTitle>
-                  <div className="space-y-3 px-5 pb-5 pt-1">
-                    <div className="flex items-center gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/10 to-primary/5 p-3.5 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_4px_16px_rgba(107,63,160,0.12)]">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 transition-transform duration-300 hover:scale-110 hover:-rotate-6">
-                        <ShieldCheck className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-muted-foreground leading-none mb-1">
-                          {t("profile.currentRole")}
-                        </p>
-                        <p className="text-sm font-semibold capitalize">{user.roleId}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {user.roleId === "admin"
-                        ? t("profile.adminDescription")
-                        : t("profile.staffDescription")}
-                    </p>
+              /* Role card — CHỈ admin/staff (không đưa xuống /profile) */
+              <section className="pf-panel craft-rise" style={{ animationDelay: "90ms" }}>
+                <PanelHead icon={ShieldCheck} title={t("profile.roleAccess")} />
+                <div className="pf-role">
+                  <span className="pf-info-icon" aria-hidden="true">
+                    <ShieldCheck size={17} />
+                  </span>
+                  <div>
+                    <p className="pf-info-label">{t("profile.currentRole")}</p>
+                    <p className="pf-info-value capitalize">{user.roleId}</p>
                   </div>
-                </section>
-
-                <AccountActions
-                  onChangePassword={() => setPwdOpen(true)}
-                  onSignOut={handleLogout}
-                />
-              </>
+                </div>
+                <p className="pf-role-desc">
+                  {user.roleId === "admin" ? t("profile.adminDescription") : t("profile.staffDescription")}
+                </p>
+              </section>
             )}
+
+            <AccountActions onChangePassword={() => setPwdOpen(true)} onSignOut={handleLogout} />
           </div>
         </div>
       </div>
 
       {/* ── Edit Profile Modal ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="glass-panel-solid sm:max-w-lg">
+        <DialogContent className="glass-panel-solid max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="pf-modal-head">
+              <span className="pf-modal-icon">
                 <Pencil className="size-4" />
               </span>
               <div>
-                <DialogTitle className="text-lg font-semibold leading-tight">
+                <DialogTitle className="pf-modal-title">
                   {t("profile.editProfileTitle")}
                 </DialogTitle>
                 <DialogDescription className="mt-1 text-sm text-muted-foreground">
@@ -691,9 +774,9 @@ export function Profile({ embedded = false }: ProfileProps) {
               />
             </div>
 
-            {/* Phone | Address */}
+            {/* Phone | Gender */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <label className={fieldLabelClass}>
                 {t("profile.phoneLabel")}
               </label>
               <input
@@ -707,23 +790,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("profile.addressLabel")}
-              </label>
-              <input
-                type="text"
-                value={editForm.address}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, address: e.target.value }))
-                }
-                className={fieldInputClass}
-                placeholder={t("profile.addressPlaceholder")}
-              />
-            </div>
-
-            {/* Gender | Date of Birth */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <label className={fieldLabelClass}>
                 {t("profile.genderLabel")}
               </label>
               <div className="relative">
@@ -744,8 +811,10 @@ export function Profile({ embedded = false }: ProfileProps) {
                 <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+
+            {/* Date of Birth */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className={fieldLabelClass}>
                 {t("profile.dobLabelLong")}
               </label>
               <DatePicker
@@ -758,13 +827,50 @@ export function Profile({ embedded = false }: ProfileProps) {
                 triggerClassName={`${fieldInputClass} flex items-center justify-between gap-2 text-left`}
               />
             </div>
+
+            {/* Address — khu vực (dropdown GHN / bản đồ) + dòng chi tiết */}
+            <fieldset className="min-w-0 space-y-3 sm:col-span-2">
+              <legend className={`${fieldLabelClass} mb-1.5`}>
+                {t("profile.addressLabel")}
+              </legend>
+              <AddressSelector
+                key={editSession}
+                idPrefix="profile-address"
+                initialValue={user.addressLocation}
+                initialStreet={user.address}
+                onChange={setAddressPick}
+                onStreetSuggest={(street) =>
+                  setEditForm((f) => (f.address.trim() ? f : { ...f, address: street }))
+                }
+                labelClassName={`${fieldLabelClass} mb-1.5 block`}
+              />
+              <div className="space-y-1.5">
+                <label htmlFor="profile-address-detail" className={fieldLabelClass}>
+                  {t("profile.addressDetailLabel")}
+                </label>
+                <input
+                  id="profile-address-detail"
+                  type="text"
+                  value={editForm.address}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, address: e.target.value }))
+                  }
+                  className={fieldInputClass}
+                  placeholder={t("profile.addressDetailPlaceholder")}
+                  autoComplete="street-address"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("profile.addressDetailHint")}
+                </p>
+              </div>
+            </fieldset>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pf-modal-foot gap-2">
             <button
               type="button"
               onClick={() => setEditOpen(false)}
-              className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-[var(--surface-secondary)] hover:text-foreground active:scale-95"
+              className="craft-btn-ghost"
               disabled={saving}
             >
               {t("profile.cancelButton")}
@@ -773,7 +879,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={handleEditSubmit}
               disabled={saving}
-              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/35 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+              className="craft-btn"
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {saving ? t("profile.savingButton") : t("profile.saveChanges")}
@@ -786,10 +892,17 @@ export function Profile({ embedded = false }: ProfileProps) {
       <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
         <DialogContent className="sm:max-w-md glass-panel-solid">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{t("profile.changePasswordTitle")}</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {t("profile.changePasswordDesc")}
-            </DialogDescription>
+            <div className="pf-modal-head">
+              <span className="pf-modal-icon">
+                <KeyRound className="size-4" />
+              </span>
+              <div>
+                <DialogTitle className="pf-modal-title">{t("profile.changePasswordTitle")}</DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                  {t("profile.changePasswordDesc")}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
@@ -871,9 +984,24 @@ export function Profile({ embedded = false }: ProfileProps) {
                 placeholder={t("profile.confirmNewPasswordPlaceholder")}
               />
             </div>
+
+            <div className="pf-pwd-checks" aria-live="polite">
+              {[
+                { ok: pwdForm.newPassword.length >= 6, label: t("profile.pwdRuleLength") },
+                {
+                  ok: Boolean(pwdForm.confirmNewPassword) && pwdForm.newPassword === pwdForm.confirmNewPassword,
+                  label: t("profile.pwdRuleMatch"),
+                },
+              ].map((rule) => (
+                <span key={rule.label} className={`pf-pwd-check${rule.ok ? " is-ok" : ""}`}>
+                  {rule.ok ? <Check className="size-3.5" /> : <Circle className="size-3" />}
+                  {rule.label}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <DialogFooter className="items-center gap-2">
+          <DialogFooter className="pf-modal-foot items-center gap-2">
             <Link
               to="/auth/forgot-password"
               onClick={() => setPwdOpen(false)}
@@ -891,7 +1019,7 @@ export function Profile({ embedded = false }: ProfileProps) {
                   confirmNewPassword: "",
                 });
               }}
-              className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium"
+              className="craft-btn-ghost"
               disabled={changingPwd}
             >
               {t("profile.cancelButton")}
@@ -900,7 +1028,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={handleChangePassword}
               disabled={changingPwd}
-              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20"
+              className="craft-btn"
             >
               {changingPwd && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {changingPwd ? t("profile.changingButton") : t("profile.changePasswordButton")}
@@ -913,15 +1041,22 @@ export function Profile({ embedded = false }: ProfileProps) {
       <Dialog open={avatarModalOpen} onOpenChange={(open) => !open && handleAvatarCancel()}>
         <DialogContent className="sm:max-w-sm glass-panel-solid">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">{t("profile.cropModalTitle")}</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {t("profile.cropModalDesc")}
-            </DialogDescription>
+            <div className="pf-modal-head">
+              <span className="pf-modal-icon">
+                <Camera className="size-4" />
+              </span>
+              <div>
+                <DialogTitle className="pf-modal-title">{t("profile.cropModalTitle")}</DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                  {t("profile.cropModalDesc")}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="flex flex-col items-center gap-5 py-2">
             <div
-              className="relative overflow-hidden rounded-full border-4 border-[var(--card)] shadow-[var(--shadow-card-elevated)] cursor-grab active:cursor-grabbing touch-none select-none"
+              className="relative overflow-hidden rounded-full border-4 border-[var(--card)] shadow-[var(--shadow-card-elevated)] outline-2 outline-offset-4 outline-dashed outline-[color-mix(in_srgb,var(--primary)_40%,transparent)] cursor-grab active:cursor-grabbing touch-none select-none"
               style={{ width: CROP_SIZE, height: CROP_SIZE, background: "var(--muted)" }}
               onPointerDown={onAvatarPointerDown}
               onPointerMove={onAvatarPointerMove}
@@ -960,12 +1095,12 @@ export function Profile({ embedded = false }: ProfileProps) {
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="pf-modal-foot gap-2">
             <button
               type="button"
               onClick={handleAvatarCancel}
               disabled={uploadingAvatar}
-              className="px-5 py-2.5 rounded-xl text-sm border border-[var(--border)] hover:bg-[var(--surface-secondary)] transition-all text-muted-foreground font-medium flex items-center gap-1.5"
+              className="craft-btn-ghost"
             >
               <X className="w-3.5 h-3.5" />
               {t("profile.cancelButton")}
@@ -974,7 +1109,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               type="button"
               onClick={handleAvatarConfirm}
               disabled={uploadingAvatar}
-              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/20 ml-auto"
+              className="craft-btn sm:ml-auto"
             >
               {uploadingAvatar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               {uploadingAvatar ? t("profile.savingButton") : t("profile.cropModalConfirm")}

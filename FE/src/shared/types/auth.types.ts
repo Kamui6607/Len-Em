@@ -1,3 +1,6 @@
+import { resolveAvatarUrl } from "../../lib/avatarUrl";
+import type { AddressLocation } from "./address.types";
+
 // ============================================================
 // Auth Types — mirrors backend API contracts
 // ============================================================
@@ -21,6 +24,8 @@ export interface ApiUserProfile {
   gender?: "MALE" | "FEMALE" | "OTHER";
   dateOfBirth?: string;
   address?: string;
+  /** Khu vực tỉnh/huyện/xã (+ toạ độ). User cũ: null hoặc không có field. */
+  addressLocation?: AddressLocation | null;
   status?: "ACTIVE" | "INACTIVE" | "LOCKED";
   roleId: ApiRoleRef | string;
   avatar?: string | { url: string; publicId: string };
@@ -38,7 +43,9 @@ export interface User {
   username: string;
   fullName: string;
   phone: string;
+  /** Dòng địa chỉ chi tiết (số nhà, tên đường) */
   address: string;
+  addressLocation?: AddressLocation | null;
   gender: "MALE" | "FEMALE" | "OTHER";
   dateOfBirth: string;
   roleId: UserRole;
@@ -99,8 +106,8 @@ export function normalizeApiUserProfile(profile: ApiUserProfile): User {
     typeof profile.roleId === "string"
       ? profile.roleId
       : profile.roleId.roleName || profile.roleId.name || "User";
-  const avatar =
-    typeof profile.avatar === "object" ? profile.avatar.url : profile.avatar;
+  // Object / string / null / relative path → usable URL (or undefined → initials).
+  const avatar = resolveAvatarUrl(profile.avatar);
 
   const userId = profile.userId || profile._id || "";
 
@@ -113,6 +120,7 @@ export function normalizeApiUserProfile(profile: ApiUserProfile): User {
     fullName: profile.fullName,
     phone: profile.phone || "",
     address: profile.address || "",
+    addressLocation: profile.addressLocation ?? null,
     gender: profile.gender || "OTHER",
     dateOfBirth: profile.dateOfBirth || "",
     roleId: mapRoleNameToUserRole(roleName),

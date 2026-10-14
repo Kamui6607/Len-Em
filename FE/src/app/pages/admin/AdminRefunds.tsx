@@ -4,9 +4,12 @@ import {
   CheckCircle,
   XCircle,
   DollarSign,
+  Eye,
+  Layers,
+  Clock,
   User,
   Package,
-  X,
+  Receipt,
   Calendar,
   FileText,
 } from "lucide-react";
@@ -14,26 +17,53 @@ import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
 import { refundService, type RefundInvoice } from "../../../shared/api/refundService";
 import { useAuth } from "../../../shared/hooks/useAuth";
-import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
-import {
-  AdminTableBodySkeleton,
-  type AdminSkeletonColumnInput,
-} from "../../../shared/components/skeletons/AdminSkeleton";
+import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
-import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-} from "../../../shared/components/admin/AdminSearch";
+import { AdminSearchMeta } from "../../../shared/components/admin/AdminSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import {
+  AdminDetailGrid,
+  AdminDetailItem,
+  AdminDialogSection,
+  AdminModal,
+} from "../../../shared/components/admin/AdminModal";
+import {
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminDateCell,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminMoney,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminGridSort,
+  type AdminGridColumn,
+  type AdminTone,
+} from "../../../shared/components/admin/AdminDataGrid";
+
+type RefundStatus = RefundInvoice["status"];
+
+const STATUS_TONE: Record<RefundStatus, AdminTone> = {
+  PENDING: "amber",
+  PROCESSED: "green",
+  REJECTED: "rose",
+};
 
 // ─── Helpers ─────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
   try {
-    const d = new Date(dateStr);
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return new Date(dateStr).toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return dateStr;
   }
@@ -64,178 +94,71 @@ function getUserId(invoice: RefundInvoice): string {
   return invoice.userId?._id ?? "—";
 }
 
-function getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case "PENDING":
-      return "badge-warm";
-    case "PROCESSED":
-      return "badge-green";
-    case "REJECTED":
-      return "badge-red";
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
+const code = (id: string) => id.slice(-8).toUpperCase();
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0 || name === "—") return "?";
+  return (parts.length === 1 ? parts[0][0] : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function StatusPill({ status }: { status: RefundStatus }) {
+  const { t } = useLanguage();
+  return <AdminPill tone={STATUS_TONE[status] ?? "neutral"}>{t(`admin.refunds.statuses.${status}`)}</AdminPill>;
 }
 
 // ─── Detail Modal ────────────────────────────────────────
 
-function RefundDetailModal({
-  invoice,
-  onClose,
-}: {
-  invoice: RefundInvoice;
-  onClose: () => void;
-}) {
+function RefundDetailModal({ invoice, onClose }: { invoice: RefundInvoice; onClose: () => void }) {
+  const { t } = useLanguage();
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+    <AdminModal
+      variant="view"
+      size="md"
+      icon={Receipt}
+      eyebrow={t("admin.refunds.refundInvoice")}
+      title={formatPrice(invoice.amount)}
+      subtitle={<span className="font-mono">#{invoice._id}</span>}
+      badges={<StatusPill status={invoice.status} />}
+      onClose={onClose}
+      footer={
+        <button type="button" onClick={onClose} className="btn-modal-cancel">
+          {t("admin.refunds.close")}
+        </button>
+      }
     >
-      <div
-        className="admin-dialog-content max-w-md w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="admin-dialog-header">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold">Refund Invoice</h3>
-            <button
-              onClick={onClose}
-              style={{ color: "var(--foreground-muted)" }}
-              className="admin-action-btn"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-xs font-mono text-muted-foreground mt-1">
-            #{invoice._id}
-          </p>
-        </div>
-        <div className="admin-dialog-body space-y-4">
-          {/* Status badge */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Status</span>
-            <span className={`badge ${getStatusBadgeClass(invoice.status)}`}>
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  invoice.status === "PENDING"
-                    ? "bg-amber-500"
-                    : invoice.status === "PROCESSED"
-                      ? "bg-emerald-500"
-                      : "bg-rose-500"
-                }`}
-              />
-              {invoice.status}
-            </span>
-          </div>
+      <div className="admin-dialog-body">
+        <AdminDialogSection icon={Package}>{t("admin.refunds.order")}</AdminDialogSection>
+        <AdminDetailGrid>
+          <AdminDetailItem label={t("admin.refunds.orderId")} mono>
+            {code(getOrderId(invoice))}
+          </AdminDetailItem>
+          <AdminDetailItem icon={DollarSign} label={t("admin.refunds.orderTotal")}>
+            {formatPrice(getOrderTotal(invoice))}
+          </AdminDetailItem>
+        </AdminDetailGrid>
 
-          {/* Amount */}
-          <div
-            className="flex items-center justify-between py-2 border-t"
-            style={{ borderColor: "var(--border-subtle)" }}
-          >
-            <span className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
-              Amount
-            </span>
-            <span className="text-lg font-bold text-primary">
-              {formatPrice(invoice.amount)}
-            </span>
-          </div>
+        <AdminDialogSection icon={User}>{t("admin.refunds.customer")}</AdminDialogSection>
+        <AdminDetailGrid>
+          <AdminDetailItem label={t("admin.refunds.name")}>{getUserName(invoice)}</AdminDetailItem>
+          <AdminDetailItem label="Email">{getUserEmail(invoice)}</AdminDetailItem>
+          <AdminDetailItem label={t("admin.refunds.userId")} mono span>
+            {code(getUserId(invoice))}
+          </AdminDetailItem>
+        </AdminDetailGrid>
 
-          {/* Order info */}
-          <div
-            className="py-2 border-t"
-            style={{ borderColor: "var(--border-subtle)" }}
-          >
-            <span className="text-sm font-medium flex items-center gap-2 mb-2">
-              <Package className="w-4 h-4 text-muted-foreground" />
-              Order
-            </span>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Order ID</span>
-              <span className="font-mono text-xs">
-                {getOrderId(invoice).slice(-8).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-muted-foreground">Total</span>
-              <span className="font-medium">
-                {formatPrice(getOrderTotal(invoice))}
-              </span>
-            </div>
-          </div>
+        <AdminDialogSection icon={FileText}>{t("admin.refunds.reason")}</AdminDialogSection>
+        <AdminDetailItem label={t("admin.refunds.reason")}>{invoice.reason}</AdminDetailItem>
 
-          {/* Customer info */}
-          <div
-            className="py-2 border-t"
-            style={{ borderColor: "var(--border-subtle)" }}
-          >
-            <span className="text-sm font-medium flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 text-muted-foreground" />
-              Customer
-            </span>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Name</span>
-              <span className="font-medium">{getUserName(invoice)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-muted-foreground">Email</span>
-              <span className="text-xs">{getUserEmail(invoice)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-muted-foreground">User ID</span>
-              <span className="font-mono text-xs">
-                {getUserId(invoice).slice(-8).toUpperCase()}
-              </span>
-            </div>
-          </div>
-
-          {/* Reason */}
-          <div
-            className="py-2 border-t"
-            style={{ borderColor: "var(--border-subtle)" }}
-          >
-            <span className="text-sm font-medium flex items-center gap-2 mb-1">
-              <FileText className="w-4 h-4 text-muted-foreground" />
-              Cancel Reason
-            </span>
-            <p className="text-sm text-muted-foreground">
-              {invoice.reason || "—"}
-            </p>
-          </div>
-
-          {/* Timestamps */}
-          <div
-            className="py-2 border-t"
-            style={{ borderColor: "var(--border-subtle)" }}
-          >
-            <span className="text-sm font-medium flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              Timeline
-            </span>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Created</span>
-              <span>{formatDate(invoice.createdAt)}</span>
-            </div>
-            {invoice.processedAt && (
-              <div className="flex items-center justify-between text-xs mt-1">
-                <span className="text-muted-foreground">Processed</span>
-                <span>{formatDate(invoice.processedAt)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="admin-dialog-footer !justify-stretch">
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-lg btn-glass-destructive"
-          >
-            Close
-          </button>
-        </div>
+        <AdminDialogSection icon={Calendar}>{t("admin.refunds.timeline")}</AdminDialogSection>
+        <AdminDetailGrid>
+          <AdminDetailItem label={t("admin.refunds.created")}>{formatDate(invoice.createdAt)}</AdminDetailItem>
+          <AdminDetailItem label={t("admin.refunds.processed")}>
+            {invoice.processedAt ? formatDate(invoice.processedAt) : null}
+          </AdminDetailItem>
+        </AdminDetailGrid>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 
@@ -254,38 +177,22 @@ function ProcessConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   const isProcess = action === "PROCESSED";
+  const orderCode = code(getOrderId(invoice));
+  const amount = formatPrice(invoice.amount);
   return (
-    <div className="admin-dialog-overlay" onClick={onCancel}>
-      <div
-        className="admin-dialog-content max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="admin-dialog-header">
-          <h3 className="text-base font-semibold">
-            {isProcess ? "Process Refund" : "Reject Refund"}
-          </h3>
-        </div>
-        <div className="admin-dialog-body">
-          <p className="text-sm text-muted-foreground">
-            {isProcess
-              ? `Confirm processing refund of ${formatPrice(invoice.amount)} for order ${getOrderId(invoice).slice(-8).toUpperCase()}?`
-              : `Reject refund request of ${formatPrice(invoice.amount)} for order ${getOrderId(invoice).slice(-8).toUpperCase()}?`}
-          </p>
-          {isProcess && (
-            <p className="text-xs text-muted-foreground mt-2">
-              This action will mark the refund as processed.
-            </p>
-          )}
-        </div>
-        <div className="admin-dialog-footer">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="btn-modal-cancel"
-          >
-            Cancel
+    <AdminModal
+      variant={isProcess ? "edit" : "danger"}
+      size="sm"
+      icon={isProcess ? CheckCircle : XCircle}
+      title={isProcess ? t("admin.refunds.processRefund") : t("admin.refunds.rejectRefund")}
+      subtitle={`${t("admin.refunds.order")} #${orderCode} · ${amount}`}
+      onClose={loading ? () => {} : onCancel}
+      footer={
+        <>
+          <button type="button" onClick={onCancel} disabled={loading} className="btn-modal-cancel">
+            {t("admin.grid.cancel")}
           </button>
           <button
             type="button"
@@ -293,17 +200,28 @@ function ProcessConfirmDialog({
             disabled={loading}
             className={isProcess ? "btn-modal-primary" : "btn-modal-destructive"}
           >
-            {loading ? "Processing…" : isProcess ? "Process Refund" : "Reject"}
+            {loading
+              ? t("admin.refunds.processing")
+              : isProcess
+                ? t("admin.refunds.processRefund")
+                : t("admin.refunds.reject")}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="admin-dialog-body">
+        <p className="text-sm text-muted-foreground">
+          {t(isProcess ? "admin.refunds.processConfirm" : "admin.refunds.rejectConfirm", { amount, order: orderCode })}
+        </p>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 
 // ─── Main Component ──────────────────────────────────────
 
 export function AdminRefunds() {
+  const { t } = useLanguage();
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
 
@@ -313,8 +231,15 @@ export function AdminRefunds() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({});
   const limit = 10;
-  const { inputValue: searchInput, debouncedValue: debouncedSearch, setInputValue: setSearchInput, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const {
+    inputValue: searchInput,
+    debouncedValue: debouncedSearch,
+    setInputValue: setSearchInput,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   // Detail & process dialog state
   const [detailInvoice, setDetailInvoice] = useState<RefundInvoice | null>(null);
@@ -337,20 +262,37 @@ export function AdminRefunds() {
       setTotal(apiData.total ?? 0);
       setTotalPages(apiData.totalPages ?? 1);
     } catch {
-      toast.error("Failed to load refund invoices");
+      toast.error(t("admin.refunds.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, debouncedSearch]);
+  }, [page, statusFilter, debouncedSearch, t]);
+
+  // Số lượng cho thẻ trạng thái (limit=1, chỉ đọc total).
+  const fetchCounts = useCallback(async () => {
+    const keys = ["", "PENDING", "PROCESSED", "REJECTED"];
+    const results = await Promise.allSettled(
+      keys.map((status) => refundService.getAll(status ? { page: 1, limit: 1, status } : { page: 1, limit: 1 })),
+    );
+    const next: Record<string, number | undefined> = {};
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") next[keys[i] || "all"] = r.value.data.data.total;
+    });
+    setCounts(next);
+  }, []);
 
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
 
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter]);
+  }, [statusFilter, debouncedSearch]);
 
   // ── Process / Reject ──
   const handleProcess = async () => {
@@ -359,292 +301,207 @@ export function AdminRefunds() {
     try {
       setProcessing(true);
       await refundService.process(invoice._id, { status: action });
-      toast.success(
-        action === "PROCESSED"
-          ? "Refund processed successfully"
-          : "Refund rejected",
-      );
+      toast.success(action === "PROCESSED" ? t("admin.refunds.processSuccess") : t("admin.refunds.rejectSuccess"));
       setProcessTarget(null);
       fetchInvoices();
+      fetchCounts();
     } catch {
-      toast.error("Failed to process refund");
+      toast.error(action === "PROCESSED" ? t("admin.refunds.processError") : t("admin.refunds.rejectError"));
     } finally {
       setProcessing(false);
     }
   };
 
-  // ── Cột skeleton phải khớp bảng thật (nút Process/Reject chỉ có ở Admin) ──
-  const skeletonColumns: AdminSkeletonColumnInput[] = [
-    "mono",
-    "mono",
-    "avatar",
-    { type: "money", align: "center" },
-    "text",
-    { type: "badge", align: "center" },
-    { type: "text", align: "center" },
+  const { sort, apply: applySort } = useAdminGridSort<RefundInvoice>((inv, field) => {
+    if (field === "invoice") return new Date(inv.createdAt).getTime();
+    if (field === "customer") return getUserName(inv);
+    if (field === "amount") return inv.amount;
+    if (field === "status") return inv.status;
+    return null;
+  });
+  const rows = applySort(invoices);
+
+  const columns: AdminGridColumn<RefundInvoice>[] = [
+    {
+      key: "invoice",
+      header: t("admin.refunds.invoice"),
+      width: "130px",
+      minWidth: 130,
+      sortable: true,
+      card: "title",
+      render: (inv) => (
+        <>
+          <span className="adm-gid">#{code(inv._id)}</span>
+          <AdminDateCell value={inv.createdAt} compact />
+        </>
+      ),
+    },
+    {
+      key: "customer",
+      header: t("admin.refunds.customer"),
+      width: "minmax(190px, 1.4fr)",
+      minWidth: 190,
+      sortable: true,
+      render: (inv) => (
+        <AdminCellStack
+          media={<span className="adm-ginitials">{initials(getUserName(inv))}</span>}
+          primary={getUserName(inv)}
+          secondary={getUserEmail(inv)}
+        />
+      ),
+    },
+    {
+      key: "reason",
+      header: t("admin.refunds.reason"),
+      width: "minmax(160px, 1.4fr)",
+      minWidth: 160,
+      render: (inv) => (
+        <span className="adm-gclamp" title={inv.reason}>
+          {inv.reason || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: t("admin.refunds.amount"),
+      width: "130px",
+      minWidth: 130,
+      align: "right",
+      sortable: true,
+      render: (inv) => (
+        <>
+          <AdminMoney value={inv.amount} />
+          <span className="adm-gsecondary">
+            {t("admin.refunds.order")} <span className="adm-gmono">#{code(getOrderId(inv))}</span>
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: t("admin.refunds.status"),
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      sortable: true,
+      card: "aside",
+      render: (inv) => <StatusPill status={inv.status} />,
+    },
+    {
+      key: "actions",
+      header: t("admin.refunds.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (inv) => (
+        <AdminRowActions>
+          {isAdmin && inv.status === "PENDING" ? (
+            <AdminActionButton
+              icon={CheckCircle}
+              tone="green"
+              label={t("admin.refunds.process")}
+              onClick={() => setProcessTarget({ invoice: inv, action: "PROCESSED" })}
+            />
+          ) : (
+            <AdminActionButton icon={Eye} label={t("admin.refunds.view")} onClick={() => setDetailInvoice(inv)} />
+          )}
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.refunds.view"), icon: Eye, onSelect: () => setDetailInvoice(inv) },
+              isAdmin &&
+                inv.status === "PENDING" && {
+                  label: t("admin.refunds.reject"),
+                  icon: XCircle,
+                  danger: true,
+                  separated: true,
+                  onSelect: () => setProcessTarget({ invoice: inv, action: "REJECTED" }),
+                },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
   ];
-  if (isAdmin) {
-    skeletonColumns.push({ type: "actions", align: "center", className: "w-[180px]" });
-  }
 
   // ── Render ──
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
       <AdminPageHeader
-        title="Refund Management"
-        subtitle={`${total} refund invoice${total !== 1 ? "s" : ""} total`}
+        eyebrow={t("admin.refunds.eyebrow")}
+        title={t("admin.refunds.title")}
+        subtitle={t("admin.refunds.totalCount", { count: total })}
         actions={
-          <button onClick={fetchInvoices} className="btn-secondary">
-            <RefreshCw size={16} />
-            Refresh
+          <button
+            type="button"
+            onClick={() => {
+              fetchInvoices();
+              fetchCounts();
+            }}
+            className="btn-secondary"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {t("admin.grid.refresh")}
           </button>
         }
       />
 
-      {/* Table */}
-      <div className="admin-panel-glow rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg">
-        {/* Filters — search dùng chung component (debounce 400ms) */}
-        <AdminSearchToolbar
+      <AdminStatusTabs<string>
+        ariaLabel={t("admin.refunds.status")}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        tabs={[
+          { value: "", label: t("admin.refunds.all"), icon: Layers, count: counts.all },
+          { value: "PENDING", label: t("admin.refunds.statuses.PENDING"), icon: Clock, tone: "amber", count: counts.PENDING },
+          { value: "PROCESSED", label: t("admin.refunds.statuses.PROCESSED"), icon: CheckCircle, tone: "green", count: counts.PROCESSED },
+          { value: "REJECTED", label: t("admin.refunds.statuses.REJECTED"), icon: XCircle, tone: "rose", count: counts.REJECTED },
+        ]}
+      />
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
           search={{
             value: searchInput,
-            onChange: (value) => {
-              setSearchInput(value);
-              setPage(1);
-            },
-            placeholder: "Search by invoice ID or order ID…",
+            onChange: setSearchInput,
+            placeholder: t("admin.refunds.searchPlaceholder"),
             isSearching: searchIsWaiting,
           }}
-          filters={
-            <AdminSelect
-              value={statusFilter || ""}
-              options={[
-                { value: "", label: "All status" },
-                {
-                  value: "PENDING",
-                  label: "PENDING",
-                  dotClassName: "bg-amber-500",
-                },
-                {
-                  value: "PROCESSED",
-                  label: "PROCESSED",
-                  dotClassName: "bg-emerald-500",
-                },
-                {
-                  value: "REJECTED",
-                  label: "REJECTED",
-                  dotClassName: "bg-rose-500",
-                },
-              ]}
-              onChange={(val) => setStatusFilter(val)}
-              className="w-full sm:w-44"
-            />
-          }
           onReset={
             searchInput || statusFilter
               ? () => {
                   clearSearch();
                   setStatusFilter("");
-                  setPage(1);
                 }
               : undefined
           }
-          resetLabel="Clear filters"
           meta={
-            searchInput || debouncedSearch ? (
+            debouncedSearch ? (
               <AdminSearchMeta searching={searchIsWaiting}>
-                {invoices.length === 0
-                  ? "No results found"
-                  : `${invoices.length} result${invoices.length === 1 ? "" : "s"}`}
+                {total === 0 ? t("admin.search.noResults") : t("admin.search.resultsCount", { count: total })}
               </AdminSearchMeta>
             ) : undefined
           }
         />
 
-        {/* Table Body */}
-        {loading ? (
-          <AdminTableBodySkeleton columns={skeletonColumns} rows={6} />
-        ) : invoices.length === 0 ? (
-          <div
-            className="admin-empty-state"
-            style={{ background: "var(--card)" }}
-          >
-            <DollarSign size={40} />
-            <p>No refund invoices found</p>
-          </div>
-        ) : (
-          <div
-            className="overflow-x-auto"
-            style={{ background: "var(--card)" }}
-          >
-            <table className="admin-table w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Invoice ID
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Order
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Customer
-                  </th>
-                  <th
-                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    Amount
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">
-                    Reason
-                  </th>
-                  <th
-                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    Status
-                  </th>
-                  <th
-                    className="text-center px-6 py-4 text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    Date
-                  </th>
-                  {isAdmin && (
-                    <th
-                      className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[180px]"
-                      style={{ textAlign: "center" }}
-                    >
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv) => (
-                  <tr
-                    key={inv._id}
-                    className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer"
-                    onClick={() => setDetailInvoice(inv)}
-                  >
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs">
-                        {inv._id.slice(-8).toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        <span className="font-mono text-xs">
-                          {getOrderId(inv).slice(-8).toUpperCase()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {getUserName(inv)}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {getUserEmail(inv)}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="font-semibold text-sm">
-                        {formatPrice(inv.amount)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-muted-foreground truncate max-w-[150px]">
-                        {inv.reason || "—"}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`badge ${getStatusBadgeClass(inv.status)}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            inv.status === "PENDING"
-                              ? "bg-amber-500"
-                              : inv.status === "PROCESSED"
-                                ? "bg-emerald-500"
-                                : "bg-rose-500"
-                          }`}
-                        />
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(inv.createdAt)}
-                    </td>
-                    {isAdmin && (
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {inv.status === "PENDING" ? (
-                            <>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setProcessTarget({
-                                    invoice: inv,
-                                    action: "PROCESSED",
-                                  });
-                                }}
-                                className="admin-action-btn edit"
-                                title="Process refund"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setProcessTarget({
-                                    invoice: inv,
-                                    action: "REJECTED",
-                                  });
-                                }}
-                                className="admin-action-btn delete"
-                                title="Reject refund"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {inv.status === "PROCESSED" ? "Done" : "Rejected"}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <AdminDataGrid<RefundInvoice>
+          ariaLabel={t("admin.refunds.title")}
+          rows={rows}
+          rowKey={(inv) => inv._id}
+          columns={columns}
+          loading={loading}
+          sort={sort}
+          onRowClick={(inv) => setDetailInvoice(inv)}
+          rowAccent={(inv) => (inv.status === "PENDING" ? "amber" : null)}
+          empty={{ icon: DollarSign, title: t("admin.refunds.noRefundsFound") }}
+        />
 
-      <AdminPagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={total}
-        pageSize={10}
-      />
+        <AdminGridFooter page={page} totalPages={totalPages} total={total} pageSize={limit} onPageChange={setPage} disabled={loading} />
+      </AdminPanel>
 
       {/* Detail Modal */}
-      {detailInvoice && (
-        <RefundDetailModal
-          invoice={detailInvoice}
-          onClose={() => setDetailInvoice(null)}
-        />
-      )}
+      {detailInvoice && <RefundDetailModal invoice={detailInvoice} onClose={() => setDetailInvoice(null)} />}
 
       {/* Process Confirm Dialog */}
       {processTarget && (

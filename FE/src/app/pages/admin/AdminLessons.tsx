@@ -1,45 +1,62 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router";
-import { Edit, Eye, Video } from "lucide-react";
-import { CreateButton } from "../../../shared/components/admin/CreateButton";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { useNavigate } from "react-router";
+import { Edit, Eye, Layers, Lock, PlayCircle, RefreshCw, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "../../../shared/components/ui/button";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { lessonService } from "../../../shared/api/lessonService";
 import type { Lesson } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
-import { AdminModal } from "../../../shared/components/admin/AdminModal";
+import { AdminDetailGrid, AdminDetailItem, AdminModal } from "../../../shared/components/admin/AdminModal";
+import { AdminSearchMeta } from "../../../shared/components/admin/AdminSearch";
 import {
-  AdminTableScroll,
-  AdminSortableHeader,
-  AdminTableHeaderCell,
-  AdminTableEmptyRow,
-} from "../../../shared/components/admin/AdminDataTable";
-import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-} from "../../../shared/components/admin/AdminSearch";
-import { AdminTableSkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminConfirm,
+  useAdminGridSort,
+  type AdminGridColumn,
+} from "../../../shared/components/admin/AdminDataGrid";
 
-type SortField = "title" | "order" | "duration" | "products" | "preview";
-type SortDirection = "asc" | "desc";
+type AccessFilter = "all" | "preview" | "locked";
 
 /** Records per page — every admin list uses the same page size. */
 const PAGE_SIZE = 10;
 
+/** "youtube.com/watch?v=…" → "youtube.com" (đủ để nhận ra nguồn video). */
+function videoHost(url?: string): string {
+  if (!url) return "—";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.slice(0, 40);
+  }
+}
+
 export function AdminLessons() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [access, setAccess] = useState<AccessFilter>("all");
   const [viewingLesson, setViewingLesson] = useState<Lesson | null>(null);
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
+  const {
+    inputValue: searchTerm,
+    debouncedValue: debouncedSearchTerm,
+    setInputValue: setSearchTerm,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   const fetchLessons = useCallback(async () => {
     try {
@@ -57,259 +74,256 @@ export function AdminLessons() {
     fetchLessons();
   }, [fetchLessons]);
 
-  const filteredLessons = lessons.filter((lesson) =>
-    lesson.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()),
-  );
-
-  const sortedLessons = [...filteredLessons].sort((a, b) => {
-    if (!sortField) return 0;
-    const getValue = (lesson: Lesson) => {
-      switch (sortField) {
-        case "title":
-          return lesson.title;
-        case "order":
-          return lesson.order;
-        case "duration":
-          return lesson.duration;
-        case "products":
-          return lesson.linkedProduct?.length ?? 0;
-        case "preview":
-          return lesson.isPreview ? "yes" : "no";
-      }
-    };
-    const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
-    return sortDirection === "asc" ? cmp : -cmp;
-  });
-
-  // The API returns every lesson at once, so paging happens here.
-  const totalPages = Math.max(1, Math.ceil(sortedLessons.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pagedLessons = sortedLessons.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  // A new search narrows the list — jump back to page 1.
+  // A new search / filter narrows the list — jump back to page 1.
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, access]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
+  const handleDelete = async (lesson: Lesson) => {
+    const ok = await confirm({
+      title: t("admin.confirmDelete.title", { name: lesson.title }),
+      description: t("admin.lessons.deleteWarning"),
+      confirmLabel: t("admin.lessons.delete"),
+      danger: true,
+      icon: Trash2,
+    });
+    if (!ok) return;
+    try {
+      await lessonService.delete(lesson._id);
+      toast.success(t("admin.lessons.deleteSuccess"));
+      setLessons((prev) => prev.filter((l) => l._id !== lesson._id));
+    } catch {
+      toast.error(t("admin.lessons.deleteError"));
     }
   };
 
-  if (loading) {
-    // Header + nút "Create" giữ thật; bảng là skeleton 6 cột (bài học, thứ tự,
-    // thời lượng, sản phẩm, preview, thao tác).
-    return (
-      <div className="space-y-6">
-        <AdminPageHeader
-          title={t("admin.lessons.title")}
-          subtitle={t("admin.lessons.subtitle")}
-          actions={
-            <CreateButton to="/admin/lessons/new" label={t("admin.lessons.create")} />
-          }
-        />
+  // The API returns every lesson at once — filter, sort and page here.
+  const needle = debouncedSearchTerm.toLowerCase();
+  const matched = lessons.filter(
+    (lesson) =>
+      lesson.title.toLowerCase().includes(needle) &&
+      (access === "all" || (access === "preview") === Boolean(lesson.isPreview)),
+  );
+  const { sort, apply: applySort } = useAdminGridSort<Lesson>((lesson, field) => {
+    if (field === "order") return lesson.order;
+    if (field === "title") return lesson.title;
+    if (field === "duration") return lesson.duration;
+    if (field === "products") return lesson.linkedProduct?.length ?? 0;
+    if (field === "access") return lesson.isPreview ? 1 : 0;
+    return null;
+  });
+  const sorted = applySort(matched);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const rows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const previewCount = lessons.filter((l) => l.isPreview).length;
 
-        <AdminTableSkeleton
-          rows={6}
-          columns={[
-            { type: "icon", className: "w-[400px]", align: "center" },
-            { type: "number", align: "center" },
-            { type: "number", align: "center" },
-            { type: "number", align: "center" },
-            { type: "badge", align: "center" },
-            { type: "actions", align: "center" },
-          ]}
-        />
-      </div>
-    );
-  }
+  const accessPill = (lesson: Lesson) => (
+    <AdminPill tone={lesson.isPreview ? "green" : "neutral"}>
+      {lesson.isPreview ? t("admin.lessons.preview") : t("admin.lessons.locked")}
+    </AdminPill>
+  );
+
+  const columns: AdminGridColumn<Lesson>[] = [
+    {
+      key: "order",
+      header: t("admin.lessons.orderShort"),
+      width: "72px",
+      minWidth: 72,
+      align: "center",
+      sortable: true,
+      card: "hidden",
+      render: (lesson) => <span className="adm-gid">{String(lesson.order).padStart(2, "0")}</span>,
+    },
+    {
+      key: "title",
+      header: t("admin.lessons.lesson"),
+      width: "minmax(260px, 2.4fr)",
+      minWidth: 260,
+      sortable: true,
+      card: "title",
+      render: (lesson) => (
+        <AdminCellStack media={<Video />} primary={lesson.title} secondary={videoHost(lesson.videoUrl)} />
+      ),
+    },
+    {
+      key: "duration",
+      header: t("admin.lessons.duration"),
+      width: "120px",
+      minWidth: 120,
+      align: "right",
+      sortable: true,
+      render: (lesson) => (
+        <span className="adm-gprimary adm-gnum-plain">{t("admin.lessons.minutes", { count: lesson.duration })}</span>
+      ),
+    },
+    {
+      key: "products",
+      header: t("admin.lessons.products"),
+      width: "110px",
+      minWidth: 110,
+      align: "right",
+      sortable: true,
+      render: (lesson) => <span className="adm-gnum">{lesson.linkedProduct?.length ?? 0}</span>,
+    },
+    {
+      key: "access",
+      header: t("admin.lessons.access"),
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      sortable: true,
+      card: "aside",
+      render: accessPill,
+    },
+    {
+      key: "actions",
+      header: t("admin.lessons.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (lesson) => (
+        <AdminRowActions>
+          <AdminActionButton
+            icon={Edit}
+            label={t("admin.lessons.edit")}
+            onClick={() => navigate(`/admin/lessons/${lesson._id}`)}
+          />
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.lessons.view"), icon: Eye, onSelect: () => setViewingLesson(lesson) },
+              {
+                label: t("admin.lessons.delete"),
+                icon: Trash2,
+                danger: true,
+                separated: true,
+                onSelect: () => void handleDelete(lesson),
+              },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
+        eyebrow={t("admin.courses.eyebrow")}
         title={t("admin.lessons.title")}
         subtitle={t("admin.lessons.subtitle")}
         actions={
-          <CreateButton to="/admin/lessons/new" label={t("admin.lessons.create")} />
+          <>
+            <button type="button" className="btn-secondary" onClick={() => void fetchLessons()} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              {t("admin.grid.refresh")}
+            </button>
+            <CreateButton to="/admin/lessons/new" label={t("admin.lessons.create")} />
+          </>
         }
       />
 
-      <AdminPanel>
-        {/* Search dùng chung: debounce 400ms + spinner khi đang chờ */}
-        <AdminSearchToolbar
+      <AdminStatusTabs<AccessFilter>
+        ariaLabel={t("admin.lessons.access")}
+        value={access}
+        onChange={setAccess}
+        tabs={[
+          { value: "all", label: t("admin.lessons.all"), icon: Layers, count: loading ? undefined : lessons.length },
+          { value: "preview", label: t("admin.lessons.preview"), icon: PlayCircle, tone: "green", count: loading ? undefined : previewCount },
+          { value: "locked", label: t("admin.lessons.locked"), icon: Lock, tone: "neutral", count: loading ? undefined : lessons.length - previewCount },
+        ]}
+      />
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
           search={{
             value: searchTerm,
             onChange: setSearchTerm,
             placeholder: t("admin.lessons.searchPlaceholder"),
             isSearching: searchIsWaiting,
           }}
-          onReset={searchTerm ? clearSearch : undefined}
-          resetLabel={t("admin.clearFilters")}
+          onReset={
+            searchTerm || access !== "all"
+              ? () => {
+                  clearSearch();
+                  setAccess("all");
+                }
+              : undefined
+          }
           meta={
-            searchTerm || debouncedSearchTerm ? (
+            debouncedSearchTerm ? (
               <AdminSearchMeta searching={searchIsWaiting}>
-                {filteredLessons.length === 0
+                {matched.length === 0
                   ? t("admin.search.noResults")
-                  : t("admin.search.resultsCount", { count: filteredLessons.length })}
+                  : t("admin.search.resultsCount", { count: matched.length })}
               </AdminSearchMeta>
             ) : undefined
           }
         />
 
-        <AdminTableScroll>
-          <thead className="bg-muted">
-            <tr>
-              <AdminSortableHeader label={t("admin.lessons.lesson")} field="title" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.lessons.order")} field="order" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.lessons.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.lessons.products")} field="products" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.lessons.preview")} field="preview" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminTableHeaderCell label={t("admin.lessons.actions")} align="center" />
-            </tr>
-          </thead>
-          <tbody>
-            {sortedLessons.length > 0 ? (
-              pagedLessons.map((lesson) => (
-                <tr
-                  key={lesson._id}
-                  className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
-                >
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="flex size-11 items-center justify-center rounded-lg bg-muted">
-                        <Video className="size-5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="block truncate font-medium text-sm max-w-[400px]">
-                          {lesson.title}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {lesson.videoUrl?.slice(0, 50)}...
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {lesson.order}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {lesson.duration} min
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">
-                    {lesson.linkedProduct?.length ?? 0}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`badge ${lesson.isPreview ? "badge-green" : "badge-red"}`}
-                    >
-                      {lesson.isPreview ? t("admin.lessons.preview") : t("admin.lessons.locked")}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="admin-action-btn view"
-                        title={t("admin.lessons.view")}
-                        onClick={() => setViewingLesson(lesson)}
-                      >
-                        <Eye className="size-4" />
-                      </Button>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="admin-action-btn edit"
-                      >
-                        <Link to={`/admin/lessons/${lesson._id}`}>
-                          <Edit className="size-4" />
-                        </Link>
-                      </Button>
-                      <ConfirmDeleteButton
-                        onDelete={async () => {
-                          try {
-                            await lessonService.delete(lesson._id);
-                            toast.success(t("admin.lessons.deleteSuccess"));
-                            setLessons((prev) => prev.filter((l) => l._id !== lesson._id));
-                          } catch {
-                            toast.error(t("admin.lessons.deleteError"));
-                          }
-                        }}
-                        itemName={lesson.title}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <AdminTableEmptyRow colSpan={6} message={t("admin.lessons.noLessons")} />
-            )}
-          </tbody>
-        </AdminTableScroll>
+        <AdminDataGrid<Lesson>
+          ariaLabel={t("admin.lessons.title")}
+          rows={rows}
+          rowKey={(l) => l._id}
+          columns={columns}
+          loading={loading}
+          sort={sort}
+          onRowClick={(l) => setViewingLesson(l)}
+          empty={{ icon: Video, title: t("admin.lessons.noLessons") }}
+        />
+
+        <AdminGridFooter page={safePage} totalPages={totalPages} total={sorted.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </AdminPanel>
 
-      <AdminPagination
-        page={safePage}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={sortedLessons.length}
-        pageSize={PAGE_SIZE}
-      />
+      {confirmDialog}
 
       {/* ── Read dialog: xem chi tiết bài học ngay tại trang admin, không chuyển trang ── */}
       {viewingLesson && (
         <AdminModal
+          variant="view"
+          size="md"
+          icon={Video}
+          eyebrow={t("admin.lessons.lesson")}
           title={viewingLesson.title}
+          badges={accessPill(viewingLesson)}
           onClose={() => setViewingLesson(null)}
-          className="max-w-2xl w-full"
+          footer={
+            <>
+              <button type="button" onClick={() => setViewingLesson(null)} className="btn-modal-cancel">
+                {t("common.close")}
+              </button>
+              <button
+                type="button"
+                className="btn-modal-primary"
+                onClick={() => navigate(`/admin/lessons/${viewingLesson._id}`)}
+              >
+                <Edit className="w-4 h-4" /> {t("admin.lessons.edit")}
+              </button>
+            </>
+          }
         >
           <div className="admin-dialog-body">
-            {/* Trạng thái preview */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`badge ${viewingLesson.isPreview ? "badge-green" : "badge-red"}`}>
-                {viewingLesson.isPreview ? t("admin.lessons.preview") : t("admin.lessons.locked")}
-              </span>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.orderLabel")}</p>
-                <p className="text-sm font-medium">{viewingLesson.order}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.durationLabel")}</p>
-                <p className="text-sm font-medium">{viewingLesson.duration} min</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.productsLabel")}</p>
-                <p className="text-sm font-medium">{viewingLesson.linkedProduct?.length ?? 0}</p>
-              </div>
-            </div>
-
-            {/* Video URL */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">{t("admin.lessons.videoUrl")}</p>
+            <AdminDetailGrid className="cols-3">
+              <AdminDetailItem label={t("admin.lessons.orderLabel")}>{viewingLesson.order}</AdminDetailItem>
+              <AdminDetailItem label={t("admin.lessons.durationLabel")}>
+                {t("admin.lessons.minutes", { count: viewingLesson.duration })}
+              </AdminDetailItem>
+              <AdminDetailItem label={t("admin.lessons.productsLabel")}>
+                {viewingLesson.linkedProduct?.length ?? 0}
+              </AdminDetailItem>
+            </AdminDetailGrid>
+            <AdminDetailItem label={t("admin.lessons.videoUrl")} mono>
               <a
                 href={viewingLesson.videoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-[var(--primary)] break-all hover:underline"
+                className="break-all text-[var(--primary)] hover:underline"
               >
                 {viewingLesson.videoUrl}
               </a>
-            </div>
-          </div>
-
-          <div className="admin-dialog-footer">
-            <button type="button" onClick={() => setViewingLesson(null)} className="btn-modal-cancel">
-              {t("common.close")}
-            </button>
+            </AdminDetailItem>
           </div>
         </AdminModal>
       )}

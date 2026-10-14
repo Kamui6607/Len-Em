@@ -127,6 +127,14 @@ export interface CreateOrderRequest {
     kitId: string;
     quantity: number;
   }[];
+  /**
+   * ĐỀ XUẤT — BE chưa hỗ trợ (order.itemType chỉ có Product / Course và
+   * controller chỉ đọc items + kits). Chỉ gửi khi DIY_CHECKOUT_ENABLED = true.
+   */
+  diyPosts?: {
+    diyPostId: string;
+    quantity: number;
+  }[];
   shippingAddress: ShippingAddressInput;
   paymentMethod: PaymentMethod;
   note?: string;
@@ -217,6 +225,8 @@ export interface ShippingFeePreviewResponse {
   subtotal: number;
   shippingFee: number;
   total: number;
+  /** GHN COD cap — COD is refused for orders whose total exceeds it. */
+  maxCodAmount?: number;
 }
 
 export interface OrderApiResponse<T> {

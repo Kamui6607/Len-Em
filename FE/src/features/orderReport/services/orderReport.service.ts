@@ -81,7 +81,11 @@ export const orderReportService = {
       { adminNote },
     ),
 
-  /** DELETE /order-reports/:id — Admin deletes a report (any status) */
+  /** DELETE /order-reports/:id — Reporter deletes their own report (only when PENDING) */
   delete: (id: string) =>
     axiosClient.delete<{ status: string; message: string }>(`/order-reports/${id}`),
+
+  /** DELETE /order-reports/:id/admin — Admin deletes any report (any status) */
+  adminDelete: (id: string) =>
+    axiosClient.delete<{ status: string; message: string }>(`/order-reports/${id}/admin`),
 };

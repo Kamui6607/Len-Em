@@ -8,9 +8,15 @@ import {
   Edit2,
   Eye,
   Package,
+  PackagePlus,
+  Boxes,
   X,
   Loader2,
   ChevronDown,
+  EyeOff,
+  Layers,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { kitService, type Kit, type KitProductInput } from "../../../shared/api/kitService";
@@ -20,18 +26,31 @@ import type { BackendProduct } from "../../../shared/types/product.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
-import { AdminModal } from "../../../shared/components/admin/AdminModal";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import {
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminMoney,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminConfirm,
+  useAdminGridSort,
+  type AdminGridColumn,
+  type AdminTone,
+} from "../../../shared/components/admin/AdminDataGrid";
+import { AdminDetailItem, AdminDialogSection, AdminModal } from "../../../shared/components/admin/AdminModal";
 import {
   AdminSearchInput,
   AdminSearchMeta,
-  AdminSearchToolbar,
 } from "../../../shared/components/admin/AdminSearch";
 import { cn } from "../../../shared/components/ui/utils";
 import {
-  AdminTableBodySkeleton,
   AdminPickerSkeleton,
   SkeletonBlock,
 } from "../../../shared/components/skeletons/AdminSkeleton";
@@ -61,11 +80,11 @@ const LEVEL_OPTIONS = [
   { value: "advanced", label: "Advanced" },
 ];
 
-// Đồng bộ màu level với AdminCourses.tsx (badge-* dùng chung, có dark mode)
-const LEVEL_BADGE_CLASS: Record<string, string> = {
-  beginner: "badge-green",
-  intermediate: "badge-orange",
-  advanced: "badge-red",
+// Đồng bộ màu level với AdminCourses.tsx
+const LEVEL_TONE: Record<string, AdminTone> = {
+  beginner: "green",
+  intermediate: "amber",
+  advanced: "rose",
 };
 
 export function AdminKits() {
@@ -90,6 +109,9 @@ export function AdminKits() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingKit, setEditingKit] = useState<Kit | null>(null);
   const [detailKit, setDetailKit] = useState<Kit | null>(null);
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<{ active?: number; hidden?: number }>({});
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
 
   const fetchKits = useCallback(async (page: number, options?: { silent?: boolean }) => {
     // Skeleton CHỈ ở lần tải đầu tiên; mọi lần tải sau đều giữ data cũ trên
@@ -125,6 +147,7 @@ export function AdminKits() {
       });
       setAllKits(null);
       setKits(res.data.data?.kits || []);
+      setTotal(res.data.data?.total ?? (res.data.data?.kits || []).length);
       setTotalPages(res.data.data?.totalPages || 1);
     } catch {
       toast.error(t("admin.kits.loadError"));
@@ -139,6 +162,23 @@ export function AdminKits() {
     fetchKits(currentPage);
   }, [fetchKits, currentPage]);
 
+  // Số lượng cho thẻ trạng thái (limit=1, chỉ đọc `total`).
+  const fetchCounts = useCallback(async () => {
+    try {
+      const [activeRes, hiddenRes] = await Promise.all([
+        kitService.getAll({ page: 1, limit: 1 }),
+        kitService.getAll({ page: 1, limit: 1, isActive: false }),
+      ]);
+      setCounts({ active: activeRes.data.data?.total ?? 0, hidden: hiddenRes.data.data?.total ?? 0 });
+    } catch {
+      // thẻ vẫn lọc được, chỉ không có số
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
   /** Về trang 1 ngay khi gõ để chỉ có 1 request (tránh 2 request đua nhau). */
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -149,15 +189,27 @@ export function AdminKits() {
     searchQuery.trim() !== "" || levelFilter !== "all" || statusFilter !== "active";
 
   const handleDelete = async (kitId: string) => {
-    // Confirmation now lives in <ConfirmDeleteButton /> (click → dialog).
+    // Hộp xác nhận nằm ở confirmDelete (useAdminConfirm).
     try {
       await kitService.delete(kitId);
       toast.success(t("admin.kits.deleteSuccess"));
       // Làm mới im lặng: danh sách không nháy skeleton sau khi xoá.
       fetchKits(currentPage, { silent: true });
+      fetchCounts();
     } catch {
       toast.error(t("admin.kits.deleteError"));
     }
+  };
+
+  const confirmDelete = async (kit: Kit) => {
+    const ok = await confirm({
+      title: t("admin.confirmDelete.title", { name: kit.name }),
+      description: t("admin.kits.deleteConfirm"),
+      confirmLabel: t("admin.kits.delete"),
+      danger: true,
+      icon: Trash2,
+    });
+    if (ok) await handleDelete(kit._id);
   };
 
   // Bộ lọc search dùng chung cho 2 chế độ tải sẵn dữ liệu (chế độ "Tất cả" và
@@ -179,27 +231,163 @@ export function AdminKits() {
     ? Math.max(1, Math.ceil(matchedKits.length / KITS_PAGE_SIZE))
     : totalPages;
 
+  const displayTotal = fePagedSource ? matchedKits.length : total;
+
+  const { sort, apply: applySort } = useAdminGridSort<Kit>((kit, field) => {
+    if (field === "name") return kit.name;
+    if (field === "price") return kit.price;
+    if (field === "stock") return kit.stock ?? 0;
+    if (field === "level") return ["beginner", "intermediate", "advanced"].indexOf(kit.level);
+    return null;
+  });
+  const rows = applySort(visibleKits);
+
+  const columns: AdminGridColumn<Kit>[] = [
+    {
+      key: "name",
+      header: t("admin.kits.kit"),
+      width: "minmax(240px, 2fr)",
+      minWidth: 240,
+      sortable: true,
+      card: "title",
+      render: (kit) => (
+        <AdminCellStack
+          media={
+            <img
+              src={kit.thumbnail}
+              alt=""
+              loading="lazy"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.fallback) {
+                  target.dataset.fallback = "true";
+                  target.src = `https://picsum.photos/seed/${kit._id}/100/100`;
+                }
+              }}
+            />
+          }
+          primary={kit.name}
+          secondary={`${(kit.products || []).length} ${t("admin.kits.items")}${kit.description ? ` · ${kit.description}` : ""}`}
+        />
+      ),
+    },
+    {
+      key: "level",
+      header: t("admin.kits.level"),
+      width: "120px",
+      minWidth: 116,
+      align: "center",
+      sortable: true,
+      render: (kit) => (
+        <AdminPill tone={LEVEL_TONE[kit.level] ?? "neutral"}>{t(`admin.kits.${kit.level}`)}</AdminPill>
+      ),
+    },
+    {
+      key: "stock",
+      header: t("admin.kits.stock"),
+      width: "96px",
+      minWidth: 96,
+      align: "right",
+      sortable: true,
+      render: (kit) => <span className={`adm-gnum ${(kit.stock ?? 0) < 5 ? "is-warn" : ""}`}>{kit.stock ?? 0}</span>,
+    },
+    {
+      key: "price",
+      header: t("admin.kits.priceShort"),
+      width: "130px",
+      minWidth: 130,
+      align: "right",
+      sortable: true,
+      render: (kit) => <AdminMoney value={kit.price} />,
+    },
+    {
+      key: "status",
+      header: t("admin.kits.status"),
+      width: "120px",
+      minWidth: 116,
+      align: "center",
+      card: "aside",
+      render: (kit) => (
+        <AdminPill tone={kit.isActive ? "green" : "neutral"}>
+          {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
+        </AdminPill>
+      ),
+    },
+    {
+      key: "actions",
+      header: t("admin.kits.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (kit) => (
+        <AdminRowActions>
+          <AdminActionButton icon={Edit2} label={t("admin.kits.edit")} onClick={() => setEditingKit(kit)} />
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.kits.view"), icon: Eye, onSelect: () => setDetailKit(kit) },
+              kit.isActive && {
+                label: t("admin.kits.delete"),
+                icon: Trash2,
+                danger: true,
+                separated: true,
+                onSelect: () => void confirmDelete(kit),
+              },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
       <AdminPageHeader
+        eyebrow={t("admin.kits.eyebrow")}
         title={t("admin.kits.title")}
         subtitle={t("admin.kits.subtitle")}
         actions={
-          <CreateButton
-            label={t("admin.kits.createKit")}
-            onClick={() => setShowCreateModal(true)}
-          />
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                fetchKits(currentPage, { silent: true });
+                fetchCounts();
+              }}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              {t("admin.grid.refresh")}
+            </button>
+            <CreateButton label={t("admin.kits.createKit")} onClick={() => setShowCreateModal(true)} />
+          </>
         }
       />
 
-      {/* Filters + Table */}
-      <div
-        className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
-        style={{ borderColor: "var(--border)" }}
-      >
-        {/* Filters — search dùng chung component (debounce 400ms) */}
-        <AdminSearchToolbar
+      {/* Trạng thái — kiêm bộ lọc. BE cho lấy kit đã ẩn qua ?isActive=false. */}
+      <AdminStatusTabs<KitStatusFilter>
+        ariaLabel={t("admin.kits.status")}
+        value={statusFilter}
+        onChange={(value) => {
+          setStatusFilter(value);
+          setCurrentPage(1);
+        }}
+        tabs={[
+          { value: "active", label: t("admin.kits.active"), icon: Boxes, tone: "green", count: counts.active },
+          { value: "hidden", label: t("admin.kits.inactive"), icon: EyeOff, tone: "neutral", count: counts.hidden },
+          {
+            value: "all",
+            label: t("admin.kits.all"),
+            icon: Layers,
+            count: counts.active === undefined || counts.hidden === undefined ? undefined : counts.active + counts.hidden,
+          },
+        ]}
+      />
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
           search={{
             value: searchQuery,
             onChange: handleSearchChange,
@@ -207,56 +395,17 @@ export function AdminKits() {
             isSearching: searchIsWaiting || refreshing,
           }}
           filters={
-            <>
-              <div className="relative w-full sm:w-44">
-                <select
-                  value={levelFilter}
-                  onChange={(e) => {
-                    setLevelFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="input w-full appearance-none bg-none"
-                  style={{ paddingRight: "2.5rem" }}
-                >
-                  {LEVEL_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
-              </div>
-            {/* Lọc trạng thái — giống /admin/products. BE cho phép lấy kit đã ẩn
-                qua ?isActive=false (không đòi quyền Admin như products). */}
             <AdminSelect
-              className="w-full sm:w-44"
-              value={statusFilter}
-              options={[
-                {
-                  value: "active",
-                  label: t("admin.kits.active"),
-                  dotClassName: "bg-emerald-500",
-                },
-                {
-                  value: "hidden",
-                  label: t("admin.kits.inactive"),
-                  dotClassName: "bg-rose-500",
-                },
-                {
-                  value: "all",
-                  label: t("admin.kits.all"),
-                  dotClassName: "bg-slate-400",
-                },
-              ]}
+              value={levelFilter}
+              options={LEVEL_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.value === "all" ? t("admin.kits.allLevelsLabel") : t(`admin.kits.${o.value}`),
+              }))}
               onChange={(value) => {
-                setStatusFilter(value as KitStatusFilter);
+                setLevelFilter(value);
                 setCurrentPage(1);
               }}
             />
-            </>
           }
           onReset={
             hasActiveFilters
@@ -268,9 +417,8 @@ export function AdminKits() {
                 }
               : undefined
           }
-          resetLabel={t("admin.clearFilters")}
           meta={
-            searchQuery || debouncedSearchQuery ? (
+            debouncedSearchQuery ? (
               <AdminSearchMeta searching={searchIsWaiting || refreshing}>
                 {matchedKits.length === 0
                   ? t("admin.search.noResults")
@@ -280,129 +428,34 @@ export function AdminKits() {
           }
         />
 
-        {/* Kits Table */}
-        {loading ? (
-          // Skeleton bám đúng 6 cột thật: kit (ảnh + tên), level, giá,
-          // số sản phẩm, trạng thái và cột thao tác view/edit/delete.
-          <AdminTableBodySkeleton
-            columns={[
-              "media",
-              { type: "badge", align: "center" },
-              { type: "money", align: "center" },
-              { type: "number", align: "center" },
-              { type: "badge", align: "center" },
-              { type: "actions", align: "center", className: "w-[130px]" },
-            ]}
-            rows={6}
-          />
-        ) : visibleKits.length === 0 ? (
-          <div className="admin-empty-state" style={{ background: "var(--card)" }}>
-            <Package size={48} />
-            <p>
-              {statusFilter === "hidden"
-                ? t("admin.kits.noHiddenKits")
-                : t("admin.kits.noKitsFound")}
-            </p>
-            <p className="text-sm">{t("admin.kits.noKitsHint")}</p>
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "overflow-x-auto transition-opacity duration-200",
-              // Làm mới ngầm: chỉ mờ nhẹ để biết đang tải, KHÔNG thay bằng skeleton.
-              refreshing && "opacity-60",
-            )}
-            style={{ background: "var(--card)" }}
-            aria-busy={refreshing}
-          >
-            <table className="admin-table w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground">{t("admin.kits.kit")}</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.level")}</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.price")}</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.products")}</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground" style={{ textAlign: "center" }}>{t("admin.kits.status")}</th>
-                  <th className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[130px]" style={{ textAlign: "center" }}>{t("admin.kits.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleKits.map((kit) => (
-                  <tr key={kit._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={kit.thumbnail}
-                          alt={kit.name}
-                          className="size-11 rounded-lg object-cover"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (!target.dataset.fallback) {
-                              target.dataset.fallback = "true";
-                              target.src = `https://picsum.photos/seed/${kit._id}/100/100`;
-                            }
-                          }}
-                        />
-                        <div className="min-w-0">
-                          <span className="block truncate font-medium text-sm max-w-[260px]">{kit.name}</span>
-                          <span className="text-xs text-muted-foreground truncate block max-w-[260px]">{kit.description}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`badge capitalize ${LEVEL_BADGE_CLASS[kit.level] ?? "badge-gray"}`}>
-                        {kit.level}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center text-sm font-semibold" style={{ color: "var(--primary)" }}>
-                      {formatPrice(kit.price)}
-                    </td>
-                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">
-                      {(kit.products || []).length} {t("admin.kits.items")}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`badge ${kit.isActive ? "badge-green" : "badge-red"}`}>
-                        {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => setDetailKit(kit)}
-                          className="admin-action-btn view"
-                          title={t("admin.kits.view")}
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={() => setEditingKit(kit)}
-                          className="admin-action-btn edit"
-                          title={t("admin.kits.edit")}
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <ConfirmDeleteButton
-                          onDelete={() => handleDelete(kit._id)}
-                          itemName={kit.name}
-                          disabled={!kit.isActive}
-                          disabledTitle={t("admin.kits.deleteInactiveHint")}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <AdminDataGrid<Kit>
+          ariaLabel={t("admin.kits.title")}
+          rows={rows}
+          rowKey={(kit) => kit._id}
+          columns={columns}
+          loading={loading}
+          refreshing={refreshing}
+          sort={sort}
+          onRowClick={(kit) => setDetailKit(kit)}
+          rowMuted={(kit) => !kit.isActive}
+          empty={{
+            icon: Package,
+            title: statusFilter === "hidden" ? t("admin.kits.noHiddenKits") : t("admin.kits.noKitsFound"),
+            description: t("admin.kits.noKitsHint"),
+          }}
+        />
 
-      <AdminPagination
-        page={currentPage}
-        totalPages={displayTotalPages}
-        onPageChange={setCurrentPage}
-        pageSize={KITS_PAGE_SIZE}
-      />
+        <AdminGridFooter
+          page={currentPage}
+          totalPages={displayTotalPages}
+          total={displayTotal}
+          pageSize={KITS_PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          disabled={refreshing}
+        />
+      </AdminPanel>
+
+      {confirmDialog}
 
       {/* Create/Edit Modal */}
       {(showCreateModal || editingKit) && (
@@ -560,16 +613,34 @@ function KitFormModal({
     // Portal + CSS-only animation (xem AdminModal): modal không còn nằm trong
     // cây trang nên mở/đóng không làm nhảy layout hay cuộn nền phía sau.
     <AdminModal
-      title={kit ? t("admin.kits.editKit") : t("admin.kits.createKit")}
+      variant={kit ? "edit" : "create"}
+      icon={kit ? undefined : PackagePlus}
+      eyebrow={kit ? t("admin.kits.editKit") : undefined}
+      title={kit ? formData.name || kit.name : t("admin.kits.createKit")}
       onClose={onClose}
-      className="max-w-2xl w-full"
       // Đang lưu thì không cho đóng bằng click nền (tránh mất thao tác).
       closeOnBackdrop={!loading}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={loading} className="btn-modal-cancel">
+            {t("admin.kits.cancelButton")}
+          </button>
+          <button type="submit" form="kit-form" disabled={loading} className="btn-modal-primary">
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : kit ? (
+              t("admin.kits.updateButton")
+            ) : (
+              t("admin.kits.createButton")
+            )}
+          </button>
+        </>
+      }
     >
-      <form onSubmit={handleSubmit}>
-        <div className="admin-dialog-body space-y-4">
+      <form id="kit-form" onSubmit={handleSubmit}>
+        <div className="admin-dialog-body">
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+            <label className="adm-field-label">
               {t("admin.kits.kitName")} <span className="text-destructive">*</span>
             </label>
             <input
@@ -584,7 +655,7 @@ function KitFormModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+            <label className="adm-field-label">
               Description <span className="text-destructive">*</span>
             </label>
             <textarea
@@ -600,7 +671,7 @@ function KitFormModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+            <label className="adm-field-label">
               {t("admin.kits.level")} <span className="text-destructive">*</span>
             </label>
             <div className="relative">
@@ -649,7 +720,7 @@ function KitFormModal({
 
           {/* Thumbnail Upload */}
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+            <label className="adm-field-label">
               {t("admin.kits.thumbnail")}
             </label>
             <input
@@ -808,29 +879,6 @@ function KitFormModal({
           </label>
         </div>
 
-        <div className="admin-dialog-footer">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="btn-modal-cancel"
-          >
-            {t("admin.kits.cancelButton")}
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-modal-primary"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : kit ? (
-              t("admin.kits.updateButton")
-            ) : (
-              t("admin.kits.createButton")
-            )}
-          </button>
-        </div>
       </form>
     </AdminModal>
   );
@@ -890,11 +938,31 @@ function KitDetailModal({
   }, [kitId]);
 
   return (
-    <AdminModal title={kit.name} onClose={onClose} className="max-w-2xl w-full">
+    <AdminModal
+      variant="view"
+      icon={Boxes}
+      eyebrow="Bộ kit"
+      title={kit.name}
+      badges={
+        <>
+          <AdminPill tone={LEVEL_TONE[kit.level] ?? "neutral"}>{t(`admin.kits.${kit.level}`)}</AdminPill>
+          <AdminPill tone={kit.isActive ? "green" : "neutral"}>
+            {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
+          </AdminPill>
+        </>
+      }
+      onClose={onClose}
+      // Footer luôn hiển thị (kể cả lúc đang tải skeleton) để đóng được ngay
+      footer={
+        <button type="button" onClick={onClose} className="btn-modal-cancel">
+          {t("admin.kits.cancelButton")}
+        </button>
+      }
+    >
       {loading ? (
         // Skeleton bám đúng nội dung thật: ảnh + badge/mô tả → khối giá →
         // danh sách sản phẩm trong kit (tên, giá, × số lượng).
-        <div className="admin-dialog-body space-y-5" aria-busy="true">
+        <div className="admin-dialog-body" aria-busy="true">
           <div className="flex flex-col sm:flex-row gap-4">
             <SkeletonBlock className="w-full sm:w-40 aspect-square shrink-0 rounded-xl" />
             <div className="flex-1 min-w-0 space-y-3">
@@ -927,7 +995,7 @@ function KitDetailModal({
           </div>
         </div>
       ) : (
-        <div className="admin-dialog-body space-y-5">
+        <div className="admin-dialog-body">
           {/* Thumbnail */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative w-full sm:w-40 aspect-square shrink-0 overflow-hidden rounded-xl bg-muted">
@@ -949,52 +1017,30 @@ function KitDetailModal({
                 }}
               />
             </div>
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`badge capitalize ${LEVEL_BADGE_CLASS[kit.level] ?? "badge-gray"}`}>
-                  {kit.level}
-                </span>
-                <span className={`badge ${kit.isActive ? "badge-green" : "badge-red"}`}>
-                  {kit.isActive ? t("admin.kits.active") : t("admin.kits.inactive")}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {kit.description}
-              </p>
+            <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+              {/* Price */}
+              <AdminDetailItem label={t("admin.kits.totalPrice")}>
+                <span className="text-xl font-bold text-primary">{formatPrice(kit.price)}</span>
+              </AdminDetailItem>
+              <p className="text-sm text-muted-foreground leading-relaxed">{kit.description}</p>
             </div>
-          </div>
-
-          {/* Price */}
-          <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "var(--muted)" }}>
-            <span className="text-sm text-muted-foreground">
-              {t("admin.kits.totalPrice")}
-            </span>
-            <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>
-              {formatPrice(kit.price)}
-            </span>
           </div>
 
           {/* Products */}
           <div>
-            <p className="text-sm font-medium mb-2">
+            <AdminDialogSection icon={Package} className="mb-3">
               {t("admin.kits.productsInKit")} ({(kit.products || []).length})
-            </p>
-            <div className="space-y-2 max-h-72 overflow-y-auto">
+            </AdminDialogSection>
+            <div className="adm-lines is-scroll">
               {(kit.products || []).map((p) => (
-                <div
-                  key={p.productId._id}
-                  className="flex items-center gap-3 p-3 rounded-xl"
-                  style={{ background: "var(--muted)" }}
-                >
+                <div key={p.productId._id} className="adm-line">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{p.productId.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {formatPrice(p.productId.variants[0]?.price || 0)}
                     </div>
                   </div>
-                  <span className="text-sm text-muted-foreground shrink-0">
-                    × {p.quantity}
-                  </span>
+                  <span className="adm-qty">× {p.quantity}</span>
                 </div>
               ))}
               {(kit.products || []).length === 0 && (
@@ -1007,12 +1053,6 @@ function KitDetailModal({
         </div>
       )}
 
-      {/* Footer luôn hiển thị (kể cả lúc đang tải skeleton) để đóng được ngay */}
-      <div className="admin-dialog-footer">
-        <button type="button" onClick={onClose} className="btn-modal-cancel">
-          {t("admin.kits.cancelButton")}
-        </button>
-      </div>
     </AdminModal>
   );
 }

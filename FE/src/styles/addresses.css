@@ -1,0 +1,402 @@
+/* ============================================================
+   ADDRESSES — sổ địa chỉ theo ngôn ngữ "craft" (xem craft.css)
+   - Hero gọn có đường khâu + bộ đếm
+   - Form là một tấm vải; các nhóm trường viền chỉ đứt
+   - Mỗi địa chỉ là một "nhãn gửi hàng"; địa chỉ mặc định có ruy băng
+   Trường nhập dùng lại .co-input / .co-select từ checkout.css.
+   Chỉ dùng token trong theme.css → tự đổi light/dark.
+   ============================================================ */
+
+.adr-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px calc(env(safe-area-inset-bottom) + 96px);
+}
+@media (min-width: 768px) {
+  .adr-page { padding: 40px 24px 64px; }
+}
+.adr-wrap {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+/* ── Hero ── */
+.adr-hero {
+  padding: clamp(22px, 3.4vw, 36px);
+  margin-bottom: 24px;
+}
+.adr-hero-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.adr-hero .craft-title { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+.adr-hero .craft-stitch { margin: 12px 0 12px; }
+.adr-hero .craft-stats { margin-top: 18px; }
+
+/* ── Form panel ── */
+.adr-panel {
+  scroll-margin-top: 96px;
+  margin-bottom: 28px;
+  padding: clamp(18px, 3vw, 28px);
+  border-radius: 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.adr-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.adr-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: var(--foreground-muted);
+  border: 1px solid var(--border);
+  transition: color 0.2s, background-color 0.2s, transform 0.2s var(--ease-out);
+}
+.adr-close:hover {
+  color: var(--foreground);
+  background: var(--muted);
+  transform: rotate(90deg);
+}
+
+.adr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.adr-fieldset {
+  margin: 0;
+  padding: 18px 16px 16px;
+  border-radius: 20px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 24%, var(--border));
+  background: color-mix(in srgb, var(--primary) 2%, var(--card));
+  min-width: 0;
+}
+.adr-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  margin-left: -4px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: var(--card);
+}
+.adr-form .co-select.is-invalid { border-color: var(--destructive); }
+
+/* Bản đồ */
+.adr-map-block {
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.adr-map-block[data-open="true"] {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+.adr-map-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  transition: background-color 0.2s;
+}
+.adr-map-toggle:hover {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+.adr-map-toggle-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.adr-map-toggle-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.adr-map-toggle-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+  margin-top: 1px;
+}
+.adr-map {
+  padding: 0 12px 12px;
+}
+
+/* Công tắc mặc định */
+.adr-default {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.adr-default-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.adr-default-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  transition: background 0.2s var(--ease-out), border-color 0.2s;
+}
+.adr-default-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s var(--ease-out);
+}
+.adr-default-input:checked + .adr-default-track {
+  background: var(--cta-gradient);
+  border-color: transparent;
+}
+.adr-default-input:checked + .adr-default-track::after {
+  transform: translateX(18px);
+}
+.adr-default-input:focus-visible + .adr-default-track {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.adr-default-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.adr-default-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+
+.adr-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1.5px dashed var(--border);
+}
+@media (max-width: 479px) {
+  .adr-form-actions > * { flex: 1; }
+}
+
+/* ── Danh sách: nhãn gửi hàng ── */
+.adr-grid {
+  display: grid;
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+@media (min-width: 720px) {
+  .adr-grid { grid-template-columns: 1fr 1fr; }
+}
+.adr-skeleton { height: 210px; border-radius: 24px; }
+
+.adr-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.25s var(--ease-out);
+}
+.adr-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: var(--shadow-sm);
+}
+.adr-card.is-default {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 55%),
+    var(--card);
+}
+.adr-card.is-default::before {
+  /* đường khâu viền trong */
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 19px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 26%, transparent);
+  pointer-events: none;
+}
+
+.adr-ribbon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary-foreground);
+  background: var(--cta-gradient);
+  box-shadow: var(--cta-shadow);
+  transform: rotate(3deg);
+}
+
+.adr-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 92px;
+}
+.adr-card-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 14px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  transform: rotate(-4deg);
+}
+.adr-card-name {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adr-card-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--foreground-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.adr-card-body {
+  flex: 1;
+  margin: 14px 0 16px;
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--border);
+}
+.adr-card-line {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.adr-card-area {
+  margin-top: 2px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--foreground-muted);
+}
+.adr-pin-tag {
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.adr-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adr-card-foot-end {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.adr-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--foreground-secondary);
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+}
+.adr-act:hover {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+.adr-act.is-primary {
+  color: var(--primary);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+.adr-act.is-primary:hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+.adr-act.is-delete:hover {
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 40%, var(--border));
+  background: color-mix(in srgb, var(--destructive) 6%, var(--card));
+}
+.adr-act.is-delete[data-armed="true"] {
+  color: #fff;
+  background: var(--destructive);
+  border-color: var(--destructive);
+}
+
+/* ── Empty ── */
+.adr-empty-mascot {
+  width: 120px;
+  height: auto;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adr-card,
+  .adr-close,
+  .adr-default-track,
+  .adr-default-track::after {
+    transition: none !important;
+  }
+}

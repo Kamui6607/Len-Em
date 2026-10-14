@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { formatPrice } from "../../lib/formatPrice";
 
 import { useSearchParams } from "react-router";
 import { useDebounce } from "./useDebounce";
@@ -311,6 +312,11 @@ export function useProducts() {
       chips.push({ label: d.charAt(0).toUpperCase() + d.slice(1), type: "difficulty", value: d });
     });
 
+    // Price is a filter too — list it so it can be removed and is counted.
+    if (filters.maxPrice > 0) {
+      chips.push({ label: `Dưới ${formatPrice(filters.maxPrice)}`, type: "maxPrice", value: String(filters.maxPrice) });
+    }
+
     return chips;
   }, [filters, dynamicFilters]);
 
@@ -337,9 +343,12 @@ export function useProducts() {
         case "difficulty":
           toggleArrayFilter("difficulty", value);
           break;
+        case "maxPrice":
+          updatePriceRange(0);
+          break;
       }
     },
-    [updateFilter, toggleArrayFilter]
+    [updateFilter, toggleArrayFilter, updatePriceRange]
   );
 
   return {

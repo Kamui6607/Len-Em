@@ -1,0 +1,715 @@
+/* ============================================================
+   USER MENU — ngôn ngữ "craft" đồng bộ với thanh điều hướng
+   - Nút: avatar có vòng chỉ đứt nét (giống logo), xoay nhẹ khi hover
+   - Popover desktop / bottom sheet trên mobile
+   - Đầu menu là "tấm vải" có đường khâu viền trong
+   Chỉ dùng token trong theme.css → tự đổi light/dark.
+   ============================================================ */
+
+/* ── Avatar ── */
+.um-avatar {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--cta-gradient);
+  color: var(--primary-foreground);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.um-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.um-avatar[data-role="staff"] {
+  background: linear-gradient(135deg, var(--badge-pink-text), var(--accent-blush));
+}
+
+/* ── Nút mở menu (thanh trên) ── */
+.um-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  outline: none;
+}
+.um-trigger .um-avatar { width: 36px; height: 36px; font-size: 0.78rem; }
+.um-trigger::before {
+  /* vòng chỉ quanh avatar */
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 999px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s;
+}
+.um-trigger:hover::before,
+.um-trigger[aria-expanded="true"]::before {
+  transform: rotate(60deg);
+  border-color: var(--primary);
+}
+.um-trigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--focus-ring-color);
+}
+
+/* Nút trong bottom nav: dùng chung kiểu .bottom-nav-item (nav.css) */
+.um-trigger.is-tab {
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--foreground-muted);
+  transition: color 0.2s;
+}
+.um-trigger.is-tab::before { display: none; }
+.um-trigger.is-tab .um-avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 0.56rem;
+  box-shadow: 0 0 0 1.5px var(--card), 0 0 0 3px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.um-trigger.is-tab[aria-current="page"] { color: var(--tabbar-active-fg); }
+.um-trigger.is-tab[aria-current="page"] .um-avatar {
+  box-shadow: 0 0 0 1.5px var(--tabbar-active-bg), 0 0 0 3px var(--tabbar-active-fg);
+}
+.um-trigger.is-tab[aria-expanded="true"]:not([aria-current="page"]) { color: var(--primary); }
+.um-trigger.is-tab:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-ring-color);
+}
+/* Badge thông báo chưa đọc: cùng kiểu badge giỏ hàng, nằm ở góc avatar */
+.um-tab-badge {
+  top: -7px !important;
+  right: -12px !important;
+}
+
+/* Hàng cài đặt trong sheet (giao diện sáng/tối…) */
+.um-setting {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.um-badge {
+  position: absolute;
+  top: -1px;
+  right: -2px;
+  z-index: 1;
+  display: flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--destructive);
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+/* Nút ở sidebar dashboard */
+.um-trigger.is-sidebar {
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface, var(--card));
+  text-align: left;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.um-trigger.is-sidebar::before { display: none; }
+.um-trigger.is-sidebar:hover,
+.um-trigger.is-sidebar[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+.um-trigger.is-sidebar .um-avatar { width: 32px; height: 32px; font-size: 0.7rem; }
+
+/* ── Bảng menu ── */
+.um-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.um-panel {
+  position: fixed;
+  z-index: 100;
+  width: 300px;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow-float-lg);
+}
+.um-panel.is-sheet {
+  left: 0 !important;
+  right: 0;
+  bottom: 0 !important;
+  width: auto;
+  max-height: 85dvh;
+  overflow-y: auto;
+  border-radius: 28px 28px 0 0;
+  border-bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.um-grabber {
+  width: 40px;
+  height: 4px;
+  margin: 10px auto 2px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+/* Đầu menu: tấm vải có đường khâu */
+.um-head {
+  position: relative;
+  isolation: isolate;
+  margin: 8px;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 60%),
+    var(--background);
+}
+.um-head::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 14px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 26%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.um-head::after {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: repeating-radial-gradient(
+    circle,
+    transparent 0 9px,
+    color-mix(in srgb, var(--primary) 9%, transparent) 9px 11px
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+.um-head .um-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 0.95rem;
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.um-hello {
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--primary);
+}
+.um-name {
+  margin-top: 2px;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--foreground);
+}
+.um-email {
+  overflow: hidden;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--foreground-muted);
+}
+.um-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  background: var(--card);
+  border: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* ── Danh sách ── */
+.um-list { padding: 2px 8px 8px; }
+.um-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 8px 4px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+}
+.um-group-label::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 2px;
+}
+.um-item {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  color: var(--foreground);
+  outline: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+.um-item:hover,
+.um-item:focus-visible {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.um-item:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring-color); }
+.um-item-icon {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  transform: rotate(-4deg);
+  transition: transform 0.25s var(--ease-out);
+}
+.um-item:hover .um-item-icon,
+.um-item:focus-visible .um-item-icon { transform: rotate(0deg) scale(1.06); }
+.um-item-label { flex: 1; min-width: 0; }
+.um-item-chev {
+  color: var(--foreground-muted);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s, transform 0.2s var(--ease-out);
+}
+.um-item:hover .um-item-chev,
+.um-item:focus-visible .um-item-chev { opacity: 0.7; transform: translateX(0); }
+.um-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  background: var(--destructive);
+}
+
+.um-item.is-danger { color: var(--error-text, var(--destructive)); }
+.um-item.is-danger .um-item-icon {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  color: var(--error-text, var(--destructive));
+}
+.um-item.is-danger:hover,
+.um-item.is-danger:focus-visible {
+  background: color-mix(in srgb, var(--destructive) 8%, transparent);
+}
+
+.um-sep {
+  margin: 6px 8px;
+  border-top: 1.5px dashed var(--border);
+}
+.um-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 8px 8px;
+  padding: 10px;
+  border-radius: 14px;
+  font-family: var(--font-script);
+  font-size: 1.05rem;
+  color: var(--foreground-muted);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  transition: color 0.2s, background-color 0.2s;
+}
+.um-foot:hover,
+.um-foot:focus-visible {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  outline: none;
+}
+
+/* ============================================================
+   SHEET TÀI KHOẢN (mobile) — mở từ tab "Tài khoản"
+   Thẻ hồ sơ (kéo xuống để đóng) → 3 ô lối tắt → nhóm hàng kiểu
+   cài đặt → trợ lý → đăng xuất. Nền sheet = --card, thẻ con = --background.
+   ============================================================ */
+.ums {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 100;
+  display: flex;
+  max-height: 92dvh;
+  flex-direction: column;
+  border-radius: 28px 28px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--card);
+  box-shadow: 0 -18px 48px -12px rgba(24, 16, 60, 0.28);
+}
+
+/* ── Thẻ hồ sơ (cùng tay nắm là vùng kéo để đóng) ── */
+.ums-top {
+  flex-shrink: 0;
+  padding: 18px 12px 0;
+  touch-action: none;
+  cursor: grab;
+}
+.ums-hero {
+  position: relative;
+  isolation: isolate;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 62%),
+    var(--background);
+}
+.ums-hero::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 24%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.ums-hero::after {
+  /* cuộn len mờ ở góc */
+  content: "";
+  position: absolute;
+  top: -56px;
+  right: -56px;
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  background: repeating-radial-gradient(
+    circle,
+    transparent 0 9px,
+    color-mix(in srgb, var(--primary) 9%, transparent) 9px 11px
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+.ums-grabber {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 40px;
+  height: 4px;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground-muted) 45%, transparent);
+}
+.ums-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--foreground-muted);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  border: 1px solid var(--border-light);
+}
+.ums-close::after {
+  /* vùng bấm 44×44 */
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+.ums-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring-color);
+}
+.ums-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 40px; /* chừa chỗ nút đóng */
+}
+.ums-avatar .um-avatar {
+  width: 60px;
+  height: 60px;
+  font-size: 1.1rem;
+  box-shadow: 0 0 0 2.5px var(--card), 0 0 0 5px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.ums-name {
+  margin-top: 3px;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--foreground);
+}
+.ums-email {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--foreground-muted);
+}
+.ums-profile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ums-edit {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+.ums-edit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring-color);
+}
+
+/* ── Phần cuộn ── */
+.ums-body {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 12px calc(16px + var(--sab, 0px));
+}
+
+/* 3 ô lối tắt */
+.ums-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ums-tile {
+  display: flex;
+  min-height: 84px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 18px;
+  border: 1px solid var(--border-light);
+  background: var(--background);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground);
+  transition: transform 0.15s var(--ease-out), border-color 0.2s;
+}
+.ums-tile:active { transform: scale(0.96); }
+.ums-tile:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring-color);
+}
+.ums-tile-icon {
+  position: relative;
+  display: flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  transform: rotate(-4deg);
+}
+.ums-tile-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  display: flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--destructive);
+  box-shadow: 0 0 0 2px var(--background);
+  transform: rotate(4deg);
+}
+
+/* Nhóm hàng kiểu "cài đặt" */
+.ums-label {
+  margin: 0 6px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+}
+.ums-card {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border-light);
+  background: var(--background);
+}
+.ums-row {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 10px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--foreground);
+  transition: background-color 0.15s;
+}
+.ums-row + .ums-row { border-top: 1.5px dashed var(--border-light); }
+a.ums-row:active { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+a.ums-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring-color);
+}
+.ums-row-icon {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.ums-row-label { flex: 1; min-width: 0; }
+.ums-chev {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--foreground-muted);
+}
+.ums-count {
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  background: var(--destructive);
+}
+
+/* Trợ lý */
+.ums-help {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, var(--primary) 7%, var(--card));
+}
+.ums-help:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring-color);
+}
+.ums-help-icon {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--primary-foreground);
+  background: var(--cta-gradient, var(--primary));
+}
+.ums-help-title {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.ums-help-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.78rem;
+  color: var(--foreground-muted);
+}
+
+/* Đăng xuất */
+.ums-logout {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--error-border, color-mix(in srgb, var(--destructive) 35%, transparent));
+  background: var(--error-bg, color-mix(in srgb, var(--destructive) 8%, transparent));
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--error-text, var(--destructive));
+}
+.ums-logout:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring-color);
+}

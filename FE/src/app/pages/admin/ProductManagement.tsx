@@ -1,19 +1,35 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Edit3,
-  X,
   RotateCcw,
+  PackagePlus,
   Package,
   Eye,
+  EyeOff,
+  Layers,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import {
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminMoney,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminConfirm,
+  useAdminGridSort,
+  type AdminGridColumn,
+} from "../../../shared/components/admin/AdminDataGrid";
 import { ProductDetailModal } from "./ProductDetailModal";
+import { AdminModal } from "../../../shared/components/admin/AdminModal";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
-import { formatPrice } from "../../../lib/formatPrice";
 import { productService, type Product } from "../../../shared/api/productService";
 import {
   VariantEditor,
@@ -25,11 +41,7 @@ import { useAuth } from "../../../shared/hooks/useAuth";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminSelect } from "../../../shared/components/admin/AdminSelect";
-import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-} from "../../../shared/components/admin/AdminSearch";
-import { AdminTableBodySkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
+import { AdminSearchMeta } from "../../../shared/components/admin/AdminSearch";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -95,7 +107,7 @@ const createEmptyForm = (): ProductFormData => ({
 
 // ─── Confirm Dialog ──────────────────────────────────────
 
-// Removed — deletion now uses <ConfirmDeleteButton /> (click → confirm dialog)
+// Ẩn sản phẩm dùng hộp xác nhận useAdminConfirm (xem handleHide / handleBulk).
 
 // ─── Main Component ──────────────────────────────────────
 
@@ -134,6 +146,10 @@ export function ProductManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [counts, setCounts] = useState<Partial<Record<ProductStatusFilter, number>>>({});
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
 
   // ─── Fetch products ───────────────────────────────────
 
@@ -175,6 +191,31 @@ export function ProductManagement() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Số lượng cho thẻ trạng thái: đang bán + tất cả (limit=1, chỉ đọc `total`); đã ẩn = hiệu số.
+  const fetchCounts = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const [activeRes, allRes] = await Promise.all([
+        productService.getAll({ page: 1, limit: 1 }),
+        productService.getAll({ page: 1, limit: 1, includeInactive: true }),
+      ]);
+      const active = activeRes.data.data?.total ?? 0;
+      const all = allRes.data.data?.total ?? 0;
+      setCounts({ active, all, hidden: Math.max(0, all - active) });
+    } catch {
+      // thẻ vẫn lọc được, chỉ không có số
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  // Đổi trang / bộ lọc → bỏ chọn
+  useEffect(() => {
+    setSelected(new Set());
+  }, [page, statusFilter, debouncedSearchTerm]);
 
   /**
    * Đổi search → về trang 1 NGAY khi gõ (không đợi debounce) để chỉ có 1 request
@@ -378,71 +419,263 @@ export function ProductManagement() {
       await productService.restore(id);
       toast.success(t("admin.products.restoreSuccess"));
       fetchProducts();
+      fetchCounts();
     } catch {
       toast.error(t("admin.products.restoreError"));
     }
   };
 
+  // Ẩn (xoá mềm) một sản phẩm — có hộp xác nhận.
+  const handleHide = async (product: Product) => {
+    const ok = await confirm({
+      title: t("admin.confirmDelete.title", { name: product.name }),
+      description: t("admin.products.hideConfirmDesc"),
+      confirmLabel: t("admin.products.hide"),
+      danger: true,
+      icon: EyeOff,
+    });
+    if (!ok) return;
+    try {
+      await productService.delete(product._id);
+      toast.success(t("admin.products.deleteSuccess"));
+      fetchProducts();
+      fetchCounts();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number } };
+      toast.error(
+        axiosErr.response?.status === 403 ? t("admin.products.noPermission") : t("admin.products.deleteError"),
+      );
+    }
+  };
+
+  // ── Bulk hide / restore ──
+  const handleBulk = async (mode: "hide" | "restore") => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (mode === "hide") {
+      const ok = await confirm({
+        title: t("admin.products.hideConfirmTitle", { count: ids.length }),
+        description: t("admin.products.hideConfirmDesc"),
+        confirmLabel: t("admin.products.hide"),
+        danger: true,
+        icon: EyeOff,
+      });
+      if (!ok) return;
+    }
+    setBulkBusy(true);
+    const results = await Promise.allSettled(
+      ids.map((id) => (mode === "hide" ? productService.delete(id) : productService.restore(id))),
+    );
+    setBulkBusy(false);
+    const done = results.filter((r) => r.status === "fulfilled").length;
+    const failed = ids.length - done;
+    if (done) {
+      toast.success(
+        t(mode === "hide" ? "admin.products.bulkHidden" : "admin.products.bulkRestored", { count: done }),
+      );
+    }
+    if (failed) toast.error(t("admin.products.bulkFailed", { count: failed }));
+    setSelected(new Set());
+    fetchProducts();
+    fetchCounts();
+  };
+
   // ── Compute min/max price helpers ──
   const priceRange = (variants: Product["variants"]) => {
     const prices = variants.map((v) => v.price);
-    return { min: Math.min(...prices), max: Math.max(...prices) };
+    return prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : { min: 0, max: 0 };
   };
+  const stockOf = (product: Product) => product.variants.reduce((s, v) => s + (v.stock || 0), 0);
+
+  const { sort, apply: applySort } = useAdminGridSort<Product>((p, field) => {
+    if (field === "name") return p.name;
+    if (field === "price") return priceRange(p.variants).min;
+    if (field === "stock") return stockOf(p);
+    return null;
+  });
+  const rows = applySort(filtered);
+
+  const selectedRows = rows.filter((p) => selected.has(p._id));
+  const hasFilters = Boolean(searchTerm) || statusFilter !== "active";
+
+  const columns: AdminGridColumn<Product>[] = [
+    {
+      key: "name",
+      header: t("admin.products.product"),
+      width: "minmax(240px, 2fr)",
+      minWidth: 240,
+      sortable: true,
+      card: "title",
+      render: (product) => (
+        <AdminCellStack
+          media={product.image ? <img src={product.image} alt="" loading="lazy" /> : <Package />}
+          primary={product.name}
+          secondary={[
+            product.category ? t(`admin.products.categories.${product.category}`) : "",
+            product.tags?.slice(0, 2).join(", "),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        />
+      ),
+    },
+    {
+      key: "colors",
+      header: t("admin.products.colors"),
+      width: "100px",
+      minWidth: 100,
+      render: (product) => (
+        <span className="adm-gswatches" title={product.variants.map((v) => v.color).filter(Boolean).join(", ")}>
+          {product.variants.slice(0, 4).map((v, i) => (
+            <span key={i} className="adm-gswatch" style={{ background: v.hexCode || "var(--muted)" }} />
+          ))}
+          {product.variants.length > 4 && <span className="adm-gswatch-more">+{product.variants.length - 4}</span>}
+        </span>
+      ),
+    },
+    {
+      key: "price",
+      header: t("admin.products.price"),
+      width: "150px",
+      minWidth: 140,
+      align: "right",
+      sortable: true,
+      render: (product) => {
+        const { min, max } = priceRange(product.variants);
+        return (
+          <>
+            <AdminMoney value={min} />
+            {max !== min && (
+              <span className="adm-gsecondary">
+                – <AdminMoney value={max} />
+              </span>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      key: "stock",
+      header: t("admin.products.variantStock"),
+      width: "96px",
+      minWidth: 96,
+      align: "right",
+      sortable: true,
+      render: (product) => {
+        const stock = stockOf(product);
+        return (
+          <>
+            <span className={`adm-gnum ${stock < 10 ? "is-warn" : ""}`}>{stock}</span>
+            {stock < 10 && <span className="adm-gsecondary">{t("admin.products.lowStock")}</span>}
+          </>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: t("admin.products.status"),
+      width: "120px",
+      minWidth: 116,
+      align: "center",
+      card: "aside",
+      render: (product) => (
+        <AdminPill tone={product.isActive ? "green" : "neutral"}>
+          {product.isActive ? t("admin.products.active") : t("admin.products.inactive")}
+        </AdminPill>
+      ),
+    },
+    {
+      key: "actions",
+      header: t("admin.products.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (product) => (
+        <AdminRowActions>
+          {product.isActive ? (
+            <AdminActionButton icon={Edit3} label={t("admin.products.edit")} onClick={() => void openEdit(product)} />
+          ) : (
+            <AdminActionButton
+              icon={RotateCcw}
+              tone="green"
+              label={t("admin.products.restore")}
+              onClick={() => void handleRestore(product._id)}
+            />
+          )}
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.products.viewDetails"), icon: Eye, onSelect: () => void openDetail(product) },
+              !product.isActive && { label: t("admin.products.edit"), icon: Edit3, onSelect: () => void openEdit(product) },
+              product.isActive &&
+                isAdminOrStaff && {
+                  label: t("admin.products.hide"),
+                  icon: EyeOff,
+                  danger: true,
+                  separated: true,
+                  onSelect: () => void handleHide(product),
+                },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
 
   // ── Render ──
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
       <AdminPageHeader
+        eyebrow={t("admin.products.eyebrow")}
         title={t("admin.products.title")}
         subtitle={t("admin.products.totalCount", { count: total })}
         actions={
-          isAdminOrStaff && (
-            <CreateButton label={t("admin.products.create")} onClick={openCreate} />
-          )
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                fetchProducts();
+                fetchCounts();
+              }}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              {t("admin.grid.refresh")}
+            </button>
+            {isAdminOrStaff && <CreateButton label={t("admin.products.create")} onClick={openCreate} />}
+          </>
         }
       />
 
-      {/* Table */}
-      <AdminPanel>
-        {/* Table Header — search dùng chung component (debounce 400ms) */}
-        <AdminSearchToolbar
+      {/* Trạng thái — kiêm bộ lọc (chỉ Admin thấy được sản phẩm đã ẩn) */}
+      {isAdmin && (
+        <AdminStatusTabs<ProductStatusFilter>
+          ariaLabel={t("admin.products.status")}
+          value={statusFilter}
+          onChange={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}
+          tabs={[
+            { value: "active", label: t("admin.products.active"), icon: Package, tone: "green", count: counts.active },
+            { value: "hidden", label: t("admin.products.inactive"), icon: EyeOff, tone: "neutral", count: counts.hidden },
+            { value: "all", label: t("admin.products.all"), icon: Layers, count: counts.all },
+          ]}
+        />
+      )}
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
           search={{
             value: searchTerm,
             onChange: handleSearchChange,
             placeholder: t("admin.products.searchPlaceholder"),
             isSearching: searchIsWaiting,
           }}
-          filters={
-            isAdmin ? (
-              <AdminSelect
-                value={statusFilter}
-                options={[
-                  {
-                    value: "active",
-                    label: t("admin.products.active"),
-                    dotClassName: "bg-emerald-500",
-                  },
-                  {
-                    value: "hidden",
-                    label: t("admin.products.inactive"),
-                    dotClassName: "bg-rose-500",
-                  },
-                  {
-                    value: "all",
-                    label: t("admin.products.all"),
-                    dotClassName: "bg-slate-400",
-                  },
-                ]}
-                onChange={(value) => {
-                  setStatusFilter(value as ProductStatusFilter);
-                  setPage(1);
-                }}
-              />
-            ) : undefined
-          }
           onReset={
-            searchTerm || statusFilter !== "active"
+            hasFilters
               ? () => {
                   clearSearch();
                   setStatusFilter("active");
@@ -450,238 +683,97 @@ export function ProductManagement() {
                 }
               : undefined
           }
-          resetLabel={t("admin.clearFilters")}
+          selectedCount={selectedRows.length}
+          onClearSelection={() => setSelected(new Set())}
+          bulkActions={
+            <>
+              {selectedRows.some((p) => p.isActive) && (
+                <AdminActionButton
+                  icon={EyeOff}
+                  tone="rose"
+                  fixedWidth={false}
+                  busy={bulkBusy}
+                  label={t("admin.products.hideSelected")}
+                  onClick={() => void handleBulk("hide")}
+                />
+              )}
+              {selectedRows.some((p) => !p.isActive) && (
+                <AdminActionButton
+                  icon={RotateCcw}
+                  tone="green"
+                  fixedWidth={false}
+                  busy={bulkBusy}
+                  label={t("admin.products.restoreSelected")}
+                  onClick={() => void handleBulk("restore")}
+                />
+              )}
+            </>
+          }
           meta={
-            searchTerm || debouncedSearchTerm ? (
+            debouncedSearchTerm ? (
               <AdminSearchMeta searching={searchIsWaiting}>
-                {filtered.length === 0
+                {rows.length === 0
                   ? t("admin.search.noResults")
-                  : t("admin.search.resultsCount", { count: filtered.length })}
+                  : t("admin.search.resultsCount", { count: rows.length })}
               </AdminSearchMeta>
             ) : undefined
           }
         />
 
-        {/* Table Body */}
-        {loading ? (
-          // Skeleton đồng bộ với bảng thật: ảnh + tên, giá (giữa), tồn kho
-          // (giữa), trạng thái (pill) và cột thao tác view/edit/delete.
-          <AdminTableBodySkeleton
-            columns={[
-              { type: "media", className: "w-[300px]" },
-              { type: "money", align: "center" },
-              { type: "number", align: "center" },
-              { type: "badge", align: "center" },
-              { type: "actions", align: "center", className: "w-[120px]" },
-            ]}
-            rows={6}
-          />
-        ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground" style={{ background: "var(--card)" }}>
-            <Package size={40} className="mx-auto mb-3 opacity-40" />
-            <p>
-              {statusFilter === "hidden"
+        <AdminDataGrid<Product>
+          ariaLabel={t("admin.products.title")}
+          rows={rows}
+          rowKey={(p) => p._id}
+          columns={columns}
+          loading={loading}
+          sort={sort}
+          selection={isAdminOrStaff ? { selected, onChange: setSelected } : undefined}
+          onRowClick={(p) => void openDetail(p)}
+          rowMuted={(p) => !p.isActive}
+          empty={{
+            icon: Package,
+            title: hasFilters
+              ? statusFilter === "hidden"
                 ? t("admin.products.noHiddenProducts")
-                : t("admin.products.noProducts")}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto" style={{ background: "var(--card)" }}>
-            <table className="admin-table w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground w-[300px]">
-                    {t("admin.products.product")}
-                  </th>
-                  {/* Căn lề bằng inline style: rule `.admin-table thead th`
-                      (CSS unlayered) đè utility text-right / text-center
-                      của Tailwind nên header không thẳng cột với body. */}
-                  <th
-                    className="px-6 py-4 text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    {t("admin.products.price")}
-                  </th>
-                  <th
-                    className="px-6 py-4 text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    {t("admin.products.totalStock")}
-                  </th>
-                  <th
-                    className="px-6 py-4 text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    {t("admin.products.status")}
-                  </th>
-                  <th
-                    className="px-6 py-4 text-sm font-medium text-muted-foreground w-[120px]"
-                    style={{ textAlign: "center" }}
-                  >
-                    {t("admin.products.actions")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((product) => {
-                  const { min, max } = priceRange(product.variants);
-                  const totalStock = product.variants.reduce(
-                    (s, v) => s + v.stock,
-                    0,
-                  );
-                  return (
-                    <tr
-                      key={product._id}
-                      className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <span
-                              className="font-medium block truncate"
-                              style={{ color: "var(--foreground)" }}
-                            >
-                              {product.name}
-                            </span>
-                            {product.tags && product.tags.length > 0 && (
-                              <span
-                                className="text-xs truncate block mt-0.5"
-                                style={{ color: "var(--foreground-muted)" }}
-                              >
-                                {product.tags.slice(0, 3).join(", ")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      {/* Inline style cho màu: `.admin-table tbody td`
-                          (CSS unlayered) đè utility text-* của Tailwind. */}
-                      <td
-                        className="px-6 py-4 text-center text-sm font-semibold tabular-nums"
-                        style={{ color: "var(--primary)" }}
-                      >
-                        {min === max
-                          ? formatPrice(min)
-                          : `${formatPrice(min)} – ${formatPrice(max)}`}
-                      </td>
-                      <td className="px-6 py-4 text-center text-sm">
-                        <span
-                          className={`tabular-nums ${
-                            totalStock < 10 ? "font-semibold" : ""
-                          }`}
-                          style={{
-                            color:
-                              totalStock < 10
-                                ? "var(--accent-red-text)"
-                                : "var(--foreground)",
-                          }}
-                        >
-                          {totalStock}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`badge ${
-                            product.isActive ? "badge-green" : "badge-red"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${product.isActive ? "bg-emerald-500" : "bg-rose-500"}`}
-                          />
-                          {product.isActive ? t("admin.products.active") : t("admin.products.inactive")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => void openDetail(product)}
-                            className="admin-action-btn view"
-                            title={t("admin.products.viewDetails")}
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button
-                            onClick={() => openEdit(product)}
-                            className="admin-action-btn edit"
-                            title={t("admin.products.edit")}
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          {product.isActive ? (
-                            <ConfirmDeleteButton
-                              onDelete={async () => {
-                                try {
-                                  await productService.delete(product._id);
-                                  toast.success(t("admin.products.deleteSuccess"));
-                                  fetchProducts();
-                                } catch (err: unknown) {
-                                  const axiosErr = err as { response?: { status?: number } };
-                                  if (axiosErr.response?.status === 403) {
-                                    toast.error(t("admin.products.noPermission"));
-                                  } else {
-                                    toast.error(t("admin.products.deleteError"));
-                                  }
-                                }
-                              }}
-                              itemName={product.name}
-                            />
-                          ) : (
-                            <button
-                              onClick={() => handleRestore(product._id)}
-                              className="admin-action-btn edit"
-                              title={t("admin.products.restore")}
-                            >
-                              <RotateCcw size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                : t("admin.grid.emptyFiltered")
+              : t("admin.products.noProducts"),
+            description: hasFilters ? t("admin.grid.emptyFilteredHint") : undefined,
+          }}
+        />
+
+        <AdminGridFooter page={page} totalPages={totalPages} total={total} pageSize={limit} onPageChange={setPage} disabled={loading} />
       </AdminPanel>
 
-      <AdminPagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        pageSize={10}
-      />
+      {confirmDialog}
 
       {/* Modal */}
       {showModal && (
-        <div className="admin-dialog-overlay" onClick={closeModal}>
-          <div
-            className="admin-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">
-                {editingId ? t("admin.products.editProduct") : t("admin.products.createProduct")}
-              </h3>
-              <button
-                onClick={closeModal}
-                style={{ color: "var(--foreground-muted)" }}
-                className="admin-action-btn absolute top-4 right-4"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
+        <AdminModal
+          variant={editingId ? "edit" : "create"}
+          icon={editingId ? undefined : PackagePlus}
+          title={editingId ? form.name || t("admin.products.editProduct") : t("admin.products.createProduct")}
+          eyebrow={editingId ? t("admin.products.editProduct") : undefined}
+          onClose={closeModal}
+          footer={
+            <>
+              <button type="button" onClick={closeModal} disabled={saving} className="btn-modal-cancel">
+                {t("admin.products.cancel")}
               </button>
-            </div>
-            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-              <div className="admin-dialog-body space-y-4">
+              <button type="submit" form="product-form" disabled={saving} className="btn-modal-primary">
+                {saving
+                  ? t("admin.products.saving")
+                  : editingId
+                    ? t("admin.products.updateProduct")
+                    : t("admin.products.createProduct")}
+              </button>
+            </>
+          }
+        >
+            <form id="product-form" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+              <div className="admin-dialog-body">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    <label className="adm-field-label">
                       {t("admin.products.name")} *
                     </label>
                     <input
@@ -694,7 +786,7 @@ export function ProductManagement() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    <label className="adm-field-label">
                       {t("admin.products.category")} *
                     </label>
                     <AdminSelect
@@ -707,7 +799,7 @@ export function ProductManagement() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    <label className="adm-field-label">
                       {t("admin.products.price")} *
                     </label>
                     <input
@@ -728,7 +820,7 @@ export function ProductManagement() {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    <label className="adm-field-label">
                       {t("admin.products.description")}
                     </label>
                     <textarea
@@ -742,7 +834,7 @@ export function ProductManagement() {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    <label className="adm-field-label">
                       {t("admin.products.mainImage")} {!editingId && <span className="text-destructive">*</span>}
                     </label>
                     <input
@@ -767,7 +859,7 @@ export function ProductManagement() {
                     ) : null}
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                    <label className="adm-field-label">
                       {t("admin.products.tags")}
                     </label>
                     <input
@@ -823,26 +915,8 @@ export function ProductManagement() {
                   </div>
                 </label>
               </div>
-              <div className="admin-dialog-footer">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={saving}
-                  className="btn-modal-cancel"
-                >
-                  {t("admin.products.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn-modal-primary"
-                >
-                  {saving ? t("admin.products.saving") : editingId ? t("admin.products.updateProduct") : t("admin.products.createProduct")}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* Read-only detail popup — viewing a product no longer leaves the list */}

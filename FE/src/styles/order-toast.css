@@ -1,0 +1,43 @@
+/* ============================================================
+   TOAST ĐƠN HÀNG (OrderToastHost) — dựa trên thẻ ct-* của toast giỏ hàng,
+   chỉ thêm ô icon thay cho ảnh sản phẩm + vị trí riêng.
+   ============================================================ */
+
+/* Desktop: cách mép phải 24px (top do JS đặt = dưới header 12px) */
+.ot-region:not(.is-mobile) {
+  right: max(24px, var(--sar, 0px));
+}
+
+.ot-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: var(--ct-accent);
+  background: var(--ct-accent-soft);
+  transform: rotate(-4deg);
+}
+
+.ot-text {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+.ot-text b {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}
+.ot-sub {
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--foreground-muted);
+}
+
+/* Nút thẳng hàng với chữ (sau ô icon 44 + 12 + 14) */
+.ct-actions.ot-actions { padding-left: 70px; }

@@ -238,6 +238,12 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     if (url.includes("/orders/shipping-fee")) {
       return Promise.reject(error);
     }
+    // Membership loads in the background on every page after login: config
+    // falls back to the FE constants and /me shows an inline retry, so a
+    // global toast here would only nag on unrelated pages.
+    if (url.includes("/membership/")) {
+      return Promise.reject(error);
+    }
     const mapped: Record<number, string> = {
       400: "Invalid input. Please check your data.",
       403: "You don't have permission to do that.",

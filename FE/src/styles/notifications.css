@@ -1,0 +1,431 @@
+/* ============================================================
+   NOTIFICATIONS — hộp thư theo ngôn ngữ "craft" (xem craft.css)
+   - Hero gọn có đường khâu + bộ đếm
+   - Thanh lọc: dải băng có miếng vá trượt (layoutId) + công tắc Unread
+   - Mỗi loại thông báo là một tấm vải; các dòng cách nhau bằng chỉ đứt
+   Chỉ dùng token trong theme.css → tự đổi light/dark.
+   ============================================================ */
+
+.ntf-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px calc(env(safe-area-inset-bottom) + 96px);
+}
+@media (min-width: 768px) {
+  .ntf-page { padding: 40px 24px 64px; }
+}
+.ntf-wrap {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+/* ── Hero ── */
+.ntf-hero {
+  padding: clamp(22px, 3.4vw, 36px);
+  margin-bottom: 20px;
+}
+.ntf-hero-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.ntf-hero .craft-title { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+.ntf-hero .craft-stitch { margin: 12px 0 0; }
+.ntf-hero .craft-stats { margin-top: 18px; }
+.ntf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ntf-actions .craft-btn,
+.ntf-actions .craft-btn-ghost { padding: 10px 18px; font-size: 0.86rem; }
+
+.ntf-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 132px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--destructive);
+  background: var(--card);
+  border: 1.5px solid color-mix(in srgb, var(--destructive) 30%, var(--border));
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s var(--ease-out);
+}
+.ntf-btn-danger:hover {
+  transform: translateY(-2px);
+  border-color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 6%, var(--card));
+}
+.ntf-btn-danger[data-armed="true"] {
+  color: #fff;
+  background: var(--destructive);
+  border-color: var(--destructive);
+}
+
+/* ── Thanh lọc ── */
+.ntf-toolbar {
+  position: sticky;
+  top: 92px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--shadow-sm);
+}
+@media (max-width: 767px) {
+  .ntf-toolbar { top: 84px; border-radius: 22px; }
+}
+.ntf-tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+}
+.ntf-tabs::-webkit-scrollbar { display: none; }
+.ntf-tab {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--foreground-muted);
+  transition: color 0.2s;
+}
+.ntf-tab:hover { color: var(--foreground); }
+.ntf-tab[aria-selected="true"] { color: var(--primary); }
+.ntf-tab-patch {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+}
+.ntf-tab-patch::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.ntf-tab-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--muted);
+  color: var(--foreground-muted);
+}
+.ntf-tab[aria-selected="true"] .ntf-tab-count {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Công tắc chỉ hiện chưa đọc */
+.ntf-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px 0 14px;
+  border-left: 1.5px dashed var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--foreground-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.ntf-switch-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background-color 0.2s;
+}
+.ntf-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s var(--ease-out);
+}
+.ntf-switch[aria-checked="true"] { color: var(--primary); }
+.ntf-switch[aria-checked="true"] .ntf-switch-track { background: var(--primary); }
+.ntf-switch[aria-checked="true"] .ntf-switch-track::after { transform: translateX(14px); }
+.ntf-switch:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+@media (max-width: 479px) {
+  .ntf-switch-label { display: none; }
+}
+
+/* ── Section (tấm vải theo loại) ── */
+.ntf-sections { display: grid; gap: 18px; }
+.ntf-card {
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow-xs);
+}
+.ntf-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 12px;
+}
+.ntf-card-head .craft-section-icon { width: 36px; height: 36px; border-radius: 12px; }
+.ntf-card-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+.ntf-card-sub {
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+.ntf-card-sub b { color: var(--primary); font-weight: 700; }
+.ntf-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.ntf-link svg { transition: transform 0.2s var(--ease-out); }
+.ntf-link:hover svg { transform: translateX(3px); }
+.ntf-more {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border-top: 1.5px dashed var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--foreground-muted);
+  transition: color 0.2s, background-color 0.2s;
+}
+.ntf-more:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+}
+
+/* ── Nhóm theo ngày ── */
+.ntf-day { margin-bottom: 22px; }
+.ntf-day-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 6px 10px;
+}
+.ntf-day-label {
+  font-family: var(--font-script);
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--primary);
+  transform: rotate(-2deg);
+}
+
+/* ── Dòng thông báo ── */
+.ntf-list { list-style: none; margin: 0; padding: 0; }
+.ntf-list > li + li .ntf-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 70px;
+  right: 18px;
+  border-top: 1px dashed var(--border);
+}
+.ntf-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 14px 14px 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.ntf-row:hover { background: color-mix(in srgb, var(--primary) 4%, transparent); }
+.ntf-row:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: -2px;
+}
+.ntf-row.is-unread { background: color-mix(in srgb, var(--primary) 5%, transparent); }
+.ntf-row.is-unread:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.ntf-row.is-unread::after {
+  /* sợi chỉ đánh dấu chưa đọc */
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary);
+}
+
+.ntf-icon {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  transform: rotate(-4deg);
+  transition: transform 0.25s var(--ease-out);
+}
+.ntf-row:hover .ntf-icon { transform: rotate(0deg) scale(1.05); }
+
+.ntf-body { flex: 1; min-width: 0; }
+.ntf-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ntf-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--foreground);
+}
+.ntf-row:not(.is-unread) .ntf-title { color: var(--foreground-secondary, var(--foreground)); font-weight: 500; }
+.ntf-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.ntf-urgent {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--destructive) 40%, transparent);
+}
+.ntf-msg {
+  margin-top: 3px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--foreground-muted);
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ntf-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  color: var(--foreground-muted);
+}
+
+.ntf-row-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.2s;
+}
+@media (hover: hover) and (min-width: 768px) {
+  .ntf-row-actions { opacity: 0; }
+  .ntf-row:hover .ntf-row-actions,
+  .ntf-row:focus-within .ntf-row-actions { opacity: 1; }
+}
+.ntf-act {
+  position: relative;
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--foreground-muted);
+  transition: background-color 0.2s, color 0.2s;
+  touch-action: none;
+}
+.ntf-act:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.ntf-act.is-delete:hover,
+.ntf-act.is-delete[data-holding="true"] {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+.ntf-act svg.ntf-ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+/* ── Empty state ── */
+.ntf-empty .craft-empty-title { margin-top: 8px; }
+.ntf-empty-mascot {
+  width: 120px;
+  height: auto;
+  animation: ntf-bob 5s ease-in-out infinite;
+}
+@keyframes ntf-bob {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-8px) rotate(-3deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ntf-empty-mascot { animation: none; }
+}

@@ -1,161 +1,73 @@
-import { cn } from "../ui/utils";
+import type { CSSProperties } from "react";
+import { Check } from "lucide-react";
 import type { RankType } from "../../../features/membership/types/membership.types";
-import { getRankConfig } from "../../../features/membership/types/membership.types";
+import { getRankConfig, rankIndex, RANK_ORDER } from "../../../features/membership/types/membership.types";
+import "../../../styles/membership.css";
 
-interface RankTimelineProps {
+interface RankJourneyProps {
   currentRank: RankType;
   points: number;
-  compact?: boolean;
 }
 
-const RANK_ORDER: RankType[] = ["member", "silver", "gold", "diamond"];
-
-export function RankTimeline({ currentRank, points, compact = false }: RankTimelineProps) {
-  const currentIndex = RANK_ORDER.indexOf(currentRank);
-
-  return (
-    <div className={compact ? "space-y-1" : "space-y-3"}>
-      {!compact && (
-        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          📈 Member Journey
-        </h3>
-      )}
-
-      {RANK_ORDER.map((rank, index) => {
-        const config = getRankConfig(rank);
-        const isAchieved = index <= currentIndex;
-        const isCurrent = index === currentIndex;
-        const isNext = index === currentIndex + 1;
-
-        return (
-          <div key={rank} className="relative">
-            {index < RANK_ORDER.length - 1 && (
-              <div
-                className={cn(
-                  "absolute left-[18px] top-10 w-0.5 h-10",
-                  index < currentIndex ? "bg-primary/30" : "bg-border",
-                )}
-              />
-            )}
-
-            <div className="flex items-start gap-4">
-              <div
-                className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0 transition-all duration-500 relative",
-                  isAchieved && "shadow-sm",
-                )}
-                style={{
-                  background: isAchieved ? config.gradient : "var(--muted)",
-                  color: isAchieved ? config.textColor : "var(--muted-foreground)",
-                }}
-              >
-                {config.icon}
-                {isCurrent && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-white" />
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0 pt-1.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "font-semibold text-sm",
-                      isCurrent && "text-foreground",
-                      isAchieved && !isCurrent && "text-muted-foreground",
-                      !isAchieved && "text-muted-foreground/50",
-                    )}
-                  >
-                    {config.displayName}
-                  </span>
-                  {isAchieved && !isCurrent && (
-                    <span className="text-[9px] text-primary/60">✓</span>
-                  )}
-                  {isCurrent && (
-                    <span className="text-[9px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-medium">
-                      Current
-                    </span>
-                  )}
-                  {isNext && (
-                    <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                      Next
-                    </span>
-                  )}
-                </div>
-
-                <p className={cn("text-xs mt-0.5", isCurrent ? "text-foreground" : "text-muted-foreground")}>
-                  {config.minPoints.toLocaleString()} pts required
-                </p>
-
-                {isCurrent && config.minPoints > 0 && (
-                  <div className="mt-2 w-full h-1.5 rounded-full bg-border/60 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-1000"
-                      style={{
-                        width: `${Math.min((points / (config.minPoints || 8000)) * 100, 100)}%`,
-                        background: config.gradient,
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Compact horizontal timeline for desktop */
-export function RankTimelineHorizontal({ currentRank }: RankTimelineProps) {
-  const currentIndex = RANK_ORDER.indexOf(currentRank);
+/**
+ * Hành trình hạng — các nút thắt trên một sợi chỉ (ngang trên desktop,
+ * dọc trên mobile). Đoạn chỉ sau hạng hiện tại được "may" tới đúng tiến độ.
+ */
+export function RankJourney({ currentRank, points }: RankJourneyProps) {
+  const currentIndex = rankIndex(currentRank);
 
   return (
-    <div className="w-full flex items-start">
+    <ol className="mb-journey">
       {RANK_ORDER.map((rank, index) => {
         const config = getRankConfig(rank);
-        const isAchieved = index <= currentIndex;
-        const isCurrent = index === currentIndex;
+        const state = index < currentIndex ? "done" : index === currentIndex ? "current" : "todo";
+        const nextConfig = index < RANK_ORDER.length - 1 ? getRankConfig(RANK_ORDER[index + 1]) : null;
+
+        // Độ dài đoạn chỉ nối tới hạng kế tiếp: đã qua = đầy, đang ở = theo điểm.
+        let fill = 0;
+        if (nextConfig && index < currentIndex) fill = 1;
+        if (nextConfig && index === currentIndex) {
+          const range = Math.max(1, nextConfig.minPoints - config.minPoints);
+          fill = Math.min(1, Math.max(0, (points - config.minPoints) / range));
+        }
 
         return (
-          <div key={rank} className="flex-1 relative flex flex-col items-center">
-            {/* Connector line */}
-            {index < RANK_ORDER.length - 1 && (
-              <div
-                className="absolute top-[18px] left-[60%] w-[80%] h-[2px]"
-                style={{
-                  background: index < currentIndex ? config.gradient : "var(--border)",
-                  opacity: index < currentIndex ? 0.5 : 1,
-                }}
-              />
-            )}
-
-            <div className="flex flex-col items-center gap-1.5 z-10">
-              <div
-                className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300",
-                  isAchieved && "shadow-sm",
-                  isCurrent && "ring-2 ring-primary ring-offset-2 scale-110",
-                )}
-                style={{
-                  background: isAchieved ? config.gradient : "var(--muted)",
-                  color: isAchieved ? config.textColor : "var(--muted-foreground)",
-                }}
-              >
-                {config.icon}
-              </div>
-              <span className={cn("text-xs font-medium", isCurrent ? "text-foreground" : "text-muted-foreground")}>
-                {config.displayName}
-              </span>
-              {isCurrent && (
-                <span className="text-[8px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-medium">
-                  Current
+          <li
+            key={rank}
+            className="mb-stop"
+            data-rank={rank}
+            data-state={state}
+            style={{ "--fill": fill } as CSSProperties}
+            aria-current={state === "current" ? "step" : undefined}
+          >
+            <span className="mb-knot" aria-hidden="true">
+              {config.icon}
+              {state === "done" && (
+                <span className="mb-knot-check">
+                  <Check size={12} strokeWidth={3} />
                 </span>
               )}
+            </span>
+            <div>
+              <p className="mb-stop-name">
+                {config.displayName}
+                {state === "current" && <span className="mb-stop-flag">Hạng của bạn</span>}
+                {index === currentIndex + 1 && <span className="mb-stop-flag is-next">Kế tiếp</span>}
+              </p>
+              <p className="mb-stop-meta">
+                {config.minPoints > 0 ? `Từ ${config.minPoints.toLocaleString("vi-VN")} điểm` : "Khi tham gia"}
+                {" · "}hoàn {config.coinRewardPercent}% Coin
+              </p>
+              {state === "current" && (
+                <p className="mb-stop-note">bạn đang ở đây · {points.toLocaleString("vi-VN")} điểm</p>
+              )}
+              {index === currentIndex + 1 && (
+                <p className="mb-stop-note">còn {Math.max(0, config.minPoints - points).toLocaleString("vi-VN")} điểm nữa</p>
+              )}
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

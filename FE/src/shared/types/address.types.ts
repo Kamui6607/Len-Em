@@ -69,6 +69,24 @@ export interface AddressApiResponse<T> {
 }
 
 // ============================================================
+// AddressLocation — khu vực hành chính (+ toạ độ) lưu trên User.
+// Khớp đúng Joi schema của PATCH /users/:userId → KHÔNG thêm key nào khác.
+// ============================================================
+
+export interface AddressLocation {
+  provinceName: string;
+  districtName: string;
+  wardName: string;
+  /** GHN IDs — có khi chọn bằng dropdown (hoặc map khớp được /ghn/map-address) */
+  provinceId?: number | null;
+  districtId?: number | null;
+  wardCode?: string | null;
+  /** Toạ độ ghim trên bản đồ — lat và lng luôn đi cùng nhau */
+  lat?: number | null;
+  lng?: number | null;
+}
+
+// ============================================================
 // Reverse Geocode — result from Mapbox/Google Maps client-side
 // ============================================================
 

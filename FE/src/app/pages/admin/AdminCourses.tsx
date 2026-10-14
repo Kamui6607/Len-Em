@@ -1,59 +1,65 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router";
-import { Edit, Eye, BookOpen } from "lucide-react";
-import { CreateButton } from "../../../shared/components/admin/CreateButton";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
+import { useNavigate } from "react-router";
+import { BookOpen, CheckCircle2, Clock, Edit, Eye, FileEdit, GraduationCap, Layers, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "../../../shared/components/ui/badge";
-import { Button } from "../../../shared/components/ui/button";
-import { formatPrice } from "../../../lib/formatPrice";
+import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { courseService } from "../../../shared/api/courseService";
 import type { Course, CourseLevel } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
 import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
-import { AdminModal } from "../../../shared/components/admin/AdminModal";
 import {
-  AdminTableScroll,
-  AdminSortableHeader,
-  AdminTableHeaderCell,
-  AdminTableEmptyRow,
-} from "../../../shared/components/admin/AdminDataTable";
+  AdminDetailGrid,
+  AdminDetailItem,
+  AdminModal,
+} from "../../../shared/components/admin/AdminModal";
+import { AdminSearchMeta } from "../../../shared/components/admin/AdminSearch";
 import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-} from "../../../shared/components/admin/AdminSearch";
-import { AdminTableSkeleton } from "../../../shared/components/skeletons/AdminSkeleton";
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminMoney,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminConfirm,
+  useAdminGridSort,
+  type AdminGridColumn,
+  type AdminTone,
+} from "../../../shared/components/admin/AdminDataGrid";
 
-type SortField = "title" | "level" | "lessons" | "duration" | "status" | "price";
-type SortDirection = "asc" | "desc";
+type StatusFilter = "all" | "published" | "draft";
 
-const levelLabels: Record<CourseLevel, string> = {
-  beginner: "Beginner",
-  mid: "Intermediate",
-  pro: "Advanced",
+const LEVEL_TONE: Record<CourseLevel, AdminTone> = {
+  beginner: "green",
+  mid: "amber",
+  pro: "rose",
 };
-
-const levelStyles: Record<CourseLevel, string> = {
-  beginner: "border border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success-text)]",
-  mid: "border border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning-text)]",
-  pro: "border border-[var(--error-border)] bg-[var(--error-bg)] text-[var(--error-text)]",
-};
+const LEVEL_ORDER: CourseLevel[] = ["beginner", "mid", "pro"];
 
 /** Records per page — every admin list uses the same page size. */
 const PAGE_SIZE = 10;
 
 export function AdminCourses() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewingCourse, setViewingCourse] = useState<Course | null>(null);
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const { inputValue: searchTerm, debouncedValue: debouncedSearchTerm, setInputValue: setSearchTerm, isWaiting: searchIsWaiting, clear: clearSearch } = useDebouncedSearch({ delay: 400, minChars: 0 });
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
+  const {
+    inputValue: searchTerm,
+    debouncedValue: debouncedSearchTerm,
+    setInputValue: setSearchTerm,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -71,267 +77,300 @@ export function AdminCourses() {
     fetchCourses();
   }, [fetchCourses]);
 
-  const filteredCourses = courses.filter((course) =>
-    course.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-  );
-
-  const sortedCourses = [...filteredCourses].sort((a, b) => {
-    if (!sortField) return 0;
-    const getValue = (course: Course) => {
-      switch (sortField) {
-        case "title": return course.title;
-        case "level": return course.level;
-        case "lessons": return course.totalLessons;
-        case "duration": return course.totalDuration;
-        case "status": return course.isPublished ? "published" : "draft";
-        case "price": return course.price ?? 0;
-      }
-    };
-    const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
-    return sortDirection === "asc" ? cmp : -cmp;
-  });
-
-  // The API returns the whole catalogue in one go, so paging happens here.
-  const totalPages = Math.max(1, Math.ceil(sortedCourses.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pagedCourses = sortedCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  // A new search narrows the list — jump back to page 1.
+  // A new search / filter narrows the list — jump back to page 1.
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, statusFilter]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
+  const levelLabel = (level: CourseLevel) => t(`admin.courses.levels.${level}`);
+
+  const handleDelete = async (course: Course) => {
+    const ok = await confirm({
+      title: t("admin.confirmDelete.title", { name: course.title }),
+      description: t("admin.courses.deleteWarning"),
+      confirmLabel: t("admin.courses.delete"),
+      danger: true,
+      icon: Trash2,
+    });
+    if (!ok) return;
+    try {
+      await courseService.delete(course._id);
+      toast.success(t("admin.courses.deleteSuccess"));
+      setCourses((prev) => prev.filter((c) => c._id !== course._id));
+    } catch {
+      toast.error(t("admin.courses.deleteError"));
     }
   };
 
-  if (loading) {
-    // Giữ nguyên header + nút "Create" thật, chỉ bảng là skeleton (đúng 7 cột:
-    // khoá học, level, số bài, thời lượng, giá, trạng thái, thao tác).
-    return (
-      <div className="space-y-6">
-        <AdminPageHeader
-          title={t("admin.courses.title")}
-          subtitle={t("admin.courses.subtitle")}
-          actions={
-            <CreateButton to="/admin/courses/new" label={t("admin.courses.create")} />
-          }
-        />
+  // The API returns the whole catalogue in one go — filter, sort and page here.
+  const needle = debouncedSearchTerm.toLowerCase();
+  const matched = courses.filter(
+    (course) =>
+      course.title.toLowerCase().includes(needle) &&
+      (statusFilter === "all" || (statusFilter === "published") === course.isPublished),
+  );
+  const { sort, apply: applySort } = useAdminGridSort<Course>((course, field) => {
+    if (field === "title") return course.title;
+    if (field === "level") return LEVEL_ORDER.indexOf(course.level);
+    if (field === "content") return course.totalLessons;
+    if (field === "price") return course.price ?? 0;
+    if (field === "status") return course.isPublished ? 1 : 0;
+    return null;
+  });
+  const sorted = applySort(matched);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const rows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const publishedCount = courses.filter((c) => c.isPublished).length;
+  const counts = loading
+    ? { all: undefined, published: undefined, draft: undefined }
+    : { all: courses.length, published: publishedCount, draft: courses.length - publishedCount };
 
-        <AdminTableSkeleton
-          rows={6}
-          columns={[
-            { type: "media", className: "w-[300px]" },
-            { type: "badge", align: "center" },
-            { type: "number", align: "center" },
-            { type: "number", align: "center" },
-            { type: "money", align: "center" },
-            { type: "badge", align: "center" },
-            { type: "actions", align: "center" },
-          ]}
+  const priceCell = (price?: number) =>
+    (price ?? 0) > 0 ? <AdminMoney value={price ?? 0} /> : <span className="adm-gprimary">{t("admin.grid.free")}</span>;
+
+  const columns: AdminGridColumn<Course>[] = [
+    {
+      key: "title",
+      header: t("admin.courses.course"),
+      width: "minmax(240px, 2fr)",
+      minWidth: 240,
+      sortable: true,
+      card: "title",
+      render: (course) => (
+        <AdminCellStack
+          media={course.thumbnail ? <img src={course.thumbnail} alt="" loading="lazy" /> : <GraduationCap />}
+          primary={course.title}
+          secondary={course.tags?.slice(0, 3).join(", ")}
         />
-      </div>
-    );
-  }
+      ),
+    },
+    {
+      key: "level",
+      header: t("admin.courses.level"),
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      sortable: true,
+      render: (course) => <AdminPill tone={LEVEL_TONE[course.level] ?? "neutral"}>{levelLabel(course.level)}</AdminPill>,
+    },
+    {
+      key: "content",
+      header: t("admin.courses.content"),
+      width: "120px",
+      minWidth: 120,
+      align: "right",
+      sortable: true,
+      render: (course) => (
+        <>
+          <span className="adm-gprimary adm-gnum-plain">{t("admin.courses.lessonsShort", { count: course.totalLessons })}</span>
+          <span className="adm-gsecondary adm-gnum-plain">
+            {t("admin.courses.durationMin", { duration: course.totalDuration })}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "price",
+      header: t("admin.courses.price"),
+      width: "120px",
+      minWidth: 120,
+      align: "right",
+      sortable: true,
+      render: (course) => priceCell(course.price),
+    },
+    {
+      key: "status",
+      header: t("admin.courses.status"),
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      sortable: true,
+      card: "aside",
+      render: (course) => (
+        <AdminPill tone={course.isPublished ? "green" : "amber"}>
+          {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
+        </AdminPill>
+      ),
+    },
+    {
+      key: "actions",
+      header: t("admin.courses.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (course) => (
+        <AdminRowActions>
+          <AdminActionButton
+            icon={Edit}
+            label={t("admin.courses.edit")}
+            onClick={() => navigate(`/admin/courses/${course._id}`)}
+          />
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.courses.view"), icon: Eye, onSelect: () => setViewingCourse(course) },
+              {
+                label: t("admin.courses.delete"),
+                icon: Trash2,
+                danger: true,
+                separated: true,
+                onSelect: () => void handleDelete(course),
+              },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
+        eyebrow={t("admin.courses.eyebrow")}
         title={t("admin.courses.title")}
         subtitle={t("admin.courses.subtitle")}
         actions={
-          <CreateButton to="/admin/courses/new" label={t("admin.courses.create")} />
+          <>
+            <button type="button" className="btn-secondary" onClick={() => void fetchCourses()} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              {t("admin.grid.refresh")}
+            </button>
+            <CreateButton to="/admin/courses/new" label={t("admin.courses.create")} />
+          </>
         }
       />
 
-      <AdminPanel>
-        {/* Search: debounce 400ms qua useDebouncedSearch + hiện spinner khi đang chờ */}
-        <AdminSearchToolbar
+      <AdminStatusTabs<StatusFilter>
+        ariaLabel={t("admin.courses.status")}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        tabs={[
+          { value: "all", label: t("admin.courses.allCourses"), icon: Layers, count: counts.all },
+          { value: "published", label: t("admin.courses.published"), icon: CheckCircle2, tone: "green", count: counts.published },
+          { value: "draft", label: t("admin.courses.draft"), icon: FileEdit, tone: "amber", count: counts.draft },
+        ]}
+      />
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
           search={{
             value: searchTerm,
             onChange: setSearchTerm,
             placeholder: t("admin.courses.searchPlaceholder"),
             isSearching: searchIsWaiting,
           }}
-          onReset={searchTerm ? clearSearch : undefined}
-          resetLabel={t("admin.clearFilters")}
+          onReset={
+            searchTerm || statusFilter !== "all"
+              ? () => {
+                  clearSearch();
+                  setStatusFilter("all");
+                }
+              : undefined
+          }
           meta={
-            searchTerm || debouncedSearchTerm ? (
+            debouncedSearchTerm ? (
               <AdminSearchMeta searching={searchIsWaiting}>
-                {filteredCourses.length === 0
+                {matched.length === 0
                   ? t("admin.search.noResults")
-                  : t("admin.search.resultsCount", { count: filteredCourses.length })}
+                  : t("admin.search.resultsCount", { count: matched.length })}
               </AdminSearchMeta>
             ) : undefined
           }
         />
 
-        <AdminTableScroll>
-          <thead className="bg-muted">
-            <tr>
-              <AdminSortableHeader label={t("admin.courses.course")} field="title" activeField={sortField} direction={sortDirection} onSort={handleSort} />
-              <AdminSortableHeader label={t("admin.courses.level")} field="level" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.courses.lessons")} field="lessons" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.courses.duration")} field="duration" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.courses.price")} field="price" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminSortableHeader label={t("admin.courses.status")} field="status" activeField={sortField} direction={sortDirection} onSort={handleSort} align="center" />
-              <AdminTableHeaderCell label={t("admin.courses.actions")} align="center" />
-            </tr>
-          </thead>
-          <tbody>
-            {sortedCourses.length > 0 ? (
-              pagedCourses.map((course) => (
-                <tr key={course._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={course.thumbnail}
-                        alt={course.title}
-                        className="size-11 rounded-lg object-cover"
-                      />
-                      <div className="min-w-0">
-                        <span className="block truncate font-medium text-sm max-w-[300px]">{course.title}</span>
-                        <span className="text-xs text-muted-foreground">{course.tags?.slice(0, 2).join(", ")}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Badge className={levelStyles[course.level]} variant="outline">{levelLabels[course.level]}</Badge>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="flex justify-center items-center gap-1.5 text-sm">
-                      <BookOpen className="size-4 text-muted-foreground" />
-                      {course.totalLessons}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground text-center">{course.totalDuration} min</td>
-                  <td className="px-6 py-4 text-sm text-center">
-                    {(course.price ?? 0) > 0 ? formatPrice(course.price ?? 0) : "Free"}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`badge ${course.isPublished ? "badge-green" : "badge-orange"}`}>
-                      {course.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button onClick={() => setViewingCourse(course)} variant="ghost" size="sm" className="admin-action-btn view" title={t("admin.courses.view")}>
-                        <Eye className="size-4" />
-                      </Button>
-                      <Button asChild variant="ghost" size="sm" className="admin-action-btn edit">
-                        <Link to={`/admin/courses/${course._id}`}>
-                          <Edit className="size-4" />
-                        </Link>
-                      </Button>
-                      <ConfirmDeleteButton
-                        onDelete={async () => {
-                          try {
-                            await courseService.delete(course._id);
-                            toast.success(t("admin.courses.deleteSuccess"));
-                            setCourses((prev) => prev.filter((c) => c._id !== course._id));
-                          } catch {
-                            toast.error(t("admin.courses.deleteError"));
-                          }
-                        }}
-                        itemName={course.title}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <AdminTableEmptyRow colSpan={7} message={t("admin.courses.noCourses")} />
-            )}
-          </tbody>
-        </AdminTableScroll>
+        <AdminDataGrid<Course>
+          ariaLabel={t("admin.courses.title")}
+          rows={rows}
+          rowKey={(c) => c._id}
+          columns={columns}
+          loading={loading}
+          sort={sort}
+          onRowClick={(c) => setViewingCourse(c)}
+          rowAccent={(c) => (c.isPublished ? null : "amber")}
+          empty={{ icon: GraduationCap, title: t("admin.courses.noCourses") }}
+        />
+
+        <AdminGridFooter
+          page={safePage}
+          totalPages={totalPages}
+          total={sorted.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </AdminPanel>
 
-      <AdminPagination
-        page={safePage}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalItems={sortedCourses.length}
-        pageSize={PAGE_SIZE}
-      />
+      {confirmDialog}
 
       {/* ── Read dialog: xem chi tiết ngay tại trang admin, không chuyển trang ── */}
       {viewingCourse && (
         <AdminModal
+          variant="view"
+          size="lg"
+          icon={GraduationCap}
+          eyebrow={t("admin.courses.course")}
           title={viewingCourse.title}
+          media={
+            viewingCourse.thumbnail ? <img src={viewingCourse.thumbnail} alt="" className="adm-dlg-thumb" /> : undefined
+          }
+          badges={
+            <>
+              <AdminPill tone={LEVEL_TONE[viewingCourse.level] ?? "neutral"}>{levelLabel(viewingCourse.level)}</AdminPill>
+              <AdminPill tone={viewingCourse.isPublished ? "green" : "amber"}>
+                {viewingCourse.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
+              </AdminPill>
+            </>
+          }
           onClose={() => setViewingCourse(null)}
-          className="max-w-3xl w-full"
+          footer={
+            <>
+              <button type="button" onClick={() => setViewingCourse(null)} className="btn-modal-cancel">
+                {t("common.close")}
+              </button>
+              <button
+                type="button"
+                className="btn-modal-primary"
+                onClick={() => navigate(`/admin/courses/${viewingCourse._id}`)}
+              >
+                <Edit className="w-4 h-4" /> {t("admin.courses.edit")}
+              </button>
+            </>
+          }
         >
           <div className="admin-dialog-body">
-            {/* Thumbnail + badges + description */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <img
-                src={viewingCourse.thumbnail}
-                alt={viewingCourse.title}
-                className="w-full sm:w-40 aspect-square shrink-0 rounded-xl object-cover bg-muted"
-              />
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={levelStyles[viewingCourse.level]} variant="outline">
-                    {levelLabels[viewingCourse.level]}
-                  </Badge>
-                  <span className={`badge ${viewingCourse.isPublished ? "badge-green" : "badge-orange"}`}>
-                    {viewingCourse.isPublished ? t("admin.courses.published") : t("admin.courses.draft")}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {viewingCourse.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.level")}</p>
-                <p className="text-sm font-medium">{levelLabels[viewingCourse.level]}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.lessonsCount")}</p>
-                <p className="text-sm font-medium">{viewingCourse.totalLessons}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.duration")}</p>
-                <p className="text-sm font-medium">
-                  {t("admin.courses.durationMin", { duration: viewingCourse.totalDuration })}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{t("admin.courses.price")}</p>
-                <p className="text-sm font-medium">
-                  {(viewingCourse.price ?? 0) > 0 ? formatPrice(viewingCourse.price ?? 0) : "Free"}
-                </p>
-              </div>
-            </div>
-
-            {/* Tags */}
-            {viewingCourse.tags && viewingCourse.tags.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">{t("admin.courses.tags")}</p>
-                <div className="flex flex-wrap gap-2">
-                  {viewingCourse.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+            {viewingCourse.description && (
+              <AdminDetailItem label={t("admin.courses.description")}>
+                <p className="whitespace-pre-wrap leading-relaxed font-normal">{viewingCourse.description}</p>
+              </AdminDetailItem>
             )}
-          </div>
-
-          <div className="admin-dialog-footer">
-            <button type="button" onClick={() => setViewingCourse(null)} className="btn-modal-cancel">
-              {t("common.close")}
-            </button>
+            <AdminDetailGrid>
+              <AdminDetailItem label={t("admin.courses.lessonsCount")}>
+                <span className="inline-flex items-center gap-1.5">
+                  <BookOpen className="size-4 text-muted-foreground" /> {viewingCourse.totalLessons}
+                </span>
+              </AdminDetailItem>
+              <AdminDetailItem label={t("admin.courses.duration")}>
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="size-4 text-muted-foreground" />
+                  {t("admin.courses.durationMin", { duration: viewingCourse.totalDuration })}
+                </span>
+              </AdminDetailItem>
+              <AdminDetailItem label={t("admin.courses.price")}>{priceCell(viewingCourse.price)}</AdminDetailItem>
+              <AdminDetailItem label={t("admin.courses.tags")}>
+                {viewingCourse.tags && viewingCourse.tags.length > 0 ? (
+                  <div className="adm-chips">
+                    {viewingCourse.tags.map((tag) => (
+                      <span key={tag} className="adm-chip">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  "—"
+                )}
+              </AdminDetailItem>
+            </AdminDetailGrid>
           </div>
         </AdminModal>
       )}

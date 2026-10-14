@@ -1,47 +1,117 @@
-import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+// ============================================================
+// AdminReports — route /admin/reports (Admin + Staff có quyền xem)
+// Báo cáo sự cố đơn hàng của khách:
+//  - Tab trạng thái có số đếm (mặc định "Đang chờ" — việc cần xử lý)
+//  - Tìm theo tiêu đề / mã báo cáo / mã đơn (BE: search, debounce 400ms)
+//  - Mỗi dòng hiện người xử lý ("Chưa giao" nổi bật để Admin phân việc)
+//  - Hộp xử lý dùng chung với staff; Admin có thêm giao việc + xoá
+// ============================================================
+
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
-import {
-  AdminSearchMeta,
-  AdminSearchToolbar,
-  ADMIN_SEARCH_DEBOUNCE_MS,
-} from "../../../shared/components/admin/AdminSearch";
-import { Eye, ChevronUp, ChevronDown } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Clock, Eye, Flag, Image as ImageIcon, Layers, RefreshCw, UserRound, XCircle } from "lucide-react";
 import { orderReportService } from "../../../features/orderReport/services/orderReport.service";
-import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
-import { userService, type UserRoleRef } from "../../../features/users/services/user.service";
-import { loadRoles } from "../../../shared/api/roleService";
 import type { OrderReport } from "../../../features/orderReport/types/orderReport.types";
-import type { UsersListResponse } from "../../../features/users/services/user.service";
-import { useAuth } from "../../../shared/hooks/useAuth";
 import {
-  AdminListSkeleton,
-  AdminTableBodySkeleton,
-} from "../../../shared/components/skeletons/AdminSkeleton";
+  assigneeName,
+  ReportReviewModal,
+  type StaffOption,
+} from "../../../features/orderReport/components/ReportReview";
+import {
+  reportCode,
+  reportImages,
+  reportOrderCode,
+  statusMeta,
+  type ReportStatus,
+} from "../../../features/orderReport/reportMeta";
+import { toText } from "../../../lib/displayText";
+import { userService, type UserRoleRef, type UsersListResponse } from "../../../features/users/services/user.service";
+import { loadRoles } from "../../../shared/api/roleService";
+import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import { useAuth } from "../../../shared/hooks/useAuth";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import { AdminSearchMeta, ADMIN_SEARCH_DEBOUNCE_MS } from "../../../shared/components/admin/AdminSearch";
+import {
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminDateCell,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  type AdminGridColumn,
+  type AdminStatusTab,
+  type AdminTone,
+} from "../../../shared/components/admin/AdminDataGrid";
 
 type ApiUser = UsersListResponse["result"]["users"][0];
+type TabValue = ReportStatus | "";
 
-const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];
+const PAGE_SIZE = 10;
 
-type SortField = "id" | "title" | "orderId" | "status" | "date";
-type SortDirection = "asc" | "desc";
+const STATUS_TABS: AdminStatusTab<TabValue>[] = [
+  { value: "PENDING", label: "Đang chờ", icon: Clock, tone: "amber" },
+  { value: "DONE", label: "Đã xong", icon: CheckCircle2, tone: "green" },
+  { value: "CANCELLED", label: "Đã huỷ", icon: XCircle, tone: "rose" },
+  { value: "", label: "Tất cả", icon: Layers },
+];
+
+const STATUS_TONE: Record<ReportStatus, AdminTone> = {
+  PENDING: "amber",
+  DONE: "green",
+  CANCELLED: "rose",
+};
+
+/** Danh sách Staff để giao việc (endpoint /users chỉ dành cho Admin). */
+async function loadStaffOptions(): Promise<StaffOption[]> {
+  let staffRoleId: string | undefined;
+  try {
+    const roles = await loadRoles({ limit: 100 });
+    staffRoleId = roles.find((role) => role.roleName === "Staff")?._id;
+  } catch {
+    // Không tra được role → lọc theo roleId nhúng trong từng user bên dưới
+  }
+  const collected: ApiUser[] = [];
+  const seen = new Set<string>();
+  for (let p = 1; p <= 5; p++) {
+    const { data } = await userService.getAllUsers({ page: p, limit: 20, roleId: staffRoleId });
+    for (const user of data.data?.result?.users ?? []) {
+      if (!user.userId || seen.has(user.userId)) continue;
+      seen.add(user.userId);
+      collected.push(user);
+    }
+    if (p >= (data.data?.result?.totalPages ?? 1)) break;
+  }
+  const roleOf = (user: ApiUser) =>
+    typeof user.roleId === "string" ? { id: user.roleId, name: user.roleId } : {
+      id: (user.roleId as UserRoleRef | undefined)?._id ?? "",
+      name: (user.roleId as UserRoleRef | undefined)?.roleName ?? "",
+    };
+  const staff = collected.filter((u) => {
+    const role = roleOf(u);
+    return (staffRoleId && role.id === staffRoleId) || role.name === "Staff";
+  });
+  return staff.map((u) => ({ id: u.userId, name: u.fullName || u.username, email: u.email }));
+}
 
 export function AdminReports() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
+
   const [reports, setReports] = useState<OrderReport[]>([]);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("");
-  const [apiUsers, setApiUsers] = useState<ApiUser[]>([]);
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  // Search DÙNG CHUNG: gõ phản hồi ngay, gọi API sau khi ngừng gõ
-  // ADMIN_SEARCH_DEBOUNCE_MS (400ms) — đồng bộ mọi trang admin.
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<TabValue>("PENDING");
+  const [counts, setCounts] = useState<Partial<Record<TabValue, number>>>({});
+  const [staff, setStaff] = useState<StaffOption[]>([]);
+  const [selected, setSelected] = useState<OrderReport | null>(null);
+
   const {
     inputValue,
     debouncedValue,
@@ -50,565 +120,259 @@ export function AdminReports() {
     clear: clearSearch,
   } = useDebouncedSearch({ delay: ADMIN_SEARCH_DEBOUNCE_MS, minChars: 0 });
 
-  // Detail modal state
-  const [selectedReport, setSelectedReport] = useState<OrderReport | null>(null);
-  const [statusUpdating, setStatusUpdating] = useState(false);
-  const [noteUpdating, setNoteUpdating] = useState(false);
-  const [assignModal, setAssignModal] = useState<string | null>(null);
-  const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
-  const [newNote, setNewNote] = useState("");
-
-  // Delete confirm state
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await orderReportService.getAll({
         page,
-        limit: 10,
-        search: debouncedValue || undefined,
+        limit: PAGE_SIZE,
+        search: debouncedValue.trim() || undefined,
         status: filterStatus || undefined,
       });
-      setReports(data.data.reports);
-      setTotalPages(data.data.totalPages);
+      const list = Array.isArray(data.data?.reports) ? data.data.reports : [];
+      setReports(list);
+      setTotal(data.data?.total ?? list.length);
+      setTotalPages(Math.max(1, data.data?.totalPages ?? 1));
     } catch {
-      toast.error("Failed to load reports");
+      toast.error("Không tải được danh sách báo cáo");
     } finally {
       setLoading(false);
     }
   }, [page, debouncedValue, filterStatus]);
 
-  useEffect(() => { fetchReports(); }, [fetchReports]);
+  // Số đếm cho từng tab (theo từ khoá đang tìm): 4 request limit=1, chỉ đọc `total`.
+  const fetchCounts = useCallback(async () => {
+    const search = debouncedValue.trim() || undefined;
+    const entries = await Promise.all(
+      STATUS_TABS.map(async (tab) => {
+        try {
+          const { data } = await orderReportService.getAll({ page: 1, limit: 1, search, status: tab.value || undefined });
+          return [tab.value, data.data?.total ?? 0] as const;
+        } catch {
+          return [tab.value, undefined] as const;
+        }
+      }),
+    );
+    setCounts(Object.fromEntries(entries));
+  }, [debouncedValue]);
 
   useEffect(() => {
-    // Staff assignment is Admin-only, and the /users endpoint is admin-only
-    // too — loading it for a staff member triggers a 400/403.
-    if (!isAdmin) {
-      setApiUsers([]);
-      return;
-    }
+    void fetchReports();
+  }, [fetchReports]);
+  useEffect(() => {
+    void fetchCounts();
+  }, [fetchCounts]);
 
+  useEffect(() => {
+    if (!isAdmin) return;
     let cancelled = false;
-    const timer = setTimeout(() => {
-      void (async () => {
-        const collected: ApiUser[] = [];
-        const seen = new Set<string>();
-        try {
-          // 1) Find the "Staff" role so we can filter server-side.
-          //    A failure here must NOT abort the staff list: the /users rows
-          //    embed their own `roleId` object, which we filter on below.
-          let staffRole: { _id: string; roleName?: string } | undefined;
-          try {
-            const roles = await loadRoles({ limit: 100 });
-            staffRole = roles.find((role) => role.roleName === "Staff");
-          } catch (err) {
-            console.warn("Role lookup failed — falling back to roleId on users:", err);
-          }
-
-          // 2) Fetch staff users — the backend caps `limit` (the official admin
-          //    hook uses 20), so page through with a safe page size.
-          const pageSize = 20;
-          const maxPages = 5;
-
-          for (let p = 1; p <= maxPages; p++) {
-            const { data: response } = await userService.getAllUsers({
-              page: p,
-              limit: pageSize,
-              roleId: staffRole?._id ?? undefined,
-            });
-            const users = response.data?.result?.users ?? [];
-            for (const user of users) {
-              if (!user.userId || seen.has(user.userId)) continue;
-              seen.add(user.userId);
-              collected.push(user);
-            }
-            const totalPages = response.data?.result?.totalPages ?? 1;
-            if (p >= totalPages) break;
-          }
-
-          // 3) If server-side filtering returned nothing (role unknown or a
-          //    roleId mismatch), fall back to a client-side filter by name.
-          let staff = collected.filter((user) => {
-            const roleId =
-              typeof user.roleId === "string"
-                ? user.roleId
-                : (user.roleId as UserRoleRef | undefined)?._id ?? "";
-            return roleId === staffRole?._id;
-          });
-          if (staff.length === 0) {
-            staff = collected.filter((user) => {
-              const roleName =
-                typeof user.roleId === "string"
-                  ? user.roleId
-                  : (user.roleId as UserRoleRef | undefined)?.roleName ?? "";
-              return roleName === "Staff";
-            });
-          }
-
-          if (!cancelled) setApiUsers(staff.length > 0 ? staff : collected);
-        } catch (error) {
-          if (cancelled) return;
-          // Keep whatever we already collected before the failure.
-          if (collected.length > 0) {
-            setApiUsers(collected);
-          } else {
-            console.warn("Failed to load staff users for assignment:", error);
-            setApiUsers([]);
-          }
-        }
-      })();
-    }, 100); // Small delay to ensure auth is ready
-
+    loadStaffOptions()
+      .then((list) => !cancelled && setStaff(list))
+      .catch(() => !cancelled && setStaff([]));
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [isAdmin]);
 
-  const staffUsers = apiUsers;
-
-  const handleUpdateStatus = async (id: string, status: string) => {
-    setStatusUpdating(true);
-    try {
-      await orderReportService.updateStatus(id, status);
-      toast.success(`Report marked as ${status}`);
-      setSelectedReport(null);
-      fetchReports();
-    } catch {
-      toast.error("Failed to update status");
-    } finally {
-      setStatusUpdating(false);
-    }
+  const refreshAll = () => {
+    void fetchReports();
+    void fetchCounts();
   };
 
-  const handleUpdateNote = async () => {
-    if (!selectedReport || !newNote.trim()) return;
-    setNoteUpdating(true);
-    try {
-      await orderReportService.updateNote(selectedReport._id, newNote);
-      toast.success("Note updated");
-      setSelectedReport({ ...selectedReport, adminNote: newNote });
-      fetchReports();
-    } catch {
-      toast.error("Failed to update note");
-    } finally {
-      setNoteUpdating(false);
-    }
-  };
+  const searching = Boolean(inputValue || debouncedValue);
 
-  const handleAssignStaff = async (reportId: string) => {
-    if (!selectedStaff) return;
-    try {
-      await orderReportService.assignStaff(reportId, selectedStaff);
-      toast.success("Staff assigned");
-      setAssignModal(null);
-      setSelectedStaff(null);
-      fetchReports();
-    } catch {
-      toast.error("Failed to assign staff");
-    }
-  };
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
-
-  function SortableHeader({ label, field, align = "left" }: { label: string; field: SortField; align?: "left" | "right" | "center" }) {
-    const active = sortField === field;
-    return (
-      <th className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`} style={{ textAlign: align }}>
-        <button
-          type="button"
-          onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
-        >
-          {label}
-          <span className="flex flex-col items-center justify-center -space-y-[3px]">
-            <ChevronUp className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-            <ChevronDown className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-          </span>
-        </button>
-      </th>
-    );
-  }
-
-  const sortedReports = [...reports].sort((a, b) => {
-    if (!sortField) return 0;
-    const getValue = (report: OrderReport) => {
-      switch (sortField) {
-        case "id": return report._id;
-        case "title": return report.title;
-        case "orderId": return report.orderId;
-        case "status": return report.status;
-        case "date": return new Date(report.createdAt).getTime();
-      }
-    };
-    const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
-    return sortDirection === "asc" ? cmp : -cmp;
-  });
+  const columns: AdminGridColumn<OrderReport>[] = [
+    {
+      key: "title",
+      header: "Báo cáo",
+      width: "minmax(260px, 2.4fr)",
+      minWidth: 260,
+      card: "title",
+      render: (report) => (
+        <AdminCellStack
+          primary={
+            <>
+              <span className="adm-gid">#{reportCode(report)}</span> {toText(report.title) || "Báo cáo"}
+            </>
+          }
+          secondary={toText(report.description)}
+        />
+      ),
+    },
+    {
+      key: "order",
+      header: "Đơn hàng",
+      width: "120px",
+      minWidth: 120,
+      render: (report) => {
+        const images = reportImages(report);
+        return (
+          <>
+            <span className="adm-gmono adm-gprimary">#{reportOrderCode(report)}</span>
+            {images.length > 0 && (
+              <span className="adm-gsecondary inline-flex items-center gap-1">
+                <ImageIcon className="h-3 w-3" aria-hidden="true" /> {images.length} ảnh
+              </span>
+            )}
+          </>
+        );
+      },
+    },
+    ...(isAdmin
+      ? [
+          {
+            key: "assignee",
+            header: "Người xử lý",
+            width: "minmax(140px, 1fr)",
+            minWidth: 140,
+            render: (report: OrderReport) => {
+              const name = assigneeName(report, staff);
+              return name ? (
+                <span className="adm-gprimary inline-flex items-center gap-1.5">
+                  <UserRound className="h-3.5 w-3.5 text-[var(--foreground-muted)]" aria-hidden="true" />
+                  {name}
+                </span>
+              ) : (
+                <AdminPill tone="amber" fixed={false}>
+                  Chưa giao
+                </AdminPill>
+              );
+            },
+          } satisfies AdminGridColumn<OrderReport>,
+        ]
+      : []),
+    {
+      key: "date",
+      header: "Ngày gửi",
+      width: "100px",
+      minWidth: 100,
+      render: (report) => <AdminDateCell value={report.createdAt} />,
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      card: "aside",
+      render: (report) => (
+        <AdminPill tone={STATUS_TONE[report.status] ?? "neutral"}>{statusMeta(report.status).label}</AdminPill>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (report) => (
+        <AdminRowActions>
+          {report.status === "PENDING" ? (
+            <AdminActionButton icon={ClipboardCheck} tone="green" label="Xử lý" onClick={() => setSelected(report)} />
+          ) : (
+            <AdminActionButton icon={Eye} label="Xem" onClick={() => setSelected(report)} />
+          )}
+          <AdminRowMenu
+            ariaLabel="Thao tác khác"
+            items={[{ label: "Xem chi tiết", icon: Eye, onSelect: () => setSelected(report) }]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
-        title="Order Reports"
-        subtitle="Customer issue reports and complaints management"
+        eyebrow="Chăm sóc khách hàng"
+        title="Báo cáo đơn hàng"
+        subtitle={
+          isAdmin
+            ? "Khiếu nại của khách về đơn hàng — giao cho nhân viên, theo dõi và đóng báo cáo."
+            : "Khiếu nại của khách về đơn hàng — xem và xử lý báo cáo."
+        }
+        actions={
+          <button type="button" className="btn-secondary" onClick={refreshAll} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Làm mới
+          </button>
+        }
       />
 
-      {/* Search & Filter — search dùng chung (debounce 400ms) */}
-      <div className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg" style={{ borderColor: "var(--border)" }}>
-        <AdminSearchToolbar
+      <AdminStatusTabs<TabValue>
+        ariaLabel="Lọc theo trạng thái"
+        value={filterStatus}
+        onChange={(value) => {
+          setFilterStatus(value);
+          setPage(1);
+        }}
+        tabs={STATUS_TABS.map((tab) => ({ ...tab, count: counts[tab.value] }))}
+      />
+
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
           search={{
             value: inputValue,
             onChange: (value) => {
               setInputValue(value);
               setPage(1);
             },
-            placeholder: "Search by report ID or title...",
+            placeholder: "Tìm theo tiêu đề, mã báo cáo hoặc mã đơn (24 ký tự)…",
             isSearching: searchIsWaiting,
           }}
-          filters={
-            <div className="relative w-full sm:w-44">
-              <select
-                value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                className="input w-full appearance-none bg-none pr-10 py-2.5"
-              >
-                <option value="">All Status</option>
-                {STATUS_OPTIONS.filter(Boolean).map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </div>
-          }
           onReset={
-            inputValue || filterStatus
+            searching
               ? () => {
                   clearSearch();
-                  setFilterStatus("");
                   setPage(1);
                 }
               : undefined
           }
-          resetLabel="Clear filters"
           meta={
-            inputValue || debouncedValue ? (
+            searching ? (
               <AdminSearchMeta searching={searchIsWaiting}>
-                {reports.length === 0
-                  ? "No results found"
-                  : `${reports.length} result${reports.length === 1 ? "" : "s"}`}
+                {total === 0 ? "Không có kết quả" : `${total} kết quả`}
               </AdminSearchMeta>
             ) : undefined
           }
         />
-      </div>
 
-      {/* Reports Table */}
-      {loading ? (
-        // Bảng report nằm ngoài panel (khác các trang khác) nên skeleton tự
-        // bo góc + viền để giữ đúng bố cục; mobile dùng list card.
-        <>
-          <AdminTableBodySkeleton
-            className="hidden md:block rounded-2xl border border-border"
-            columns={[
-              "mono",
-              "text",
-              "mono",
-              { type: "badge", align: "center" },
-              "text",
-              { type: "actions", align: "center" },
-            ]}
-            rows={6}
-          />
-          <AdminListSkeleton
-            className="md:hidden"
-            rows={4}
-            itemClassName="h-24 rounded-xl border border-border"
-          />
-        </>
-      ) : reports.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground" style={{ background: "var(--card)" }}>
-          No reports found.
-        </div>
-      ) : (
-        <>
-          <div className="hidden md:block overflow-x-auto" style={{ background: "var(--card)" }}>
-            <table className="admin-table w-full text-sm">
-              <thead>
-                <tr>
-                  <SortableHeader label="ID" field="id" />
-                  <SortableHeader label="Title" field="title" />
-                  <SortableHeader label="Order ID" field="orderId" />
-                  <SortableHeader label="Status" field="status" align="center" />
-                  <SortableHeader label="Date" field="date" />
-                  <th
-                    className="px-6 py-4 text-center text-sm font-medium text-muted-foreground"
-                    style={{ textAlign: "center" }}
-                  >
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedReports.map((report) => (
-                  <tr key={report._id} className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs">{report._id.slice(-8)}</td>
-                    <td className="px-6 py-4 max-w-[200px] truncate text-sm">{report.title}</td>
-                    <td className="px-6 py-4 font-mono text-xs">{report.orderId.slice(-8)}</td>
-                    <td className="px-6 py-4 text-center">
-                       <span className={`badge ${
-                         report.status === "PENDING" ? "badge-orange" :
-                         report.status === "DONE" ? "badge-green" :
-                         "badge-red"
-                       }`}>
-                         {report.status}
-                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{format(new Date(report.createdAt), "MMM dd, yyyy")}</td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                        onClick={() => setSelectedReport(report)}
-                        className="admin-action-btn view text-xs"
-                        title="View details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {isAdmin && (
-                          <ConfirmDeleteButton
-                            onDelete={async () => {
-                              try {
-                                await orderReportService.delete(report._id);
-                                toast.success("Report deleted successfully");
-                                fetchReports();
-                              } catch {
-                                toast.error("Failed to delete report");
-                              }
-                            }}
-                            itemName={report.title}
-                          />
-                      )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <AdminDataGrid<OrderReport>
+          ariaLabel="Báo cáo đơn hàng"
+          rows={reports}
+          rowKey={(r) => r._id}
+          columns={columns}
+          loading={loading}
+          onRowClick={(r) => setSelected(r)}
+          rowAccent={(r) => (r.status === "PENDING" ? "amber" : null)}
+          empty={{
+            icon: Flag,
+            title: searching
+              ? "Không tìm thấy báo cáo phù hợp"
+              : filterStatus === "PENDING"
+                ? "Không còn báo cáo nào đang chờ 🎉"
+                : "Chưa có báo cáo nào",
+            description: searching ? "Thử từ khoá khác, hoặc dán đủ 24 ký tự của mã báo cáo / mã đơn." : undefined,
+          }}
+        />
 
-          {/* Mobile Cards */}
-          <div className="md:hidden space-y-3 p-4" style={{ background: "var(--card)" }}>
-            {reports.map((report) => (
-              <div key={report._id} className="p-4 rounded-xl border border-border bg-surface">
-                <div className="flex justify-between mb-1">
-                  <span className="font-medium text-sm truncate">{report.title}</span>
-                   <span className={`badge ml-2 whitespace-nowrap ${
-                     report.status === "PENDING" ? "badge-orange" :
-                     report.status === "DONE" ? "badge-green" :
-                     "badge-red"
-                   }`}>{report.status}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">Order: #{report.orderId.slice(-8)}</p>
-                <button onClick={() => setSelectedReport(report)} className="text-primary hover:underline text-xs">View Details</button>
-              </div>
-            ))}
-          </div>
+        <AdminGridFooter page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} disabled={loading} />
+      </AdminPanel>
 
-          <AdminPagination
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            pageSize={10}
-            className="mt-4 p-4"
-          />
-        </>
-      )}
-
-      {/* Detail Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setSelectedReport(null)}>
-          <div className="bg-popover rounded-2xl border border-border shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 border-b border-border">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{selectedReport.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Report #{selectedReport._id.slice(-8)} · Order #{selectedReport.orderId.slice(-8)}
-                  </p>
-                </div>
-                 <span className={`badge ${
-                   selectedReport.status === "PENDING" ? "badge-orange" :
-                   selectedReport.status === "DONE" ? "badge-green" :
-                   "badge-red"
-                 }`}>{selectedReport.status}</span>
-              </div>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
-                <p className="text-sm">{selectedReport.description}</p>
-              </div>
-
-              {selectedReport.images && selectedReport.images.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Images</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {selectedReport.images.map((img, i) => (
-                      <img key={i} src={img} alt="" className="w-20 h-20 rounded-lg object-cover" />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Created</p>
-                <p className="text-sm">{format(new Date(selectedReport.createdAt), "MMM dd, yyyy HH:mm")}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Admin Note</p>
-                <textarea
-                  value={newNote || selectedReport.adminNote || ""}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  className="input w-full px-3 py-2 min-h-[80px]"
-                  placeholder="Add admin note..."
-                />
-                <button
-                  onClick={handleUpdateNote}
-                  disabled={noteUpdating || !newNote.trim()}
-                  className="mt-2 px-4 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {noteUpdating ? "Saving..." : "Save Note"}
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                {selectedReport.status === "PENDING" && (
-                  <>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedReport._id, "DONE")}
-                      disabled={statusUpdating}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                      style={{
-                        background: "var(--accent-green)",
-                        color: "var(--accent-green-text)",
-                      }}
-                    >
-                      Mark as Done
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedReport._id, "CANCELLED")}
-                      disabled={statusUpdating}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                      style={{
-                        background: "var(--accent-red)",
-                        color: "var(--accent-red-text)",
-                      }}
-                    >
-                      Cancel Report
-                    </button>
-                  </>
-                )}
-                {isAdmin && (
-                  <button
-                    onClick={() => setAssignModal(selectedReport._id)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-card border border-border hover:bg-muted"
-                  >
-                    {selectedReport.assignedStaff ? "Reassign" : "Assign Staff"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirm Modal */}
-      {deleteTargetId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setDeleteTargetId(null)}
-        >
-          <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-sm w-full mx-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold text-lg mb-2">Delete Report</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Are you sure you want to delete this report? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteTargetId(null)}
-                className="flex-1 py-2.5 rounded-lg text-sm border border-border hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await orderReportService.delete(deleteTargetId);
-                    toast.success("Report deleted successfully");
-                    setDeleteTargetId(null);
-                    fetchReports();
-                  } catch {
-                    toast.error("Failed to delete report");
-                    setDeleteTargetId(null);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Staff Modal */}
-      {assignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setAssignModal(null)}>
-          <div className="bg-popover rounded-2xl border border-border shadow-xl max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 border-b border-border">
-              <h3 className="font-semibold">Assign Staff</h3>
-            </div>
-            {staffUsers.length === 0 ? (
-              <div className="p-5 text-center text-sm text-muted-foreground">No staff available.</div>
-            ) : (
-              <div className="p-3 space-y-1 max-h-60 overflow-y-auto">
-                {staffUsers.map((staff) => (
-                  <button
-                    key={staff.userId}
-                    onClick={() => setSelectedStaff(staff.userId)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all ${
-                      selectedStaff === staff.userId ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
-                    }`}
-                  >
-                    <p className="font-medium text-sm">{staff.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{staff.email}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="p-4 pt-2 flex gap-3">
-              <button onClick={() => { setAssignModal(null); setSelectedStaff(null); }} className="btn-secondary flex-1 py-2.5">Cancel</button>
-              <button
-                onClick={() => handleAssignStaff(assignModal)}
-                disabled={!selectedStaff}
-                className="btn-primary flex-1 py-2.5"
-              >
-                Assign
-              </button>
-            </div>
-          </div>
-        </div>
+      {selected && (
+        <ReportReviewModal
+          report={selected}
+          staff={staff}
+          canAssign={isAdmin}
+          canDelete={isAdmin}
+          onClose={() => setSelected(null)}
+          onUpdated={(updated) => {
+            setSelected(updated);
+            setReports((prev) => prev.map((r) => (r._id === updated._id ? updated : r)));
+          }}
+          onDeleted={refreshAll}
+        />
       )}
     </div>
   );

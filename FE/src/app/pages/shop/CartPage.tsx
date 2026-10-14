@@ -1,24 +1,37 @@
 // ============================================================
 // Cart Page — route /cart
-// Uses CartContext for state management
-// Design based on len-and-em-website CartPage
+// Items (products + combos) on the left, order summary on the right;
+// on mobile the summary stacks below and a checkout bar floats above
+// the tab bar until the summary's own button is on screen.
 // ============================================================
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import {
-  X,
-  ChevronDown,
-  ChevronUp,
-  Lock,
+  ArrowLeft,
   ArrowRight,
-  ShoppingBag,
+  ChevronDown,
+  Heart,
+  Lock,
   Minus,
+  Package,
   Plus,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCart } from "../../../shared/contexts/CartContext";
+import {
+  useCart,
+  type CartDIYItem,
+  type CartItem,
+  type CartKitItem,
+} from "../../../shared/contexts/CartContext";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
+import { getValidHex, getVariantLabel, isDefaultVariant } from "../../../shared/components/ProductVariantSelector";
+import { VariantPickerDialog, toCartPayload } from "../../../features/cart/VariantPickerDialog";
 import { formatPrice } from "../../../lib/formatPrice";
 import "../../../styles/cartpage.css";
 
@@ -118,883 +131,333 @@ export function EmptyHoopIllustration({ size = 200 }: { size?: number }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// EMPTY STATE — also used by Checkout
+// ═══════════════════════════════════════════════════════════════════
+
 export function EmptyCartState() {
   const { t } = useLanguage();
 
   return (
-    <div
-      className="cart-fade-in"
-      style={{
-        position: "relative" as const,
-        display: "flex",
-        flexDirection: "column" as const,
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "96px 32px",
-        textAlign: "center" as const,
-        minHeight: "460px",
-      }}
-    >
-      {/* Soft ambient glow behind the hoop */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          width: "320px",
-          height: "320px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(107,63,160,0.08), transparent 70%)",
-          filter: "blur(4px)",
-          zIndex: 0,
+    <div className="cart-empty cart-fade-in">
+      <div className="cart-empty-art">
+        <EmptyHoopIllustration size={170} />
+      </div>
+      <h2 className="cart-empty-title">{t("cart.emptyTitle")}</h2>
+      <p className="cart-empty-desc">{t("cart.emptyDesc")}</p>
+      <div className="cart-empty-actions">
+        <Link to="/shop" className="cart-btn is-primary">
+          <ShoppingBag size={16} aria-hidden="true" />
+          {t("cart.continueShopping")}
+        </Link>
+        <Link to="/love" className="cart-btn is-ghost">
+          <Heart size={16} aria-hidden="true" />
+          {t("cart.fromWishlist")}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PIECES
+// ═══════════════════════════════════════════════════════════════════
+
+function Thumb({ src, alt, seed, badge }: { src?: string; alt: string; seed: string; badge?: string }) {
+  const fallback = `https://picsum.photos/seed/${seed}/160/160`;
+  return (
+    <div className="cart-thumb">
+      <img
+        src={src || fallback}
+        alt={alt}
+        loading="lazy"
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (!img.dataset.fallback) {
+            img.dataset.fallback = "true";
+            img.src = fallback;
+          }
         }}
       />
-
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <EmptyHoopIllustration size={190} />
-      </div>
-
-      <h2
-        style={{
-          position: "relative",
-          zIndex: 1,
-          fontFamily: "'Playfair Display',serif",
-          fontSize: "1.55rem",
-          fontWeight: 600,
-          fontStyle: "italic",
-          color: "var(--foreground)",
-          letterSpacing: "-0.015em",
-          marginTop: "28px",
-          marginBottom: "10px",
-        }}
-      >
-        {t("cart.emptyTitle")}
-      </h2>
-      <p
-        style={{
-          position: "relative",
-          zIndex: 1,
-          fontFamily: "'Caveat',cursive",
-          fontSize: "1.15rem",
-          color: "var(--foreground-muted)",
-          letterSpacing: "0.02em",
-          marginBottom: "30px",
-          maxWidth: "320px",
-        }}
-      >
-        {t("cart.emptyDesc")}
-      </p>
-
-      <Link
-        to="/shop"
-        className="cart-empty-btn"
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "8px",
-          padding: "12px 30px",
-          borderRadius: "999px",
-          border: "1.5px solid var(--primary)",
-          background: "var(--background)",
-          color: "var(--primary)",
-          fontFamily: "'Inter',sans-serif",
-          fontSize: "0.9rem",
-          fontWeight: 600,
-          cursor: "pointer",
-          textDecoration: "none",
-        }}
-      >
-        <ShoppingBag size={15} strokeWidth={1.8} />
-        {t("cart.continueShopping")}
-      </Link>
+      {badge && <span className="cart-thumb-badge">{badge}</span>}
     </div>
   );
 }
 
-// ── Compact inline quantity stepper ──────────────────────────────
-
-function InlineStepper({
+function Stepper({
   value,
+  max,
+  label,
   onChange,
-  min = 1,
-  max = 20,
 }: {
   value: number;
+  max: number;
+  label: string;
   onChange: (n: number) => void;
-  min?: number;
-  max?: number;
 }) {
   return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        borderRadius: "999px",
-        border: "1.5px solid var(--border)",
-        background: "var(--background)",
-        overflow: "hidden",
-        height: "34px",
-        flexShrink: 0,
-      }}
-    >
+    <div className="cart-stepper" role="group" aria-label={`Số lượng ${label}`}>
       <button
-        onClick={() => onChange(Math.max(min, value - 1))}
-        className="cart-stepper-btn"
-        style={{
-          width: "32px",
-          height: "34px",
-          border: "none",
-          background: "transparent",
-          cursor: value <= min ? "not-allowed" : "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: value <= min ? "var(--border)" : "var(--foreground-muted)",
-        }}
-        disabled={value <= min}
+        type="button"
+        onClick={() => onChange(value - 1)}
+        disabled={value <= 1}
+        aria-label="Giảm số lượng"
       >
-        <Minus size={12} strokeWidth={2.2} />
+        <Minus size={14} strokeWidth={2.4} />
       </button>
-      <span
-        style={{
-          minWidth: "26px",
-          textAlign: "center" as const,
-          fontFamily: "'Playfair Display',serif",
-          fontSize: "0.92rem",
-          fontWeight: 600,
-          color: "var(--foreground)",
-          userSelect: "none" as const,
-        }}
-      >
-        {value}
-      </span>
+      <output aria-live="polite">{value}</output>
       <button
-        onClick={() => onChange(Math.min(max, value + 1))}
-        className="cart-stepper-btn"
-        style={{
-          width: "32px",
-          height: "34px",
-          border: "none",
-          background: "transparent",
-          cursor: value >= max ? "not-allowed" : "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: value >= max ? "var(--border)" : "var(--foreground-muted)",
-        }}
+        type="button"
+        onClick={() => onChange(value + 1)}
         disabled={value >= max}
+        aria-label="Tăng số lượng"
       >
-        <Plus size={12} strokeWidth={2.2} />
+        <Plus size={14} strokeWidth={2.4} />
       </button>
     </div>
   );
 }
 
-// ── Product image cell, framed like a little embroidery hoop ────────
+function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="cart-remove" onClick={onClick} aria-label={`Xoá ${label} khỏi giỏ`}>
+      <Trash2 size={16} />
+    </button>
+  );
+}
 
-function ProductThumb({
-  img,
-  alt,
-  fallbackSeed,
-  size = 84,
+// ═══════════════════════════════════════════════════════════════════
+// ROWS
+// ═══════════════════════════════════════════════════════════════════
+
+const LOW_STOCK = 5;
+const MAX_QTY = 99;
+
+function ProductRow({
+  item,
+  onQty,
+  onRemove,
+  onChangeVariant,
 }: {
-  img: string | null;
-  alt: string;
-  fallbackSeed?: string;
-  size?: number;
+  item: CartItem;
+  onQty: (n: number) => void;
+  onRemove: () => void;
+  /** Mở hộp đổi màu / phân loại. */
+  onChangeVariant: () => void;
 }) {
-  const src = img || `https://picsum.photos/seed/${fallbackSeed || "product"}/100/100`;
-
-  return (
-    <div className="cart-thumb-ring" style={{ width: size, height: size }}>
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: "16px",
-          overflow: "hidden",
-          border: "1px solid var(--border)",
-          background: "var(--surface)",
-        }}
-      >
-        <img
-          src={src}
-          alt={alt}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          onError={(e) => {
-            const target = e.currentTarget;
-            if (!target.dataset.fallback) {
-              target.dataset.fallback = "true";
-              target.src = `https://picsum.photos/seed/${fallbackSeed || "product"}/100/100`;
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// CART PRODUCT ROW
-// ═══════════════════════════════════════════════════════════════════
-
-interface CartProductRowProps {
-  item: {
-    productId: string;
-    variantId: string;
-    name: string;
-    image: string;
-    color: string;
-    hexCode: string;
-    size?: string;
-    price: number;
-    quantity: number;
-    stock: number;
-  };
-  onQtyChange: (productId: string, variantId: string, qty: number) => void;
-  onRemove: (productId: string, variantId: string) => void;
-}
-
-export function CartProductRow({
-  item,
-  onQtyChange,
-  onRemove,
-}: CartProductRowProps) {
-  return (
-    <div
-      className="cart-item-card cart-fade-in"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "18px",
-        padding: "18px",
-        borderRadius: "20px",
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <ProductThumb img={item.image} alt={item.name} fallbackSeed={item.productId} />
-
-      {/* Name + variant */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: "'Playfair Display',serif",
-            fontSize: "1.05rem",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1.25,
-            marginBottom: "6px",
-          }}
-        >
-          {item.name}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" as const }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <div
-              style={{
-                width: "13px",
-                height: "13px",
-                borderRadius: "50%",
-                background: item.hexCode,
-                border: "1px solid rgba(0,0,0,0.1)",
-                boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.72rem", color: "var(--foreground-muted)" }}>
-              {item.color}
-            </span>
-          </div>
-          {item.size && (
-            <>
-              <span style={{ color: "var(--border)", fontSize: "0.7rem" }}>·</span>
-              <span
-                style={{
-                  padding: "2px 8px",
-                  borderRadius: "999px",
-                  border: "1px solid var(--border)",
-                  background: "var(--background)",
-                  fontFamily: "'Inter',sans-serif",
-                  fontSize: "0.68rem",
-                  color: "var(--foreground-muted)",
-                }}
-              >
-                {item.size}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <InlineStepper value={item.quantity} onChange={(n) => onQtyChange(item.productId, item.variantId, n)} />
-
-      <div
-        style={{
-          fontFamily: "'Playfair Display',serif",
-          fontSize: "1.05rem",
-          fontWeight: 700,
-          color: "var(--foreground)",
-          letterSpacing: "-0.015em",
-          textAlign: "right" as const,
-          minWidth: "64px",
-          flexShrink: 0,
-        }}
-      >
-        {formatPrice(item.price * item.quantity)}
-      </div>
-
-      <button
-        onClick={() => onRemove(item.productId, item.variantId)}
-        className="cart-remove-btn"
-        aria-label="Remove"
-        style={{
-          width: "30px",
-          height: "30px",
-          borderRadius: "50%",
-          border: "1px solid var(--border)",
-          background: "var(--background)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          color: "var(--foreground-muted)",
-          flexShrink: 0,
-        }}
-      >
-        <X size={12} strokeWidth={2.5} />
-      </button>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// CART KIT ROW
-// ═══════════════════════════════════════════════════════════════════
-
-const KIT_LEVEL_STYLE = {
-  beginner: { bg: "var(--accent-pink)", text: "var(--primary)" },
-  pro: { bg: "var(--badge-purple-bg)", text: "var(--badge-purple-text)" },
-  promax: { bg: "var(--accent-yellow)", text: "var(--warning-text)" },
-};
-
-interface CartKitRowProps {
-  item: {
-    kitId: string;
-    name: string;
-    level?: "beginner" | "pro" | "promax";
-    price: number;
-    quantity: number;
-    originalIndividualTotal?: number;
-    thumbnail: string;
-    productCount: number;
-    products: {
-      productId: string;
-      variantId: string;
-      name: string;
-      image: string;
-      price: number;
-    }[];
-  };
-  onQtyChange: (kitId: string, quantity: number) => void;
-  onRemove: (kitId: string) => void;
-  defaultExpanded?: boolean;
-}
-
-export function CartKitRow({
-  item,
-  onQtyChange,
-  onRemove,
-  defaultExpanded = false,
-}: CartKitRowProps) {
   const { t } = useLanguage();
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const level = item.level || "beginner";
-  const ls = KIT_LEVEL_STYLE[level];
-  const saving = item.originalIndividualTotal ? item.originalIndividualTotal - item.price : 0;
+  const hasColor = item.color && !isDefaultVariant({ color: item.color });
+  const hex = hasColor ? getValidHex(item.hexCode) : undefined;
+  const max = Math.min(item.stock || MAX_QTY, MAX_QTY);
 
   return (
-    <div
-      className="cart-kit-card cart-fade-in"
-      style={{
-        background: "rgba(107,63,160,0.03)",
-        borderRadius: "20px",
-        border: "1.5px dashed rgba(107,63,160,0.28)",
-        overflow: "hidden",
-      }}
-    >
-      {/* Main row */}
-      <div style={{ display: "flex", alignItems: "center", gap: "18px", padding: "18px" }}>
-        <div style={{ position: "relative" as const, flexShrink: 0 }}>
-          <ProductThumb img={item.thumbnail} alt={item.name} fallbackSeed={item.kitId} />
-          <div
-            style={{
-              position: "absolute" as const,
-              bottom: "-6px",
-              left: "-6px",
-              padding: "2px 8px",
-              borderRadius: "999px",
-              background: ls.bg,
-              border: "1.5px solid var(--background)",
-              fontFamily: "'Caveat',cursive",
-              fontSize: "0.62rem",
-              fontWeight: 700,
-              color: ls.text,
-              whiteSpace: "nowrap" as const,
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            Bundle
-          </div>
+    <li className="cart-row cart-fade-in">
+      <Link to={`/shop/product/${item.productId}`} className="cart-row-media" tabIndex={-1} aria-hidden="true">
+        <Thumb src={item.image} alt="" seed={item.productId} />
+      </Link>
+
+      <div className="cart-row-main">
+        <div className="cart-row-head">
+          <Link to={`/shop/product/${item.productId}`} className="cart-row-name">
+            {item.name}
+          </Link>
+          <RemoveButton label={item.name} onClick={onRemove} />
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "5px", flexWrap: "wrap" as const }}>
-            <div
-              style={{
-                fontFamily: "'Playfair Display',serif",
-                fontSize: "1.05rem",
-                fontWeight: 600,
-                color: "var(--foreground)",
-                letterSpacing: "-0.01em",
-                lineHeight: 1.25,
-              }}
+        <div className="cart-row-meta">
+          {hasColor && (
+            <button
+              type="button"
+              className="cart-chip is-button"
+              onClick={onChangeVariant}
+              aria-label={`Màu ${item.color} — đổi màu khác`}
+              title="Đổi màu"
             >
-              {item.name}
-            </div>
-            <span
-              style={{
-                padding: "2px 10px",
-                borderRadius: "999px",
-                background: ls.bg,
-                fontFamily: "'Poppins','Inter',sans-serif",
-                fontSize: "0.6rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase" as const,
-                color: ls.text,
-                flexShrink: 0,
-              }}
-            >
-              {level}
-            </span>
-          </div>
-
-          {saving > 0 && (
-            <div style={{ marginBottom: "7px" }}>
-              <span
-                style={{
-                  padding: "2px 8px",
-                  borderRadius: "999px",
-                  background: "var(--success-bg)",
-                  fontFamily: "'Inter',sans-serif",
-                  fontSize: "0.64rem",
-                  fontWeight: 700,
-                  color: "var(--success-text)",
-                }}
-              >
-                Bundle saves you {formatPrice(saving)}
-              </span>
-            </div>
+              {hex && <span className="cart-swatch" style={{ background: hex }} aria-hidden="true" />}
+              {item.color}
+              <ChevronDown size={12} aria-hidden="true" />
+            </button>
           )}
-
-          <button
-            onClick={() => setExpanded((e) => !e)}
-            className="cart-kit-expand-btn"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              padding: 0,
-              fontFamily: "'Caveat',cursive",
-              fontSize: "0.78rem",
-              color: "var(--primary)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {expanded ? (
-              <>
-                <ChevronUp size={13} strokeWidth={2} /> {t("cart.hideItems", { count: item.products.length })}
-              </>
-            ) : (
-              <>
-                <ChevronDown size={13} strokeWidth={2} /> {t("cart.showItems", { count: item.products.length })}
-              </>
-            )}
-          </button>
+          {item.size && <span className="cart-chip">{item.size}</span>}
+          <span className="cart-unit">{formatPrice(item.price)}</span>
         </div>
 
-        <InlineStepper value={item.quantity} onChange={(n) => onQtyChange(item.kitId, n)} />
+        {item.stock > 0 && item.stock <= LOW_STOCK && (
+          <p className="cart-warn">{t("cart.lowStock", { count: item.stock })}</p>
+        )}
 
-        <div
-          style={{
-            fontFamily: "'Playfair Display',serif",
-            fontSize: "1.05rem",
-            fontWeight: 700,
-            color: "var(--foreground)",
-            letterSpacing: "-0.015em",
-            textAlign: "right" as const,
-            minWidth: "64px",
-            flexShrink: 0,
-          }}
-        >
-          {formatPrice(item.price * item.quantity)}
-          {item.originalIndividualTotal && (
-            <div
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: "0.62rem",
-                fontWeight: 400,
-                color: "var(--foreground-muted)",
-                textDecoration: "line-through",
-                textDecorationColor: "var(--accent-pink)",
-              }}
-            >
-              {t("cart.bundle")}
-            </div>
-          )}
+        <div className="cart-row-foot">
+          <Stepper value={item.quantity} max={max} label={item.name} onChange={onQty} />
+          <span className="cart-line-total">{formatPrice(item.price * item.quantity)}</span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function KitRow({
+  kit,
+  onQty,
+  onRemove,
+}: {
+  kit: CartKitItem;
+  onQty: (n: number) => void;
+  onRemove: () => void;
+}) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const listId = `kit-${kit.kitId}-items`;
+
+  return (
+    <li className="cart-row is-kit cart-fade-in">
+      <Link to={`/kits/${kit.kitId}`} className="cart-row-media" tabIndex={-1} aria-hidden="true">
+        <Thumb src={kit.thumbnail} alt="" seed={kit.kitId} badge={t("cart.bundle")} />
+      </Link>
+
+      <div className="cart-row-main">
+        <div className="cart-row-head">
+          <Link to={`/kits/${kit.kitId}`} className="cart-row-name">
+            {kit.name}
+          </Link>
+          <RemoveButton label={kit.name} onClick={onRemove} />
+        </div>
+
+        <div className="cart-row-meta">
+          <span className="cart-chip is-kit">
+            <Package size={12} aria-hidden="true" />
+            {t("cart.kitItems", { count: kit.products.length })}
+          </span>
+          <span className="cart-unit">{formatPrice(kit.price)}</span>
         </div>
 
         <button
-          onClick={() => onRemove(item.kitId)}
-          className="cart-remove-btn"
-          aria-label="Remove"
-          style={{
-            width: "30px",
-            height: "30px",
-            borderRadius: "50%",
-            border: "1px solid var(--border)",
-            background: "var(--background)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "var(--foreground-muted)",
-            flexShrink: 0,
-          }}
+          type="button"
+          className="cart-kit-toggle"
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => setOpen((v) => !v)}
         >
-          <X size={12} strokeWidth={2.5} />
+          <ChevronDown size={14} className={open ? "rotate-180" : ""} aria-hidden="true" />
+          {open ? t("cart.hideItems", { count: kit.products.length }) : t("cart.showItems", { count: kit.products.length })}
         </button>
-      </div>
 
-      {/* Expandable sub-items */}
-      {expanded && (
-        <div
-          className="cart-fade-in"
-          style={{
-            borderTop: "1.5px dashed rgba(107,63,160,0.28)",
-            padding: "14px 18px 16px 116px",
-            background: "rgba(107,63,160,0.025)",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column" as const, gap: "9px" }}>
-            {item.products.map((sub, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div
-                  style={{
-                    width: "10px",
-                    height: "10px",
-                    borderRadius: "50%",
-                    background: sub.image || "#9B6FD6",
-                    flexShrink: 0,
-                    border: "1px solid rgba(0,0,0,0.06)",
-                    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
-                  }}
-                />
-                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.8rem", fontWeight: 500, color: "var(--foreground)" }}>
-                  {sub.name}
-                </span>
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    padding: "2px 8px",
-                    borderRadius: "999px",
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    fontFamily: "'Caveat',cursive",
-                    fontSize: "0.65rem",
-                    color: "var(--foreground-muted)",
-                  }}
-                >
-                  {t("cart.included")}
-                </span>
-              </div>
+        {open && (
+          <ul id={listId} className="cart-kit-list">
+            {kit.products.map((p, i) => (
+              <li key={`${p.productId}-${i}`}>
+                <img src={p.image || `https://picsum.photos/seed/${p.productId}/60/60`} alt="" />
+                <span>{p.name}</span>
+              </li>
             ))}
-          </div>
+          </ul>
+        )}
+
+        <div className="cart-row-foot">
+          <Stepper value={kit.quantity} max={MAX_QTY} label={kit.name} onChange={onQty} />
+          <span className="cart-line-total">{formatPrice(kit.price * kit.quantity)}</span>
         </div>
-      )}
-    </div>
+      </div>
+    </li>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ORDER SUMMARY CARD — styled like a fabric-shop cutting ticket
+// SUMMARY
 // ═══════════════════════════════════════════════════════════════════
 
-export function OrderSummaryCard({
-  cartItems,
-  cartKits,
+function Summary({
+  count,
+  total,
+  ctaRef,
 }: {
-  cartItems: { price: number; quantity: number }[];
-  cartKits: { price: number; originalIndividualTotal?: number }[];
+  count: number;
+  total: number;
+  ctaRef: React.RefObject<HTMLAnchorElement>;
 }) {
   const { t } = useLanguage();
-  const [promoOpen, setPromoOpen] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
-  const [promoOk, setPromoOk] = useState(false);
-  const [checking, setChecking] = useState(false);
-
-  const subtotal =
-    cartItems.reduce((s, i) => s + i.price * i.quantity, 0) +
-    cartKits.reduce((s, k) => s + k.price, 0);
-  const kitSavings = cartKits.reduce(
-    (s, k) => s + (k.originalIndividualTotal ? k.originalIndividualTotal - k.price : 0),
-    0,
-  );
-  const promoSaving = promoOk ? Math.round(subtotal * 0.1) : 0;
-  const total = subtotal - promoSaving;
-
-  const handleApplyPromo = () => {
-    setChecking(true);
-    setTimeout(() => {
-      setChecking(false);
-      setPromoOk(promoCode.toUpperCase() === "MAKER10");
-    }, 700);
-  };
-
   return (
-    <div
-      className="cart-ticket"
-      style={{
-        borderRadius: "24px",
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        boxShadow: "var(--shadow-card)",
-      }}
-    >
-      {/* Decorative thread loop — the page's one signature flourish */}
-      <svg className="cart-ticket-tag" width="32" height="32" viewBox="0 0 34 34" fill="none" aria-hidden>
-        <circle cx="17" cy="9" r="5" stroke="var(--primary)" strokeWidth="2" opacity="0.35" />
-        <path d="M17 14 C 17 20, 10 20, 10 27" stroke="var(--primary)" strokeWidth="1.6" strokeDasharray="3 3" opacity="0.3" fill="none" />
-      </svg>
+    <section className="cart-summary" aria-labelledby="cart-summary-title">
+      <h2 id="cart-summary-title" className="cart-summary-title">
+        {t("cart.orderSummary")}
+      </h2>
+      <dl className="cart-summary-lines">
+        <div>
+          <dt>{t("cart.subtotal", { count })}</dt>
+          <dd>{formatPrice(total)}</dd>
+        </div>
+        <div>
+          <dt>{t("cart.shipping")}</dt>
+          <dd className="is-muted">{t("cart.shippingAtCheckout")}</dd>
+        </div>
+      </dl>
+      <div className="cart-summary-total">
+        <span>{t("cart.orderTotal")}</span>
+        <strong>{formatPrice(total)}</strong>
+      </div>
+      <Link ref={ctaRef} to="/order" className="cart-btn is-primary is-block">
+        <Lock size={15} aria-hidden="true" />
+        {t("cart.proceedToCheckout")}
+        <ArrowRight size={15} aria-hidden="true" />
+      </Link>
+      <ul className="cart-assure">
+        <li>
+          <ShieldCheck size={14} aria-hidden="true" />
+          {t("cart.securePayment")}
+        </li>
+        <li>
+          <RotateCcw size={14} aria-hidden="true" />
+          {t("cart.returns30Day")}
+        </li>
+      </ul>
+    </section>
+  );
+}
 
-      <div style={{ padding: "34px 26px 26px" }}>
-        <h2
-          style={{
-            fontFamily: "'Playfair Display',serif",
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            color: "var(--foreground)",
-            letterSpacing: "-0.015em",
-            margin: "0 0 22px",
-          }}
-        >
-          {t("cart.orderSummary")}
-        </h2>
+/** Một bài DIY (mua chính bài DIY — title / mô tả / ảnh / giá của bài). */
+function DIYRow({
+  diy,
+  onQty,
+  onRemove,
+}: {
+  diy: CartDIYItem;
+  onQty: (n: number) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <li className="cart-row is-kit is-diy cart-fade-in">
+      <Link to={`/diy/${diy.diyId}`} className="cart-row-media" tabIndex={-1} aria-hidden="true">
+        <Thumb src={diy.image} alt="" seed={diy.diyId} badge="DIY" />
+      </Link>
 
-        {/* Line items */}
-        <div style={{ display: "flex", flexDirection: "column" as const, gap: "12px", marginBottom: "18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.85rem", color: "var(--foreground-muted)" }}>
-              {t("cart.subtotal", { count: cartItems.reduce((s, i) => s + i.quantity, 0) + cartKits.length })}
-            </span>
-            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.92rem", fontWeight: 600, color: "var(--foreground)" }}>
-              {formatPrice(subtotal)}
-            </span>
-          </div>
-
-          {kitSavings > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontFamily: "'Caveat',cursive", fontSize: "0.85rem", color: "var(--success-text)" }}>
-                {t("cart.kitSavings")}
-              </span>
-              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.87rem", fontWeight: 600, color: "var(--success-text)" }}>
-                − {formatPrice(kitSavings)}{" "}
-                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: "0.65rem", fontWeight: 400 }}>{t("cart.saved")}</span>
-              </span>
-            </div>
-          )}
-
-          {promoOk && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontFamily: "'Caveat',cursive", fontSize: "0.85rem", color: "var(--success-text)" }}>
-                ✦ MAKER10 (10% off)
-              </span>
-              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.87rem", fontWeight: 600, color: "var(--success-text)" }}>
-                − {formatPrice(promoSaving)}
-              </span>
-            </div>
-          )}
-
-          {/* Promo code toggle */}
-          <div>
-            <button
-              onClick={() => setPromoOpen((o) => !o)}
-              className="cart-promo-toggle"
-              style={{
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                fontFamily: "'Caveat',cursive",
-                fontSize: "0.8rem",
-                color: "var(--primary)",
-                cursor: "pointer",
-                letterSpacing: "0.02em",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              {promoOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              {promoOk ? t("cart.promoApplied") : t("cart.havePromo")}
-            </button>
-
-            {promoOpen && !promoOk && (
-              <div style={{ display: "flex", gap: "7px", marginTop: "9px" }}>
-                <input
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  placeholder={t("cart.enterCode")}
-                  style={{
-                    flex: 1,
-                    padding: "9px 14px",
-                    borderRadius: "999px",
-                    border: "1.5px solid var(--border)",
-                    background: "var(--background)",
-                    fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.8rem",
-                    color: "var(--foreground)",
-                    outline: "none",
-                  }}
-                />
-                <button
-                  onClick={handleApplyPromo}
-                  className="cart-promo-apply"
-                  disabled={checking}
-                  style={{
-                    padding: "9px 16px",
-                    borderRadius: "999px",
-                    border: "none",
-                    background: "var(--primary)",
-                    color: "var(--primary-foreground)",
-                    fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.77rem",
-                    fontWeight: 600,
-                    cursor: checking ? "default" : "pointer",
-                    opacity: checking ? 0.7 : 1,
-                  }}
-                >
-                  {checking ? "…" : t("cart.apply")}
-                </button>
-              </div>
-            )}
-          </div>
+      <div className="cart-row-main">
+        <div className="cart-row-head">
+          <Link to={`/diy/${diy.diyId}`} className="cart-row-name">
+            {diy.title}
+          </Link>
+          <RemoveButton label={diy.title} onClick={onRemove} />
         </div>
 
-        {/* Stitched divider */}
-        <div
-          style={{
-            height: 0,
-            margin: "6px 0 18px",
-            borderTop: "1.5px dashed color-mix(in srgb, var(--primary) 35%, var(--border))",
-          }}
-        />
-
-        {/* Total */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "22px" }}>
-          <div>
-            <div
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase" as const,
-                color: "var(--foreground-muted)",
-              }}
-            >
-              {t("cart.orderTotal")}
-            </div>
-            {(kitSavings > 0 || promoOk) && (
-              <div style={{ fontFamily: "'Caveat',cursive", fontSize: "0.75rem", color: "var(--success-text)", marginTop: "2px" }}>
-                {t("cart.savingToday", { amount: formatPrice(kitSavings + promoSaving) })}
-              </div>
-            )}
-          </div>
-          <span
-            style={{
-              fontFamily: "'Playfair Display',serif",
-              fontSize: "1.95rem",
-              fontWeight: 700,
-              color: "var(--primary)",
-              letterSpacing: "-0.03em",
-            }}
-          >
-            {formatPrice(total)}
+        <div className="cart-row-meta">
+          <span className="cart-chip is-kit">
+            <Sparkles size={12} aria-hidden="true" />
+            DIY
           </span>
+          <span className="cart-unit">{diy.price > 0 ? formatPrice(diy.price) : "Miễn phí"}</span>
         </div>
 
-        {/* Checkout CTA */}
-        <Link
-          to="/order"
-          className="cart-checkout-btn"
-          style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "9px",
-            padding: "15px 24px",
-            borderRadius: "999px",
-            border: "none",
-            background: "var(--primary)",
-            color: "var(--primary-foreground)",
-            fontFamily: "'Inter',sans-serif",
-            fontSize: "0.96rem",
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 6px 20px rgba(107,63,160,0.28)",
-            marginBottom: "14px",
-            textDecoration: "none",
-          }}
-        >
-          <Lock size={14} strokeWidth={2} />
-          {t("cart.proceedToCheckout")}
-          <ArrowRight size={14} strokeWidth={2} />
-        </Link>
+        {diy.description && <p className="cart-diy-desc">{diy.description}</p>}
 
-        {/* Assurance strip */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "18px", flexWrap: "wrap" as const }}>
-          {[t("cart.securePayment"), t("cart.returns30Day")].map((note) => (
-            <span
-              key={note}
-              style={{
-                fontFamily: "'Caveat',cursive",
-                fontSize: "0.7rem",
-                color: "var(--foreground-muted)",
-                display: "flex",
-                alignItems: "center",
-                gap: "3px",
-              }}
-            >
-              <span style={{ color: "var(--primary)", fontSize: "0.65rem" }}>✦</span>
-              {note}
-            </span>
-          ))}
+        <div className="cart-row-foot">
+          <Stepper value={diy.quantity} max={MAX_QTY} label={diy.title} onChange={onQty} />
+          <span className="cart-line-total">{formatPrice(diy.price * diy.quantity)}</span>
         </div>
       </div>
-    </div>
+    </li>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// FULL CART PAGE
+// PAGE
 // ═══════════════════════════════════════════════════════════════════
 
 export function CartPage() {
@@ -1002,158 +465,191 @@ export function CartPage() {
   const {
     cartItems,
     cartKits,
+    cartDIYs,
+    addToCart,
+    addKitToCart,
+    addDIYToCart,
+    removeDIYFromCart,
+    updateDIYQuantity,
     removeFromCart,
     updateQuantity,
+    changeVariant,
     updateKitQuantity,
     removeKitFromCart,
     clearCart,
     totalItems,
+    totalPrice,
   } = useCart();
+  // Dòng hàng đang đổi màu (null = hộp đóng).
+  const [changing, setChanging] = useState<CartItem | null>(null);
 
-  const updateQty = (productId: string, variantId: string, qty: number) => updateQuantity(productId, variantId, qty);
-  const updateKitQty = (kitId: string, qty: number) => updateKitQuantity(kitId, qty);
-  const removeItem = (productId: string, variantId: string) => removeFromCart(productId, variantId);
-  const removeKit = (kitId: string) => removeKitFromCart(kitId);
+  // Mobile: a checkout bar floats above the tab bar until the summary's own
+  // button scrolls into view.
+  const ctaRef = useRef<HTMLAnchorElement>(null);
+  const [ctaVisible, setCtaVisible] = useState(false);
+  const isEmpty = cartItems.length === 0 && cartKits.length === 0 && cartDIYs.length === 0;
 
-  const handleClearCart = () => {
-    clearCart();
-    toast.success(t("cart.removeAllItems"));
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => setCtaVisible(entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [isEmpty]);
+
+  const restoreItem = (item: CartItem) => {
+    const { quantity, ...payload } = item;
+    addToCart(payload, quantity);
+  };
+  const restoreKit = (kit: CartKitItem) => {
+    addKitToCart({
+      kitId: kit.kitId,
+      name: kit.name,
+      thumbnail: kit.thumbnail,
+      price: kit.price,
+      quantity: kit.quantity,
+      products: kit.products,
+    });
   };
 
-  const isEmpty = cartItems.length === 0 && cartKits.length === 0;
+  const restoreDIY = (diy: CartDIYItem) => {
+    const { quantity, ...payload } = diy;
+    addDIYToCart(payload, quantity);
+  };
+  const removeDIY = (diy: CartDIYItem) => {
+    removeDIYFromCart(diy.diyId);
+    toast(t("cart.removed", { name: diy.title }), {
+      action: { label: t("cart.undo"), onClick: () => restoreDIY(diy) },
+    });
+  };
+
+  const removeItem = (item: CartItem) => {
+    removeFromCart(item.productId, item.variantId);
+    toast(t("cart.removed", { name: item.name }), {
+      action: { label: t("cart.undo"), onClick: () => restoreItem(item) },
+    });
+  };
+  const removeKit = (kit: CartKitItem) => {
+    removeKitFromCart(kit.kitId);
+    toast(t("cart.removed", { name: kit.name }), {
+      action: { label: t("cart.undo"), onClick: () => restoreKit(kit) },
+    });
+  };
+  const clearAll = () => {
+    const items = [...cartItems];
+    const kits = [...cartKits];
+    const diys = [...cartDIYs];
+    clearCart();
+    toast(t("cart.clearedAll"), {
+      action: {
+        label: t("cart.undo"),
+        onClick: () => {
+          items.forEach(restoreItem);
+          kits.forEach(restoreKit);
+          diys.forEach(restoreDIY);
+        },
+      },
+    });
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--background)", position: "relative" as const }} className="pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
-      {/* Ambient texture + soft corner glows */}
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.022'/%3E%3C/svg%3E")`,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "-140px",
-            right: "-120px",
-            width: "420px",
-            height: "420px",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(232,181,196,0.18), transparent 70%)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-160px",
-            left: "-140px",
-            width: "460px",
-            height: "460px",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(240,200,120,0.12), transparent 70%)",
-          }}
-        />
-      </div>
-
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "56px 40px 100px" }}>
-          {/* Page heading */}
-          <div style={{ marginBottom: "44px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", marginBottom: "10px" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
-                <h1
-                  style={{
-                    fontFamily: "'Playfair Display',Georgia,serif",
-                    fontSize: "clamp(2rem, 3vw, 2.6rem)",
-                    fontWeight: 700,
-                    color: "var(--foreground)",
-                    letterSpacing: "-0.025em",
-                    lineHeight: 1.1,
-                    margin: 0,
-                  }}
-                >
-                  {t("cart.yourBag")}
-                </h1>
-                {!isEmpty && (
-                  <span style={{ fontFamily: "'Caveat',cursive", fontSize: "1rem", color: "var(--foreground-muted)" }}>
-                    {totalItems} {t("cart.items")}
-                  </span>
-                )}
-              </div>
-              {!isEmpty && (
-                <button
-                  onClick={handleClearCart}
-                  className="cart-clear-btn"
-                  style={{
-                    fontFamily: "'Inter',sans-serif",
-                    fontSize: "0.78rem",
-                    color: "var(--destructive)",
-                    background: "transparent",
-                    border: "1px solid var(--destructive)",
-                    borderRadius: "999px",
-                    padding: "7px 16px",
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}
-                >
-                  {t("cart.removeAllItems")}
-                </button>
-              )}
-            </div>
-            <div className="cart-heading-stitch" />
+    <div className="cart-page">
+      <div className="cart-wrap">
+        <header className="cart-header">
+          <div>
+            <p className="cart-eyebrow">{t("cart.eyebrow")}</p>
+            <h1 className="cart-title">
+              {t("cart.title")}
+              {!isEmpty && <span className="cart-count">{totalItems}</span>}
+            </h1>
           </div>
-
-          {isEmpty ? (
-            <EmptyCartState />
-          ) : (
-            <div className="cart-layout">
-              {/* LEFT: items */}
-              <div>
-                <div style={{ display: "flex", flexDirection: "column" as const, gap: "14px" }}>
-                  {cartItems.map((item) => (
-                    <CartProductRow
-                      key={`${item.productId}-${item.variantId}`}
-                      item={item}
-                      onQtyChange={updateQty}
-                      onRemove={removeItem}
-                    />
-                  ))}
-
-                  {cartKits.map((kit) => (
-                    <CartKitRow key={kit.kitId} item={kit} onQtyChange={updateKitQty} onRemove={removeKit} />
-                  ))}
-                </div>
-
-                {/* Continue shopping link */}
-                <div style={{ marginTop: "18px", textAlign: "right" as const }}>
-                  <Link
-                    to="/shop"
-                    className="cart-continue-link"
-                    style={{
-                      fontFamily: "'Caveat',cursive",
-                      fontSize: "0.86rem",
-                      color: "var(--primary)",
-                      textDecoration: "none",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    ← {t("cart.continueShopping")}
-                  </Link>
-                </div>
-              </div>
-
-              {/* RIGHT: order summary */}
-              <div className="cart-summary-sticky">
-                <OrderSummaryCard cartItems={cartItems} cartKits={cartKits} />
-              </div>
-            </div>
+          {!isEmpty && (
+            <button type="button" className="cart-clear" onClick={clearAll}>
+              <Trash2 size={14} aria-hidden="true" />
+              {t("cart.removeAll")}
+            </button>
           )}
-        </div>
+        </header>
+
+        {isEmpty ? (
+          <EmptyCartState />
+        ) : (
+          <div className="cart-layout">
+            <div>
+              <ul className="cart-list" aria-label={t("cart.title")}>
+                {cartItems.map((item) => (
+                  <ProductRow
+                    key={`${item.productId}-${item.variantId}`}
+                    item={item}
+                    onQty={(n) => updateQuantity(item.productId, item.variantId, n)}
+                    onRemove={() => removeItem(item)}
+                    onChangeVariant={() => setChanging(item)}
+                  />
+                ))}
+                {cartDIYs.map((diy) => (
+                  <DIYRow
+                    key={diy.diyId}
+                    diy={diy}
+                    onQty={(n) => updateDIYQuantity(diy.diyId, n)}
+                    onRemove={() => removeDIY(diy)}
+                  />
+                ))}
+                {cartKits.map((kit) => (
+                  <KitRow
+                    key={kit.kitId}
+                    kit={kit}
+                    onQty={(n) => updateKitQuantity(kit.kitId, n)}
+                    onRemove={() => removeKit(kit)}
+                  />
+                ))}
+              </ul>
+              <Link to="/shop" className="cart-continue">
+                <ArrowLeft size={15} aria-hidden="true" />
+                {t("cart.continueShopping")}
+              </Link>
+            </div>
+
+            <div className="cart-aside">
+              <Summary count={totalItems} total={totalPrice} ctaRef={ctaRef} />
+            </div>
+          </div>
+        )}
       </div>
+
+      {!isEmpty && (
+        <div className="cart-float" data-hidden={ctaVisible || undefined} aria-hidden={ctaVisible}>
+          <div className="cart-float-total">
+            <span>{t("cart.orderTotal")}</span>
+            <strong>{formatPrice(totalPrice)}</strong>
+          </div>
+          <Link to="/order" className="cart-btn is-primary" tabIndex={ctaVisible ? -1 : undefined}>
+            {t("cart.checkout")}
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
+      {changing && (
+        <VariantPickerDialog
+          open={!!changing}
+          onOpenChange={(open) => !open && setChanging(null)}
+          productId={changing.productId}
+          mode="change"
+          initialVariantId={changing.variantId}
+          onConfirm={(product, { variant }) => {
+            const merging = cartItems.some(
+              (it) => it.productId === changing.productId && it.variantId === variant.id,
+            );
+            changeVariant(changing.productId, changing.variantId, toCartPayload(product, variant));
+            toast.success(`Đã đổi sang ${getVariantLabel(variant)}`, {
+              description: merging
+                ? "Màu này đã có trong giỏ nên số lượng được gộp lại."
+                : changing.quantity > variant.stock
+                  ? `Kho chỉ còn ${variant.stock} — số lượng đã được điều chỉnh.`
+                  : undefined,
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

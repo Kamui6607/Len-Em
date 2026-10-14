@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router";
+import { Coins, Gift, History, Route, Wallet } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useMembershipStore } from "../../../features/membership/store/membership.store";
-import { getRankConfig, getNextRank } from "../../../features/membership/types/membership.types";
+import { getRankConfig } from "../../../features/membership/types/membership.types";
 import { formatPrice } from "../../../lib/formatPrice";
-import { RankBadge } from "./RankBadge";
 import { ProgressBar } from "./ProgressBar";
+import "../../../styles/craft.css";
+import "../../../styles/membership.css";
 
 interface MembershipCardProps {
   compact?: boolean;
@@ -13,6 +15,7 @@ interface MembershipCardProps {
   onViewTimeline?: () => void;
 }
 
+/** Thẻ thành viên Len&em Club — dữ liệu thật từ BE, skeleton khi đang tải. */
 export function MembershipCard({
   compact = false,
   onViewHistory,
@@ -21,169 +24,131 @@ export function MembershipCard({
 }: MembershipCardProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { data, loading } = useMembershipStore();
+  const { data, loading, error, initialize } = useMembershipStore();
 
-  if (loading || !data || !user) {
+  if (!loading && !data && error && user) {
     return (
-      <div className="bg-card rounded-2xl border border-border p-5 animate-pulse">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-muted" />
-          <div className="space-y-2">
-            <div className="h-4 w-24 bg-muted rounded" />
-            <div className="h-3 w-16 bg-muted rounded" />
-          </div>
-        </div>
-        <div className="h-3 bg-muted rounded w-full mb-2" />
-        <div className="h-3 bg-muted rounded w-3/4" />
+      <div className="mb-card-error">
+        <p>{error}</p>
+        <button type="button" onClick={initialize} className="craft-btn-ghost mt-3">
+          Thử lại
+        </button>
       </div>
     );
   }
 
+  if (loading || !data || !user) {
+    return <MembershipCardSkeleton compact={compact} />;
+  }
+
   const config = getRankConfig(data.rank);
-  const nextRankInfo = getNextRank(data.rank, data.points);
+  const initial = user.fullName?.trim().charAt(0).toUpperCase() || "U";
 
   return (
-    <div
-      className="rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-lg group"
-      style={{ background: config.gradient }}
-    >
-      {/* Card Header */}
-      <div className="p-5 pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.fullName}
-                className="w-11 h-11 rounded-full border-2 border-white/40 object-cover"
-              />
-            ) : (
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold shadow-sm"
-                style={{ background: "rgba(255,255,255,0.25)", color: config.textColor }}
-              >
-                {user.fullName?.charAt(0)?.toUpperCase() ?? "U"}
-              </div>
-            )}
-            <div>
-              <p className="font-bold text-sm leading-tight" style={{ color: config.textColor }}>
-                {user.fullName}
-              </p>
-              <RankBadge rank={data.rank} size="sm" showLabel />
-            </div>
-          </div>
-          {!compact && (
-            <div className="text-right">
-              <p className="text-[10px] font-medium uppercase tracking-wider opacity-60" style={{ color: config.textColor }}>
-                Points
-              </p>
-              <p className="text-sm font-bold" style={{ color: config.textColor }}>
-                {data.points.toLocaleString()}
-              </p>
-            </div>
-          )}
+    <article className="mb-card" data-rank={data.rank} data-compact={compact} aria-label="Thẻ thành viên">
+      <div className="mb-card-body">
+        <div className="mb-card-top">
+          <span className="mb-card-brand">
+            Len&amp;em<small>club</small>
+          </span>
+          <span className="mb-rank-chip">
+            <span aria-hidden="true">{config.icon}</span>
+            {config.displayName}
+          </span>
         </div>
-      </div>
 
-      {/* Progress Section */}
-      <div className="px-5 pb-3">
-        <ProgressBar
-          points={data.points}
-          currentRank={data.rank}
-          size={compact ? "sm" : "md"}
-        />
-      </div>
-
-      {/* Coin & Total Spent */}
-      <div className="px-5 pb-4">
-        <div className="grid grid-cols-2 gap-2.5">
-          <div
-            className="rounded-xl p-3 backdrop-blur-sm"
-            style={{ background: "rgba(255,255,255,0.2)" }}
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs">🪙</span>
-              <p className="text-[9px] font-medium uppercase tracking-wider opacity-70" style={{ color: config.textColor }}>
-                Coin
-              </p>
-            </div>
-            <p className="text-sm font-bold" style={{ color: config.textColor }}>
-              {data.coinBalance.toLocaleString()}
-            </p>
-            <p className="text-[9px] opacity-60" style={{ color: config.textColor }}>
-              ≈ {formatPrice(data.coinBalance)}
+        <div className="mb-card-holder">
+          <span className="mb-card-avatar">
+            {user.avatar ? <img src={user.avatar} alt="" /> : initial}
+          </span>
+          <div className="min-w-0">
+            <p className="mb-card-name">{user.fullName}</p>
+            <p className="mb-card-tier">
+              Thành viên {config.displayName} · hoàn {config.coinRewardPercent}% Coin
             </p>
           </div>
-          <div
-            className="rounded-xl p-3 backdrop-blur-sm"
-            style={{ background: "rgba(255,255,255,0.2)" }}
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-xs">💰</span>
-              <p className="text-[9px] font-medium uppercase tracking-wider opacity-70" style={{ color: config.textColor }}>
-                Đã chi
-              </p>
-            </div>
-            <p className="text-sm font-bold" style={{ color: config.textColor }}>
-              {formatPrice(data.totalSpent)}
+        </div>
+
+        <div className="mb-card-points">
+          <span className="mb-card-points-num">{data.points.toLocaleString("vi-VN")}</span>
+          <span className="mb-card-points-label">điểm tích luỹ</span>
+        </div>
+
+        <div className="mt-3">
+          <ProgressBar points={data.points} currentRank={data.rank} size={compact ? "sm" : "md"} />
+        </div>
+
+        <div className="mb-card-chips">
+          <div className="mb-card-chip">
+            <p className="mb-card-chip-label">
+              <Coins size={12} aria-hidden="true" /> Coin
             </p>
+            <p className="mb-card-chip-value">{data.coinBalance.toLocaleString("vi-VN")}</p>
+            <p className="mb-card-chip-sub">≈ {formatPrice(data.coinBalance)}</p>
+          </div>
+          <div className="mb-card-chip">
+            <p className="mb-card-chip-label">
+              <Wallet size={12} aria-hidden="true" /> Đã chi
+            </p>
+            <p className="mb-card-chip-value">{formatPrice(data.totalSpent)}</p>
+            <p className="mb-card-chip-sub">đơn đã giao</p>
           </div>
         </div>
       </div>
 
-      {/* Next Rank Info */}
-      {nextRankInfo.nextRank && !compact && (
-        <div className="px-5 pb-3">
-          <div
-            className="rounded-xl p-3 backdrop-blur-sm flex items-center justify-between"
-            style={{ background: "rgba(0,0,0,0.05)" }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm">🔒</span>
-              <div>
-                <p className="text-[10px] opacity-70" style={{ color: config.textColor }}>
-                  Hạng tiếp theo
-                </p>
-                <p className="text-xs font-semibold" style={{ color: config.textColor }}>
-                  {getRankConfig(nextRankInfo.nextRank).icon} {getRankConfig(nextRankInfo.nextRank).displayName}
-                </p>
-              </div>
-            </div>
-            <p className="text-[10px] text-right" style={{ color: config.textColor }}>
-              <span className="opacity-70">Còn </span>
-              <span className="font-bold">{formatPrice(nextRankInfo.pointsNeeded * 1000)}</span>
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
       {!compact && (
-        <div
-          className="flex border-t"
-          style={{ borderColor: "rgba(0,0,0,0.08)" }}
-        >
+        <nav className="mb-card-actions" aria-label="Thành viên">
           <button
-            onClick={onViewHistory ?? (() => navigate("/my-account/membership"))}
-            className="flex-1 py-3 text-xs font-medium text-center hover:bg-black/5 active:bg-black/10 transition-colors min-h-[44px]"
-            style={{ color: config.textColor }}
+            type="button"
+            className="mb-card-action"
+            onClick={onViewHistory ?? (() => navigate("/my-account/membership?tab=history"))}
           >
-            📋 History
+            <History size={15} aria-hidden="true" /> Lịch sử
           </button>
           <button
+            type="button"
+            className="mb-card-action"
             onClick={onViewBenefits ?? (() => navigate("/my-account/membership?tab=benefits"))}
-            className="flex-1 py-3 text-xs font-medium text-center hover:bg-black/5 active:bg-black/10 transition-colors border-x min-h-[44px]"
-            style={{ color: config.textColor, borderColor: "rgba(0,0,0,0.08)" }}
           >
-            🎁 Benefits
+            <Gift size={15} aria-hidden="true" /> Quyền lợi
           </button>
           <button
+            type="button"
+            className="mb-card-action"
             onClick={onViewTimeline ?? (() => navigate("/my-account/membership?tab=timeline"))}
-            className="flex-1 py-3 text-xs font-medium text-center hover:bg-black/5 active:bg-black/10 transition-colors min-h-[44px]"
-            style={{ color: config.textColor }}
           >
-            📈 Timeline
+            <Route size={15} aria-hidden="true" /> Hành trình
           </button>
+        </nav>
+      )}
+    </article>
+  );
+}
+
+export function MembershipCardSkeleton({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className="rounded-[26px] border border-[var(--border)] p-5"
+      aria-busy="true"
+      aria-label="Đang tải thẻ thành viên"
+    >
+      <div className="flex items-center justify-between">
+        <div className="craft-skeleton h-4 w-24" />
+        <div className="craft-skeleton h-6 w-20 rounded-full" />
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <div className="craft-skeleton h-12 w-12 rounded-full" />
+        <div className="space-y-2">
+          <div className="craft-skeleton h-4 w-32" />
+          <div className="craft-skeleton h-3 w-24" />
+        </div>
+      </div>
+      <div className="craft-skeleton mt-5 h-9 w-28" />
+      <div className="craft-skeleton mt-4 h-2.5 w-full rounded-full" />
+      {!compact && (
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <div className="craft-skeleton h-16" />
+          <div className="craft-skeleton h-16" />
         </div>
       )}
     </div>

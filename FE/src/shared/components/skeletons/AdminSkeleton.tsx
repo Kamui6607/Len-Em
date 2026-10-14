@@ -185,7 +185,7 @@ interface AdminSkeletonRowsProps {
 
 /**
  * Chỉ render các `<tr>` giả — đặt trực tiếp trong `<tbody>` có sẵn
- * (dùng cho AdminUsersDesktop: bảng + toolbar + phân trang là thật).
+ * (bảng + toolbar + phân trang là thật).
  */
 export function AdminSkeletonRows({ columns, rows = 6 }: AdminSkeletonRowsProps) {
   const normalized = columns.map(normalizeColumn);

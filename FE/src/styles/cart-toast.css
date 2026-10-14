@@ -1,0 +1,300 @@
+/* ============================================================
+   CART TOAST — "Đã thêm vào giỏ hàng"
+   - Nền ĐẶC (--dropdown-bg: trắng / tím đêm) + bóng rõ → không lẫn
+     vào thanh công cụ phía sau
+   - Màu nhấn thành công = tím thương hiệu (không dùng xanh lá chói)
+   - Neo dưới icon giỏ (có mũi tên) hoặc góc phải dưới thanh điều hướng;
+     mobile: sát đáy, NẰM TRÊN hàng nút "+" / chatbot và bottom nav
+   ============================================================ */
+
+.ct-region {
+  position: fixed;
+  z-index: 300; /* trên nav (50) và hàng nút nổi (200) */
+  display: flex;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.ct-region > * { pointer-events: auto; }
+
+/* Mobile: gần full chiều ngang, phía dưới, trên nút "+" và bottom nav */
+.ct-region.is-mobile {
+  left: max(16px, var(--sal));
+  right: max(16px, var(--sar));
+  /* ngay trên bottom nav (đã gồm safe-area-inset-bottom); hàng nút nổi
+     ("+", thanh mua) được đẩy lên qua --float-row-lift trong lúc toast hiện */
+  bottom: var(--float-row-bottom);
+  width: auto;
+  max-width: none;
+  flex-direction: column-reverse; /* toast mới nhất nằm sát ngón tay */
+}
+
+/* ── Thẻ ── */
+.ct-toast {
+  --ct-accent: var(--primary);
+  --ct-accent-soft: color-mix(in srgb, var(--primary) 12%, var(--dropdown-bg));
+  --ct-border: color-mix(in srgb, var(--primary) 24%, var(--border));
+  position: relative;
+  border-radius: 20px;
+  border: 1px solid var(--ct-border);
+  background: var(--dropdown-bg);
+  color: var(--foreground);
+  box-shadow:
+    0 24px 48px -14px rgba(46, 30, 120, 0.42),
+    0 8px 18px -6px rgba(46, 30, 120, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+/* Lớp trong cắt theo bo góc: thanh đếm giờ không tràn ra ngoài */
+.ct-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.dark .ct-toast {
+  box-shadow:
+    0 20px 44px -12px rgba(0, 0, 0, 0.7),
+    0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.ct-toast[data-variant="warning"] {
+  --ct-accent: var(--warning-text);
+  --ct-accent-soft: color-mix(in srgb, var(--warning-text) 13%, var(--dropdown-bg));
+}
+.ct-toast[data-variant="error"] {
+  --ct-accent: var(--destructive);
+  --ct-accent-soft: color-mix(in srgb, var(--destructive) 12%, var(--dropdown-bg));
+}
+
+/* Mũi tên trỏ vào icon giỏ (chỉ toast trên cùng, chế độ neo) */
+.ct-arrow {
+  position: absolute;
+  top: -8px; /* 16px vuông xoay 45° → đỉnh nhô ~11px, chạm sát mép header */
+  width: 16px;
+  height: 16px;
+  border-radius: 4px 0 0 0;
+  border-top: 1px solid var(--ct-border);
+  border-left: 1px solid var(--ct-border);
+  background: var(--dropdown-bg);
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
+  z-index: 2; /* phủ lên viền trên của thẻ → mũi tên liền mạch với thẻ */
+}
+
+.ct-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 44px 12px 14px;
+}
+
+/* Ảnh sản phẩm */
+.ct-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+}
+.ct-thumb img,
+.ct-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--muted);
+  border: 1px solid var(--border);
+}
+.ct-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ct-accent);
+  background: var(--ct-accent-soft);
+}
+/* Nhiều sản phẩm (gộp): ảnh xếp chồng */
+.ct-thumb.is-stack img:nth-child(2) {
+  position: absolute;
+  inset: 0;
+  transform: translate(7px, -5px) rotate(6deg) scale(0.92);
+  z-index: -1;
+  opacity: 0.85;
+}
+.ct-thumb-count {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: 0 0 0 2px var(--dropdown-bg);
+}
+.ct-body { flex: 1; min-width: 0; padding-top: 1px; }
+.ct-status {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ct-accent);
+}
+.ct-name {
+  margin-top: 3px;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--foreground);
+}
+.ct-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--foreground-muted);
+}
+.ct-dot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.ct-sep { opacity: 0.5; }
+.ct-price {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.ct-msg {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--foreground-muted);
+}
+.ct-status svg { flex-shrink: 0; }
+.ct-toast[data-variant="warning"] .ct-msg,
+.ct-toast[data-variant="error"] .ct-msg { color: var(--foreground); }
+
+/* Nút đóng ≥ 32×32 */
+.ct-close {
+  position: absolute;
+  top: 8px; /* tâm 24px = tâm dòng trạng thái (padding 14 + nửa dòng 10) */
+  right: 8px;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--foreground);
+  opacity: 0.75;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.ct-close:hover { opacity: 1; background: color-mix(in srgb, var(--foreground) 8%, transparent); }
+.ct-close:focus-visible,
+.ct-primary:focus-visible,
+.ct-undo:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+/* Hành động */
+.ct-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 14px 14px 82px; /* thẳng hàng với nội dung (sau ảnh 56 + 12 + 14) */
+}
+.ct-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--primary-foreground);
+  background: var(--cta-gradient);
+  box-shadow: var(--cta-shadow);
+  transition: transform 0.2s var(--ease-out);
+}
+.ct-primary:hover { transform: translateY(-1px); }
+.ct-undo {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  transition: background-color 0.2s;
+}
+.ct-undo:hover { background: color-mix(in srgb, var(--primary) 9%, transparent); }
+
+/* Thanh đếm giờ: track rất nhạt + vạch tím nhạt chạy 100% → 0%.
+   Dừng khi rê chuột / focus vào chính toast đó. */
+.ct-progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--ct-accent) 10%, var(--dropdown-bg));
+}
+.ct-progress {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  background: color-mix(in srgb, var(--ct-accent) 55%, var(--dropdown-bg));
+  animation: ct-countdown linear forwards;
+}
+.ct-toast:hover .ct-progress,
+.ct-toast:focus-within .ct-progress { animation-play-state: paused; }
+@keyframes ct-countdown {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* Badge giỏ hàng nảy một lần khi có toast "đã thêm" */
+@keyframes ct-bump {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.35) translateY(-2px); }
+  55%  { transform: scale(0.92); }
+  75%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.cart-bump .cart-badge { animation: ct-bump 0.55s var(--ease-out); }
+.cart-bump svg { animation: ct-bump 0.55s var(--ease-out); }
+
+@media (max-width: 767px) {
+  .ct-main { padding: 12px 42px 10px 12px; }
+  .ct-close { top: 6px; right: 6px; }
+  .ct-thumb { width: 52px; height: 52px; }
+  .ct-actions { padding: 0 12px 12px 76px; }
+}
+@media (max-width: 360px) {
+  .ct-actions { padding-left: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-bump .cart-badge,
+  .cart-bump svg { animation: none; }
+  .ct-primary:hover { transform: none; }
+}

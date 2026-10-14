@@ -19,6 +19,11 @@ import type { ReverseGeocodeResult } from "../../types/address.types";
 export interface MapPickerProps {
   initialLat?: number;
   initialLng?: number;
+  /**
+   * Địa chỉ đã biết của ghim ban đầu (vd. lấy từ hồ sơ). Khi có, MapPicker hiển
+   * thị nó và KHÔNG reverse-geocode lại lúc mở — tránh ghi đè tên đã lưu.
+   */
+  initialResult?: ReverseGeocodeResult | null;
   onLocationSelect: (result: ReverseGeocodeResult) => void;
   mapboxToken?: string;
 }
@@ -131,6 +136,7 @@ async function reverseGeocodeMapbox(
 export function MapPicker({
   initialLat,
   initialLng,
+  initialResult,
   onLocationSelect,
   mapboxToken,
 }: MapPickerProps) {
@@ -140,7 +146,9 @@ export function MapPicker({
   const initStartedRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [selectedResult, setSelectedResult] =
-    useState<ReverseGeocodeResult | null>(null);
+    useState<ReverseGeocodeResult | null>(() =>
+      initialLat && initialLng && initialResult ? initialResult : null,
+    );
 
   const doReverseGeocodeRef = useRef<
     (lat: number, lng: number) => Promise<void>
@@ -243,7 +251,7 @@ export function MapPicker({
           draggable: true,
         }).addTo(map);
         markerRef.current = marker;
-        doReverseGeocodeRef.current(initialLat, initialLng);
+        if (!initialResult) doReverseGeocodeRef.current(initialLat, initialLng);
       }
 
       map.on("click", async (e: L.LeafletMouseEvent) => {
@@ -279,17 +287,27 @@ export function MapPicker({
 
       map.once("load", () => map.invalidateSize());
 
-      // Keep the observer with the map instance for cleanup on unmount.
-      (map as L.Map & { __resizeObserver?: ResizeObserver }).__resizeObserver =
-        resizeObserver;
+      // Inside a modal the map is created while the dialog is still running its
+      // zoom-in animation → re-measure once that animation has finished,
+      // otherwise tiles render offset or grey.
+      const dialog = container.closest<HTMLElement>('[role="dialog"]');
+      const onDialogAnimationEnd = (e: AnimationEvent) => {
+        if (e.target === dialog) map.invalidateSize();
+      };
+      dialog?.addEventListener("animationend", onDialogAnimationEnd);
+      const settleTimer = window.setTimeout(() => map.invalidateSize(), 350);
+
+      // Keep the observer + listeners with the map instance for cleanup on unmount.
+      (map as L.Map & { __cleanup?: () => void }).__cleanup = () => {
+        resizeObserver.disconnect();
+        dialog?.removeEventListener("animationend", onDialogAnimationEnd);
+        window.clearTimeout(settleTimer);
+      };
     });
 
     return () => {
       if (mapRef.current) {
-        const mapWithObserver = mapRef.current as L.Map & {
-          __resizeObserver?: ResizeObserver;
-        };
-        mapWithObserver.__resizeObserver?.disconnect();
+        (mapRef.current as L.Map & { __cleanup?: () => void }).__cleanup?.();
         mapRef.current.remove();
         mapRef.current = null;
       }

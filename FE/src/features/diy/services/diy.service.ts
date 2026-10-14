@@ -43,6 +43,10 @@ export const diyService = {
       data,
     ),
 
+  /** POST /diy-posts/{id}/rate — chấm 1–5 sao (chấm lại thì ghi đè). Bài trả về KHÔNG populate creator. */
+  ratePost: (id: string, score: number) =>
+    axiosClient.post<{ status: string; data: { post: DIYPost } }>(`/diy-posts/${id}/rate`, { score }),
+
   deletePost: (id: string) =>
     axiosClient.delete(`/diy-posts/${id}`),
 };

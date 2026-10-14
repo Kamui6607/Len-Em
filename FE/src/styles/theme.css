@@ -148,6 +148,8 @@
   /* Admin action buttons (view/edit/delete) — dùng lại status set */
   --action-info-bg: var(--info-bg); --action-info-border: var(--info-border); --action-info-text: var(--info-text); --action-info-hover-bg: #DCE7FA; --action-info-glow: rgba(42,86,198,0.35);
   --action-warning-bg: var(--warning-bg); --action-warning-border: var(--warning-border); --action-warning-text: var(--warning-text); --action-warning-hover-bg: #FCEDC7; --action-warning-glow: rgba(154,107,0,0.30);
+  /* Nút chuyển trạng thái đơn — mỗi nút mang màu của trạng thái ĐÍCH (đậm hơn status text để đạt AA trên nền tint 15%) */
+  --action-confirm: #1C3F9C; --action-prepare: #5B21B6; --action-ship: #0A5266; --action-deliver: #0F5530;
   --action-destructive-bg: var(--error-bg); --action-destructive-border: var(--error-border); --action-destructive-text: var(--error-text); --action-destructive-hover-bg: #FAD6D6; --action-destructive-glow: rgba(194,59,59,0.30);
 
   --destructive: #C23B3B;
@@ -438,6 +440,8 @@
 
   --action-info-bg: var(--info-bg); --action-info-border: var(--info-border); --action-info-text: var(--info-text); --action-info-hover-bg: rgba(157,184,245,0.24); --action-info-glow: rgba(157,184,245,0.45);
   --action-warning-bg: var(--warning-bg); --action-warning-border: var(--warning-border); --action-warning-text: var(--warning-text); --action-warning-hover-bg: rgba(244,196,90,0.24); --action-warning-glow: rgba(244,196,90,0.40);
+  /* Nút chuyển trạng thái đơn — blue/green dùng lại status palette; violet bão hoà hơn --badge-purple-text để không lẫn với blue */
+  --action-confirm: var(--info-text); --action-prepare: #C79BFF; --action-ship: #67D8EA; --action-deliver: var(--success-text);
   --action-destructive-bg: var(--error-bg); --action-destructive-border: var(--error-border); --action-destructive-text: var(--error-text); --action-destructive-hover-bg: rgba(244,135,159,0.24); --action-destructive-glow: rgba(244,135,159,0.40);
 
   --destructive: #F4879F;

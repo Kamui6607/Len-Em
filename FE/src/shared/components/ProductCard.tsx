@@ -1,19 +1,24 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Heart, ShoppingBag, PlayCircle, Star } from "lucide-react";
 import { motion } from "motion/react";
-import { toast } from "sonner";
 import type { Product } from "../../app/data/products";
 import { getBasePrice } from "../../app/data/products";
 import { useFavorites } from "../contexts/FavoritesContext";
 import { useAuth } from "../hooks/useAuth";
-import { useCart } from "../contexts/CartContext";
 import { LevelBadge } from "./LevelBadge";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "./ui/ResponsiveImage";
 import { getCategoryMeta } from "../../features/shop/shopMeta";
 import { getValidHex, isDefaultVariant } from "./ProductVariantSelector";
 import "../../styles/product-card.css";
+import { useAddToCart } from "../../features/cart/useAddToCart";
+import {
+  VariantPickerDialog,
+  firstAvailableVariant,
+  needsVariantChoice,
+  toCartPayload,
+} from "../../features/cart/VariantPickerDialog";
 
 interface ProductCardProps {
   product: Product;
@@ -29,7 +34,10 @@ export const ProductCard = memo(function ProductCard({
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAuthenticated } = useAuth();
-  const { addToCart } = useCart();
+  const { addProduct } = useAddToCart();
+  // Nhiều màu / phân loại → hỏi khách chọn (trước đây luôn lấy variants[0]).
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerVariantId, setPickerVariantId] = useState<string | undefined>();
 
   const prices = product.variants?.map((variant) => variant.price) ?? [
     getBasePrice(product),
@@ -58,22 +66,22 @@ export const ProductCard = memo(function ProductCard({
     action();
   };
 
+  const openPicker = (variantId?: string) =>
+    requireAuth(() => {
+      setPickerVariantId(variantId);
+      setPickerOpen(true);
+    });
+
   const handleAddClick = (event: React.MouseEvent) => {
     event.preventDefault();
+    if (needsVariantChoice(product)) {
+      openPicker();
+      return;
+    }
+    // Chỉ 1 biến thể → thêm luôn, không cần hỏi.
     requireAuth(() => {
-      const variant = product.variants?.[0];
-      if (!variant) return;
-      addToCart({
-        productId: product.id,
-        variantId: variant.id,
-        name: product.name,
-        image: variant.images?.[0] || product.image,
-        color: variant.color || "",
-        hexCode: variant.hexCode || "#ccc",
-        price: variant.price,
-        stock: variant.stock,
-      });
-      toast.success("Đã thêm vào giỏ hàng");
+      const variant = firstAvailableVariant(product.variants);
+      if (variant) addProduct(toCartPayload(product, variant));
     });
   };
 
@@ -164,11 +172,14 @@ export const ProductCard = memo(function ProductCard({
         {swatches.length > 1 && (
           <div className="pc-swatches" aria-label={`${product.variants?.length} màu`}>
             {swatches.map((variant) => (
-              <span
+              <button
                 key={variant.id}
-                className="pc-swatch"
+                type="button"
+                className="pc-swatch pc-swatch-btn"
                 style={{ backgroundColor: getValidHex(variant.hexCode) }}
-                title={variant.color}
+                title={`${variant.color}${variant.stock <= 0 ? " · hết hàng" : ""}`}
+                aria-label={`Chọn màu ${variant.color} để thêm vào giỏ`}
+                onClick={() => openPicker(variant.id)}
               />
             ))}
             {extraSwatches > 0 && <span className="pc-swatch-more">+{extraSwatches}</span>}
@@ -197,6 +208,17 @@ export const ProductCard = memo(function ProductCard({
           </motion.button>
         </div>
       </div>
+
+      {pickerOpen && (
+        <VariantPickerDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          product={product}
+          mode="add"
+          initialVariantId={pickerVariantId}
+          onConfirm={(p, { variant, quantity }) => addProduct(toCartPayload(p, variant), quantity)}
+        />
+      )}
     </article>
   );
 });

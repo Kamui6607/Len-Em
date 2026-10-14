@@ -5,13 +5,21 @@
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
 
-  /* "Hàng nổi" ở đáy màn hình: nút FAB "+" (ArchiveFloatingMenu) và các thanh
+  /* Thanh tab dưới (mobile): pill cao 64px, cách đáy 8px + safe-area.
+     --tabbar-space = toàn bộ vùng thanh tab chiếm ở đáy màn hình. */
+  --tabbar-h: 64px;
+  --tabbar-gap: 8px;
+  --tabbar-space: calc(var(--tabbar-h) + var(--tabbar-gap) + var(--sab));
+
+  /* "Hàng nổi" ở đáy màn hình: nút nổi (ArchiveFloatingMenu) và các thanh
      nổi đặt cạnh nó (vd. thanh mua trên /shop/product/:id) dùng chung các mốc
-     này để luôn cùng hàng. 90px = bottom nav (≈86px) + 4px; cộng thêm
-     safe-area vì bottom nav cũng tự cộng safe-area vào chiều cao. */
-  --float-row-bottom: calc(90px + var(--sab));
-  --float-row-right: max(12px, var(--sar));
-  --fab-size: 48px;
+     này để luôn cùng hàng: ngay trên thanh tab + 16px. */
+  --float-row-bottom: calc(var(--tabbar-space) + 16px);
+  --float-row-right: max(16px, var(--sar));
+  /* Đẩy cả hàng nổi lên khi toast giỏ hàng (mobile) đang hiện ở đáy màn hình —
+     CartToastHost đặt giá trị này = chiều cao toast + khoảng cách. */
+  --float-row-lift: 0px;
+  --fab-size: 52px;
 }
 @media (min-width: 768px) {
   :root {
@@ -40,7 +48,20 @@
   padding-right: var(--sar);
 }
 
-/* Bottom nav specific - ensures safe area is respected */
-.bottom-nav {
-  padding-bottom: var(--sab);
+/* Chừa chỗ cho thanh tab dưới + nút nổi: phần tử cuối trang luôn nằm
+   hoàn toàn phía trên thanh tab và không bị nút nổi đè lên */
+@media (max-width: 767px) {
+  .has-tabbar {
+    padding-bottom: calc(var(--float-row-bottom) + var(--fab-size) + 12px);
+  }
+}
+
+/* 100vh trên mobile tính cả thanh địa chỉ → dùng dvh (chiều cao thực tế) */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
 }

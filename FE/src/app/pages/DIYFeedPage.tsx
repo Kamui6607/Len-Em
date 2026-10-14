@@ -17,10 +17,10 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../../shared/components/ui/avatar";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useAuth } from "../../shared/hooks/useAuth";
-import { useCart } from "../../shared/contexts/CartContext";
+import { useAddToCart } from "../../features/cart/useAddToCart";
+import { toDIYCartPayload } from "../../features/diy/diyMaterials";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { diyService } from "../../features/diy/services/diy.service";
-import { kitService, type KitProduct } from "../../shared/api/kitService";
 import type { DIYCreator, DIYPost } from "../../features/diy/types/diy.types";
 import { formatPrice } from "../../lib/formatPrice";
 import { ResponsiveImage } from "../../shared/components/ui/ResponsiveImage";
@@ -46,7 +46,7 @@ export function DIYFeedPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
-  const { addKitToCart } = useCart();
+  const { addDIY } = useAddToCart();
   const [filter, setFilter] = useState<FeedFilter>("all");
   const [posts, setPosts] = useState<DIYPost[]>([]);
   const searchQuery = searchParams.get("search") || "";
@@ -95,41 +95,9 @@ export function DIYFeedPage() {
     action();
   };
 
-  const buyCombo = async (post: DIYPost) => {
-    try {
-      const combos = post.linkedCombo ?? [];
-      if (combos.length === 0) {
-        toast.error("No combo available for this post");
-        return;
-      }
-
-      // Fetch the first linked combo kit from the API
-      const comboId = combos[0].comboId;
-      const { data: kitResponse } = await kitService.getById(comboId);
-      const kit = kitResponse.data.kit;
-
-      addKitToCart({
-        kitId: kit._id,
-        name: kit.name,
-        thumbnail: kit.thumbnail,
-        price: kit.price,
-        products: (kit.products || []).map((kitProduct: KitProduct) => {
-          const product = kitProduct.productId;
-          const firstVariant = product?.variants?.[0];
-          return {
-            productId: product._id,
-            variantId: kitProduct.variantId,
-            name: product.name,
-            image: firstVariant?.image || product.image,
-            price: firstVariant?.price || 0,
-          };
-        }),
-      });
-      toast.success("Added kit to cart");
-    } catch {
-      toast.error("Failed to load kit details");
-    }
-  };
+  // "Mua ngay" = bỏ chính bài DIY vào giỏ (title / ảnh / giá của bài) —
+  // không phải combo hay nguyên liệu của bài.
+  const buyDIY = (post: DIYPost) => addDIY(toDIYCartPayload(post));
 
   const savePost = (post: DIYPost) => {
     const wasSaved = isDIYPostSaved(post._id);
@@ -138,9 +106,9 @@ export function DIYFeedPage() {
   };
 
   const approvedPosts = useMemo(
-    // Backend trả "Pending"/"Done" (viết hoa) — so sánh case-insensitive
-    // để chắc chắn bài chờ duyệt không bao giờ lọt qua render layer.
-    () => posts.filter((p) => (p.status || "").toLowerCase() !== "pending"),
+    // Backend: "Pending" / "Done" / "Cancel" — chỉ bài đã duyệt mới công khai
+    // (trước đây chỉ lọc "pending" nên bài bị từ chối vẫn lọt ra feed).
+    () => posts.filter((p) => !["pending", "cancel"].includes((p.status || "").toLowerCase())),
     [posts],
   );
 
@@ -401,7 +369,7 @@ export function DIYFeedPage() {
                       <button
                         type="button"
                         className="diy-card-action is-primary"
-                        onClick={() => requireAuth(() => buyCombo(post))}
+                        onClick={() => requireAuth(() => buyDIY(post))}
                       >
                         <ShoppingBag className="size-3.5" />
                         {t("diyFeed.buyNow")}

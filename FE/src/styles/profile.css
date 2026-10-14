@@ -1,0 +1,424 @@
+/* ============================================================
+   PROFILE — /profile theo ngôn ngữ craft (xem craft.css):
+   - Hero là tấm vải có đường khâu: avatar là miếng vá tròn viền
+     chỉ, tên Playfair nghiêng, lời chào chữ viết tay
+   - Thông tin cá nhân là các ô vải nhỏ, bấm để sao chép
+   - Thước "hồ sơ hoàn thiện" là sợi chỉ đứt nét được may dần
+   Chỉ dùng token trong theme.css → tự đổi light/dark.
+   ============================================================ */
+
+.pf-page {
+  min-height: 100vh;
+  padding: 24px 16px calc(env(safe-area-inset-bottom) + 88px);
+}
+@media (min-width: 768px) {
+  .pf-page { padding: 32px 24px 64px; }
+}
+.pf-page[data-embedded="true"] { min-height: 0; padding: 0; }
+.pf-wrap { max-width: 72rem; margin: 0 auto; }
+
+/* ── Hero ── */
+.pf-hero-grid {
+  display: grid;
+  gap: 22px;
+  align-items: center;
+}
+@media (min-width: 768px) {
+  .pf-hero-grid { grid-template-columns: auto minmax(0, 1fr) auto; gap: 28px; }
+}
+
+.pf-avatar {
+  position: relative;
+  display: flex;
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px;
+  border: 2px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+}
+.pf-avatar:hover { transform: rotate(-3deg) scale(1.03); box-shadow: var(--shadow-card-hover); }
+.pf-avatar:focus-visible { outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent); }
+.pf-avatar-inner {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  color: var(--primary);
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 2.1rem;
+}
+.pf-avatar-inner img { width: 100%; height: 100%; object-fit: cover; }
+.pf-avatar-cam {
+  position: absolute;
+  right: 2px;
+  bottom: 4px;
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--cta-gradient);
+  color: var(--primary-foreground);
+  border: 3px solid var(--card);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s var(--ease-out);
+}
+.pf-avatar:hover .pf-avatar-cam { transform: rotate(-12deg) scale(1.08); }
+
+.pf-hero-name {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.pf-hero-name em { font-style: italic; color: var(--primary); }
+.pf-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.pf-chip.is-role {
+  text-transform: capitalize;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  border: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.pf-chip .mb-badge { gap: 6px; }
+.pf-chip.is-rank { padding: 3px 12px 3px 4px; }
+
+.pf-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (min-width: 768px) {
+  .pf-hero-actions { flex-direction: column; align-items: stretch; }
+}
+
+/* ── Bố cục ── */
+.pf-layout {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+@media (min-width: 1024px) {
+  .pf-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 400px); align-items: start; }
+}
+.pf-col { display: grid; gap: 18px; min-width: 0; }
+
+.pf-panel {
+  position: relative;
+  padding: clamp(18px, 3vw, 24px);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow-xs);
+}
+.pf-panel .craft-section-head { margin-bottom: 16px; }
+.pf-panel .craft-section-title { font-size: 1.15rem; }
+.pf-panel .craft-section-icon { width: 36px; height: 36px; border-radius: 12px; }
+.pf-panel-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.pf-panel-link:hover { text-decoration: underline; }
+
+/* ── Ô thông tin ── */
+.pf-info {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .pf-info { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-info-item.is-wide { grid-column: 1 / -1; }
+}
+.pf-info-item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 2%, var(--card));
+  text-align: left;
+  transition: border-color 0.2s var(--ease-out), transform 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+.pf-info-item:not(:disabled):hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+.pf-info-item:disabled { cursor: default; }
+.pf-info-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  color: var(--primary);
+  transform: rotate(-4deg);
+}
+.pf-info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+}
+.pf-info-value {
+  margin-top: 3px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.pf-info-item.is-empty .pf-info-value {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--foreground-muted);
+}
+.pf-info-copy {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--foreground-muted);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-out);
+}
+.pf-info-item:not(:disabled):hover .pf-info-copy,
+.pf-info-item:focus-visible .pf-info-copy { opacity: 1; }
+@media (hover: none) {
+  .pf-info-copy { opacity: 0.5; }
+}
+
+/* ── Hồ sơ hoàn thiện ── */
+.pf-complete {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+}
+.pf-complete-num {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--primary);
+}
+.pf-complete-body { flex: 1; min-width: 0; }
+.pf-complete-title { font-size: 0.82rem; font-weight: 600; color: var(--foreground); }
+.pf-complete-hint { margin-top: 2px; font-size: 0.74rem; color: var(--foreground-muted); }
+.pf-complete-track {
+  position: relative;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
+  background-size: 8px 2px;
+  background-repeat: repeat-x;
+  background-position: left center;
+}
+.pf-complete-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--cta-gradient);
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pf-complete-btn {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.pf-complete-btn:hover { text-decoration: underline; }
+
+/* ── Lối tắt ── */
+.pf-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .pf-shortcuts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.pf-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition: transform 0.2s var(--ease-out), border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.pf-shortcut:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: var(--shadow-card-hover);
+}
+.pf-shortcut-icon {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  color: var(--primary);
+  transition: transform 0.25s var(--ease-out);
+}
+.pf-shortcut:hover .pf-shortcut-icon { transform: rotate(-8deg) scale(1.06); }
+.pf-shortcut-label { font-size: 0.86rem; font-weight: 600; color: var(--foreground); }
+.pf-shortcut-sub { margin-top: -6px; font-size: 0.72rem; color: var(--foreground-muted); }
+
+/* ── Vai trò (admin/staff) ── */
+.pf-role {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+.pf-role-desc { margin-top: 12px; font-size: 0.8rem; line-height: 1.55; color: var(--foreground-muted); }
+
+/* ── Thao tác tài khoản ── */
+.pf-actions { display: grid; gap: 4px; }
+.pf-action {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--foreground);
+  transition: background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+.pf-action:hover { background: var(--surface-secondary); transform: translateX(2px); }
+.pf-action-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  color: var(--primary);
+}
+.pf-action-sub { display: block; font-size: 0.72rem; font-weight: 500; color: var(--foreground-muted); }
+.pf-action-chev { margin-left: auto; flex-shrink: 0; color: var(--foreground-muted); opacity: 0.5; }
+.pf-action.is-danger { color: var(--destructive); }
+.pf-action.is-danger .pf-action-icon {
+  background: color-mix(in srgb, var(--destructive) 11%, transparent);
+  color: var(--destructive);
+}
+.pf-action.is-danger:hover { background: color-mix(in srgb, var(--destructive) 8%, transparent); }
+
+/* ── Modal ── */
+.pf-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pf-modal-icon {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  transform: rotate(-4deg);
+}
+.pf-modal-title {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.35rem !important;
+  font-weight: 600 !important;
+  line-height: 1.15;
+}
+.pf-modal-stitch {
+  margin: 4px 0 2px;
+  border-top: 1.5px dashed var(--border);
+}
+.pf-modal-foot .craft-btn,
+.pf-modal-foot .craft-btn-ghost { min-height: 44px; }
+
+.pf-pwd-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: -4px;
+  font-size: 0.74rem;
+  color: var(--foreground-muted);
+}
+.pf-pwd-check { display: inline-flex; align-items: center; gap: 5px; }
+.pf-pwd-check.is-ok { color: var(--primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-avatar,
+  .pf-avatar-cam,
+  .pf-info-item,
+  .pf-shortcut,
+  .pf-shortcut-icon,
+  .pf-action,
+  .pf-complete-fill { transition: none !important; }
+}

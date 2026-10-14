@@ -41,7 +41,33 @@ export interface CartKitItem {
   }[];
 }
 
-interface AddToCartPayload {
+/**
+ * Một bài DIY trong giỏ — mua CHÍNH bài DIY (title / description / images /
+ * price của bài), không phải nguyên liệu (linkedProduct / linkedCombo) của nó.
+ */
+export interface CartDIYItem {
+  diyId: string;
+  title: string;
+  description: string;
+  image: string;
+  images: string[];
+  /** post.price — giá của bài DIY. */
+  price: number;
+  quantity: number;
+}
+export type AddDIYToCartPayload = Omit<CartDIYItem, "quantity">;
+
+const MAX_DIY_QTY = 99;
+
+/** Dòng gửi lên BE (phí ship / tạo đơn): sản phẩm lẻ + combo. DIY đi riêng. */
+export function expandCart(items: CartItem[], kits: CartKitItem[]) {
+  return {
+    items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
+    kits: kits.map((k) => ({ kitId: k.kitId, quantity: k.quantity, products: k.products })),
+  };
+}
+
+export interface AddToCartPayload {
   productId: string;
   variantId: string;
   name: string;
@@ -53,7 +79,7 @@ interface AddToCartPayload {
   stock: number;
 }
 
-interface AddKitToCartPayload {
+export interface AddKitToCartPayload {
   kitId: string;
   name: string;
   thumbnail: string;
@@ -71,11 +97,21 @@ interface AddKitToCartPayload {
 interface CartContextType {
   cartItems: CartItem[];
   cartKits: CartKitItem[];
+  cartDIYs: CartDIYItem[];
   addToCart: (product: AddToCartPayload, quantity?: number) => void;
+  /** Thêm bài DIY (cộng dồn số lượng nếu đã có). */
+  addDIYToCart: (diy: AddDIYToCartPayload, quantity?: number) => void;
+  removeDIYFromCart: (diyId: string) => void;
+  updateDIYQuantity: (diyId: string, quantity: number) => void;
   addKitToCart: (kit: AddKitToCartPayload) => void;
   removeFromCart: (productId: string, variantId: string) => void;
   removeKitFromCart: (kitId: string) => void;
   updateQuantity: (productId: string, variantId: string, quantity: number) => void;
+  /**
+   * Đổi một dòng hàng sang biến thể khác của cùng sản phẩm (giữ vị trí + số
+   * lượng, cắt theo tồn kho). Nếu biến thể mới đã có trong giỏ thì gộp lại.
+   */
+  changeVariant: (productId: string, fromVariantId: string, to: AddToCartPayload) => void;
   updateKitQuantity: (kitId: string, quantity: number) => void;
   clearCart: () => void;
   isInCart: (productId: string, variantId: string) => boolean;
@@ -86,6 +122,7 @@ interface CartContextType {
 
 const CART_STORAGE_KEY = "yarn_shop_cart";
 const CART_KITS_STORAGE_KEY = "yarn_shop_cart_kits";
+const CART_DIYS_STORAGE_KEY = "yarn_shop_cart_diys";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -107,6 +144,17 @@ function loadCartKits(): CartKitItem[] {
   }
 }
 
+function loadCartDIYs(): CartDIYItem[] {
+  try {
+    const saved = localStorage.getItem(CART_DIYS_STORAGE_KEY);
+    const list = saved ? JSON.parse(saved) : [];
+    // Bản cũ lưu DIY theo "bộ nguyên liệu" (có `products`) → bỏ, giá không còn đúng.
+    return Array.isArray(list) ? list.filter((d) => d && d.diyId && !Array.isArray(d.products)) : [];
+  } catch {
+    return [];
+  }
+}
+
 function makeKey(productId: string, variantId: string): string {
   return `${productId}::${variantId}`;
 }
@@ -114,6 +162,32 @@ function makeKey(productId: string, variantId: string): string {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(loadCart);
   const [cartKits, setCartKits] = useState<CartKitItem[]>(loadCartKits);
+  const [cartDIYs, setCartDIYs] = useState<CartDIYItem[]>(loadCartDIYs);
+
+  useEffect(() => {
+    localStorage.setItem(CART_DIYS_STORAGE_KEY, JSON.stringify(cartDIYs));
+  }, [cartDIYs]);
+
+  const addDIYToCart = useCallback((diy: AddDIYToCartPayload, quantity: number = 1) => {
+    setCartDIYs((prev) => {
+      const existing = prev.find((d) => d.diyId === diy.diyId);
+      const next: CartDIYItem = {
+        ...diy,
+        quantity: Math.max(1, Math.min((existing?.quantity ?? 0) + quantity, MAX_DIY_QTY)),
+      };
+      return existing ? prev.map((d) => (d.diyId === diy.diyId ? next : d)) : [...prev, next];
+    });
+  }, []);
+
+  const removeDIYFromCart = useCallback((diyId: string) => {
+    setCartDIYs((prev) => prev.filter((d) => d.diyId !== diyId));
+  }, []);
+
+  const updateDIYQuantity = useCallback((diyId: string, quantity: number) => {
+    setCartDIYs((prev) =>
+      prev.map((d) => (d.diyId === diyId ? { ...d, quantity: Math.max(1, Math.min(quantity, MAX_DIY_QTY)) } : d)),
+    );
+  }, []);
 
   // Sync to localStorage whenever cart changes
   useEffect(() => {
@@ -181,14 +255,49 @@ export function CartProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const changeVariant = useCallback(
+    (productId: string, fromVariantId: string, to: AddToCartPayload) => {
+      if (fromVariantId === to.variantId) return;
+      const fromKey = makeKey(productId, fromVariantId);
+      const toKey = makeKey(productId, to.variantId);
+      setCartItems((prev) => {
+        const from = prev.find((item) => makeKey(item.productId, item.variantId) === fromKey);
+        if (!from) return prev;
+        const snapshot = {
+          variantId: to.variantId,
+          name: to.name,
+          image: to.image,
+          color: to.color,
+          hexCode: to.hexCode,
+          size: to.size,
+          price: to.price,
+          stock: to.stock,
+        };
+        const target = prev.find((item) => makeKey(item.productId, item.variantId) === toKey);
+        if (target) {
+          const merged = Math.max(1, Math.min(target.quantity + from.quantity, to.stock));
+          return prev
+            .filter((item) => item !== from)
+            .map((item) => (item === target ? { ...item, ...snapshot, quantity: merged } : item));
+        }
+        return prev.map((item) =>
+          item === from ? { ...item, ...snapshot, quantity: Math.max(1, Math.min(from.quantity, to.stock)) } : item,
+        );
+      });
+    },
+    []
+  );
+
   const clearCart = useCallback(() => {
     // Clear both React state AND localStorage synchronously
     // so that even if window.location.href navigates away immediately,
     // the cart data is already removed from localStorage.
     setCartItems([]);
     setCartKits([]);
+    setCartDIYs([]);
     localStorage.removeItem(CART_STORAGE_KEY);
     localStorage.removeItem(CART_KITS_STORAGE_KEY);
+    localStorage.removeItem(CART_DIYS_STORAGE_KEY);
   }, []);
 
   const isInCart = useCallback(
@@ -200,13 +309,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const totalItems = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.quantity, 0) + cartKits.reduce((sum, kit) => sum + kit.quantity, 0),
-    [cartItems, cartKits]
+    () =>
+      cartItems.reduce((sum, item) => sum + item.quantity, 0) +
+      cartKits.reduce((sum, kit) => sum + kit.quantity, 0) +
+      cartDIYs.reduce((sum, diy) => sum + diy.quantity, 0),
+    [cartItems, cartKits, cartDIYs]
   );
 
   const totalPrice = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + cartKits.reduce((sum, kit) => sum + kit.price * kit.quantity, 0),
-    [cartItems, cartKits]
+    () =>
+      cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) +
+      cartKits.reduce((sum, kit) => sum + kit.price * kit.quantity, 0) +
+      cartDIYs.reduce((sum, diy) => sum + diy.price * diy.quantity, 0),
+    [cartItems, cartKits, cartDIYs]
   );
 
   const addKitToCart = useCallback((kit: AddKitToCartPayload) => {
@@ -248,11 +363,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         cartItems,
         cartKits,
+        cartDIYs,
         addToCart,
+        addDIYToCart,
+        removeDIYFromCart,
+        updateDIYQuantity,
         addKitToCart,
         removeFromCart,
         removeKitFromCart,
         updateQuantity,
+        changeVariant,
         updateKitQuantity,
         clearCart,
         isInCart,

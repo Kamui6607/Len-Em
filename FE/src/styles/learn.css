@@ -75,7 +75,10 @@
 /* ── Bộ lọc ── */
 .learn-filter-panel {
   position: sticky;
-  top: calc(var(--header-height, 88px) + 16px);
+  /* navbar cao 84px, khi cuộn thu thành viên thuốc 58px (đáy ~71px) →
+     dính sát ngay dưới viên thuốc thay vì chừa khoảng trống lớn */
+  top: 80px;
+  align-self: start;
   height: fit-content;
   padding: 22px;
   border-radius: 24px;

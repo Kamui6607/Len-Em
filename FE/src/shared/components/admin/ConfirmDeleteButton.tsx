@@ -9,9 +9,9 @@
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { AdminModal } from "./AdminModal";
 
 export interface ConfirmDeleteButtonProps {
   /** Runs the delete. May be async — the dialog shows a spinner while pending. */
@@ -40,23 +40,16 @@ export function ConfirmDeleteButton({
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const titleId = useRef(`confirm-delete-${Math.random().toString(36).slice(2)}`).current;
 
   const close = useCallback(() => {
     if (working) return;
     setOpen(false);
   }, [working]);
 
-  // Esc closes the dialog; focus lands on "Cancel" (the safe default).
+  // Focus lands on "Cancel" (the safe default); AdminModal handles Esc.
   useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    cancelRef.current?.focus();
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, close]);
+    if (open) cancelRef.current?.focus();
+  }, [open]);
 
   const handleConfirm = async () => {
     try {
@@ -106,73 +99,47 @@ export function ConfirmDeleteButton({
         trashButton
       )}
 
-      {open &&
-        createPortal(
-          <div className="admin-dialog-overlay" onClick={close}>
-            <div
-              className="admin-dialog-content max-w-md"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={titleId}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="admin-dialog-header flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                    style={{ background: "var(--error-bg)", color: "var(--error-text)" }}
-                  >
-                    <AlertTriangle className="h-4 w-4" />
-                  </span>
-                  <h2 id={titleId} className="text-base font-semibold">
-                    {dialogTitle}
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="admin-action-btn"
-                  style={{ color: "var(--foreground-muted)" }}
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="admin-dialog-body">
-                <p className="text-sm text-muted-foreground">{t("admin.confirmDelete.description")}</p>
-              </div>
-
-              <div className="admin-dialog-footer">
-                <button
-                  ref={cancelRef}
-                  type="button"
-                  onClick={close}
-                  disabled={working}
-                  className="btn-modal-cancel"
-                >
-                  {t("admin.confirmDelete.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleConfirm()}
-                  disabled={working}
-                  className="btn-modal-destructive"
-                >
-                  {working ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t("admin.confirmDelete.deleting")}
-                    </>
-                  ) : (
-                    t("admin.confirmDelete.confirm")
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {open && (
+        <AdminModal
+          variant="danger"
+          size="sm"
+          icon={Trash2}
+          title={dialogTitle}
+          onClose={close}
+          footer={
+            <>
+              <button
+                ref={cancelRef}
+                type="button"
+                onClick={close}
+                disabled={working}
+                className="btn-modal-cancel"
+              >
+                {t("admin.confirmDelete.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirm()}
+                disabled={working}
+                className="btn-modal-destructive"
+              >
+                {working ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("admin.confirmDelete.deleting")}
+                  </>
+                ) : (
+                  t("admin.confirmDelete.confirm")
+                )}
+              </button>
+            </>
+          }
+        >
+          <div className="admin-dialog-body">
+            <p className="text-sm text-muted-foreground">{t("admin.confirmDelete.description")}</p>
+          </div>
+        </AdminModal>
+      )}
     </>
   );
 }

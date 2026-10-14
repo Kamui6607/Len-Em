@@ -26,7 +26,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { formatPrice } from "../../lib/formatPrice";
 import { kitService, type Kit, type KitProduct } from "../../shared/api/kitService";
 import { useAuth } from "../../shared/hooks/useAuth";
-import { useCart } from "../../shared/contexts/CartContext";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { cn } from "../../shared/components/ui/utils";
 import { LevelBadge } from "../../shared/components/LevelBadge";
@@ -36,6 +35,7 @@ import { EmptyHoopIllustration } from "./shop/CartPage";
 import "../../styles/craft.css";
 import "../../styles/product-detail.css";
 import "../../styles/kit-detail.css";
+import { useAddToCart } from "../../features/cart/useAddToCart";
 
 /** Số món hiện sẵn trong hộp — phần còn lại mở bằng "Xem thêm". */
 const VISIBLE_ITEMS = 4;
@@ -203,7 +203,7 @@ export function KitDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { addKitToCart } = useCart();
+  const { addKit } = useAddToCart();
   const { isFavoriteKit, toggleFavoriteKit } = useFavorites();
   const [kit, setKit] = useState<Kit | null>(null);
   const [loading, setLoading] = useState(true);
@@ -275,15 +275,13 @@ export function KitDetail() {
       };
     });
 
-    addKitToCart({
+    addKit({
       kitId: kit._id,
       name: kit.name,
       thumbnail: kit.thumbnail,
       price: kit.price,
       products,
     });
-
-    toast.success(`Đã thêm combo "${kit.name}" vào giỏ hàng`);
   };
 
   if (loading) {

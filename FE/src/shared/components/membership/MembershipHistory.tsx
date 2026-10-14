@@ -1,134 +1,84 @@
-import { cn } from "../ui/utils";
+import { Link } from "react-router";
+import { BookOpen, Clapperboard, PartyPopper, ScrollText, ShoppingBag, Trophy, type LucideIcon } from "lucide-react";
 import { formatPrice } from "../../../lib/formatPrice";
 import type { MembershipHistoryEntry } from "../../../features/membership/types/membership.types";
 import { getRankConfig } from "../../../features/membership/types/membership.types";
+import "../../../styles/membership.css";
 
 interface MembershipHistoryProps {
   history: MembershipHistoryEntry[];
+  /** Chỉ 5 dòng gần nhất (tab Tổng quan). */
   compact?: boolean;
 }
 
-const sourceLabels: Record<string, string> = {
-  purchase: "Purchase",
-  diy_video: "DIY Video",
-  registration: "Registration",
-  rank_up: "Rank Up",
-  course_complete: "Course Complete",
-};
-
-const sourceIcons: Record<string, string> = {
-  purchase: "🛒",
-  diy_video: "🎬",
-  registration: "🎉",
-  rank_up: "🏆",
-  course_complete: "📚",
+const SOURCES: Record<MembershipHistoryEntry["source"], { label: string; icon: LucideIcon }> = {
+  purchase: { label: "Mua hàng", icon: ShoppingBag },
+  diy_video: { label: "Bài DIY", icon: Clapperboard },
+  registration: { label: "Đăng ký", icon: PartyPopper },
+  rank_up: { label: "Lên hạng", icon: Trophy },
+  course_complete: { label: "Khoá học", icon: BookOpen },
 };
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  return new Date(dateStr).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export function MembershipHistory({ history, compact = false }: MembershipHistoryProps) {
   if (history.length === 0) {
     return (
-      <div className="text-center py-8 px-4">
-        <div className="text-4xl mb-3">📭</div>
-        <p className="text-sm text-muted-foreground">No transactions yet</p>
-        <p className="text-xs text-muted-foreground/70 mt-1">
-          When you shop or post a video, your point history will appear here.
-        </p>
+      <div className="mb-empty">
+        <span className="mb-empty-icon">
+          <ScrollText size={22} aria-hidden="true" />
+        </span>
+        <p className="mb-empty-title">Chưa có điểm nào</p>
+        <p className="mb-empty-desc">Mua sắm, đăng bài DIY hay hoàn thành khoá học — điểm sẽ được ghi lại ở đây.</p>
       </div>
     );
   }
 
-  if (compact) {
-    return (
-      <div className="space-y-2">
-        {history.slice(0, 5).map((entry) => (
-          <div key={entry.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm shrink-0">
-              {sourceIcons[entry.source] ?? "📄"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium truncate">{entry.description}</span>
-                <span className="text-[9px] text-muted-foreground shrink-0">{formatDate(entry.date)}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
-                <span>{sourceIcons[entry.source]} {sourceLabels[entry.source] ?? entry.source}</span>
-                {entry.orderAmount && <span>• {formatPrice(entry.orderAmount)}</span>}
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <span className={cn("text-xs font-bold", entry.points > 0 ? "text-primary" : "text-destructive")}>
-                {entry.points > 0 ? "+" : ""}{entry.points}
-              </span>
-              {entry.newRank && <div className="text-[8px] text-amber-600">🆕 {getRankConfig(entry.newRank).icon}</div>}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const rows = compact ? history.slice(0, 5) : history;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">Date</th>
-            <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">Points</th>
-            <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">Source</th>
-            <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">Order</th>
-            <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">New Rank</th>
-            <th className="text-left py-3 px-4 font-medium text-muted-foreground text-xs">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {history.map((entry) => (
-            <tr key={entry.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-              <td className="py-3 px-4 text-xs">{formatDate(entry.date)}</td>
-              <td className="py-3 px-4">
-                <span className={cn("font-semibold", entry.points > 0 ? "text-primary" : "text-destructive")}>
-                  {entry.points > 0 ? "+" : ""}{entry.points}
-                </span>
-              </td>
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-1.5">
-                  <span>{sourceIcons[entry.source]}</span>
-                  <span className="text-xs">{sourceLabels[entry.source]}</span>
-                </div>
-              </td>
-              <td className="py-3 px-4 text-xs text-muted-foreground">
-                {entry.orderId ? (
-                  <span className="font-mono text-[10px]">{entry.orderId}</span>
-                ) : (
-                  <span className="text-muted-foreground/50">—</span>
+    <ul className="mb-entries">
+      {rows.map((entry) => {
+        const source = SOURCES[entry.source] ?? { label: entry.source, icon: ScrollText };
+        const Icon = source.icon;
+        // orderId chỉ là id đơn hàng khi source === "purchase" (còn lại là id DIY / khoá học).
+        const orderId = entry.source === "purchase" ? entry.orderId : undefined;
+        const tone =
+          entry.status === "completed" ? (entry.points >= 0 ? "is-plus" : "is-minus") : "is-muted";
+
+        return (
+          <li key={entry.id} className="mb-entry" data-status={entry.status}>
+            <span className="mb-entry-icon" aria-hidden="true">
+              <Icon size={17} />
+            </span>
+            <div className="min-w-0">
+              <p className="mb-entry-title">{entry.description}</p>
+              <div className="mb-entry-meta">
+                <span>{formatDate(entry.date)}</span>
+                <span>· {source.label}</span>
+                {orderId && (
+                  <Link to={`/purchased/${orderId}`}>#{orderId.slice(-8).toUpperCase()}</Link>
                 )}
-                {entry.orderAmount && <div className="text-[10px]">{formatPrice(entry.orderAmount)}</div>}
-              </td>
-              <td className="py-3 px-4">
-                {entry.newRank ? (
-                  <span className="text-xs font-medium">{getRankConfig(entry.newRank).icon} {getRankConfig(entry.newRank).displayName}</span>
-                ) : (
-                  <span className="text-muted-foreground/50">—</span>
+                {entry.orderAmount != null && !compact && <span>· {formatPrice(entry.orderAmount)}</span>}
+                {entry.status === "pending" && <span className="mb-status is-pending">Chờ giao hàng</span>}
+                {entry.status === "cancelled" && <span className="mb-status is-cancelled">Đã huỷ</span>}
+                {entry.newRank && (
+                  <span className="mb-status is-rank">
+                    {getRankConfig(entry.newRank).icon} Lên {getRankConfig(entry.newRank).displayName}
+                  </span>
                 )}
-              </td>
-              <td className="py-3 px-4">
-                <span className={cn(
-                  "badge text-[10px] px-2 py-0.5",
-                  entry.status === "completed" && "badge-green",
-                  entry.status === "pending" && "badge-orange",
-                  entry.status === "cancelled" && "badge-red",
-                )}>
-                  {entry.status === "completed" ? "✅" : entry.status === "pending" ? "⏳" : "❌"}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </div>
+            <p className={`mb-entry-amount ${tone}`}>
+              {entry.points > 0 ? "+" : ""}
+              {entry.points.toLocaleString("vi-VN")}
+              <small>{entry.status === "pending" ? "chưa cộng" : "điểm"}</small>
+            </p>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

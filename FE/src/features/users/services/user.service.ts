@@ -4,6 +4,7 @@
 
 import axiosClient from "../../../lib/axiosClient";
 import type { ApiResponse } from "../../../shared/types/auth.types";
+import type { AddressLocation } from "../../../shared/types/address.types";
 
 const USERS_BASE = "/users";
 
@@ -48,6 +49,8 @@ export interface UpdateUserRequest {
   fullName?: string;
   phone?: string;
   address?: string;
+  /** null = xoá khu vực đã lưu */
+  addressLocation?: AddressLocation | null;
   gender?: UserGender;
   dateOfBirth?: string;
   subscription?: string;

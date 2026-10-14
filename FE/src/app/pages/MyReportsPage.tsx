@@ -1,421 +1,527 @@
 // ============================================================
 // MyReportsPage — route /orders/reports
-// Customer xem danh sách reports của mình
+// Khách theo dõi các báo cáo sự cố đã gửi + phản hồi từ shop.
+//  - GET /order-reports/my chỉ hỗ trợ page/limit (BE bỏ qua search/status)
+//    → tải một lượt rồi lọc / tìm / phân trang ngay trên client.
+//  - Tự làm mới mỗi 30s khi tab đang mở. Không tự bắn toast khi trạng thái
+//    đổi: BE đã gửi thông báo realtime cho việc đó.
 // ============================================================
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { format } from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Search, Edit, Trash2, Eye } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  ImageIcon,
+  MessageSquareText,
+  Pencil,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { orderReportService } from "../../features/orderReport/services/orderReport.service";
 import type { OrderReport } from "../../features/orderReport/types/orderReport.types";
-import { Badge } from "../../shared/components/ui/badge";
-import { Button } from "../../shared/components/ui/button";
-import { Input } from "../../shared/components/ui/input";
-import { useDebouncedSearch } from "../../shared/hooks/useDebouncedSearch";
+import { ReportFormDialog } from "../../features/orderReport/components/ReportFormDialog";
+import {
+  formatReportDate,
+  reportCode,
+  reportErrorMessage,
+  reportImages,
+  reportOrderCode,
+  reportOrderId,
+  statusMeta,
+  type ReportStatus,
+} from "../../features/orderReport/reportMeta";
+import { toText } from "../../lib/displayText";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../shared/components/ui/dialog";
+import "../../styles/purchased.css";
+import "../../styles/reports.css";
 
-const STATUS_OPTIONS = ["", "PENDING", "DONE", "CANCELLED"];
-const POLLING_INTERVAL = 30000; // Poll every 30 seconds
+const PAGE_SIZE = 8;
+const FETCH_LIMIT = 100;
+const POLLING_INTERVAL = 30000;
+
+const TABS: { value: ReportStatus | "ALL"; label: string }[] = [
+  { value: "ALL", label: "Tất cả" },
+  { value: "PENDING", label: "Đang xử lý" },
+  { value: "DONE", label: "Đã giải quyết" },
+  { value: "CANCELLED", label: "Đã đóng" },
+];
+
+const normalize = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function MyReportsPage() {
   const [reports, setReports] = useState<OrderReport[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [tab, setTab] = useState<ReportStatus | "ALL">("ALL");
+  const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("");
-  const { inputValue, debouncedValue, setInputValue } = useDebouncedSearch({ delay: 400, minChars: 0 });
 
-  // Detail modal state
-  const [selectedReport, setSelectedReport] = useState<OrderReport | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [updating, setUpdating] = useState(false);
-  
-  // Store previous reports for change detection
-  const previousReportsRef = useRef<Map<string, OrderReport>>(new Map());
+  const [viewing, setViewing] = useState<OrderReport | null>(null);
+  const [editing, setEditing] = useState<OrderReport | null>(null);
+  const [deleting, setDeleting] = useState<OrderReport | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const fetchReports = useCallback(async () => {
+  const fetchReports = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const { data } = await orderReportService.getMyReports({
-        page,
-        limit: 10,
-        search: debouncedValue || undefined,
-      });
-      
-      const newReports = data.data.reports;
-      const previousReports = previousReportsRef.current;
-      
-      // Check for status changes and show notifications
-      if (previousReports.size > 0 && newReports.length > 0) {
-        newReports.forEach((report) => {
-          const previous = previousReports.get(report._id);
-          
-          // If report exists in both and status changed
-          if (previous && previous.status !== report.status) {
-            const statusMessages: Record<string, string> = {
-              "DONE": `Report #${report._id.slice(-8)} has been marked as DONE`,
-              "CANCELLED": `Report #${report._id.slice(-8)} has been CANCELLED`,
-            };
-            
-            const message = statusMessages[report.status];
-            if (message) {
-              toast.info(message, {
-                duration: 5000,
-              });
-            }
-          }
-        });
-      }
-      
-      // Update previous reports ref
-      previousReportsRef.current = new Map(newReports.map(r => [r._id, r]));
-      
-      setReports(newReports);
-      setTotalPages(data.data.totalPages);
+      const { data } = await orderReportService.getMyReports({ page: 1, limit: FETCH_LIMIT });
+      const list = Array.isArray(data.data?.reports) ? data.data.reports : [];
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setReports(list);
+      setLoadError(false);
+      // Hộp chi tiết đang mở → cập nhật theo dữ liệu mới (vd. shop vừa phản hồi).
+      setViewing((current) => (current ? list.find((r) => r._id === current._id) ?? current : current));
     } catch {
-      toast.error("Failed to load reports");
+      if (!silent) setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [page, debouncedValue]);
+  }, []);
 
-  // Initial fetch
   useEffect(() => {
-    fetchReports();
+    void fetchReports();
   }, [fetchReports]);
-  
-  // Poll for updates every 30 seconds
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchReports();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchReports(true);
     }, POLLING_INTERVAL);
-    
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [fetchReports]);
 
-  const handleUpdate = async () => {
-    if (!selectedReport || !editTitle.trim() || !editDescription.trim()) return;
-    setUpdating(true);
+  const counts = useMemo(() => {
+    const c: Record<ReportStatus | "ALL", number> = { ALL: reports.length, PENDING: 0, DONE: 0, CANCELLED: 0 };
+    reports.forEach((r) => {
+      if (r.status in c) c[r.status] += 1;
+    });
+    return c;
+  }, [reports]);
+
+  const filtered = useMemo(() => {
+    const q = normalize(query.trim().replace(/^#/, ""));
+    return reports.filter((r) => {
+      if (tab !== "ALL" && r.status !== tab) return false;
+      if (!q) return true;
+      return [toText(r.title), r._id, reportOrderId(r)].some((field) => normalize(field).includes(q));
+    });
+  }, [reports, tab, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const filtering = tab !== "ALL" || query.trim() !== "";
+
+  const replaceReport = (updated: OrderReport) => {
+    setReports((prev) => prev.map((r) => (r._id === updated._id ? { ...r, ...updated } : r)));
+    setViewing((current) => (current?._id === updated._id ? { ...current, ...updated } : current));
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
     try {
-      await orderReportService.update(selectedReport._id, {
-        title: editTitle,
-        description: editDescription,
-      });
-      toast.success("Report updated successfully");
-      setShowEditModal(false);
-      setSelectedReport(null);
-      fetchReports();
-    } catch {
-      toast.error("Failed to update report");
+      await orderReportService.delete(deleting._id);
+      setReports((prev) => prev.filter((r) => r._id !== deleting._id));
+      if (viewing?._id === deleting._id) setViewing(null);
+      toast.success("Đã xoá báo cáo");
+      setDeleting(null);
+    } catch (error) {
+      toast.error(reportErrorMessage(error, "Không xoá được báo cáo. Vui lòng thử lại."));
     } finally {
-      setUpdating(false);
+      setDeleteBusy(false);
     }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this report?")) return;
-    try {
-      await orderReportService.delete(id);
-      toast.success("Report deleted");
-      fetchReports();
-    } catch {
-      toast.error("Failed to delete report");
-    }
-  };
-
-  const openEditModal = (report: OrderReport) => {
-    setEditTitle(report.title);
-    setEditDescription(report.description);
-    setShowEditModal(true);
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
+    <div className="min-h-screen bg-background py-12 px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-12">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-4">
-          <Link
-            to="/purchased"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Orders
-          </Link>
-          <h1 className="text-2xl font-bold">My Reports</h1>
-        </div>
+        <Link to="/purchased" className="rp-back">
+          <ArrowLeft className="size-4" />
+          Đơn hàng của tôi
+        </Link>
 
-        {/* Search & Filter */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={inputValue}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search by title..."
-              className="pl-9"
-            />
+        <header className="purchased-hero">
+          <div className="min-w-0">
+            <p className="purchased-eyebrow">Hỗ trợ đơn hàng</p>
+            <h1 className="purchased-title">Báo cáo của tôi</h1>
+            <div className="purchased-title-stitch" aria-hidden />
+            <p className="purchased-subtitle">
+              Theo dõi các sự cố bạn đã báo và phản hồi từ Len&amp;Em. Báo cáo đang xử lý vẫn có thể sửa hoặc xoá.
+            </p>
           </div>
-          <select
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value);
-              setPage(1);
-            }}
-            className="px-4 py-2 rounded-lg border border-border bg-card text-sm"
-          >
-            <option value="">All Status</option>
-            {STATUS_OPTIONS.filter(Boolean).map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+          {!loading && reports.length > 0 && (
+            <div className="purchased-hero-count">
+              <span className="purchased-hero-count-num">{counts.PENDING}</span>
+              <span className="purchased-hero-count-label">đang xử lý</span>
+            </div>
+          )}
+        </header>
 
-        {/* Reports List */}
         {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse bg-muted rounded-lg" />
+          <div className="grid gap-4">
+            <div className="purchased-skeleton h-12 w-full rounded-2xl" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="purchased-skeleton h-40 w-full rounded-3xl" />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="purchased-empty">
+            <span className="rp-empty-mark" aria-hidden="true">
+              <Flag className="size-8" />
+            </span>
+            <h2 className="purchased-empty-title">Không tải được báo cáo</h2>
+            <p className="purchased-empty-desc">Kết nối có trục trặc. Bạn thử tải lại nhé.</p>
+            <button type="button" className="purchased-empty-btn" onClick={() => void fetchReports()}>
+              <RotateCcw className="size-4" />
+              Thử lại
+            </button>
           </div>
         ) : reports.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            No reports found.
+          <div className="purchased-empty">
+            <span className="rp-empty-mark" aria-hidden="true">
+              <Flag className="size-8" />
+            </span>
+            <h2 className="purchased-empty-title">Chưa có báo cáo nào</h2>
+            <p className="purchased-empty-desc">
+              Nếu đơn hàng có vấn đề, mở đơn đó và bấm biểu tượng <Flag className="inline size-3.5 align-[-2px]" /> để báo
+              cho chúng mình.
+            </p>
+            <Link to="/purchased" className="purchased-empty-btn">
+              Đến đơn hàng của tôi
+            </Link>
           </div>
         ) : (
           <>
-            <div className="space-y-4">
-              {reports.map((report) => (
-                <div
-                  key={report._id}
-                  className="rounded-2xl border border-border bg-card p-5"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge
-                          variant={
-                            report.status === "PENDING"
-                              ? "secondary"
-                              : report.status === "DONE"
-                              ? "default"
-                              : "destructive"
-                          }
-                        >
-                          {report.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          #{report._id.slice(-8)}
-                        </span>
-                      </div>
-                      <h3 className="font-semibold text-lg mb-1">{report.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                        {report.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Order: #{report.orderId.slice(-8)} •{" "}
-                        {format(new Date(report.createdAt), "MMM dd, yyyy")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedReport(report)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {report.status === "PENDING" && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditModal(report)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(report._id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* Toolbar: trạng thái + tìm kiếm */}
+            <div className="rp-toolbar">
+              <div className="rp-tabs" role="tablist" aria-label="Lọc theo trạng thái">
+                {TABS.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === t.value}
+                    className="rp-tab"
+                    onClick={() => {
+                      setTab(t.value);
+                      setPage(1);
+                    }}
+                  >
+                    {t.label}
+                    <span className="rp-tab-count">{counts[t.value]}</span>
+                  </button>
+                ))}
+              </div>
+              <label className="rp-search">
+                <Search className="size-4 shrink-0" aria-hidden="true" />
+                <span className="sr-only">Tìm báo cáo</span>
+                <input
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Tìm theo tiêu đề, mã báo cáo hoặc mã đơn"
+                />
+                {query && (
+                  <button type="button" onClick={() => setQuery("")} aria-label="Xoá tìm kiếm" className="rp-search-clear">
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </label>
             </div>
 
-            {/* Pagination */}
+            {filtered.length === 0 ? (
+              <div className="rp-noresult">
+                <p>Không có báo cáo nào phù hợp.</p>
+                {filtering && (
+                  <button
+                    type="button"
+                    className="rp-btn-ghost"
+                    onClick={() => {
+                      setTab("ALL");
+                      setQuery("");
+                    }}
+                  >
+                    Bỏ lọc
+                  </button>
+                )}
+              </div>
+            ) : (
+              <ul className="rp-list">
+                {pageItems.map((report) => (
+                  <ReportCard
+                    key={report._id}
+                    report={report}
+                    onOpen={() => setViewing(report)}
+                    onEdit={() => setEditing(report)}
+                    onDelete={() => setDeleting(report)}
+                  />
+                ))}
+              </ul>
+            )}
+
             {totalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-8">
+              <nav className="rp-pager" aria-label="Phân trang">
                 <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="px-4 py-2 rounded-lg text-sm border border-border hover:bg-muted disabled:opacity-50"
+                  type="button"
+                  onClick={() => setPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  aria-label="Trang trước"
                 >
-                  Prev
+                  <ChevronLeft className="size-4" />
                 </button>
-                <span className="text-sm text-muted-foreground self-center">
-                  Page {page} of {totalPages}
+                <span>
+                  Trang <b>{currentPage}</b> / {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="px-4 py-2 rounded-lg text-sm border border-border hover:bg-muted disabled:opacity-50"
+                  type="button"
+                  onClick={() => setPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  aria-label="Trang sau"
                 >
-                  Next
+                  <ChevronRight className="size-4" />
                 </button>
-              </div>
+              </nav>
             )}
           </>
         )}
       </div>
 
-      {/* Detail Modal */}
-      {selectedReport && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setSelectedReport(null)}
-        >
-          <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 border-b border-border">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{selectedReport.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Report #{selectedReport._id.slice(-8)} • Order #
-                    {selectedReport.orderId.slice(-8)}
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    selectedReport.status === "PENDING"
-                      ? "secondary"
-                      : selectedReport.status === "DONE"
-                      ? "default"
-                      : "destructive"
-                  }
-                >
-                  {selectedReport.status}
-                </Badge>
-              </div>
-            </div>
+      <ReportDetailDialog
+        report={viewing}
+        onClose={() => setViewing(null)}
+        onEdit={(r) => setEditing(r)}
+        onDelete={(r) => setDeleting(r)}
+      />
 
-            <div className="p-5 space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Description
-                </p>
-                <p className="text-sm">{selectedReport.description}</p>
-              </div>
-
-              {selectedReport.images && selectedReport.images.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Images
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {selectedReport.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img}
-                        alt=""
-                        className="w-20 h-20 rounded-lg object-cover"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedReport.adminNote && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Admin Note
-                  </p>
-                  <p className="text-sm">{selectedReport.adminNote}</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Created
-                </p>
-                <p className="text-sm">
-                  {format(new Date(selectedReport.createdAt), "MMM dd, yyyy HH:mm")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {editing && (
+        <ReportFormDialog
+          mode="edit"
+          report={editing}
+          open={!!editing}
+          onOpenChange={(open) => !open && setEditing(null)}
+          onSaved={(updated) => updated && replaceReport(updated)}
+        />
       )}
 
-      {/* Edit Modal */}
-      {showEditModal && selectedReport && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowEditModal(false)}
-        >
-          <div
-            className="bg-card rounded-2xl border border-border shadow-xl max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 border-b border-border">
-              <h3 className="font-semibold">Edit Report</h3>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                  Title
-                </label>
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Report title"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                  Description
-                </label>
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Report description"
-                  rows={4}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm resize-none"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 py-2.5 rounded-full text-sm border border-border hover:bg-muted transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpdate}
-                  disabled={updating || !editTitle.trim() || !editDescription.trim()}
-                  className="flex-1 py-2.5 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {updating ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
+      <Dialog open={!!deleting} onOpenChange={(open) => !open && !deleteBusy && setDeleting(null)}>
+        <DialogContent className="rp-dialog glass-panel-solid sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="rp-dialog-title">Xoá báo cáo này?</DialogTitle>
+            <DialogDescription className="rp-dialog-sub">
+              Báo cáo #{deleting ? reportCode(deleting) : ""} sẽ bị xoá và không thể khôi phục. Nếu sự cố vẫn còn, bạn có
+              thể sửa báo cáo thay vì xoá.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rp-actions">
+            <button type="button" className="rp-btn-ghost" onClick={() => setDeleting(null)} disabled={deleteBusy}>
+              Giữ lại
+            </button>
+            <button type="button" className="rp-btn-danger" onClick={confirmDelete} disabled={deleteBusy}>
+              <Trash2 className="size-4" />
+              {deleteBusy ? "Đang xoá…" : "Xoá báo cáo"}
+            </button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// ── Thẻ báo cáo trong danh sách ──
+function ReportCard({
+  report,
+  onOpen,
+  onEdit,
+  onDelete,
+}: {
+  report: OrderReport;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const meta = statusMeta(report.status);
+  const images = reportImages(report);
+  const note = toText(report.adminNote).trim();
+  const editable = report.status === "PENDING";
+
+  return (
+    <li className="rp-card" data-tone={meta.tone}>
+      <button type="button" className="rp-card-main" onClick={onOpen}>
+        <span className="rp-card-top">
+          <span className={`badge ${meta.badge}`}>{meta.customerLabel}</span>
+          <span className="rp-code">#{reportCode(report)}</span>
+          <span className="rp-date">{formatReportDate(report.createdAt)}</span>
+        </span>
+        <span className="rp-card-title">{toText(report.title) || "Báo cáo"}</span>
+        <span className="rp-card-desc">{toText(report.description)}</span>
+        <span className="rp-card-meta">
+          <span>Đơn #{reportOrderCode(report)}</span>
+          {images.length > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <ImageIcon className="size-3.5" aria-hidden="true" />
+              {images.length} ảnh
+            </span>
+          )}
+        </span>
+        {note && (
+          <span className="rp-card-note">
+            <MessageSquareText className="size-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              <b>Len&amp;Em:</b> {note}
+            </span>
+          </span>
+        )}
+      </button>
+      <span className="rp-card-actions">
+        <button type="button" className="rp-link" onClick={onOpen}>
+          Xem chi tiết
+        </button>
+        {editable && (
+          <>
+            <button type="button" className="rp-icon-btn" onClick={onEdit} aria-label="Sửa báo cáo" title="Sửa">
+              <Pencil className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              className="rp-icon-btn is-danger"
+              onClick={onDelete}
+              aria-label="Xoá báo cáo"
+              title="Xoá"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </>
+        )}
+      </span>
+    </li>
+  );
+}
+
+// ── Chi tiết báo cáo: tiến trình + nội dung + phản hồi của shop ──
+function ReportDetailDialog({
+  report,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  report: OrderReport | null;
+  onClose: () => void;
+  onEdit: (report: OrderReport) => void;
+  onDelete: (report: OrderReport) => void;
+}) {
+  const meta = report ? statusMeta(report.status) : null;
+  const images = report ? reportImages(report) : [];
+  const note = report ? toText(report.adminNote).trim() : "";
+  const closed = report && report.status !== "PENDING";
+
+  return (
+    <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="rp-dialog glass-panel-solid max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+        {report && meta && (
+          <div className="grid gap-5">
+            <DialogHeader>
+              <div className="flex flex-wrap items-center gap-2 pr-8">
+                <span className={`badge ${meta.badge}`}>{meta.customerLabel}</span>
+                <span className="rp-code">Báo cáo #{reportCode(report)}</span>
+              </div>
+              <DialogTitle className="rp-detail-title">{toText(report.title) || "Báo cáo"}</DialogTitle>
+              <DialogDescription className="rp-dialog-sub">
+                Đơn{" "}
+                <Link to={`/purchased/${reportOrderId(report)}`} className="rp-order-link" onClick={onClose}>
+                  #{reportOrderCode(report)}
+                </Link>{" "}
+                · Gửi lúc {formatReportDate(report.createdAt, "HH:mm dd/MM/yyyy")}
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Tiến trình: Đã gửi → Đang xử lý → Giải quyết / Đóng */}
+            <ol className="rp-steps" data-tone={meta.tone} aria-label="Tiến trình xử lý">
+              <li className="is-done">
+                <span className="rp-step-dot" />
+                <span>
+                  Đã gửi
+                  <small>{formatReportDate(report.createdAt)}</small>
+                </span>
+              </li>
+              <li className={closed ? "is-done" : "is-current"}>
+                <span className="rp-step-dot" />
+                <span>Đang xử lý</span>
+              </li>
+              <li className={closed ? "is-done is-final" : ""}>
+                <span className="rp-step-dot" />
+                <span>
+                  {report.status === "CANCELLED" ? "Đã đóng" : "Đã giải quyết"}
+                  {closed && <small>{formatReportDate(report.updatedAt)}</small>}
+                </span>
+              </li>
+            </ol>
+
+            <section>
+              <p className="rp-label">Bạn đã báo</p>
+              <p className="rp-detail-text">{toText(report.description) || "—"}</p>
+            </section>
+
+            {images.length > 0 && (
+              <section>
+                <p className="rp-label">Ảnh đính kèm</p>
+                <div className="rp-thumbs">
+                  {images.map((src, i) => (
+                    <a key={i} href={src} target="_blank" rel="noreferrer" className="rp-thumb is-link">
+                      <img src={src} alt={`Ảnh ${i + 1}`} />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className={`rp-reply${note ? "" : " is-empty"}`}>
+              <p className="rp-reply-head">
+                <MessageSquareText className="size-4" aria-hidden="true" />
+                Phản hồi từ Len&amp;Em
+              </p>
+              <p className="rp-detail-text">
+                {note ||
+                  (report.status === "PENDING"
+                    ? "Chưa có phản hồi — chúng mình đang xem báo cáo của bạn và sẽ cập nhật sớm."
+                    : "Báo cáo đã được xử lý.")}
+              </p>
+            </section>
+
+            <div className="rp-actions">
+              {report.status === "PENDING" ? (
+                <>
+                  <button type="button" className="rp-btn-ghost is-danger" onClick={() => onDelete(report)}>
+                    <Trash2 className="size-4" />
+                    Xoá
+                  </button>
+                  <button type="button" className="rp-btn-primary" onClick={() => onEdit(report)}>
+                    <Pencil className="size-4" />
+                    Sửa báo cáo
+                  </button>
+                </>
+              ) : (
+                <Link to={`/purchased/${reportOrderId(report)}`} className="rp-btn-primary" onClick={onClose}>
+                  Xem đơn hàng
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

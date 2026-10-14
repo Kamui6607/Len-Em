@@ -4,29 +4,59 @@ import { supportDIYService } from "../../../features/supportDIY/services/support
 import type { SupportDIYPost } from "../../../features/supportDIY/types/supportDIY.types";
 import {
   CheckCircle,
+  Clock,
   Eye,
-  ChevronUp,
-  ChevronDown,
-  Check,
   Edit3,
-  X,
   XCircle,
+  Image as ImageIcon,
+  Layers,
+  LifeBuoy,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { ReportButton } from "../../../shared/components/ReportButton";
-import { ConfirmDeleteButton } from "../../../shared/components/admin/ConfirmDeleteButton";
-import { AdminPagination } from "../../../shared/components/admin/AdminPagination";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
+import { AdminPanel } from "../../../shared/components/admin/AdminPanel";
+import { AdminSearchMeta } from "../../../shared/components/admin/AdminSearch";
 import {
-  AdminListSkeleton,
-  AdminTableBodySkeleton,
-} from "../../../shared/components/skeletons/AdminSkeleton";
+  AdminActionButton,
+  AdminCellStack,
+  AdminDataGrid,
+  AdminDateCell,
+  AdminGridFooter,
+  AdminGridToolbar,
+  AdminMoney,
+  AdminPill,
+  AdminRowActions,
+  AdminRowMenu,
+  AdminStatusTabs,
+  useAdminConfirm,
+  useAdminGridSort,
+  type AdminGridColumn,
+} from "../../../shared/components/admin/AdminDataGrid";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
+import {
+  AdminDetailItem,
+  AdminDialogSection,
+  AdminField,
+  AdminModal,
+} from "../../../shared/components/admin/AdminModal";
 
-const STATUS_OPTIONS = ["", "Pending", "Done", "Cancel"];
+function formatCreatedAt(value: string): string {
+  try {
+    return new Date(value).toLocaleDateString("en-US", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
 
-type SortField = "id" | "title" | "status" | "date";
-type SortDirection = "asc" | "desc";
 
 export function AdminSupportDIYPosts() {
   const { t } = useLanguage();
@@ -35,18 +65,22 @@ export function AdminSupportDIYPosts() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
 
   const [selectedPost, setSelectedPost] = useState<SupportDIYPost | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Tìm kiếm: chỉ cần giá trị đã debounce (gọi API sau 400ms ngừng gõ).
-  const { debouncedValue: debouncedSearch } = useDebouncedSearch({
-    delay: 400,
-    minChars: 0,
-  });
+  // Tìm kiếm: debounce 400ms (ô gõ phản hồi ngay, lọc khi ngừng gõ).
+  const {
+    inputValue: searchInput,
+    debouncedValue: debouncedSearch,
+    setInputValue: setSearchInput,
+    isWaiting: searchIsWaiting,
+    clear: clearSearch,
+  } = useDebouncedSearch({ delay: 400, minChars: 0 });
   const isSearching = debouncedSearch.trim().length > 0;
 
   // Edit modal state
@@ -70,6 +104,7 @@ export function AdminSupportDIYPosts() {
         status: filterStatus || undefined,
       });
       setPosts(data.data.posts);
+      setTotal(data.data.total ?? data.data.posts.length);
       setTotalPages(data.data.totalPages);
     } catch {
       toast.error(t("admin.supportDIY.loadError"));
@@ -85,6 +120,27 @@ export function AdminSupportDIYPosts() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, filterStatus]);
+
+  useEffect(() => {
+    setSelected(new Set());
+  }, [page, debouncedSearch, filterStatus]);
+
+  // Số lượng cho thẻ trạng thái (limit=1, chỉ đọc `total`).
+  const fetchCounts = useCallback(async () => {
+    const keys = ["", "Pending", "Done", "Cancel"];
+    const results = await Promise.allSettled(
+      keys.map((status) => supportDIYService.getAllPosts({ page: 1, limit: 1, status: status || undefined })),
+    );
+    const next: Record<string, number | undefined> = {};
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") next[keys[i] || "all"] = r.value.data.data.total;
+    });
+    setCounts(next);
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
 
   const openEditModal = (post: SupportDIYPost) => {
     setEditModal(post);
@@ -123,11 +179,12 @@ export function AdminSupportDIYPosts() {
     setStatusUpdating(true);
     try {
       await supportDIYService.updatePostStatus(id, { status: "Done" });
-      toast.success("Post confirmed");
+      toast.success(t("admin.supportDIY.confirmSuccess"));
       setSelectedPost(null);
       fetchPosts();
+      fetchCounts();
     } catch {
-      toast.error("Failed to confirm post");
+      toast.error(t("admin.supportDIY.confirmError"));
     } finally {
       setStatusUpdating(false);
     }
@@ -137,11 +194,12 @@ export function AdminSupportDIYPosts() {
     setStatusUpdating(true);
     try {
       await supportDIYService.updatePostStatus(id, { status: "Cancel" });
-      toast.success("Post cancelled");
+      toast.success(t("admin.supportDIY.cancelSuccess"));
+      fetchCounts();
       setSelectedPost(null);
       fetchPosts();
     } catch {
-      toast.error("Failed to cancel post");
+      toast.error(t("admin.supportDIY.cancelError"));
     } finally {
       setStatusUpdating(false);
     }
@@ -150,597 +208,466 @@ export function AdminSupportDIYPosts() {
   const handleDelete = async (post: SupportDIYPost) => {
     try {
       await supportDIYService.deletePost(post._id);
-      toast.success("Post deleted");
+      toast.success(t("admin.supportDIY.deleteSuccess"));
+      fetchCounts();
       fetchPosts();
     } catch {
-      toast.error("Failed to delete post");
+      toast.error(t("admin.supportDIY.deleteError"));
     }
   };
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
+  // Lọc theo search (title / id / tags) trên cửa sổ đã tải, phân trang ở FE khi đang search.
+  const searchNeedle = debouncedSearch.trim().toLowerCase();
+  const matchedPosts = searchNeedle
+    ? posts.filter(
+        (post) =>
+          post.title.toLowerCase().includes(searchNeedle) ||
+          post._id.toLowerCase().includes(searchNeedle) ||
+          (post.tags || []).some((tag) => tag.toLowerCase().includes(searchNeedle)),
+      )
+    : posts;
+  const visiblePosts = isSearching ? matchedPosts.slice((page - 1) * 10, page * 10) : matchedPosts;
+  const displayTotalPages = isSearching ? Math.max(1, Math.ceil(matchedPosts.length / 10)) : totalPages;
+  const displayTotal = isSearching ? matchedPosts.length : total;
 
-  function SortableHeader({
-    label,
-    field,
-    align = "left",
-  }: {
-    label: string;
-    field: SortField;
-    align?: "left" | "right" | "center";
-  }) {
-    const active = sortField === field;
+  const statusKey = (post: SupportDIYPost) => post.status || "Pending";
+  const isPending = (post: SupportDIYPost) => statusKey(post) === "Pending";
+  const statusPill = (post: SupportDIYPost) => {
+    const key = statusKey(post);
     return (
-      <th
-        className={`px-6 py-4 text-sm font-medium text-muted-foreground ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}`}
-        style={{ textAlign: align }}
-      >
-        <button
-          type="button"
-          onClick={() => handleSort(field)}
-          className={`group inline-flex items-center gap-1 transition-colors hover:text-foreground focus:outline-none ${active ? "text-foreground" : ""} ${align === "right" ? "flex-row-reverse" : align === "center" ? "justify-center w-full" : ""}`}
-        >
-          {label}
-          <span className="flex flex-col items-center justify-center -space-y-[3px]">
-            <ChevronUp
-              className={`w-2.5 h-2.5 ${active && sortDirection === "asc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`}
-            />
-            <ChevronDown
-              className={`w-2.5 h-2.5 ${active && sortDirection === "desc" ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`}
-            />
-          </span>
-        </button>
-      </th>
+      <AdminPill tone={key === "Done" ? "green" : key === "Cancel" ? "rose" : "amber"}>
+        {t(`admin.supportDIY.status${key}`)}
+      </AdminPill>
     );
-  }
-
-  const sortedPosts = [...posts].sort((a, b) => {
-    if (!sortField) return 0;
-    const getValue = (post: SupportDIYPost) => {
-      switch (sortField) {
-        case "id":
-          return post._id;
-        case "title":
-          return post.title;
-        case "status":
-          return post.status;
-        case "date":
-          return new Date(post.createdAt).getTime();
-      }
-    };
-    const cmp = String(getValue(a)).localeCompare(String(getValue(b)));
-    return sortDirection === "asc" ? cmp : -cmp;
-  });
-
-  const displayStatus = (post: SupportDIYPost) => post.status || "Pending";
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "Done":
-        return "badge-green";
-      case "Cancel":
-        return "badge-red";
-      default:
-        return "badge-orange";
-    }
   };
+
+  const { sort, apply: applySort } = useAdminGridSort<SupportDIYPost>((post, field) => {
+    if (field === "title") return post.title;
+    if (field === "price") return post.price ?? 0;
+    if (field === "date") return new Date(post.createdAt).getTime();
+    if (field === "status") return statusKey(post);
+    return null;
+  });
+  const rows = applySort(visiblePosts);
+  const selectedRows = rows.filter((p) => selected.has(p._id));
+  const pendingSelected = selectedRows.filter(isPending);
+
+  const handleBulkStatus = async (status: "Done" | "Cancel") => {
+    if (pendingSelected.length === 0) return;
+    if (status === "Cancel") {
+      const ok = await confirm({
+        title: t("admin.supportDIY.bulkCancelTitle", { count: pendingSelected.length }),
+        description: t("admin.supportDIY.bulkCancelDesc"),
+        confirmLabel: t("admin.supportDIY.cancelRequest"),
+        danger: true,
+        icon: XCircle,
+      });
+      if (!ok) return;
+    }
+    setStatusUpdating(true);
+    const results = await Promise.allSettled(
+      pendingSelected.map((p) => supportDIYService.updatePostStatus(p._id, { status })),
+    );
+    setStatusUpdating(false);
+    const done = results.filter((r) => r.status === "fulfilled").length;
+    if (done) {
+      toast.success(t(status === "Done" ? "admin.supportDIY.bulkDone" : "admin.supportDIY.bulkCancelled", { count: done }));
+    }
+    if (pendingSelected.length - done) {
+      toast.error(t("admin.supportDIY.bulkFailed", { count: pendingSelected.length - done }));
+    }
+    setSelected(new Set());
+    fetchPosts();
+    fetchCounts();
+  };
+
+  const confirmDelete = async (post: SupportDIYPost) => {
+    const ok = await confirm({
+      title: t("admin.supportDIY.deleteConfirm"),
+      description: t("admin.supportDIY.deleteWarning", { title: post.title }),
+      confirmLabel: t("admin.supportDIY.delete"),
+      danger: true,
+      icon: Trash2,
+    });
+    if (ok) await handleDelete(post);
+  };
+
+  const columns: AdminGridColumn<SupportDIYPost>[] = [
+    {
+      key: "title",
+      header: t("admin.supportDIY.request"),
+      width: "minmax(220px, 2.2fr)",
+      minWidth: 220,
+      sortable: true,
+      card: "title",
+      render: (post) => (
+        <AdminCellStack
+          media={post.images?.[0] ? <img src={post.images[0]} alt="" loading="lazy" /> : <LifeBuoy />}
+          primary={post.title}
+          secondary={
+            <>
+              <span className="adm-gmono">#{post._id.slice(-8).toUpperCase()}</span>
+              {post.tags?.length ? ` · ${post.tags.slice(0, 3).map((tag) => `#${tag}`).join(" ")}` : ""}
+            </>
+          }
+        />
+      ),
+    },
+    {
+      key: "description",
+      header: t("admin.supportDIY.description"),
+      width: "minmax(130px, 1.4fr)",
+      minWidth: 130,
+      card: "hidden",
+      render: (post) => <span className="adm-gclamp">{post.description || "—"}</span>,
+    },
+    {
+      key: "price",
+      header: t("admin.supportDIY.price"),
+      width: "120px",
+      minWidth: 112,
+      align: "right",
+      sortable: true,
+      render: (post) =>
+        post.price && post.price > 0 ? (
+          <AdminMoney value={post.price} />
+        ) : (
+          <span className="adm-gprimary">{t("admin.grid.free")}</span>
+        ),
+    },
+    {
+      key: "date",
+      header: t("admin.supportDIY.created"),
+      width: "100px",
+      minWidth: 100,
+      sortable: true,
+      render: (post) => <AdminDateCell value={post.createdAt} />,
+    },
+    {
+      key: "status",
+      header: t("admin.supportDIY.status"),
+      width: "120px",
+      minWidth: 120,
+      align: "center",
+      sortable: true,
+      card: "aside",
+      render: statusPill,
+    },
+    {
+      key: "actions",
+      header: t("admin.supportDIY.actions"),
+      width: "178px",
+      minWidth: 178,
+      align: "center",
+      card: "actions",
+      render: (post) => (
+        <AdminRowActions>
+          {isPending(post) ? (
+            <AdminActionButton
+              icon={CheckCircle}
+              tone="green"
+              label={t("admin.supportDIY.markDone")}
+              busy={statusUpdating}
+              onClick={() => void handleConfirmPost(post._id)}
+            />
+          ) : (
+            <AdminActionButton icon={Edit3} label={t("admin.supportDIY.edit")} onClick={() => openEditModal(post)} />
+          )}
+          <AdminRowMenu
+            ariaLabel={t("admin.grid.moreActions")}
+            items={[
+              { label: t("admin.supportDIY.view"), icon: Eye, onSelect: () => setSelectedPost(post) },
+              isPending(post) && { label: t("admin.supportDIY.edit"), icon: Edit3, onSelect: () => openEditModal(post) },
+              isPending(post) && {
+                label: t("admin.supportDIY.cancelRequest"),
+                icon: XCircle,
+                onSelect: () => void handleCancelPost(post._id),
+              },
+              {
+                label: t("admin.supportDIY.delete"),
+                icon: Trash2,
+                danger: true,
+                separated: true,
+                onSelect: () => void confirmDelete(post),
+              },
+            ]}
+          />
+        </AdminRowActions>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
-        title="Support DIY Management"
-        subtitle="Manage all Support DIY requests from users"
+        eyebrow={t("admin.supportDIY.eyebrow")}
+        title={t("admin.supportDIY.title")}
+        subtitle={t("admin.supportDIY.subtitle")}
+        actions={
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              fetchPosts();
+              fetchCounts();
+            }}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {t("admin.grid.refresh")}
+          </button>
+        }
       />
 
-      <div
-        className="admin-panel-glow rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-lg"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <div
-          className="p-6 border-b border-border"
-          style={{ background: "var(--surface)" }}
-        >
-          <div className="flex flex-wrap gap-3">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="input pl-4 pr-10 py-2 flex items-center justify-between min-w-[200px]"
-                style={{ paddingRight: "2.5rem" }}
-              >
-                <span className="text-sm">
-                  {filterStatus === "" ? "All Status" : filterStatus}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 absolute right-3 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-              {isDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsDropdownOpen(false)}
-                  />
-                  <div
-                    className="absolute top-full mt-2 z-50 w-full min-w-[200px] rounded-lg border shadow-lg overflow-hidden"
-                    style={{
-                      background: "var(--dropdown-bg)",
-                      borderColor: "var(--border)",
-                      boxShadow: "var(--shadow-float)",
-                    }}
-                  >
-                    <div className="py-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFilterStatus("");
-                          setPage(1);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="w-full px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)] transition-colors flex items-center justify-between"
-                        style={{ color: "var(--foreground)" }}
-                      >
-                        <span>All Status</span>
-                        {filterStatus === "" && (
-                          <Check
-                            className="w-4 h-4"
-                            style={{ color: "var(--primary)" }}
-                          />
-                        )}
-                      </button>
-                      {STATUS_OPTIONS.filter(Boolean).map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => {
-                            setFilterStatus(s);
-                            setPage(1);
-                            setIsDropdownOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)] transition-colors flex items-center justify-between"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          <span>{s}</span>
-                          {filterStatus === s && (
-                            <Check
-                              className="w-4 h-4"
-                              style={{ color: "var(--primary)" }}
-                            />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+      <AdminStatusTabs<string>
+        ariaLabel={t("admin.supportDIY.status")}
+        value={filterStatus}
+        onChange={(value) => {
+          setFilterStatus(value);
+          setPage(1);
+        }}
+        tabs={[
+          { value: "", label: t("admin.supportDIY.allStatus"), icon: Layers, count: counts.all },
+          { value: "Pending", label: t("admin.supportDIY.statusPending"), icon: Clock, tone: "amber", count: counts.Pending },
+          { value: "Done", label: t("admin.supportDIY.statusDone"), icon: CheckCircle, tone: "green", count: counts.Done },
+          { value: "Cancel", label: t("admin.supportDIY.statusCancel"), icon: XCircle, tone: "rose", count: counts.Cancel },
+        ]}
+      />
 
-        {loading ? (
-          // Skeleton đồng bộ với layout thật: bảng trên desktop (id, tiêu đề,
-          // trạng thái, ngày, 4 nút thao tác) + list card trên mobile.
-          <>
-            <AdminTableBodySkeleton
-              className="hidden md:block"
-              columns={[
-                "mono",
-                "text",
-                { type: "badge", align: "center" },
-                { type: "text", align: "center" },
-                { type: "actionsWide", align: "center", className: "w-[240px]" },
-              ]}
-              rows={5}
-            />
-            <AdminListSkeleton className="md:hidden p-4" rows={4} itemClassName="h-24 rounded-xl" />
-          </>
-        ) : posts.length === 0 ? (
-          <div
-            className="text-center py-16 text-muted-foreground"
-            style={{ background: "var(--card)" }}
-          >
-            No Support DIY requests found.
-          </div>
-        ) : (
-          <>
-            <div
-              className="hidden md:block overflow-x-auto"
-              style={{ background: "var(--card)" }}
-            >
-              <table className="admin-table w-full text-sm">
-                <thead>
-                  <tr>
-                    <SortableHeader label="ID" field="id" />
-                    <SortableHeader label="Title" field="title" />
-                    <SortableHeader label="Status" field="status" align="center" />
-                    <SortableHeader label="Date" field="date" align="center" />
-                    <th
-                      className="text-center px-6 py-4 text-sm font-medium text-muted-foreground w-[240px]"
-                      style={{ textAlign: "center" }}
-                    >
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedPosts.map((post) => (
-                    <tr
-                      key={post._id}
-                      className="border-b border-border hover:bg-[var(--surface-secondary)] transition-colors"
-                    >
-                      <td className="px-6 py-4 font-mono text-xs">
-                        {post._id.slice(-8)}
-                      </td>
-                      <td className="px-6 py-4 max-w-[200px] truncate text-sm">
-                        {post.title}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`badge ${getStatusBadgeClass(post.status)}`}
-                        >
-                          {displayStatus(post)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center text-sm text-muted-foreground">
-                        {(() => {
-                          try {
-                            return new Date(post.createdAt).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "2-digit",
-                                year: "numeric",
-                              },
-                            );
-                          } catch {
-                            return "—";
-                          }
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          {post.status === "Pending" && (
-                            <>
-                              <button
-                                onClick={() => handleConfirmPost(post._id)}
-                                disabled={statusUpdating}
-                                className="admin-action-btn edit"
-                                title="Approve (Done)"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleCancelPost(post._id)}
-                                disabled={statusUpdating}
-                                className="admin-action-btn delete"
-                                title="Cancel"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => openEditModal(post)}
-                            className="admin-action-btn edit"
-                            title="Edit"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setSelectedPost(post)}
-                            className="admin-action-btn view"
-                            title="View details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <ConfirmDeleteButton
-                            onDelete={() => handleDelete(post)}
-                            itemName={post.title}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div
-              className="md:hidden space-y-3 p-4"
-              style={{ background: "var(--card)" }}
-            >
-              {posts.map((post) => (
-                <div
-                  key={post._id}
-                  className="p-4 rounded-xl border border-border bg-surface"
-                >
-                  <div className="flex justify-between mb-1">
-                    <span className="font-medium text-sm truncate">
-                      {post.title}
-                    </span>
-                    <span
-                      className={`badge ml-2 whitespace-nowrap ${getStatusBadgeClass(post.status)}`}
-                    >
-                      {displayStatus(post)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    #{post._id.slice(-8)} •{" "}
-                    {(() => {
-                      try {
-                        return new Date(post.createdAt).toLocaleDateString(
-                          "en-US",
-                          { month: "short", day: "2-digit", year: "numeric" },
-                        );
-                      } catch {
-                        return "—";
-                      }
-                    })()}
-                  </p>
-                  <button
-                    onClick={() => setSelectedPost(post)}
-                    className="text-primary hover:underline text-xs"
-                  >
-                    View Details
-                  </button>
-                </div>
-              ))}
-            </div>
-            <AdminPagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              pageSize={10}
-              className="mt-4 p-4"
-            />
-          </>
-        )}
-      </div>
+      <AdminPanel hover={false} className="adm-gpanel">
+        <AdminGridToolbar
+          search={{
+            value: searchInput,
+            onChange: (value) => {
+              setSearchInput(value);
+              setPage(1);
+            },
+            placeholder: t("admin.supportDIY.searchPlaceholder"),
+            isSearching: searchIsWaiting || loading,
+          }}
+          onReset={
+            searchInput || filterStatus
+              ? () => {
+                  clearSearch();
+                  setFilterStatus("");
+                  setPage(1);
+                }
+              : undefined
+          }
+          selectedCount={selectedRows.length}
+          onClearSelection={() => setSelected(new Set())}
+          bulkActions={
+            <>
+              <AdminActionButton
+                icon={CheckCircle}
+                tone="green"
+                fixedWidth={false}
+                busy={statusUpdating}
+                disabled={pendingSelected.length === 0}
+                label={t("admin.supportDIY.markDone")}
+                onClick={() => void handleBulkStatus("Done")}
+              />
+              <AdminActionButton
+                icon={XCircle}
+                tone="rose"
+                fixedWidth={false}
+                busy={statusUpdating}
+                disabled={pendingSelected.length === 0}
+                label={t("admin.supportDIY.cancelRequest")}
+                onClick={() => void handleBulkStatus("Cancel")}
+              />
+            </>
+          }
+          bulkNote={
+            pendingSelected.length !== selectedRows.length
+              ? t("admin.supportDIY.onlyPending", { count: pendingSelected.length })
+              : undefined
+          }
+          meta={
+            debouncedSearch ? (
+              <AdminSearchMeta searching={searchIsWaiting || loading}>
+                {matchedPosts.length === 0
+                  ? t("admin.search.noResults")
+                  : t("admin.search.resultsCount", { count: matchedPosts.length })}
+              </AdminSearchMeta>
+            ) : undefined
+          }
+        />
+
+        <AdminDataGrid<SupportDIYPost>
+          ariaLabel={t("admin.supportDIY.title")}
+          rows={rows}
+          rowKey={(p) => p._id}
+          columns={columns}
+          loading={loading && posts.length === 0}
+          refreshing={loading && posts.length > 0}
+          sort={sort}
+          selection={{ selected, onChange: setSelected }}
+          onRowClick={(p) => setSelectedPost(p)}
+          rowAccent={(p) => (isPending(p) ? "amber" : null)}
+          rowMuted={(p) => statusKey(p) === "Cancel"}
+          empty={{ icon: LifeBuoy, title: t("admin.supportDIY.noRequestsFound") }}
+        />
+
+        <AdminGridFooter
+          page={page}
+          totalPages={displayTotalPages}
+          total={displayTotal}
+          pageSize={10}
+          onPageChange={setPage}
+          disabled={loading}
+        />
+      </AdminPanel>
+
+      {confirmDialog}
 
       {/* View Detail Modal */}
       {selectedPost && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setSelectedPost(null)}
+        <AdminModal
+          variant="view"
+          size="md"
+          icon={LifeBuoy}
+          eyebrow="Yêu cầu hỗ trợ DIY"
+          title={selectedPost.title}
+          subtitle={<>Request <span className="font-mono">#{selectedPost._id.slice(-8)}</span> · {formatCreatedAt(selectedPost.createdAt)}</>}
+          badges={statusPill(selectedPost)}
+          headerActions={
+            <ReportButton targetType="support_diy" targetId={selectedPost._id} targetTitle={selectedPost.title} />
+          }
+          onClose={() => setSelectedPost(null)}
+          footer={
+            selectedPost.status === "Pending" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleCancelPost(selectedPost._id)}
+                  disabled={statusUpdating}
+                  className="btn-modal-destructive"
+                >
+                  <XCircle className="w-4 h-4" /> {t("admin.supportDIY.cancelRequest")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmPost(selectedPost._id)}
+                  disabled={statusUpdating}
+                  className="btn-modal-primary"
+                >
+                  <CheckCircle className="w-4 h-4" /> {t("admin.supportDIY.markDone")}
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => setSelectedPost(null)} className="btn-modal-cancel">
+                {t("admin.grid.close")}
+              </button>
+            )
+          }
         >
-          <div
-            className="admin-dialog-content max-w-lg w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="admin-dialog-header">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{selectedPost.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Request #{selectedPost._id.slice(-8)}
-                  </p>
+          <div className="admin-dialog-body">
+            <AdminDetailItem label="Description">
+              {selectedPost.description ? (
+                <p className="whitespace-pre-wrap leading-relaxed font-normal">{selectedPost.description}</p>
+              ) : null}
+            </AdminDetailItem>
+            {selectedPost.price != null && selectedPost.price > 0 && (
+              <AdminDetailItem label="Price">
+                <span className="text-base font-semibold text-primary">
+                  {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(selectedPost.price)}
+                </span>
+              </AdminDetailItem>
+            )}
+            {selectedPost.images && selectedPost.images.length > 0 && (
+              <>
+                <AdminDialogSection icon={ImageIcon}>Images ({selectedPost.images.length})</AdminDialogSection>
+                <div className="adm-gallery">
+                  {selectedPost.images.map((img, i) => (
+                    <a key={i} href={img} target="_blank" rel="noreferrer" className="adm-gallery-item">
+                      <img src={img} alt="" />
+                    </a>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`badge ${getStatusBadgeClass(selectedPost.status)}`}
-                  >
-                    {displayStatus(selectedPost)}
-                  </span>
-                  <ReportButton
-                    targetType="support_diy"
-                    targetId={selectedPost._id}
-                    targetTitle={selectedPost.title}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="admin-dialog-body space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Description
-                </p>
-                <p className="text-sm">{selectedPost.description}</p>
-              </div>
-              {selectedPost.price != null && selectedPost.price > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Price
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {new Intl.NumberFormat("vi-VN", {
-                      style: "currency",
-                      currency: "VND",
-                    }).format(selectedPost.price)}
-                  </p>
-                </div>
-              )}
-              {selectedPost.images && selectedPost.images.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Images
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {selectedPost.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img}
-                        alt=""
-                        className="w-20 h-20 rounded-lg object-cover"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Created
-                </p>
-                <p className="text-sm">
-                  {(() => {
-                    try {
-                      return new Date(
-                        selectedPost.createdAt,
-                      ).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
-                    } catch {
-                      return "—";
-                    }
-                  })()}
-                </p>
-              </div>
-              {selectedPost.status === "Pending" && (
-                <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                  <button
-                    onClick={() => handleConfirmPost(selectedPost._id)}
-                    disabled={statusUpdating}
-                    className="btn-primary"
-                  >
-                    <CheckCircle className="w-4 h-4 inline mr-1" /> Confirm
-                    (Done)
-                  </button>
-                  <button
-                    onClick={() => handleCancelPost(selectedPost._id)}
-                    disabled={statusUpdating}
-                    className="btn-modal-destructive"
-                  >
-                    <XCircle className="w-4 h-4 inline mr-1" /> Cancel Request
-                  </button>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* Edit Modal */}
       {editModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setEditModal(null)}
-        >
-          <div
-            className="admin-dialog-content max-w-lg w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="admin-dialog-header">
-              <h3 className="text-base font-semibold">
-                Edit Support DIY Request
-              </h3>
+        <AdminModal
+          variant="edit"
+          size="md"
+          eyebrow="Edit Support DIY Request"
+          title={editForm.title || editModal.title}
+          subtitle={<>Request <span className="font-mono">#{editModal._id.slice(-8)}</span></>}
+          onClose={() => setEditModal(null)}
+          footer={
+            <>
               <button
+                type="button"
                 onClick={() => setEditModal(null)}
-                style={{ color: "var(--foreground-muted)" }}
-                className="admin-action-btn absolute top-4 right-4"
-                aria-label="Close"
+                disabled={savingEdit}
+                className="btn-modal-cancel"
               >
-                <X className="w-4 h-4" />
+                Cancel
               </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSaveEdit();
-              }}
-            >
-              <div className="admin-dialog-body space-y-4">
-                <div>
-                  <label
-                    className="block text-xs font-medium mb-1.5"
-                    style={{ color: "var(--foreground-muted)" }}
-                  >
-                    Title <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.title}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, title: e.target.value })
-                    }
-                    className="input w-full"
-                    placeholder="Request title"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="block text-xs font-medium mb-1.5"
-                    style={{ color: "var(--foreground-muted)" }}
-                  >
-                    Description
-                  </label>
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, description: e.target.value })
-                    }
-                    rows={3}
-                    className="input w-full resize-none"
-                    placeholder="Request description"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="block text-xs font-medium mb-1.5"
-                    style={{ color: "var(--foreground-muted)" }}
-                  >
-                    Tags (comma separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.tags}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, tags: e.target.value })
-                    }
-                    className="input w-full"
-                    placeholder="e.g. support, help, crochet"
-                  />
-                </div>
-                <div>
-                  <label
-                    className="block text-xs font-medium mb-1.5"
-                    style={{ color: "var(--foreground-muted)" }}
-                  >
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    value={editForm.price || ""}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        price: Number(e.target.value),
-                      })
-                    }
-                    className="input w-full"
-                    placeholder="0 for free"
-                    min={0}
-                  />
-                </div>
-              </div>
-              <div className="admin-dialog-footer">
-                <button
-                  type="button"
-                  onClick={() => setEditModal(null)}
-                  disabled={savingEdit}
-                  className="btn-modal-cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingEdit}
-                  className="btn-modal-primary"
-                >
-                  {savingEdit ? "Saving…" : "Update Request"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              <button type="submit" form="support-diy-edit-form" disabled={savingEdit} className="btn-modal-primary">
+                {savingEdit ? "Saving…" : "Update Request"}
+              </button>
+            </>
+          }
+        >
+          <form
+            id="support-diy-edit-form"
+            className="admin-dialog-body admin-dialog-grid"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveEdit();
+            }}
+          >
+            <AdminField label="Title" required span htmlFor="sdiy-title">
+              <input
+                id="sdiy-title"
+                type="text"
+                required
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="input w-full"
+                placeholder="Request title"
+              />
+            </AdminField>
+            <AdminField label="Description" span htmlFor="sdiy-desc">
+              <textarea
+                id="sdiy-desc"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                rows={3}
+                className="input w-full resize-none py-3"
+                placeholder="Request description"
+              />
+            </AdminField>
+            <AdminField label="Tags" hint="Comma separated" htmlFor="sdiy-tags">
+              <input
+                id="sdiy-tags"
+                type="text"
+                value={editForm.tags}
+                onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                className="input w-full"
+                placeholder="e.g. support, help, crochet"
+              />
+            </AdminField>
+            <AdminField label="Price (VND)" hint="0 = free" htmlFor="sdiy-price">
+              <input
+                id="sdiy-price"
+                type="number"
+                value={editForm.price || ""}
+                onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
+                className="input w-full font-mono"
+                placeholder="0"
+                min={0}
+              />
+            </AdminField>
+          </form>
+        </AdminModal>
       )}
     </div>
   );

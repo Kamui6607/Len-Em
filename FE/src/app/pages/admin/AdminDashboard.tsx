@@ -15,7 +15,19 @@ import {
   ChevronRight,
   ReceiptText,
 } from "lucide-react";
-import { ORDER_STATUS_LABELS, getOrderStatusBadgeClass } from "../../../constants/orderStatus";
+import { ORDER_STATUS_LABELS } from "../../../constants/orderStatus";
+import { AdminMoney, AdminPill, type AdminTone } from "../../../shared/components/admin/AdminDataGrid";
+
+/** Cùng bảng màu trạng thái với /admin/orders. */
+const ORDER_STATUS_TONE: Record<string, AdminTone> = {
+  PENDING: "amber",
+  CONFIRMED: "blue",
+  PREPARING: "violet",
+  SHIPPING: "cyan",
+  DELIVERED: "green",
+  CANCELLED: "rose",
+  REJECTED: "rose",
+};
 import { formatPrice } from "../../../lib/formatPrice";
 import { orderService } from "../../../features/orders/services/order.service";
 import { userService } from "../../../features/users/services/user.service";
@@ -360,10 +372,14 @@ export function AdminDashboard() {
                         })}
                       </span>
                     </span>
-                    <span className={`badge ${getOrderStatusBadgeClass(order.orderStatus)} hidden sm:inline-flex`}>
-                      {ORDER_STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
+                    <span className="hidden sm:inline-flex">
+                      <AdminPill tone={ORDER_STATUS_TONE[order.orderStatus] ?? "neutral"}>
+                        {ORDER_STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
+                      </AdminPill>
                     </span>
-                    <span className="admin-recent-total">{formatPrice(order.totalPrice)}</span>
+                    <span className="admin-recent-total">
+                      <AdminMoney value={order.totalPrice} />
+                    </span>
                   </Link>
                 </li>
               ))}

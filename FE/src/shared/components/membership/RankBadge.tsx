@@ -1,6 +1,7 @@
 import { cn } from "../ui/utils";
 import type { RankType } from "../../../features/membership/types/membership.types";
 import { getRankConfig } from "../../../features/membership/types/membership.types";
+import "../../../styles/membership.css";
 
 interface RankBadgeProps {
   rank: RankType;
@@ -9,52 +10,26 @@ interface RankBadgeProps {
   className?: string;
 }
 
-const sizeClasses = {
-  sm: "w-7 h-7 text-xs",
-  md: "w-10 h-10 text-base",
-  lg: "w-14 h-14 text-2xl",
-};
-
-const labelSizeClasses = {
-  sm: "text-[10px]",
-  md: "text-xs",
-  lg: "text-sm",
-};
-
+/** Huy hiệu hạng — miếng vá tròn nhuộm màu hạng, kèm tên hạng (tuỳ chọn). */
 export function RankBadge({ rank, size = "md", showLabel = false, className }: RankBadgeProps) {
   const config = getRankConfig(rank);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-full font-bold shadow-sm",
-          "transition-all duration-300 hover:scale-110 hover:shadow-md",
-          sizeClasses[size],
-        )}
-        style={{
-          background: config.gradient,
-          color: config.textColor,
-        }}
-        title={`${config.displayName} — Tích Coin ${config.coinRewardPercent}%`}
-      >
+    <span
+      className={cn("mb-badge", className)}
+      data-rank={rank}
+      data-size={size}
+      title={`${config.displayName} — hoàn ${config.coinRewardPercent}% Coin`}
+    >
+      <span className="mb-badge-patch" aria-hidden="true">
         {config.icon}
-      </div>
+      </span>
       {showLabel && (
-        <div className="flex flex-col leading-tight">
-          <span
-            className={cn("font-bold leading-none", labelSizeClasses[size])}
-            style={{ color: config.textColor }}
-          >
-            {config.displayName}
-          </span>
-          {size !== "sm" && (
-            <span className="text-[9px] text-muted-foreground mt-0.5">
-              Coin {config.coinRewardPercent}%
-            </span>
-          )}
-        </div>
+        <span className="flex flex-col">
+          <span className="mb-badge-name">{config.displayName}</span>
+          {size !== "sm" && <span className="mb-badge-sub">Hoàn {config.coinRewardPercent}% Coin</span>}
+        </span>
       )}
-    </div>
+    </span>
   );
 }

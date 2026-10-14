@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Check } from "lucide-react";
 import { cn } from "./ui/utils";
 import { YarnBallIcon } from "../../features/shop/shopMeta";
@@ -54,12 +54,14 @@ export function ProductVariantSelector({
     defaultVariantId || variants[0]?.id || "",
   );
 
-  // Re-sync when defaultVariantId changes externally (e.g., navigating to a new product)
+  // Re-sync only when defaultVariantId itself changes (e.g. navigating to a new
+  // product). Depending on selectedId here snapped every click back to the default.
+  const lastDefaultRef = useRef(defaultVariantId);
   useEffect(() => {
-    if (defaultVariantId && defaultVariantId !== selectedId) {
-      setSelectedId(defaultVariantId);
-    }
-  }, [defaultVariantId, selectedId]);
+    if (defaultVariantId === lastDefaultRef.current) return;
+    lastDefaultRef.current = defaultVariantId;
+    if (defaultVariantId) setSelectedId(defaultVariantId);
+  }, [defaultVariantId]);
 
   const selectedVariant = useMemo(
     () => variants.find((v) => v.id === selectedId) || variants[0],

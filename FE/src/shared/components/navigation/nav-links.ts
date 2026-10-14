@@ -17,30 +17,30 @@ export interface NavLink {
 
 /** Top-level links shown on every non-landing (real) page. */
 export const navLinks: NavLink[] = [
-  { label: "LEARN", href: "/learn", icon: BookOpen, protected: false },
-  { label: "SHOP", href: "/shop", icon: ShoppingBag, protected: true },
+  { label: "Learn", href: "/learn", icon: BookOpen, protected: false },
+  { label: "Shop", href: "/shop", icon: ShoppingBag, protected: true },
   { label: "DIY", href: "/diy", icon: Palette, protected: false },
 ];
 
 /** Landing page links — scroll to sections on Home, ABOUT US is a real route. */
 export const homeNavLinks: NavLink[] = [
-  { label: "HOME", href: "/", icon: Sparkles, sectionId: "top", protected: false },
+  { label: "Home", href: "/", icon: Sparkles, sectionId: "top", protected: false },
   {
-    label: "HOW IT WORKS",
+    label: "How it works",
     href: "/",
     icon: Sparkles,
     sectionId: "section-how-it-works",
     protected: false,
   },
   {
-    label: "LEARN",
+    label: "Learn",
     href: "/",
     icon: BookOpen,
     sectionId: "section-learn",
     protected: false,
   },
   {
-    label: "SHOP",
+    label: "Shop",
     href: "/",
     icon: ShoppingBag,
     sectionId: "section-shop",
@@ -53,7 +53,7 @@ export const homeNavLinks: NavLink[] = [
     sectionId: "section-diy",
     protected: false,
   },
-  { label: "ABOUT US", href: "/about", icon: Heart, protected: false },
+  { label: "About us", href: "/about", icon: Heart, protected: false },
 ];
 
 /** Resolve which link set to display for the current route. */

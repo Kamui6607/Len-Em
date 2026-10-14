@@ -1,210 +1,597 @@
 /* ============================================================
-   CART PAGE — polish layer
-   Giữ nguyên toàn bộ token màu/spacing sẵn có của site
-   (--primary, --border, --surface, --background, ...).
-   File này chỉ đảm nhiệm 3 việc CSS thuần không làm được ở
-   inline style: hover/active state, responsive grid, và các
-   chi tiết trang trí mang tinh thần "đồ nghề thủ công"
-   (viền chỉ đứt nét, mép vé đục lỗ) để đồng bộ với minh hoạ
-   khung thêu ở trạng thái giỏ trống.
+   CART PAGE (/cart) — ngôn ngữ "craft" đồng bộ toàn site
+   - Mỗi món là một "miếng vải" có ảnh, tên, biến thể, bộ đếm, thành tiền
+   - Tóm tắt đơn hàng dính bên phải (desktop) / xếp dưới (mobile)
+   - Mobile: thanh thanh toán nổi cùng hàng nút "+" (--float-row-*),
+     tự ẩn khi nút thanh toán của phần tóm tắt đã hiện trên màn hình
+   Chỉ dùng token trong theme.css → tự đổi light/dark.
    ============================================================ */
 
 @keyframes cart-fade-in {
-  0%   { opacity: 0; transform: translateY(8px); }
-  100% { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
 }
-.cart-fade-in { animation: cart-fade-in 0.35s ease-out both; }
+.cart-fade-in { animation: cart-fade-in 0.3s var(--ease-out, ease-out) both; }
 
-/* ── Bố cục 2 cột: danh sách + vé tổng kết ── */
+.cart-page {
+  min-height: 100dvh;
+  background: var(--background);
+}
+.cart-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+@media (min-width: 768px) {
+  .cart-wrap { padding: 48px 32px 80px; }
+}
+
+/* ── Tiêu đề ── */
+.cart-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+@media (min-width: 768px) {
+  .cart-header { margin-bottom: 32px; }
+}
+.cart-eyebrow {
+  font-family: var(--font-script);
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--primary);
+  transform: rotate(-2deg);
+  transform-origin: left;
+}
+.cart-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-family: var(--font-heading);
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+.cart-count {
+  display: inline-flex;
+  min-width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-family: var(--font-body, inherit);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.cart-clear {
+  display: inline-flex;
+  min-height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--error-text, var(--destructive));
+  transition: background-color 0.2s;
+}
+.cart-clear:hover { background: color-mix(in srgb, var(--destructive) 10%, transparent); }
+
+/* ── Bố cục ── */
 .cart-layout {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 48px;
+  gap: 20px;
   align-items: start;
 }
-@media (max-width: 960px) {
+@media (min-width: 1024px) {
   .cart-layout {
-    grid-template-columns: 1fr;
-    gap: 28px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 32px;
   }
-  .cart-summary-sticky {
-    position: static !important;
+  .cart-aside {
+    position: sticky;
+    top: calc(var(--header-height, 88px) + 16px);
   }
 }
 
-/* Vé tổng kết dính ngay dưới header cố định, không chừa khoảng trống.
-   Nếu site đã có biến --header-height dùng chung thì nó sẽ tự lấy;
-   nếu chưa, chỉnh số 88px này bằng đúng chiều cao thực tế của header. */
-.cart-summary-sticky {
-  position: sticky;
-  top: calc(var(--header-height, 88px) + 16px);
+/* ── Danh sách ── */
+.cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cart-row {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 22px;
+  border: 1px solid var(--border-light);
+  background: var(--card);
+  box-shadow: var(--shadow-xs, none);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cart-row:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  box-shadow: var(--shadow-sm);
+}
+.cart-row.is-kit {
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+@media (min-width: 768px) {
+  .cart-row { gap: 18px; padding: 16px; }
 }
 
-/* ── Gạch chỉ đứt nét dưới tiêu đề ── */
-.cart-heading-stitch {
-  width: 72px;
-  border-top: 2px dashed var(--primary);
-  opacity: 0.45;
+.cart-row-media { flex-shrink: 0; }
+.cart-thumb {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  padding: 3px;
+  border-radius: 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+@media (min-width: 768px) {
+  .cart-thumb { width: 108px; height: 108px; }
+}
+.cart-thumb img {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--surface, var(--background));
+}
+.cart-thumb-badge {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-family: var(--font-script);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: 0 0 0 2px var(--card);
 }
 
-/* ── Nút "Xoá tất cả" ── */
-.cart-clear-btn {
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+.cart-row-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
 }
-.cart-clear-btn:hover {
-  background: var(--destructive);
-  border-color: var(--destructive);
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+.cart-row-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
 }
-
-/* ── Card sản phẩm ── */
-.cart-item-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+.cart-row-name {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-top: 2px;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--foreground);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-.cart-item-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
-  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+.cart-row-name:hover { color: var(--primary); }
+@media (min-width: 768px) {
+  .cart-row-name { font-size: 1.08rem; }
 }
-
-/* ── Khung ảnh kiểu "vòng thêu": viền đứt nét bao ngoài ── */
-.cart-thumb-ring {
-  padding: 4px;
-  border-radius: 20px;
-  border: 1.5px dashed color-mix(in srgb, var(--primary) 40%, var(--border));
+.cart-remove {
+  display: flex;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
-  transition: border-color 0.2s ease;
+  align-items: center;
+  justify-content: center;
+  margin: -4px -4px 0 0;
+  border-radius: 999px;
+  color: var(--foreground-muted);
+  transition: color 0.2s, background-color 0.2s;
 }
-.cart-item-card:hover .cart-thumb-ring,
-.cart-kit-card:hover .cart-thumb-ring {
-  border-color: var(--primary);
-}
-
-/* ── Nút xoá tròn (X) ── */
-.cart-remove-btn {
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-.cart-remove-btn:hover {
-  background: var(--destructive);
-  border-color: var(--destructive);
-  color: #fff;
-  transform: scale(1.1) rotate(90deg);
+.cart-remove:hover {
+  color: var(--error-text, var(--destructive));
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
 }
 
-/* ── Stepper số lượng ── */
-.cart-stepper-btn {
-  transition: background 0.15s ease, color 0.15s ease;
+.cart-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
-.cart-stepper-btn:hover:not(:disabled) {
-  background: var(--accent-blush);
+.cart-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--background);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--foreground-muted);
+}
+.cart-chip.is-kit {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.cart-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.cart-unit {
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+.cart-warn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--warning-text, #B45309);
+}
+
+.cart-kit-toggle {
+  display: inline-flex;
+  min-height: 32px;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--primary);
 }
-
-/* ── Card kit/bundle: viền đứt nét như tờ rập giấy ── */
-.cart-kit-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+.cart-kit-toggle svg { transition: transform 0.2s; }
+.cart-kit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--background));
+  list-style: none;
 }
-.cart-kit-card:hover {
-  transform: translateY(-2px);
+.cart-kit-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--foreground);
+}
+.cart-kit-list img {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: cover;
+}
+/* Dòng DIY: mô tả ngắn của bài */
+.cart-diy-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--foreground-muted);
+}
+
+.cart-row-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.cart-line-total {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+/* Bộ đếm: nút 40px (đủ chạm), giữa là số */
+.cart-stepper {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--background);
+}
+.cart-stepper button {
+  display: flex;
+  width: 40px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--foreground);
+  transition: color 0.2s, background-color 0.2s;
+}
+.cart-stepper button:hover:not(:disabled) {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.cart-stepper button:disabled {
+  color: var(--border);
+  cursor: not-allowed;
+}
+.cart-stepper output {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.cart-continue {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.cart-continue:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Tóm tắt ── */
+.cart-summary {
+  position: relative;
+  isolation: isolate;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--card);
   box-shadow: var(--shadow-card);
 }
-
-.cart-kit-expand-btn {
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-.cart-kit-expand-btn:hover {
-  transform: translateX(3px);
-  opacity: 0.75;
-}
-
-/* ── Liên kết tiếp tục mua sắm ── */
-.cart-continue-link {
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-.cart-continue-link:hover {
-  transform: translateX(-4px);
-  opacity: 0.75;
-}
-
-/* ============================================================
-   "VÉ" TỔNG KẾT ĐƠN — mép trên đục lỗ như vé cắt vải,
-   góc phải có một vòng chỉ nhỏ xuyên qua — chi tiết đặc trưng
-   duy nhất của trang, phần còn lại giữ tiết chế.
-   ============================================================ */
-.cart-ticket {
-  position: relative;
-  overflow: hidden;
-}
-.cart-ticket::before {
+.cart-summary::before {
+  /* đường khâu viền trong */
   content: "";
   position: absolute;
-  top: -1px;
-  left: 0;
-  right: 0;
-  height: 14px;
-  background-image: radial-gradient(circle 6px, var(--background) 99%, transparent 100%);
-  background-size: 24px 24px;
-  background-position: 4px -7px;
-  background-repeat: repeat-x;
+  inset: 6px;
+  border-radius: 19px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 20%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.cart-summary-title {
+  margin-bottom: 14px;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.cart-summary-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  font-size: 0.875rem;
+}
+.cart-summary-lines > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cart-summary-lines dt { color: var(--foreground-muted); }
+.cart-summary-lines dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  color: var(--foreground);
+}
+.cart-summary-lines dd.is-muted {
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--foreground-muted);
+}
+.cart-summary-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 18px;
+  padding-top: 16px;
+  border-top: 1.5px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+.cart-summary-total span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+}
+.cart-summary-total strong {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+}
+.cart-assure {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cart-assure li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+}
+.cart-assure svg { color: var(--primary); }
+
+/* ── Nút ── */
+.cart-btn {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 0.2s var(--ease-out, ease-out), box-shadow 0.2s, background-color 0.2s;
+}
+.cart-btn:active { transform: scale(0.98); }
+.cart-btn.is-block { width: 100%; }
+.cart-btn.is-primary {
+  color: var(--primary-foreground);
+  background: var(--cta-gradient, var(--primary));
+  box-shadow: var(--cta-shadow, 0 6px 18px rgba(91, 61, 245, 0.3));
+}
+.cart-btn.is-primary:hover { box-shadow: var(--cta-shadow-hover, 0 8px 22px rgba(91, 61, 245, 0.35)); }
+.cart-btn.is-ghost {
+  color: var(--primary);
+  border: 1.5px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--card);
+}
+.cart-btn:focus-visible,
+.cart-clear:focus-visible,
+.cart-remove:focus-visible,
+.cart-stepper button:focus-visible,
+.cart-kit-toggle:focus-visible,
+.cart-continue:focus-visible,
+.cart-row-name:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring-color);
+}
+
+/* ── Giỏ trống ── */
+.cart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 8px 24px;
+  text-align: center;
+}
+.cart-empty-art {
+  padding: 18px;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 9%, transparent), transparent 70%);
+}
+.cart-empty-title {
+  margin-top: 16px;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.cart-empty-desc {
+  max-width: 320px;
+  margin: 8px 0 24px;
+  font-family: var(--font-script);
+  font-size: 1.2rem;
+  line-height: 1.3;
+  color: var(--foreground-muted);
+}
+.cart-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ── Thanh thanh toán nổi (mobile) — cùng hàng nút "+" ── */
+.cart-float {
+  position: fixed;
+  left: max(16px, var(--sal));
+  right: calc(var(--float-row-right) + var(--fab-size) + 10px);
+  bottom: calc(var(--float-row-bottom) + var(--float-row-lift, 0px));
+  z-index: 60;
+  display: flex;
+  height: var(--fab-size);
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 4px 4px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 8px 24px rgba(24, 24, 27, 0.16);
+  transition: opacity 0.2s, transform 0.25s var(--ease-out, ease-out), bottom 0.25s var(--ease-out, ease-out);
+}
+.cart-float[data-hidden] {
+  opacity: 0;
+  transform: translateY(12px);
   pointer-events: none;
 }
-.cart-ticket-tag {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  transform: rotate(-10deg);
-  pointer-events: none;
+.cart-float-total {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.1;
 }
-
-.cart-promo-toggle {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+.cart-float-total span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
 }
-.cart-promo-toggle:hover {
-  transform: translateX(2px);
+.cart-float-total strong {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  color: var(--primary);
+  white-space: nowrap;
 }
-
-.cart-promo-apply {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+.cart-float .cart-btn {
+  min-height: 0;
+  height: 100%;
+  padding: 0 16px;
+  font-size: 0.85rem;
 }
-.cart-promo-apply:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(107, 63, 160, 0.35);
+/* Thanh tab ẩn khi cuộn xuống → thanh nổi hạ xuống sát đáy theo */
+html[data-chrome="collapsed"] .cart-float:not([data-hidden]) {
+  transform: translateY(calc(var(--tabbar-h) + var(--tabbar-gap)));
 }
-
-.cart-checkout-btn {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.cart-checkout-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(107, 63, 160, 0.4);
-}
-
-.cart-empty-btn {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-.cart-empty-btn:hover {
-  transform: translateY(-2px);
-  background: var(--primary);
-  color: var(--primary-foreground, #fff);
-  box-shadow: 0 10px 24px rgba(107, 63, 160, 0.3);
+@media (min-width: 768px) {
+  .cart-float { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cart-fade-in,
-  .cart-item-card,
-  .cart-kit-card,
-  .cart-remove-btn,
-  .cart-stepper-btn,
-  .cart-kit-expand-btn,
-  .cart-continue-link,
-  .cart-promo-toggle,
-  .cart-promo-apply,
-  .cart-checkout-btn,
-  .cart-empty-btn,
-  .cart-thumb-ring {
-    animation: none !important;
-    transition: none !important;
-  }
+  .cart-fade-in { animation: none; }
+  .cart-float,
+  .cart-btn { transition: none; }
 }

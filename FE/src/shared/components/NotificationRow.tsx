@@ -164,6 +164,10 @@ interface NotificationSectionHeaderProps {
   /** Right-hand action label (e.g. "View all (7)" or "Show all"). */
   actionLabel?: string;
   onAction?: () => void;
+  /** Override the category label (admin shows Vietnamese labels). */
+  label?: string;
+  /** Word after the unread count (default "new"). */
+  newLabel?: string;
 }
 
 /** Header of one notification-type section (icon + name + counters). */
@@ -173,6 +177,8 @@ export function NotificationSectionHeader({
   unreadCount = 0,
   actionLabel,
   onAction,
+  label,
+  newLabel = "new",
 }: NotificationSectionHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3 px-2 mb-2">
@@ -182,14 +188,14 @@ export function NotificationSectionHeader({
           className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
         />
         <h2 className="text-sm font-semibold text-foreground truncate">
-          {NOTIFICATION_CATEGORY_LABELS[category]}
+          {label ?? NOTIFICATION_CATEGORY_LABELS[category]}
         </h2>
         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
           {count}
         </span>
         {unreadCount > 0 && (
           <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-            {unreadCount} new
+            {unreadCount} {newLabel}
           </span>
         )}
       </div>
