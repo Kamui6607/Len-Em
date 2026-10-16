@@ -130,8 +130,8 @@ export function useProducts() {
     catalogProducts.forEach((product) => {
       product.variants?.forEach((variant) => {
         const hex = getValidHex(variant.hexCode);
-        if (isDefaultVariant(variant) || !hex) return;
-        const name = variant.color.trim();
+        const name = variant.color?.trim();
+        if (isDefaultVariant(variant) || !hex || !name) return;
         const entry = colorMap.get(name) ?? { hex, productIds: new Set<string>() };
         entry.productIds.add(product.id);
         colorMap.set(name, entry);

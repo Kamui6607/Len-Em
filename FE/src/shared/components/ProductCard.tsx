@@ -45,7 +45,7 @@ export const ProductCard = memo(function ProductCard({
   // Variant khớp màu đang lọc (so đúng tên màu như BE)
   const matchedVariants =
     highlightColors && highlightColors.length > 0
-      ? (product.variants ?? []).filter((variant) => highlightColors.includes(variant.color?.trim()))
+      ? (product.variants ?? []).filter((variant) => highlightColors.includes(variant.color?.trim() ?? ""))
       : [];
   const matchedIds = new Set(matchedVariants.map((variant) => variant.id));
   const displayImage = matchedVariants.find((variant) => variant.images?.[0])?.images?.[0] ?? product.image;
