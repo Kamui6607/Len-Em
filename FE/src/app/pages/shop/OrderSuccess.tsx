@@ -45,24 +45,24 @@ function LargeGiftBox({ size = 200 }: { size?: number }) {
         {/* Warm candlelit glow behind the box */}
         <radialGradient id="lg-glow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="var(--bg-1)" stopOpacity="0.9" />
-          <stop offset="30%" stopColor="#F5EFA8" stopOpacity="0.55" />
-          <stop offset="65%" stopColor="#F0C4E0" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#F0C4E0" stopOpacity="0" />
+          <stop offset="30%" stopColor="#FEED9C" stopOpacity="0.55" />
+          <stop offset="65%" stopColor="#F7CFD9" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#F7CFD9" stopOpacity="0" />
         </radialGradient>
         {/* Box body fill gradient */}
         <linearGradient id="lg-box" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#F5EFA8" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#F0C4E0" stopOpacity="0.55" />
+          <stop offset="0%" stopColor="#FEED9C" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#F7CFD9" stopOpacity="0.55" />
         </linearGradient>
         {/* Ribbon fill gradient */}
         <linearGradient id="lg-rib" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#9B6FD6" />
-          <stop offset="100%" stopColor="#6B3FA0" />
+          <stop offset="0%" stopColor="#EC769A" />
+          <stop offset="100%" stopColor="#C8436E" />
         </linearGradient>
         {/* Bow fill gradient */}
         <linearGradient id="lg-bow" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--primary)" />
-          <stop offset="100%" stopColor="#6B3FA0" />
+          <stop offset="100%" stopColor="#C8436E" />
         </linearGradient>
       </defs>
 
@@ -108,7 +108,7 @@ function LargeGiftBox({ size = 200 }: { size?: number }) {
         width="100"
         height="22"
         rx="5"
-        fill="#F5EFA8"
+        fill="#FEED9C"
         fillOpacity="0.8"
         stroke="var(--primary)"
         strokeWidth="1.8"
@@ -281,246 +281,6 @@ function LargeGiftBox({ size = 200 }: { size?: number }) {
   );
 }
 
-// ── Pom-pom confetti piece ─────────────────────────────────────
-
-function PomPomShape({
-  size,
-  color,
-  opacity = 1,
-}: {
-  size: number;
-  color: string;
-  opacity?: number;
-}) {
-  const r = size / 2;
-  const fib = Math.max(2, size * 0.22);
-  const count = size >= 20 ? 12 : 8;
-
-  return (
-    <svg
-      width={size + fib * 2}
-      height={size + fib * 2}
-      viewBox={`0 0 ${size + fib * 2} ${size + fib * 2}`}
-      fill="none"
-      overflow="visible"
-      aria-hidden
-    >
-      {Array.from({ length: count }).map((_, i) => {
-        const a = (i / count) * Math.PI * 2;
-        const cx = r + fib;
-        const cy = r + fib;
-        const x1 = cx + Math.cos(a) * (r * 0.92);
-        const y1 = cy + Math.sin(a) * (r * 0.92);
-        const x2 = cx + Math.cos(a) * (r + fib);
-        const y2 = cy + Math.sin(a) * (r + fib);
-        return (
-          <line
-            key={i}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke={color}
-            strokeWidth={Math.max(1, size * 0.09)}
-            strokeLinecap="round"
-            opacity={opacity * 0.78}
-          />
-        );
-      })}
-      <circle cx={r + fib} cy={r + fib} r={r} fill={color} opacity={opacity} />
-      <circle
-        cx={r + fib}
-        cy={r + fib}
-        r={r * 0.65}
-        fill={color}
-        fillOpacity={opacity * 0.25}
-        stroke={color}
-        strokeWidth={r * 0.08}
-        strokeOpacity={opacity * 0.3}
-      />
-      <circle
-        cx={r + fib - r * 0.28}
-        cy={r + fib - r * 0.28}
-        r={r * 0.38}
-        fill="white"
-        fillOpacity={0.28 * opacity}
-      />
-      <circle
-        cx={r + fib}
-        cy={r + fib}
-        r={r * 0.12}
-        fill="white"
-        fillOpacity={0.35 * opacity}
-      />
-    </svg>
-  );
-}
-
-const CONFETTI_PIECES = [
-  {
-    size: 22,
-    color: "var(--accent-pink)",
-    top: "6%",
-    left: "6%",
-    rotate: 15,
-    opacity: 0.92,
-  },
-  {
-    size: 13,
-    color: "var(--accent-yellow)",
-    top: "13%",
-    left: "19%",
-    rotate: -5,
-    opacity: 0.85,
-  },
-  {
-    size: 30,
-    color: "var(--primary)",
-    top: "4%",
-    right: "8%",
-    rotate: 22,
-    opacity: 0.75,
-  },
-  {
-    size: 16,
-    color: "var(--accent-pink)",
-    top: "18%",
-    right: "4%",
-    rotate: -12,
-    opacity: 0.88,
-  },
-  {
-    size: 10,
-    color: "var(--accent-yellow)",
-    top: "8%",
-    left: "36%",
-    rotate: 8,
-    opacity: 0.8,
-  },
-  {
-    size: 8,
-    color: "var(--primary)",
-    top: "3%",
-    right: "26%",
-    rotate: -20,
-    opacity: 0.65,
-  },
-  {
-    size: 18,
-    color: "var(--accent-yellow)",
-    top: "42%",
-    left: "2%",
-    rotate: 10,
-    opacity: 0.82,
-  },
-  {
-    size: 12,
-    color: "var(--accent-pink)",
-    top: "38%",
-    right: "3%",
-    rotate: -18,
-    opacity: 0.78,
-  },
-  {
-    size: 24,
-    color: "var(--primary)",
-    top: "54%",
-    left: "5%",
-    rotate: 6,
-    opacity: 0.7,
-  },
-  {
-    size: 14,
-    color: "var(--accent-yellow)",
-    top: "58%",
-    right: "2%",
-    rotate: -8,
-    opacity: 0.75,
-  },
-  {
-    size: 26,
-    color: "var(--accent-pink)",
-    bottom: "16%",
-    left: "7%",
-    rotate: 12,
-    opacity: 0.85,
-  },
-  {
-    size: 18,
-    color: "var(--accent-yellow)",
-    bottom: "12%",
-    right: "5%",
-    rotate: -10,
-    opacity: 0.8,
-  },
-  {
-    size: 11,
-    color: "var(--primary)",
-    bottom: "30%",
-    left: "3%",
-    rotate: 25,
-    opacity: 0.68,
-  },
-  {
-    size: 15,
-    color: "var(--accent-pink)",
-    bottom: "25%",
-    right: "12%",
-    rotate: -15,
-    opacity: 0.72,
-  },
-  {
-    size: 9,
-    color: "var(--accent-yellow)",
-    bottom: "8%",
-    left: "20%",
-    rotate: 4,
-    opacity: 0.65,
-  },
-  {
-    size: 8,
-    color: "var(--primary)",
-    bottom: "6%",
-    right: "22%",
-    rotate: -22,
-    opacity: 0.6,
-  },
-];
-
-function ConfettiLayer() {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        overflow: "hidden",
-        zIndex: 0,
-      }}
-    >
-      {CONFETTI_PIECES.map((piece, i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            top: piece.top,
-            bottom: piece.bottom,
-            left: piece.left,
-            right: piece.right,
-            transform: `rotate(${piece.rotate}deg)`,
-          }}
-        >
-          <PomPomShape
-            size={piece.size}
-            color={piece.color}
-            opacity={piece.opacity}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ═══════════════════════════════════════════════════════════════════
 // ORDER SUCCESS PAGE — /order/success?orderId=…
 // Trái: lời chúc mừng + mã đơn + tiến trình sợi chỉ (bước 1 đã xong).
@@ -631,8 +391,6 @@ export function OrderSuccess() {
 
   return (
     <div className="os-page">
-      <ConfettiLayer />
-
       <div className="os-wrap">
         {/* ── Lời chúc mừng ── */}
         <section className="os-hero" aria-labelledby="os-title">

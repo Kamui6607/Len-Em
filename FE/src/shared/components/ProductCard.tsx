@@ -24,12 +24,15 @@ interface ProductCardProps {
   product: Product;
   relatedLessonId?: string;
   relatedCourseId?: string;
+  /** Màu đang lọc ở Shop — thẻ ưu tiên hiện ảnh / giá / swatch của variant khớp màu. */
+  highlightColors?: string[];
 }
 
 export const ProductCard = memo(function ProductCard({
   product,
   relatedLessonId,
   relatedCourseId,
+  highlightColors,
 }: ProductCardProps) {
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -39,7 +42,16 @@ export const ProductCard = memo(function ProductCard({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerVariantId, setPickerVariantId] = useState<string | undefined>();
 
-  const prices = product.variants?.map((variant) => variant.price) ?? [
+  // Variant khớp màu đang lọc (so đúng tên màu như BE)
+  const matchedVariants =
+    highlightColors && highlightColors.length > 0
+      ? (product.variants ?? []).filter((variant) => highlightColors.includes(variant.color?.trim()))
+      : [];
+  const matchedIds = new Set(matchedVariants.map((variant) => variant.id));
+  const displayImage = matchedVariants.find((variant) => variant.images?.[0])?.images?.[0] ?? product.image;
+
+  const priceSource = matchedVariants.length > 0 ? matchedVariants : product.variants;
+  const prices = priceSource?.map((variant) => variant.price) ?? [
     getBasePrice(product),
   ];
   const minPrice = Math.min(...prices);
@@ -52,6 +64,8 @@ export const ProductCard = memo(function ProductCard({
   // Bỏ biến thể "Mặc định" / hex không hợp lệ để không vẽ chấm màu đen sai.
   const swatches = (product.variants ?? [])
     .filter((variant) => !isDefaultVariant(variant) && getValidHex(variant.hexCode))
+    // màu đang lọc lên đầu để luôn nằm trong 5 chấm hiển thị
+    .sort((a, b) => Number(matchedIds.has(b.id)) - Number(matchedIds.has(a.id)))
     .slice(0, 5);
   const colorVariantCount = (product.variants ?? []).filter(
     (variant) => !isDefaultVariant(variant) && getValidHex(variant.hexCode),
@@ -75,7 +89,8 @@ export const ProductCard = memo(function ProductCard({
   const handleAddClick = (event: React.MouseEvent) => {
     event.preventDefault();
     if (needsVariantChoice(product)) {
-      openPicker();
+      // Đang lọc đúng 1 màu của sản phẩm → mở hộp chọn với màu đó chọn sẵn
+      openPicker(matchedVariants.length === 1 ? matchedVariants[0].id : undefined);
       return;
     }
     // Chỉ 1 biến thể → thêm luôn, không cần hỏi.
@@ -106,7 +121,7 @@ export const ProductCard = memo(function ProductCard({
         onClick={handleProductClick}
       >
         <div className="product-card__img pc-img">
-          <ResponsiveImage src={product.image} alt={product.name} />
+          <ResponsiveImage src={displayImage} alt={product.name} />
         </div>
         <div aria-hidden className="product-card__sweep pc-sweep" />
 
@@ -169,13 +184,13 @@ export const ProductCard = memo(function ProductCard({
           <p className="pc-desc">{product.description}</p>
         </Link>
 
-        {swatches.length > 1 && (
+        {(swatches.length > 1 || matchedVariants.length > 0) && swatches.length > 0 && (
           <div className="pc-swatches" aria-label={`${product.variants?.length} màu`}>
             {swatches.map((variant) => (
               <button
                 key={variant.id}
                 type="button"
-                className="pc-swatch pc-swatch-btn"
+                className={`pc-swatch pc-swatch-btn ${matchedIds.has(variant.id) ? "is-match" : ""}`}
                 style={{ backgroundColor: getValidHex(variant.hexCode) }}
                 title={`${variant.color}${variant.stock <= 0 ? " · hết hàng" : ""}`}
                 aria-label={`Chọn màu ${variant.color} để thêm vào giỏ`}

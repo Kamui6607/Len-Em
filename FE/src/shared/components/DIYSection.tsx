@@ -1077,7 +1077,7 @@ export function DIYSection({ hoveredIndex = -1 }: { hoveredIndex?: number }) {
           style={{
             position: "absolute",
             inset: 0,
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.025'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.02'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23C8436E' fill-opacity='0.025'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23F7CFD9' fill-opacity='0.02'/%3E%3C/svg%3E")`,
           }}
         />
       </div>

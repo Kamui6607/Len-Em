@@ -1,7 +1,10 @@
 import { useRef, useState, useEffect } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion, useReducedMotion } from "motion/react";
+import { Link } from "react-router";
 import { useLanguage } from "../contexts/LanguageContext";
+
+const MotionLink = motion.create(Link);
 
 export type StackMode = "collapsed" | "fanned";
 
@@ -239,8 +242,8 @@ function HeroCTAs() {
       initial="hidden"
       animate="show"
     >
-      <motion.a
-        href="#"
+      <MotionLink
+        to="/learn"
         variants={ctaItem}
         className="inline-flex items-center gap-2 rounded-full"
         whileHover={{ scale: 1.04, y: -2, boxShadow: "var(--cta-shadow-hover)" }}
@@ -265,10 +268,10 @@ function HeroCTAs() {
           <path d="M10.5 2.5C10 4.3 9.8 6.2 10 8.2C10.2 10 10.8 11.8 11.6 13.2" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" strokeOpacity="0.8"/>
         </svg>
         {t("hero.ctaStart")}
-      </motion.a>
+      </MotionLink>
 
-      <motion.a
-        href="#"
+      <MotionLink
+        to="/diy"
         variants={ctaItem}
         className="inline-flex items-center gap-1.5 rounded-full"
         whileHover={{
@@ -295,7 +298,7 @@ function HeroCTAs() {
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path d="M2.5 7H11.5M8 3.5L11.5 7L8 10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      </motion.a>
+      </MotionLink>
 
       <motion.div
         variants={ctaItem}
@@ -707,7 +710,7 @@ export function HeroSection({ stackMode = "collapsed" }: HeroSectionProps) {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.03'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%235B3DF5' fill-opacity='0.02'/%3E%3Crect x='1' y='4' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.025'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23C8436E' fill-opacity='0.03'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23C8436E' fill-opacity='0.02'/%3E%3Crect x='1' y='4' width='1' height='1' fill='%23F7CFD9' fill-opacity='0.025'/%3E%3C/svg%3E")`,
           zIndex: 0,
         }}
       />

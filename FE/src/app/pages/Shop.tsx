@@ -23,6 +23,7 @@ import {
   ShoppingBag,
   ChevronDown,
   Check,
+  LayoutGrid,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "../../shared/components/ProductCard";
@@ -452,6 +453,37 @@ export function Shop() {
         </button>
       )}
 
+      {/* Category — trước đây là dải pill .shop-cat-rail ở hero */}
+      <FilterSection icon={LayoutGrid} title="Danh mục" badge={filters.category !== "all" ? 1 : 0}>
+        <div className="flt-cats" role="group" aria-label="Danh mục">
+          {categoryOptions.map(({ value, count }) => {
+            const cat = getCategoryMeta(value);
+            const Icon = cat.Icon;
+            const active = filters.category === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                className="flt-cat"
+                aria-pressed={active}
+                onClick={() => updateFilter("category", value)}
+              >
+                <span className="flt-cat-icon">
+                  <Icon size={16} />
+                </span>
+                <span className="flt-cat-label">{cat.label}</span>
+                {count > 0 && <span className="flt-cat-count">{count}</span>}
+                {active && (
+                  <span className="flt-cat-check" aria-hidden="true">
+                    <Check size={11} strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
+
       {/* Color */}
       {dynamicFilters.colors.length > 0 && (
         <FilterSection icon={Palette} title="Màu len" badge={filters.color.length}>
@@ -597,28 +629,6 @@ export function Shop() {
             </div>
           </div>
 
-          {viewMode === "products" && (
-            <div className="shop-cat-rail">
-              {categoryOptions.map(({ value, count }) => {
-                const cat = getCategoryMeta(value);
-                const Icon = cat.Icon;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`shop-cat-pill ${filters.category === value ? "is-active" : ""}`}
-                    onClick={() => updateFilter("category", value)}
-                  >
-                    <span className="shop-cat-icon">
-                      <Icon size={15} />
-                    </span>
-                    {cat.label}
-                    {count > 0 && <span className="shop-cat-count">{count}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </section>
 
         {/* ── Chế độ xem + sắp xếp ── */}
@@ -803,6 +813,7 @@ export function Shop() {
                         <ProductCard
                           key={product.id}
                           product={product}
+                          highlightColors={filters.color}
                           relatedCourseId={
                             currentCourseId &&
                             product.linkedComboIds?.some((comboId) =>

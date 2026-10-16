@@ -1,6 +1,10 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { Link } from "react-router";
+import { Wordmark } from "./brand/Wordmark";
+
+const MotionLink = motion.create(Link);
 
 // ═══════════════════════════════════════════════════════════════════
 // BOW / KNOT GRAPHIC  — static decorative SVG closing asset
@@ -178,143 +182,14 @@ export function ClosingCTA() {
       style={{
         position: "relative",
         overflow: "hidden",
-        background: "var(--primary)",
+        // Nền = họa tiết sợi len (public/pattern.png); màu nền phòng khi ảnh chưa tải
+        background: "#EC769A url('/pattern.png') center / cover no-repeat",
         paddingTop: "var(--section-py-lg)",
         paddingBottom: "var(--section-py-lg)",
         paddingLeft: "2rem",
         paddingRight: "2rem",
       }}
     >
-      {/* ── Soft radial warm-glow graphic ── */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-
-        {/* Large warm-pink bloom — left of centre — breathing glow */}
-        <motion.div
-          animate={{ scale: [1, 1.08, 1], opacity: [0.9, 1, 0.9] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0 }}
-          style={{
-            position: "absolute",
-            width: "clamp(340px, 90vw, 680px)",
-            height: "clamp(240px, 60vw, 480px)",
-            top: "-100px", left: "8%",
-            borderRadius: "50%",
-            background: "radial-gradient(ellipse, var(--glow-pink) 0%, transparent 65%)",
-            filter: "blur(48px)",
-          }}
-        />
-
-        {/* Warm-yellow bloom — right of centre — breathing glow */}
-        <motion.div
-          animate={{ scale: [1, 1.08, 1], opacity: [0.9, 1, 0.9] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-          style={{
-            position: "absolute",
-            width: "clamp(280px, 75vw, 560px)",
-            height: "clamp(190px, 50vw, 380px)",
-            bottom: "-80px", right: "5%",
-            borderRadius: "50%",
-            background: "radial-gradient(ellipse, var(--glow-yellow) 0%, transparent 65%)",
-            filter: "blur(44px)",
-          }}
-        />
-
-        {/* Core radial — centred, the "spotlight" — breathing glow */}
-        <motion.div
-          animate={{ scale: [1, 1.08, 1], opacity: [0.9, 1, 0.9] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-          style={{
-            position: "absolute",
-            width: "clamp(360px, 95vw, 900px)",
-            height: "clamp(240px, 60vw, 560px)",
-            top: "50%", left: "50%",
-            transform: "translate(-50%, -50%)",
-            borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(255,255,255,0.09) 0%, var(--glow-lavender) 40%, transparent 70%)",
-            filter: "blur(32px)",
-          }}
-        />
-
-        {/* Floating particles */}
-        {[15, 40, 65, 85].map((left, i) => (
-          <motion.div
-            key={i}
-            initial={{ y: 0, opacity: 0 }}
-            animate={{ y: -220, opacity: [0, 0.6, 0] }}
-            transition={{ duration: 6 + i, repeat: Infinity, delay: i * 1.4, ease: "easeInOut" }}
-            style={{
-              position: "absolute", left: `${left}%`, bottom: "10%",
-              width: "5px", height: "5px", borderRadius: "50%",
-              background: i % 2 === 0 ? "var(--brand-300)" : "var(--brand-200)",
-              opacity: 0.7,
-            }}
-          />
-        ))}
-
-        {/* Fine fiber texture at low opacity */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' fill-opacity='0.04'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
-        }} />
-
-        {/* ── Large decorative stitch loops — far background ── */}
-        <svg
-          viewBox="0 0 1200 200"
-          width="100%"
-          height="200"
-          style={{ position: "absolute", top: "-30px", left: 0, opacity: 0.07 }}
-          aria-hidden
-        >
-          {/* Giant arch motif left */}
-          <path
-            d="M-40,180 C-40,60 60,-20 160,-20 C260,-20 360,60 360,180"
-            stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"
-          />
-          {/* Giant ring motif right */}
-          <circle cx="1000" cy="90" r="130" stroke="white" strokeWidth="22" fill="none" />
-          <circle cx="1000" cy="90" r="70"  stroke="white" strokeWidth="12" fill="none" />
-          {/* Figure-8 centre */}
-          <ellipse cx="600" cy="50"  rx="90" ry="55" stroke="white" strokeWidth="14" fill="none" />
-          <ellipse cx="600" cy="155" rx="90" ry="55" stroke="white" strokeWidth="14" fill="none" />
-        </svg>
-
-        {/* Bottom decorative motifs */}
-        <svg
-          viewBox="0 0 1200 180"
-          width="100%"
-          height="180"
-          style={{ position: "absolute", bottom: "-20px", left: 0, opacity: 0.055 }}
-          aria-hidden
-        >
-          <path
-            d="M900,180 C900,60 1000,-10 1100,-10 C1200,-10 1300,60 1300,180"
-            stroke="white" strokeWidth="18" fill="none" strokeLinecap="round"
-          />
-          <circle cx="200" cy="80" r="110" stroke="white" strokeWidth="18" fill="none" />
-          <circle cx="200" cy="80" r="56"  stroke="white" strokeWidth="10" fill="none" />
-        </svg>
-
-        {/* Floating accent-pink dots */}
-        <svg
-          width="100%" height="100%"
-          style={{ position: "absolute", inset: 0, opacity: 0.55 }}
-          aria-hidden
-        >
-          {[
-            [8, 15], [15, 72], [6, 38],
-            [88, 22], [92, 68], [85, 45],
-            [50, 8],  [48, 90],
-          ].map(([cx, cy], i) => (
-            <circle
-              key={i}
-              cx={`${cx}%`} cy={`${cy}%`}
-              r={i % 3 === 0 ? 3 : 2}
-              fill={i % 2 === 0 ? "var(--brand-300)" : "var(--brand-200)"}
-              fillOpacity={i % 2 === 0 ? 0.6 : 0.5}
-            />
-          ))}
-        </svg>
-      </div>
-
       {/* ── Content ── */}
       <motion.div
         variants={ctaContainerVariants}
@@ -421,8 +296,8 @@ export function ClosingCTA() {
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", flexWrap: "wrap" as const }}
         >
           {/* Primary CTA — fill with primary-foreground */}
-          <motion.a
-            href="#"
+          <MotionLink
+            to="/learn"
             whileHover={{ scale: 1.04, y: -2 }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -445,11 +320,11 @@ export function ClosingCTA() {
           >
             {t("cta.ctaStart")}
             <ArrowRight size={15} strokeWidth={2.5} />
-          </motion.a>
+          </MotionLink>
 
           {/* Secondary CTA — ghost */}
-          <motion.a
-            href="#"
+          <MotionLink
+            to="/shop"
             whileHover={{ scale: 1.04, y: -2 }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -472,7 +347,7 @@ export function ClosingCTA() {
             }}
           >
             {t("cta.ctaShop")}
-          </motion.a>
+          </MotionLink>
         </motion.div>
 
         {/* Bow flourish beneath buttons */}
@@ -497,21 +372,18 @@ export function ClosingCTA() {
 
 function FooterLogo() {
   return (
-    <a href="#" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+    <Link to="/" aria-label="Len&Em" className="group" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
       <img
-        src="/yarn-shop-2-removebg-preview.vng.svg"
+        src="/cuu.png"
         alt=""
-        width={30}
-        height={30}
-        style={{ display: "block", objectFit: "contain" }}
+        width={39}
+        height={32}
+        className="brand-mark"
+        style={{ display: "block" }}
         draggable={false}
       />
-      <span style={{ display: "flex", alignItems: "baseline", gap: 0 }}>
-        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", fontWeight: 600, color: "var(--footer-text)", letterSpacing: "-0.01em" }}>Len</span>
-        <span style={{ fontFamily: "'Caveat', cursive", fontSize: "1.35rem", fontWeight: 500, color: "var(--footer-text-muted)", lineHeight: 1, marginTop: "2px" }}>&</span>
-        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", fontWeight: 600, color: "var(--footer-text)", letterSpacing: "-0.01em" }}>Em</span>
-      </span>
-    </a>
+      <Wordmark className="h-[30px]" />
+    </Link>
   );
 }
 
@@ -581,7 +453,9 @@ function IconTikTok() {
 
 // ── Footer link column ─────────────────────────────────────────────────────────
 
-function FooterColumn({ heading, links }: { heading: string; links: string[] }) {
+type FooterLink = { label: string; to: string };
+
+function FooterColumn({ heading, links }: { heading: string; links: FooterLink[] }) {
   return (
     <motion.div
       variants={footerColumnVariants}
@@ -600,9 +474,9 @@ function FooterColumn({ heading, links }: { heading: string; links: string[] }) 
       </div>
       <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column" as const, gap: "10px" }}>
         {links.map((link) => (
-          <li key={link}>
-            <motion.a
-              href="#"
+          <li key={link.label}>
+            <MotionLink
+              to={link.to}
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0.2 }}
@@ -618,8 +492,8 @@ function FooterColumn({ heading, links }: { heading: string; links: string[] }) 
                 transition: "color 0.15s",
               }}
             >
-              {link}
-            </motion.a>
+              {link.label}
+            </MotionLink>
           </li>
         ))}
       </ul>
@@ -635,22 +509,14 @@ export function LenEmFooter() {
   const { t } = useLanguage();
   return (
     <motion.footer
+      className="lenem-footer"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, amount: 0.1 }}
       transition={{ duration: 0.5 }}
       style={{
-        // ── Local CSS variables, isolated from theme.css tokens ──
-        // This ensures footer always keeps dark-bg / light-text regardless
-        // of --foreground/--card changes elsewhere on the page.
-        "--footer-bg": "#1A1020",
-        "--footer-text": "#F5F0E8",
-        "--footer-text-muted": "#D0C4DC",
-        "--footer-text-dim": "#A898B0",
-        "--footer-border": "rgba(255,255,255,0.06)",
-        "--footer-glow": "rgba(155,111,214,0.12)",
-        "--footer-accent": "rgba(240,196,224,0.18)",
-
+        // Màu footer lấy từ token --footer-* trong theme.css
+        // (light: trắng + chữ tím than, dark: tím tối + chữ sáng).
         background: "var(--footer-bg)",
         color: "var(--footer-text)",
         borderTop: "1px solid var(--footer-border)",
@@ -714,9 +580,27 @@ export function LenEmFooter() {
             </div>
           </motion.div>
 
-          <FooterColumn heading={t("cta.footerShop")}    links={[t("cta.footerNewArrivals"),t("cta.footerYarn"),t("cta.footerNeedles"),t("cta.footerKits"),t("cta.footerGiftCards")]} />
-          <FooterColumn heading={t("cta.footerLearn")}   links={[t("cta.footerCourses"),t("cta.footerBeginner"),t("cta.footerPatterns"),t("cta.footerCreator"),t("cta.footerCommunity")]} />
-          <FooterColumn heading={t("cta.footerConnect")} links={[t("cta.footerStudio"),t("cta.footerNewsletter"),t("cta.footerWholesale"),t("cta.footerPress"),t("cta.footerContact")]} />
+          <FooterColumn heading={t("cta.footerShop")}    links={[
+            { label: t("cta.footerNewArrivals"), to: "/shop?sort=newest" },
+            { label: t("cta.footerYarn"),        to: "/shop?search=len" },
+            { label: t("cta.footerNeedles"),     to: "/shop?search=kim" },
+            { label: t("cta.footerKits"),        to: "/shop?view=combo" },
+            { label: t("cta.footerGiftCards"),   to: "/shop" },
+          ]} />
+          <FooterColumn heading={t("cta.footerLearn")}   links={[
+            { label: t("cta.footerCourses"),   to: "/learn" },
+            { label: t("cta.footerBeginner"),  to: "/learn" },
+            { label: t("cta.footerPatterns"),  to: "/diy" },
+            { label: t("cta.footerCreator"),   to: "/diy/create" },
+            { label: t("cta.footerCommunity"), to: "/diy" },
+          ]} />
+          <FooterColumn heading={t("cta.footerConnect")} links={[
+            { label: t("cta.footerStudio"),     to: "/about" },
+            { label: t("cta.footerNewsletter"), to: "/about" },
+            { label: t("cta.footerWholesale"),  to: "/about" },
+            { label: t("cta.footerPress"),      to: "/about" },
+            { label: t("cta.footerContact"),    to: "/messages" },
+          ]} />
         </motion.div>
 
         {/* ── Bottom bar ── */}

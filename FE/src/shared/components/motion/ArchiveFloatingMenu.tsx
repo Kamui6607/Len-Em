@@ -185,7 +185,7 @@ export function ArchiveFloatingMenu() {
                           left: -buttonSize / 2,
                           background: "var(--primary)",
                           boxShadow:
-                            "0 6px 16px rgba(91,61,245,0.35), 0 0 0 3px var(--background)",
+                            "0 6px 16px rgba(var(--brand-rgb),0.35), 0 0 0 3px var(--background)",
                           pointerEvents: "auto",
                         }}
                         aria-label={btn.label}
@@ -238,7 +238,7 @@ export function ArchiveFloatingMenu() {
           width: mainSize,
           height: mainSize,
           background: "var(--primary)",
-          boxShadow: "0 6px 20px rgba(107,63,160,0.35)",
+          boxShadow: "0 6px 20px rgba(var(--brand-rgb),0.35)",
         }}
         whileHover={{ scale: 1.08, rotate: -8 }}
         whileTap={{ scale: 0.92 }}

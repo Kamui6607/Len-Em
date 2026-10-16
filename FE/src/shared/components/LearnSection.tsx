@@ -3,6 +3,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion } from "motion/react";
 import { useIsMobile } from "../hooks/useMediaQuery";
 import { useLanguage } from "../contexts/LanguageContext";
+import { Link } from "react-router";
+
+const MotionLink = motion.create(Link);
 
 export type StitchFillState = "unfilled" | "filled";
 
@@ -21,207 +24,176 @@ interface StitchIconProps {
   bgColor?: string;
 }
 
-// Shared token shortcuts
-const T = {
-  stroke:       "var(--foreground-muted)",
-  strokeFilled: "none",
-  fill:         "none",
-  fillFilled:   "var(--primary)",
-  sw:           1.9,
-};
+// Yarn-stroke style: every motif is drawn as continuous rounded strokes, like
+// a crochet chart symbol. Idle = muted pencil line; filled = primary yarn with
+// soft accent tints. Strokes "draw themselves" on mount, so re-mounting an
+// icon (see ViewFillIcon hover) replays the stitch being made.
+const SW = 2.4;
+const draw = (delay = 0) => ({
+  initial: { pathLength: 0, opacity: 0 },
+  animate: { pathLength: 1, opacity: 1 },
+  transition: {
+    pathLength: { duration: 0.7, delay, ease: [0.65, 0, 0.35, 1] },
+    opacity: { duration: 0.1, delay },
+  },
+});
 
-// Icon 1 — Ring Stitch (donut, evenodd hole)
+function stitchTone(filled: boolean) {
+  return {
+    line: filled ? "var(--primary)" : "var(--foreground-muted)",
+    tintA: filled ? "color-mix(in srgb, var(--accent-pink) 55%, transparent)" : "none",
+    tintB: filled ? "color-mix(in srgb, var(--accent-yellow) 70%, transparent)" : "none",
+  };
+}
+
+function StitchSvg({ size, label, children }: { size: number; label: string; children: React.ReactNode }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role="img"
+      aria-label={label}
+    >
+      {children}
+    </svg>
+  );
+}
+
+// Icon 1 — Vòng: magic ring — yarn wrapped twice, both tails crossing below
 export function StitchRing({ filled = false, size = 48 }: StitchIconProps) {
-  const f = filled;
+  const c = stitchTone(filled);
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-label="Ring stitch">
-      {/* Outer glow only when filled */}
-      {f && <circle cx="24" cy="24" r="17" fill="var(--accent-pink)" fillOpacity="0.35" />}
-      {/* Donut shape via evenodd */}
-      <path
-        fillRule="evenodd"
-        d="M9,24 A15,15 0 1,0 39,24 A15,15 0 1,0 9,24 Z M17,24 A7,7 0 1,0 31,24 A7,7 0 1,0 17,24 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-      {/* Inner detail dot when filled */}
-      {f && <circle cx="24" cy="24" r="2.5" fill="var(--background)" fillOpacity="0.55" />}
-    </svg>
+    <StitchSvg size={size} label="Ring stitch">
+      <circle cx="24" cy="20" r="9" fill={c.tintB} />
+      <motion.circle cx="24" cy="20" r="12" stroke={c.line} strokeWidth={SW} {...draw()} />
+      <motion.ellipse cx="25" cy="19" rx="8.5" ry="8" stroke={c.line} strokeWidth={SW - 0.6} opacity={0.75} {...draw(0.2)} />
+      <motion.path d="M17,29 C20,33 25,36 31,43" stroke={c.line} strokeWidth={SW} {...draw(0.45)} />
+      <motion.path d="M31,29 C28,33 23,36 17,43" stroke={c.line} strokeWidth={SW} {...draw(0.55)} />
+    </StitchSvg>
   );
 }
 
-// Icon 2 — Arch Stitch (garter arch / rainbow)
+// Icon 2 — Vòm: chain-space arch (chain loops along an arc) over a base row
 export function StitchArch({ filled = false, size = 48 }: StitchIconProps) {
-  const f = filled;
+  const c = stitchTone(filled);
+  const links = [150, 120, 90, 60, 30].map((deg) => {
+    const r = (deg * Math.PI) / 180;
+    return { x: 24 + Math.cos(r) * 14, y: 36 - Math.sin(r) * 14, rot: 90 - deg };
+  });
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-label="Arch stitch">
-      {f && <path d="M7,39 C7,20 14,8 24,8 C34,8 41,20 41,39 Z" fill="var(--accent-yellow)" fillOpacity="0.45" />}
-      {/* Thick C-arch: outer arch minus inner arch */}
-      <path
-        fillRule="evenodd"
-        d="M6,39 L10,39 C10,23 16,11 24,11 C32,11 38,23 38,39 L42,39 C42,21 34,7 24,7 C14,7 6,21 6,39 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-      {/* Baseline crossbar */}
-      <rect
-        x={f ? 6 : 7} y={f ? 37 : 37}
-        width={f ? 36 : 34} height={f ? 4 : 3}
-        rx="1.5"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-    </svg>
-  );
-}
-
-// Icon 3 — Double Loop (figure-8, vertical)
-export function StitchFigureEight({ filled = false, size = 48 }: StitchIconProps) {
-  const f = filled;
-  // Upper oval: cx=24 cy=16 rx=10 ry=9
-  // Lower oval: cx=24 cy=33 rx=10 ry=9
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-label="Figure-eight stitch">
-      {f && <>
-        <ellipse cx="24" cy="16" rx="13" ry="11" fill="var(--accent-pink)" fillOpacity="0.3" />
-        <ellipse cx="24" cy="33" rx="13" ry="11" fill="var(--accent-yellow)" fillOpacity="0.3" />
-      </>}
-      <ellipse cx="24" cy="16" rx="10" ry="9"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-      <ellipse cx="24" cy="33" rx="10" ry="9"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-      {/* Connecting bridge at center */}
-      {f && <rect x="18" y="21.5" width="12" height="5" fill={T.fillFilled} />}
-      {/* Center divider line when unfilled */}
-      {!f && <line x1="14" y1="24.5" x2="34" y2="24.5" stroke={T.stroke} strokeWidth="1.2" strokeDasharray="2.5 2" />}
-    </svg>
-  );
-}
-
-// Icon 4 — Chain Link (two interlocked tilted ovals)
-export function StitchChain({ filled = false, size = 48 }: StitchIconProps) {
-  const f = filled;
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-label="Chain stitch">
-      {f && <>
-        <ellipse cx="17" cy="22" rx="13" ry="8" transform="rotate(-35,17,22)" fill="var(--accent-pink)" fillOpacity="0.3" />
-        <ellipse cx="31" cy="26" rx="13" ry="8" transform="rotate(-35,31,26)" fill="var(--accent-yellow)" fillOpacity="0.3" />
-      </>}
-      {/* Left link */}
-      <ellipse cx="17" cy="22" rx="10" ry="6.5"
-        transform="rotate(-35,17,22)"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-      {/* Right link */}
-      <ellipse cx="31" cy="26" rx="10" ry="6.5"
-        transform="rotate(-35,31,26)"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-      />
-      {/* Interlock overlay — small overlap zone that needs to be "clipped" visually */}
-      {/* In filled state, draw a small bridge piece */}
-      {f && (
-        <ellipse cx="24" cy="24" rx="5" ry="4"
-          transform="rotate(-35,24,24)"
-          fill={T.fillFilled}
+    <StitchSvg size={size} label="Arch stitch">
+      <path d="M10,36 A14,14 0 0 1 38,36 Z" fill={c.tintB} opacity={0.6} />
+      {links.map((l, i) => (
+        <motion.ellipse
+          key={i}
+          cx={l.x}
+          cy={l.y}
+          rx="4"
+          ry="2.4"
+          transform={`rotate(${l.rot} ${l.x} ${l.y})`}
+          fill={i === 2 ? c.tintA : "none"}
+          stroke={c.line}
+          strokeWidth={SW - 0.2}
+          {...draw(i * 0.09)}
         />
-      )}
-    </svg>
+      ))}
+      <motion.path d="M6,36 H42" stroke={c.line} strokeWidth={SW} {...draw(0.5)} />
+    </StitchSvg>
   );
 }
 
-// Icon 5 — Cable Braid (X-crossing two diagonal bands)
+// Icon 3 — Số 8: one continuous strand looping into a figure-eight
+export function StitchFigureEight({ filled = false, size = 48 }: StitchIconProps) {
+  const c = stitchTone(filled);
+  return (
+    <StitchSvg size={size} label="Figure-eight stitch">
+      <ellipse cx="24" cy="15.5" rx="6" ry="5" fill={c.tintA} />
+      <ellipse cx="24" cy="32.5" rx="6.5" ry="5.5" fill={c.tintB} />
+      <motion.path
+        d="M24,24 C16,19.5 15,7 24,7 C33,7 32,19.5 24,24 C15.5,28.5 14.5,41 24,41 C33.5,41 32.5,28.5 24,24 Z"
+        stroke={c.line}
+        strokeWidth={SW}
+        {...draw()}
+      />
+    </StitchSvg>
+  );
+}
+
+// Icon 4 — Xích: a diagonal row of interlocked chain loops with a tail
+export function StitchChain({ filled = false, size = 48 }: StitchIconProps) {
+  const c = stitchTone(filled);
+  const links = [
+    { x: 15, y: 33 },
+    { x: 24, y: 24 },
+    { x: 33, y: 15 },
+  ];
+  return (
+    <StitchSvg size={size} label="Chain stitch">
+      {links.map((l, i) => (
+        <motion.ellipse
+          key={i}
+          cx={l.x}
+          cy={l.y}
+          rx="7.5"
+          ry="4.4"
+          transform={`rotate(-45 ${l.x} ${l.y})`}
+          fill={i === 1 ? c.tintA : "none"}
+          stroke={c.line}
+          strokeWidth={SW}
+          {...draw(i * 0.15)}
+        />
+      ))}
+      <motion.path d="M10,38 C8,40 7,42 5,43" stroke={c.line} strokeWidth={SW} {...draw(0.5)} />
+      <motion.path d="M38,10 C40,8 41,6 43,5" stroke={c.line} strokeWidth={SW} {...draw(0.6)} />
+    </StitchSvg>
+  );
+}
+
+// Icon 5 — Bện: two strands twisting over each other like a cable
 export function StitchCable({ filled = false, size = 48 }: StitchIconProps) {
-  const f = filled;
+  const c = stitchTone(filled);
+  const second = filled ? "color-mix(in srgb, var(--primary) 45%, var(--card))" : c.line;
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-label="Cable stitch">
-      {f && <circle cx="24" cy="24" r="18" fill="var(--accent-pink)" fillOpacity="0.2" />}
-      {/* Band ↘ (top-left to bottom-right) */}
-      <path
-        d="M6,8 C8,12 18,20 22,24 C26,28 36,36 40,40 L38,42 C36,38 26,30 22,26 C18,22 8,14 4,10 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        strokeLinejoin="round"
+    <StitchSvg size={size} label="Cable stitch">
+      <motion.path
+        d="M33,5 C33,13 15,15 15,24 C15,33 33,35 33,43"
+        stroke={second}
+        strokeWidth={SW + 1.2}
+        {...draw()}
       />
-      {/* Band ↙ (top-right to bottom-left) */}
-      <path
-        d="M42,8 C40,12 30,20 26,24 C22,28 12,36 8,40 L10,42 C12,38 22,30 26,26 C30,22 40,14 44,10 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        strokeLinejoin="round"
+      <motion.path
+        d="M15,5 C15,13 33,15 33,24 C33,33 15,35 15,43"
+        stroke={c.line}
+        strokeWidth={SW + 1.2}
+        {...draw(0.15)}
       />
-      {/* Center knot circle */}
-      <circle cx="24" cy="24" r={f ? 5 : 4}
-        fill={f ? "var(--background)" : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        fillOpacity={f ? 1 : 0}
-      />
-    </svg>
+      <motion.path d="M10,5 V43 M38,5 V43" stroke={c.line} strokeWidth={1.4} strokeDasharray="2 3.5" opacity={0.6} {...draw(0.4)} />
+    </StitchSvg>
   );
 }
 
-// Icon 6 — Lace Bloom (4-petal flower)
+// Icon 6 — Hoa: five chain-loop petals around a centre ring
 export function StitchBloom({ filled = false, size = 48 }: StitchIconProps) {
-  const f = filled;
-  // 4 petals built from pairs of cubic bezier arcs, centered at (24,24)
+  const c = stitchTone(filled);
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-label="Lace bloom stitch">
-      {f && <circle cx="24" cy="24" r="18" fill="var(--accent-yellow)" fillOpacity="0.25" />}
-      {/* Petal Top */}
-      <path
-        d="M24,24 C20,20 16,10 24,8 C32,10 28,20 24,24 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        strokeLinejoin="round"
-      />
-      {/* Petal Right */}
-      <path
-        d="M24,24 C28,20 38,16 40,24 C38,32 28,28 24,24 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        strokeLinejoin="round"
-      />
-      {/* Petal Bottom */}
-      <path
-        d="M24,24 C28,28 32,38 24,40 C16,38 20,28 24,24 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        strokeLinejoin="round"
-      />
-      {/* Petal Left */}
-      <path
-        d="M24,24 C20,28 10,32 8,24 C10,16 20,20 24,24 Z"
-        fill={f ? T.fillFilled : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        strokeLinejoin="round"
-      />
-      {/* Center bead */}
-      <circle cx="24" cy="24" r={f ? 4 : 3}
-        fill={f ? "var(--background)" : T.fill}
-        stroke={f ? T.strokeFilled : T.stroke}
-        strokeWidth={f ? 0 : T.sw}
-        fillOpacity={f ? 0.7 : 0}
-      />
-    </svg>
+    <StitchSvg size={size} label="Lace bloom stitch">
+      {[0, 72, 144, 216, 288].map((deg, i) => (
+        <motion.path
+          key={deg}
+          d="M24,21 C19.5,15 20,7.5 24,7.5 C28,7.5 28.5,15 24,21"
+          transform={`rotate(${deg} 24 24)`}
+          fill={i % 2 === 0 ? c.tintA : c.tintB}
+          stroke={c.line}
+          strokeWidth={SW - 0.2}
+          {...draw(i * 0.08)}
+        />
+      ))}
+      <motion.circle cx="24" cy="24" r="3.2" stroke={c.line} strokeWidth={SW - 0.2} {...draw(0.45)} />
+    </StitchSvg>
   );
 }
 
@@ -594,9 +566,15 @@ function ViewFillIcon({
   filled: boolean;
   onFill: () => void;
 }) {
+  // Bumping the key re-mounts the icon so its strokes draw again ("Di chuột để xem")
+  const [drawKey, setDrawKey] = useState(0);
+  const replay = () => setDrawKey((k) => k + 1);
+
   return (
     <motion.div
       onViewportEnter={() => setTimeout(onFill, delay * 1000)}
+      onHoverStart={replay}
+      onTap={replay}
       viewport={{ once: true, amount: 0.6 }}
       initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -608,6 +586,7 @@ function ViewFillIcon({
         alignItems: "center",
         gap: "8px",
         position: "relative",
+        cursor: "pointer",
       }}
     >
       {/* Step badge — number while unfilled, check once stitched */}
@@ -662,14 +641,21 @@ function ViewFillIcon({
             width: "60px",
             height: "60px",
             borderRadius: "50%",
-            background: filled ? "var(--cta-gradient)" : "var(--card)",
-            boxShadow: filled ? "var(--cta-shadow)" : "var(--shadow-sm)",
+            // Light tint (not the solid CTA gradient) so the primary-coloured
+            // yarn strokes stay readable once the stitch is "made"
+            background: filled
+              ? "color-mix(in srgb, var(--primary) 10%, var(--card))"
+              : "var(--card)",
+            boxShadow: filled
+              ? "0 6px 18px color-mix(in srgb, var(--primary) 22%, transparent), inset 0 0 0 1.5px color-mix(in srgb, var(--primary) 30%, transparent)"
+              : "var(--shadow-sm)",
+            transition: "background 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Comp filled={filled} size={40} />
+          <Comp key={`${filled}-${drawKey}`} filled={filled} size={40} />
         </motion.div>
       </div>
 
@@ -891,9 +877,9 @@ export function LearnSection() {
             </motion.div>
 
             {/* CTA */}
-            <motion.a
+            <MotionLink
               variants={leftColItem}
-              href="#"
+              to="/learn"
               whileHover={{ scale: 1.04, y: -2 }}
               whileTap={{ scale: 0.97 }}
               style={{
@@ -916,7 +902,7 @@ export function LearnSection() {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </motion.a>
+            </MotionLink>
           </motion.div>
 
           {/* ── RIGHT: image + testimonial ── */}

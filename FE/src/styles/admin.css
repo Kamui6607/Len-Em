@@ -144,13 +144,6 @@
 .dash-side-logo:hover {
   transform: rotate(0deg) scale(1.05);
 }
-.dash-side-name {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--foreground);
-}
 .dash-side-title {
   font-family: var(--font-script);
   font-size: 1.05rem;

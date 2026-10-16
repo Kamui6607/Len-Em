@@ -388,7 +388,7 @@ export function RegisterPage() {
         </figure>
 
         <img
-          src="/mascot.png"
+          src="/mascot-sheep.png"
           alt=""
           aria-hidden="true"
           className="auth-mascot"
@@ -433,7 +433,7 @@ export function RegisterPage() {
                   <p className="fit-sub">{head.sub}</p>
                 </div>
                 <img
-                  src="/mascot.png"
+                  src="/mascot-sheep.png"
                   alt=""
                   aria-hidden="true"
                   className="fit-mascot"

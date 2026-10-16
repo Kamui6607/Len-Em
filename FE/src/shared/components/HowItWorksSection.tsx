@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { motion, useReducedMotion } from "motion/react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useNavigate } from "react-router";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -725,6 +726,7 @@ function HangTag() {
 
 export function ShopCard({ state = "front" }: { state?: ShopState }) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   if (state === "back") {
     return (
@@ -987,7 +989,13 @@ export function ShopCard({ state = "front" }: { state?: ShopState }) {
 
         {/* Add to cart CTA */}
         <button
+          type="button"
           className="add-to-cart-btn"
+          onClick={(e) => {
+            // Don't let the parent flip card swallow the tap
+            e.stopPropagation();
+            navigate("/shop");
+          }}
           style={{
             width: "100%",
             padding: "10px",
@@ -1112,7 +1120,7 @@ export function DIYCard({ state = "default" }: { state?: DIYState }) {
             style={{
               position: "absolute",
               inset: 0,
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.05'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23C8436E' fill-opacity='0.05'/%3E%3C/svg%3E")`,
             }}
           />
 
@@ -1502,7 +1510,7 @@ export function HowItWorksSection() {
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%235B3DF5' fill-opacity='0.026'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23E8DEFF' fill-opacity='0.021'/%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23C8436E' fill-opacity='0.026'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23F7CFD9' fill-opacity='0.021'/%3E%3C/svg%3E")`,
           }}
         />
       </div>

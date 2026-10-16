@@ -55,26 +55,14 @@
 .nav-bar.is-floating::before { opacity: 1; }
 
 /* ── Brand ── */
-.nav-brand-name {
-  font-family: var(--font-heading);
-  font-style: italic;
-  font-weight: 700;
-  font-size: 1.55rem;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  color: var(--foreground);
+/* Wordmark "len&em" (ảnh) — chữ tím/hồng, hơi nhích xuống cho cân với cừu */
+.nav-brand-wordmark {
+  margin-top: 4px;
+  transition: transform 0.35s var(--ease-spring);
 }
-.nav-brand-name span { color: var(--primary); }
-.nav-brand-tagline {
-  display: inline-block;
-  margin-top: 2px;
-  font-family: var(--font-script);
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--primary);
-  transform: rotate(-2deg);
-  transform-origin: left;
-  white-space: nowrap;
+.group:hover .nav-brand-wordmark { transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .nav-brand-wordmark { transform: none; }
 }
 
 /* ── Dải băng chứa link (desktop) ── */
@@ -335,7 +323,7 @@
    - [data-keyboard-open]: bàn phím ảo đang mở
    ============================================================ */
 :root {
-  --tabbar-active-bg: var(--brand-700, #4A2FE0); /* trắng trên nền này ≈ 7:1 */
+  --tabbar-active-bg: var(--brand-700, #A8345A); /* trắng trên nền này ≈ 7:1 */
   --tabbar-active-fg: #FFFFFF;
 }
 .dark {
@@ -602,10 +590,7 @@ html[data-chrome="collapsed"] .bottom-nav {
   .navx .nav-link { padding: 7px 11px; }
 }
 
-/* Tagline chỉ khi rộng rãi; dưới 1024px chỉ giữ biểu tượng logo */
-@media (max-width: 1279px) {
-  .navx .nav-brand-tagline { display: none; }
-}
+/* Dưới 1024px thanh desktop chật → chỉ giữ biểu tượng cừu */
 @media (max-width: 1023px) {
-  .navx .navx-brand .nav-brand-name { display: none; }
+  .navx .navx-brand .nav-brand-wordmark { display: none; }
 }

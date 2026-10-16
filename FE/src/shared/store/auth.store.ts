@@ -16,21 +16,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   refreshToken: null,
   isAuthenticated: false,
-  isLoading: true,
+  // Only enter the loading state when a session token exists. Guests skip the
+  // skeleton and see Log in / Sign up immediately on first paint.
+  isLoading: hasValidToken(),
 
   initialize: async () => {
     // Guard: prevent double-execution from StrictMode or re-renders
     if (_initialized) return;
     _initialized = true;
 
+    if (!hasValidToken()) {
+      set({ isLoading: false, isAuthenticated: false, user: null });
+      return;
+    }
+
     set({ isLoading: true });
     try {
-      if (!hasValidToken()) {
-        // Ensure minimum loading duration for smooth transition
-        await new Promise((r) => setTimeout(r, 300));
-        set({ isLoading: false, isAuthenticated: false, user: null });
-        return;
-      }
 
       const [response] = await Promise.all([
         authService.getCurrentUser(),

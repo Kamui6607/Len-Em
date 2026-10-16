@@ -42,8 +42,8 @@
   background: var(--dropdown-bg);
   color: var(--foreground);
   box-shadow:
-    0 24px 48px -14px rgba(46, 30, 120, 0.42),
-    0 8px 18px -6px rgba(46, 30, 120, 0.18),
+    0 24px 48px -14px rgba(57, 48, 81, 0.42),
+    0 8px 18px -6px rgba(57, 48, 81, 0.18),
     0 0 0 1px rgba(255, 255, 255, 0.6) inset;
 }
 /* Lớp trong cắt theo bo góc: thanh đếm giờ không tràn ra ngoài */

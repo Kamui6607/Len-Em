@@ -1,6 +1,6 @@
 /* ============================================================
    THEME TOGGLE — Uiverse.io by JkHuger (adapted)
-   Light: Soft Lilac (#E8DEFF) | Dark: Electric Indigo (#7C63FF)
+   Light: Vàng (#FEED9C) | Dark: Tím (#7C63FF)
    Depends on --bg, --transDur, --primaryT from theme.css
    ============================================================ */
 
@@ -80,9 +80,9 @@
 
 .theme__toggle {
   display: block;
-  background-color: #E8DEFF; /* Soft Lilac — light mode track */
+  background-color: var(--toggle-track); /* light: vàng #FEED9C */
   border-radius: 999px;
-  --toggle-border: rgba(91, 61, 245, 0.25);
+  --toggle-border: rgba(214, 160, 40, 0.45);
   box-shadow: 0 0 0 0.125em var(--toggle-border);
   padding: 0.25em;
   width: 6em;
@@ -98,7 +98,7 @@
 
 .theme__toggle:before {
   display: block;
-  background-color: #DCCEFF; /* Soft Lilac hover — light mode thumb */
+  background-color: var(--toggle-thumb); /* light: vàng hổ phách — mặt trời trắng nổi rõ */
   border-radius: 50%;
   content: "";
   width: 2.5em;
@@ -114,7 +114,7 @@
 
 /* Checked = dark mode */
 .theme__toggle:checked {
-  background-color: #7C63FF; /* Electric Indigo (dark) — dark mode track */
+  background-color: var(--toggle-track); /* dark: tím #7962AB */
   --toggle-border: var(--primaryT);
 }
 
@@ -131,7 +131,7 @@
 }
 
 .theme__toggle:checked:before {
-  background-color: #9080FF; /* Primary hover (dark) — dark mode thumb */
+  background-color: var(--toggle-thumb); /* dark: tím sáng */
 }
 
 .theme__toggle:checked ~ .theme__icon .theme__icon-part:nth-child(1) {

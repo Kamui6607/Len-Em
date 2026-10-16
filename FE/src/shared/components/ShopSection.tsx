@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router";
 import { ProductCard } from "./ProductCard";
 import { products } from "../../app/data/products";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -11,54 +12,43 @@ const SHOP_PRODUCTS = products.slice(0, 4);
 function ShopHeading() {
   const { t } = useLanguage();
   return (
-    <motion.div
-      initial={{ opacity: 1, y: 0 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.5 }}
-      style={{ maxWidth: "560px", marginBottom: "40px" }}
-    >
-      {/* Eyebrow */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          marginBottom: "16px",
-        }}
-      >
-        <div
-          style={{
-            width: "24px",
-            height: "1.5px",
-            background: "var(--primary)",
-            borderRadius: "1px",
-            opacity: 0.5,
-          }}
-        />
-        <span
-          style={{
-            fontFamily: "'Caveat', cursive",
-            fontSize: "0.88rem",
-            fontWeight: 500,
-            color: "var(--primary)",
-            letterSpacing: "0.05em",
-          }}
-        >
-          {t("shop.eyebrow")}
-        </span>
-      </div>
+    <div className="mb-6 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+      <div style={{ maxWidth: "560px" }}>
+        {/* Eyebrow */}
+        <div className="mb-2 flex items-center gap-2 sm:mb-4">
+          <div
+            style={{
+              width: "24px",
+              height: "1.5px",
+              background: "var(--primary)",
+              borderRadius: "1px",
+              opacity: 0.5,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: "0.88rem",
+              fontWeight: 500,
+              color: "var(--primary)",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {t("shop.eyebrow")}
+          </span>
+        </div>
 
-      {/* Headline */}
+        {/* Headline */}
         <h2
+          className="mb-2 sm:mb-3.5"
           style={{
             fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: "clamp(2rem, 2.8vw, 2.8rem)",
+            fontSize: "clamp(1.6rem, 2.8vw, 2.8rem)",
             fontWeight: 700,
             color: "var(--foreground)",
             letterSpacing: "-0.025em",
-            lineHeight: 1.1,
-            marginBottom: "14px",
+            lineHeight: 1.15,
           }}
         >
           {t("shop.headline")}{" "}
@@ -68,16 +58,31 @@ function ShopHeading() {
         </h2>
 
         <p
+          className="text-[0.86rem] sm:text-[0.92rem]"
           style={{
             fontFamily: "'Inter', sans-serif",
-            fontSize: "0.92rem",
             color: "var(--foreground-muted)",
-            lineHeight: 1.65,
+            lineHeight: 1.6,
           }}
         >
           {t("shop.subtitle")}
         </p>
-    </motion.div>
+      </div>
+
+      <Link
+        to="/shop"
+        className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full px-4 py-2 text-sm font-semibold sm:self-auto"
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          color: "var(--primary)",
+          border: "1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+          background: "color-mix(in srgb, var(--primary) 6%, transparent)",
+        }}
+      >
+        {t("common.viewAll")}
+        <ArrowRight size={15} strokeWidth={2.25} />
+      </Link>
+    </div>
   );
 }
 
@@ -138,8 +143,8 @@ export function ShopSection() {
         {/* Heading */}
         <ShopHeading />
 
-         {/* Product grid - exactly like /shop */}
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+        {/* Product grid — 2 columns on phones keeps the section short */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-start">
           {SHOP_PRODUCTS.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

@@ -369,7 +369,7 @@ export function NotificationsPage() {
         {/* ── List / empty state ── */}
         {filteredNotifications.length === 0 ? (
           <div className="craft-empty ntf-empty craft-rise">
-            <img src="/mascot.png" alt="" aria-hidden="true" className="ntf-empty-mascot" draggable={false} />
+            <img src="/mascot-sheep.png" alt="" aria-hidden="true" className="ntf-empty-mascot" draggable={false} />
             <p className="craft-empty-title">
               {filter === "unread"
                 ? "No unread notifications"

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "../ui/utils";
 import "../../../styles/nav.css";
+import { Wordmark } from "../brand/Wordmark";
 
 /* Focus ring dùng chung cho các phần tử tương tác tuỳ biến (không phải <Button>) */
 export const focusRingClass =
@@ -25,14 +26,12 @@ export const drawerItemVariants = {
 
 /* ── Brand / Logo — mark đọc như một cuộn chỉ: vòng chỉ đứt quay nhẹ khi hover ── */
 export function Brand({
-  tagline,
   compact = false,
   markOnly = false,
   className,
 }: {
-  tagline?: string;
   compact?: boolean;
-  /** Only the yarn mark, no wordmark — used by the condensed desktop pill. */
+  /** Only the sheep mark, no wordmark — used by the condensed desktop pill. */
   markOnly?: boolean;
   className?: string;
 }) {
@@ -41,42 +40,25 @@ export function Brand({
       to="/"
       aria-label="Len&em"
       className={cn(
-        "group relative flex shrink-0 items-center gap-3 rounded-2xl",
+        "group relative flex shrink-0 items-center gap-2 rounded-2xl",
         focusRingClass,
         className,
       )}
     >
-      <div
-        className={cn(
-          "relative flex items-center justify-center",
-          compact ? "size-10" : "size-11",
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className="absolute inset-[-4px] rounded-full border border-dashed border-[var(--primary)] opacity-35 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-[60deg]"
-        />
-        <div className="relative flex size-full items-center justify-center rounded-[14px] bg-[image:var(--cta-gradient)] shadow-[var(--cta-shadow)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-rotate-6 group-active:scale-95">
-          <img
-            src="/yarn-shop-2-removebg-preview.vng.svg"
-            alt=""
-            width={32}
-            height={32}
-            className={cn("object-contain", compact ? "size-8" : "size-9")}
-            draggable={false}
-          />
-        </div>
-      </div>
-      <div className={cn("flex flex-col leading-none", markOnly && "sr-only")}>
-        <span className="nav-brand-name">
-          Len<span>&</span>em
-        </span>
-        {tagline && !compact && (
-          <span className="nav-brand-tagline hidden lg:inline-block">
-            {tagline}
-          </span>
-        )}
-      </div>
+      {/* Logo đứng tự do, không khung — nghiêng nhẹ + nảy khi hover */}
+      <img
+        src="/cuu.png"
+        alt=""
+        width={58}
+        height={48}
+        className={cn("brand-mark", compact ? "h-10 w-auto" : "h-12 w-auto")}
+        draggable={false}
+      />
+      {/* Wordmark "len&em" — ẩn khi nav thu gọn lúc cuộn xuống (markOnly);
+          tên đã có ở aria-label của link nên ảnh để alt rỗng */}
+      {!markOnly && (
+        <Wordmark className={cn("nav-brand-wordmark", compact ? "h-7" : "h-9")} />
+      )}
     </Link>
   );
 }

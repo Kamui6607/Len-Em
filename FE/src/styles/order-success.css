@@ -28,10 +28,18 @@
   display: flex;
   align-items: center;
   padding: 40px 16px calc(48px + env(safe-area-inset-bottom));
+  /* Nền họa tiết sợi len (ảnh không lặp liền mạch → phủ kín bằng cover).
+     Lớp vignette mờ ở giữa giữ chữ của phần chúc mừng dễ đọc trên họa tiết. */
   background:
-    radial-gradient(60% 50% at 30% 30%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 70%),
-    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--primary) 8%, transparent) 1px, transparent 0) 0 0 / 22px 22px,
-    var(--background);
+    radial-gradient(70% 60% at 50% 45%, color-mix(in srgb, var(--background) 55%, transparent), transparent 75%),
+    url("/order-success-bg-light.png") center / cover no-repeat,
+    #FBFBFA;
+}
+.dark .os-page {
+  background:
+    radial-gradient(70% 60% at 50% 45%, color-mix(in srgb, var(--background) 55%, transparent), transparent 75%),
+    url("/order-success-bg-dark.png") center / cover no-repeat,
+    #393051;
 }
 .os-wrap {
   position: relative;

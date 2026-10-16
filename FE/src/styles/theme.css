@@ -1,49 +1,48 @@
 /* ============================================================
-   LEN&EM — DESIGN TOKENS (v5 · "Indigo–Lilac, chuẩn 2 màu gốc")
+   LEN&EM — DESIGN TOKENS (v6 · "Hồng – Vàng / Tím – Xanh")
    ============================================================
-   Quy tắc:
-   1) CHỈ dùng 2 màu thương hiệu làm accent: Electric Indigo #5B3DF5
-      (đậm/nổi) và Soft Lilac #E8DEFF (nhạt/mềm) — mọi màu nhấn khác
-      chỉ là các sắc độ (tint/shade) của chính 2 màu này.
-   2) Chữ THƯỜNG luôn là đen/trắng trung tính (zinc scale) — KHÔNG
-      nhuộm tím. Chữ NHẤN (giá, số liệu, chữ ký, tiêu đề nổi bật)
-      mới dùng Indigo/Lilac, giống đúng 2 khối trong ảnh mood board.
-   3) Light mode: nền mềm (soft), gần trắng nhưng không chói.
-   4) Dark mode: nền phải có cảm giác "phát sáng" như đèn toả ra —
-      dùng glow (box-shadow + radial-gradient) quanh các điểm nhấn,
-      không chỉ đơn thuần là nền tối phẳng.
-   5) Đầy đủ mọi biến đang được các component thực tế sử dụng —
-      không còn biến "mồ côi" gây lỗi màu (vd: --color-text-muted).
+   Light mode:
+     #F9F9F7 hồng trắng (nền) · #F7CFD9 hồng (bề mặt, chip)
+     #EC769A hồng đậm (brand) · #FEED9C vàng · #CB6828 cam đậm
+     → nút/chữ nhấn dùng sắc đậm hơn của hồng (#C8436E / #B8395F)
+       để chữ trắng trên nút và chữ hồng trên nền đạt tương phản AA.
+   Dark mode:
+     #393051 tím đậm (card) · #7962AB tím (nút) · #B4D4F0 xanh
+     (link, chữ nhấn) · #1EAD7E xanh lá (thành công, tiến độ)
+   Quy tắc giữ nguyên: chữ thường luôn trung tính (đen/trắng);
+   rgba(var(--brand-rgb), a) tự đổi màu theo light/dark.
    ============================================================ */
 
 :root {
   color: var(--foreground);
   --font-size: 16px;
+  /* rgb của màu brand chính — dùng cho rgba(var(--brand-rgb), a) */
+  --brand-rgb: 200, 67, 110;
 
   /* ============================================================
-     BRAND RAMP — chỉ 1 hue duy nhất (Indigo→Lilac), nhiều sắc độ
+     BRAND RAMP — Hồng (#F7CFD9) → Hồng đậm (#EC769A), nhiều sắc độ
      ============================================================ */
-  --brand-50:  #F8F5FF;
-  --brand-100: #F1EAFE;
-  --brand-150: #E8DEFF;  /* ★ Soft Lilac — ĐÚNG HEX GỐC */
-  --brand-200: #D8C9F9;
-  --brand-300: #C3ADF5;
-  --brand-400: #9B84F2;
-  --brand-500: #7A63F5;
-  --brand-600: #5B3DF5;  /* ★ Electric Indigo — ĐÚNG HEX GỐC */
-  --brand-700: #4A2FE0;
-  --brand-800: #3B23BD;
-  --brand-900: #2A1985;
+  --brand-50:  #FDF2F5;
+  --brand-100: #FBE3EA;
+  --brand-150: #F7CFD9;  /* ★ Hồng — ĐÚNG HEX GỐC */
+  --brand-200: #F3B5C6;
+  --brand-300: #F09AB3;
+  --brand-400: #EC769A;  /* ★ Hồng đậm — ĐÚNG HEX GỐC */
+  --brand-500: #DE5A84;
+  --brand-600: #C8436E;  /* nút / link — sắc đậm của #EC769A (chữ trắng ≈ 4.7:1) */
+  --brand-700: #A8345A;
+  --brand-800: #862849;
+  --brand-900: #5E1C33;
 
   /* ============================================================
      🌞 LIGHT MODE
      ============================================================ */
 
   /* ── Nền — soft, gần trắng, không chói ── */
-  --bg-1: #FBFAFD;
-  --bg-2: #F4F0FC;
-  --bg-3: #ECE3FA;
-  --bg-1-rgb: 251, 250, 253;
+  --bg-1: #F9F9F7;
+  --bg-2: #FBF1F3;
+  --bg-3: #F8E4EA;
+  --bg-1-rgb: 249, 249, 247;
   --bg-gradient-160: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 55%, var(--bg-3) 100%);
   --bg-gradient-180: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-3) 100%);
   --bg-overlay-92: rgba(var(--bg-1-rgb), 0.92);
@@ -55,20 +54,20 @@
   --bg-vignette: linear-gradient(to bottom, rgba(var(--bg-1-rgb), 0) 55%, rgba(var(--bg-1-rgb), 0.22) 100%);
 
   --background:          var(--bg-1);
-  --surface:              var(--brand-150);  /* card = Soft Lilac đúng gốc */
-  --surface-secondary:    var(--brand-200);
+  --surface:              var(--brand-50);  /* bề mặt hồng rất nhạt */
+  --surface-secondary:    var(--brand-100);
   --muted:                var(--bg-2);
-  --card:                 var(--brand-150);
-  --card-warm:            var(--brand-100);
-  --card-hover:           var(--brand-200);
-  --card-glass:           rgba(251,250,253,.97);
+  --card:                 #FDF5F7;
+  --card-warm:            #FFF9E3;
+  --card-hover:           var(--brand-100);
+  --card-glass:           rgba(249,249,247,.97);
   --card-feature:         var(--bg-2);
   --card-bg:              var(--card);
 
   /* ── Border ── */
-  --border:              #DED0F7;
-  --border-subtle:       #E8DFFA;
-  --border-light:        #DED0F7;
+  --border:              #F3D3DD;
+  --border-subtle:       #F7E2E8;
+  --border-light:        #F3D3DD;
 
   /* ── TEXT THƯỜNG — đen/trắng trung tính, KHÔNG nhuộm tím ── */
   --foreground:            #18181B;   /* gần đen thuần */
@@ -82,11 +81,11 @@
   --color-text-muted:      var(--foreground-muted);
   --muted-foreground:      var(--foreground-muted);
 
-  /* ── TEXT NHẤN — nổi bật, dùng đúng Indigo/Lilac ── */
-  --text-accent:           var(--brand-600);  /* chữ nhấn trên nền sáng */
-  --text-accent-on-brand:  #FFFFFF;           /* chữ trên nền Indigo đặc */
+  /* ── TEXT NHẤN — hồng đậm (≈ 5.3:1 trên nền) ── */
+  --text-accent:           #B8395F;  /* chữ nhấn trên nền sáng */
+  --text-accent-on-brand:  #FFFFFF;           /* chữ trên nền hồng đặc */
 
-  /* ── Primary — Electric Indigo (đúng hex gốc) ── */
+  /* ── Primary — hồng đậm ── */
   --primary:            var(--brand-600);
   --primary-hover:      var(--brand-700);
   --primary-pressed:    var(--brand-800);
@@ -98,7 +97,7 @@
   /* ── Secondary button ── */
   --secondary:            var(--brand-150);
   --secondary-hover:      var(--brand-200);
-  --secondary-foreground: var(--brand-600);
+  --secondary-foreground: var(--brand-700);
 
   /* ── Link ── */
   --link:               var(--brand-600);
@@ -106,17 +105,17 @@
   --link-visited:       var(--brand-800);
 
   /* ── CTA Gradient ── */
-  --cta-gradient:       linear-gradient(135deg, var(--brand-600) 0%, var(--brand-500) 100%);
-  --cta-shadow:         0 4px 20px rgba(91, 61, 245, 0.20);
-  --cta-shadow-hover:   0 10px 32px rgba(74, 47, 224, 0.28);
+  --cta-gradient:       linear-gradient(135deg, var(--brand-500) 0%, var(--brand-600) 100%);
+  --cta-shadow:         0 4px 20px rgba(var(--brand-rgb), 0.28);
+  --cta-shadow-hover:   0 10px 32px rgba(var(--brand-rgb), 0.38);
 
-  /* ── Accent hỗ trợ — CHỈ LÀ sắc độ của Indigo/Lilac (không rẽ hue khác) ── */
+  /* ── Accent hỗ trợ — hồng + vàng #FEED9C + cam đậm #CB6828 ── */
   --accent-pink:         var(--brand-100);   /* nền chip nhạt */
-  --accent-yellow:       var(--brand-100);   /* dùng cùng 1 sắc thay vì hue lạ */
+  --accent-yellow:       #FEED9C;   /* dùng cùng 1 sắc thay vì hue lạ */
   --accent-blush:        var(--brand-400);   /* nút nổi bật cấp 2 */
-  --accent-cream:        var(--brand-50);
-  --accent-warm:         var(--brand-500);
-  --accent-lavender:     var(--brand-300);
+  --accent-cream:        #FFF8D9;
+  --accent-warm:         #CB6828;
+  --accent-lavender:     var(--brand-200);
   --accent-gray:         #EEEEF1;
   --accent-gray-text:    #52525B;
   --accent-green:        #E6F6EA;
@@ -131,23 +130,23 @@
   --decor-heart:         #E23E6B;            /* tim yêu thích — đỏ hồng rõ ràng, KHÁC biệt có chủ đích để không lẫn với brand, dễ nhận biết trạng thái */
   --decor-heart-soft:    #F293AC;
 
-  --decor-1-bg: var(--brand-100); --decor-1-border: var(--brand-500);
+  --decor-1-bg: var(--brand-100); --decor-1-border: var(--brand-400);
   --decor-2-bg: var(--brand-150); --decor-2-border: var(--brand-600);
-  --decor-3-bg: var(--brand-200); --decor-3-border: var(--brand-700);
-  --decor-4-bg: var(--brand-100); --decor-4-border: var(--brand-400);
+  --decor-3-bg: #FEED9C; --decor-3-border: #CB6828;
+  --decor-4-bg: #FFF8D9; --decor-4-border: #E0A15A;
   --decor-5-bg: var(--brand-50);  --decor-5-border: var(--brand-300);
   --decor-avatar-close: var(--brand-600);
-  --decor-avatar-s:     var(--brand-400);
+  --decor-avatar-s:     #CB6828;
 
   /* ── Status (giữ tách biệt để không lẫn với brand — cần thiết cho UX) ── */
   --success-bg: #E9F7EF; --success-text: #1F8A4C; --success-border: #BEE8CF;
-  --warning-bg: #FEF6E3; --warning-text: #9A6B00; --warning-border: #F5DFA0;
+  --warning-bg: #FFF6D1; --warning-text: #9E4D17; --warning-border: #FEED9C;
   --error-bg:   #FCE9E9; --error-text:   #C23B3B; --error-border:   #F3C4C4;
   --info-bg:    #E7EEFC; --info-text:    #2A56C6; --info-border:    #C4D4F5;
 
   /* Admin action buttons (view/edit/delete) — dùng lại status set */
   --action-info-bg: var(--info-bg); --action-info-border: var(--info-border); --action-info-text: var(--info-text); --action-info-hover-bg: #DCE7FA; --action-info-glow: rgba(42,86,198,0.35);
-  --action-warning-bg: var(--warning-bg); --action-warning-border: var(--warning-border); --action-warning-text: var(--warning-text); --action-warning-hover-bg: #FCEDC7; --action-warning-glow: rgba(154,107,0,0.30);
+  --action-warning-bg: var(--warning-bg); --action-warning-border: var(--warning-border); --action-warning-text: var(--warning-text); --action-warning-hover-bg: #FEED9C; --action-warning-glow: rgba(203,104,40,0.30);
   /* Nút chuyển trạng thái đơn — mỗi nút mang màu của trạng thái ĐÍCH (đậm hơn status text để đạt AA trên nền tint 15%) */
   --action-confirm: #1C3F9C; --action-prepare: #5B21B6; --action-ship: #0A5266; --action-deliver: #0F5530;
   --action-destructive-bg: var(--error-bg); --action-destructive-border: var(--error-border); --action-destructive-text: var(--error-text); --action-destructive-hover-bg: #FAD6D6; --action-destructive-glow: rgba(194,59,59,0.30);
@@ -156,9 +155,9 @@
   --destructive-foreground: #FFFFFF;
 
   /* ── Focus ring ── */
-  --focus-ring: 0 0 0 3px rgba(91, 61, 245, 0.35);
+  --focus-ring: 0 0 0 3px rgba(var(--brand-rgb), 0.35);
   --focus-ring-width: 3px;
-  --focus-ring-color: rgba(91, 61, 245, 0.35);
+  --focus-ring-color: rgba(var(--brand-rgb), 0.35);
 
   /* ── Shadows — trung tính, không nhuộm hết mọi thứ ── */
   --shadow-xs:   0 1px 2px rgba(24,24,27,0.04);
@@ -166,16 +165,16 @@
   --shadow-md:   0 2px 10px rgba(24,24,27,0.06), 0 6px 18px rgba(24,24,27,0.05);
   --shadow-lg:   0 6px 20px rgba(24,24,27,0.08), 0 12px 36px rgba(24,24,27,0.06);
   --shadow-xl:   0 10px 32px rgba(24,24,27,0.10), 0 20px 52px rgba(24,24,27,0.08);
-  --shadow-card: 0 1px 3px rgba(24,24,27,0.05), 0 4px 14px rgba(24,24,27,0.05), 0 0 0 1px rgba(222,208,247,0.6) inset;
-  --shadow-card-hover: 0 6px 20px rgba(24,24,27,0.09), 0 16px 42px rgba(91,61,245,0.12), 0 0 0 1px rgba(222,208,247,0.9) inset;
-  --shadow-card-elevated: 0 10px 34px rgba(24,24,27,0.10), 0 28px 60px rgba(91,61,245,0.12);
+  --shadow-card: 0 1px 3px rgba(24,24,27,0.05), 0 4px 14px rgba(24,24,27,0.05), 0 0 0 1px rgba(243,211,221,0.7) inset;
+  --shadow-card-hover: 0 6px 20px rgba(24,24,27,0.09), 0 16px 42px rgba(var(--brand-rgb),0.14), 0 0 0 1px rgba(243,211,221,1) inset;
+  --shadow-card-elevated: 0 10px 34px rgba(24,24,27,0.10), 0 28px 60px rgba(var(--brand-rgb),0.14);
   --shadow-float: 0 14px 46px rgba(24,24,27,0.12);
   --shadow-float-lg: 0 26px 64px rgba(24,24,27,0.14);
   /* Glow riêng cho phần tử cần nổi bật ngay ở light mode (nhẹ) */
-  --shadow-glow-primary: 0 0 24px rgba(91,61,245,0.18);
+  --shadow-glow-primary: 0 0 24px rgba(var(--brand-rgb),0.22);
 
   /* ── Glass ── */
-  --glass-bg:       rgba(251, 250, 253, 0.94);
+  --glass-bg:       rgba(249, 249, 247, 0.94);
   --glass-border:   rgba(255, 255, 255, 0.6);
   --glass-shadow:   0 4px 24px rgba(24,24,27,0.08);
   --glass-blur:     20px;
@@ -191,58 +190,58 @@
   /* ── Badge ── */
   --badge-radius: var(--radius-full);
   --badge-padding: 2px 12px;
-  --badge-purple-bg: var(--brand-100); --badge-purple-text: var(--brand-600);
-  --badge-pink-bg:   var(--brand-100); --badge-pink-text:   var(--brand-700);
-  --badge-yellow-bg: var(--brand-100); --badge-yellow-text: var(--brand-700);
-  --badge-peach-bg:  var(--brand-100); --badge-peach-text:  var(--brand-700);
-  --badge-warm-bg:   var(--brand-100); --badge-warm-text:   var(--brand-700);
+  --badge-purple-bg: var(--brand-100); --badge-purple-text: var(--brand-700);
+  --badge-pink-bg:   var(--brand-150); --badge-pink-text:   var(--brand-800);
+  --badge-yellow-bg: #FEED9C; --badge-yellow-text: #7A3B10;
+  --badge-peach-bg:  #FCE3CF; --badge-peach-text:  #9E4D17;
+  --badge-warm-bg:   #FFF6D1; --badge-warm-text:   #9E4D17;
   --badge-green-bg:  #E6F6EA; --badge-green-text: #1F8A4C;
 
   /* ── Filter Chip ── */
   --chip-bg:          #FFFFFF;
-  --chip-border:      #DED0F7;
+  --chip-border:      #F3D3DD;
   --chip-hover-bg:    var(--bg-2);
   --chip-active-bg:   var(--brand-150);
   --chip-active-border: var(--brand-600);
   --chip-radius:      var(--radius-full);
   --chip-padding:     6px 16px;
-  --chip-text:        var(--brand-600);
+  --chip-text:        var(--brand-700);
 
   /* ── About · Core Values — swatch "vải/len" theo đúng 2 sắc brand ──
-     Light: nền lilac nhạt (tint) + mực Indigo đậm → tương phản cao,
+     Light: nền hồng nhạt (tint) + mực hồng đậm → tương phản cao,
      đúng ý "mảnh vải" pastel của ảnh mood board. */
   --swatch-1-bg:     var(--brand-100);
   --swatch-2-bg:     var(--brand-150);
-  --swatch-3-bg:     var(--brand-200);
-  --swatch-icon-bg:  rgba(91, 61, 245, 0.14);
-  --swatch-ink:      var(--brand-600);
-  --swatch-border:   #DED0F7;
+  --swatch-3-bg:     #FEED9C;
+  --swatch-icon-bg:  rgba(var(--brand-rgb), 0.14);
+  --swatch-ink:      var(--brand-700);
+  --swatch-border:   #F3D3DD;
 
   /* ── Input ── */
   --input-bg:           #FFFFFF;
-  --input-border:       #DED0F7;
+  --input-border:       #F0CCD7;
   --input-hover-border: var(--brand-600);
   --input-focus-border: var(--brand-600);
   --input-hover-bg:     var(--bg-2);
-  --input-focus-shadow: 0 0 0 4px rgba(91, 61, 245, 0.10);
+  --input-focus-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.12);
   --input-radius:       var(--radius-lg);
   --input-placeholder:  #A1A1AA;
 
-  --switch-bg: #DED0F7;
+  --switch-bg: #F3D3DD;
 
   /* ── Table ── */
   --table-header: var(--bg-2);
   --table-body: #FFFFFF;
-  --table-row-alt: #FBF9FE;
+  --table-row-alt: #FDF7F9;
   --table-row-hover: var(--bg-3);
-  --table-border: #DED0F7;
+  --table-border: #F3D3DD;
 
   --sidebar-bg: #FFFFFF;
   --sidebar-hover: var(--bg-2);
   --sidebar-active: var(--brand-150);
-  --sidebar-border: #DED0F7;
+  --sidebar-border: #F3D3DD;
 
-  --navbar-bg: rgba(251, 250, 253, .97);
+  --navbar-bg: rgba(249, 249, 247, .97);
   --navbar-blur: 18px;
   --navbar-border: rgba(255, 255, 255, .7);
 
@@ -254,14 +253,14 @@
   --progress-fill: var(--brand-600);
 
   /* ── Glow — dùng CÓ CHỦ ĐÍCH, light mode nhẹ, dark mode mạnh (xem .dark) ── */
-  --glow-primary: rgba(91, 61, 245, 0.14);
-  --glow-pink: rgba(91, 61, 245, 0.12);
-  --glow-yellow: rgba(91, 61, 245, 0.10);
-  --glow-peach: rgba(91, 61, 245, 0.10);
-  --glow-lavender: rgba(91, 61, 245, 0.12);
+  --glow-primary: rgba(var(--brand-rgb), 0.16);
+  --glow-pink: rgba(var(--brand-rgb), 0.14);
+  --glow-yellow: rgba(254, 237, 156, 0.45);
+  --glow-peach: rgba(203, 104, 40, 0.12);
+  --glow-lavender: rgba(247, 207, 217, 0.45);
 
   --hover-overlay: rgba(255,255,255,.45);
-  --divider: #DED0F7;
+  --divider: #F3D3DD;
   --overlay: rgba(24,24,27,.35);
   --texture-opacity: 0.02;
 
@@ -269,9 +268,9 @@
      SECTION SPACING SCALE — nhịp khoảng cách nhất quán giữa các section
      Dùng clamp() để tự co giãn mượt theo viewport, tránh dư/thiếu
      ============================================================ */
-  --section-py-sm: clamp(3rem, 6vw, 4rem);     /* Hero, How-it-works, Learn */
-  --section-py-md: clamp(4.5rem, 9vw, 6rem);   /* Shop, DIY */
-  --section-py-lg: clamp(5.5rem, 11vw, 7.5rem); /* ClosingCTA */
+  --section-py-sm: clamp(2.25rem, 6vw, 4rem);     /* Hero, How-it-works, Learn */
+  --section-py-md: clamp(2.75rem, 9vw, 6rem);   /* Shop, DIY */
+  --section-py-lg: clamp(3.5rem, 11vw, 7.5rem); /* ClosingCTA */
 
   /* ── Spacing / Typography / Radius / Z / Anim — không đổi ── */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
@@ -334,13 +333,29 @@
   /* ── Theme toggle widget ── */
   --bg:       var(--background);
   --transDur: 0.4s;
-  --primaryT: rgba(91, 61, 245, 0.25);
+  --primaryT: rgba(var(--brand-rgb), 0.25);
+
+  /* ── Footer (LenEmFooter) — light: nền trắng, chữ tím than hợp logo ──
+     Tương phản trên nền: text 15:1, muted 7.3:1, dim 5.3:1 (đều ≥ WCAG AA) */
+  --footer-bg: #FFFFFF;
+  --footer-text: #2A2240;
+  --footer-text-muted: #5A5270;
+  --footer-text-dim: #6E6784;
+  --footer-border: rgba(42, 34, 64, 0.08);
+  --footer-glow: rgba(236, 118, 154, 0.10);
+  --footer-accent: rgba(236, 118, 154, 0.08);
+
+  /* ── Nút đổi theme — light: vàng #FEED9C, núm hổ phách cho mặt trời trắng ── */
+  --toggle-track: #FEED9C;
+  --toggle-thumb: #F2A93B;
 }
 
 /* ============================================================
    🌙 DARK MODE — "phát sáng như đèn", không phẳng lì
    ============================================================ */
+
 .dark {
+  --brand-rgb: 140, 123, 255;
   /* ── Nền tối, có sắc indigo rất nhẹ để glow "có chỗ để toả" ── */
   --bg-1: #0F0D16;
   --bg-2: #17131F;
@@ -574,6 +589,19 @@
   --color-warm-text-secondary: var(--foreground-secondary);
 
   --primaryT: rgba(140, 123, 255, 0.35);
+
+  /* ── Footer (LenEmFooter) — dark: giữ nguyên màu cũ ── */
+  --footer-bg: #1A1020;
+  --footer-text: #F5F0E8;
+  --footer-text-muted: #D0C4DC;
+  --footer-text-dim: #A898B0;
+  --footer-border: rgba(255,255,255,0.06);
+  --footer-glow: rgba(155,111,214,0.12);
+  --footer-accent: rgba(240,196,224,0.18);
+
+  /* ── Nút đổi theme — dark: Electric Indigo ── */
+  --toggle-track: #7C63FF;
+  --toggle-thumb: #9080FF;
 }
 
 /* ============================================================
@@ -598,16 +626,16 @@ body::before {
   z-index: 0;
   opacity: 0;
   background:
-    radial-gradient(600px 400px at 15% 0%, rgba(140,123,255,0.16), transparent 60%),
-    radial-gradient(500px 380px at 90% 30%, rgba(140,123,255,0.12), transparent 60%),
-    radial-gradient(700px 500px at 50% 100%, rgba(140,123,255,0.10), transparent 60%);
+    radial-gradient(600px 400px at 15% 0%, rgba(var(--brand-rgb),0.16), transparent 60%),
+    radial-gradient(500px 380px at 90% 30%, rgba(var(--brand-rgb),0.12), transparent 60%),
+    radial-gradient(700px 500px at 50% 100%, rgba(var(--brand-rgb),0.10), transparent 60%);
   transition: opacity 0.4s ease;
 }
 .dark body::before { opacity: 1; }
 
 html { scroll-behavior: smooth; font-size: var(--font-size); }
-::selection { background: rgba(91, 61, 245, 0.14); color: var(--foreground); }
-.dark ::selection { background: rgba(140, 123, 255, 0.30); }
+::selection { background: rgba(var(--brand-rgb), 0.14); color: var(--foreground); }
+.dark ::selection { background: rgba(var(--brand-rgb), 0.30); }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);

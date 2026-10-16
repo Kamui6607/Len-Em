@@ -119,7 +119,7 @@ export function LoginPage() {
         </figure>
 
         <img
-          src="/mascot.png"
+          src="/mascot-sheep.png"
           alt=""
           aria-hidden="true"
           className="auth-mascot"
@@ -152,7 +152,7 @@ export function LoginPage() {
               </p>
             </div>
             <img
-              src="/mascot.png"
+              src="/mascot-sheep.png"
               alt=""
               aria-hidden="true"
               className="fit-mascot"

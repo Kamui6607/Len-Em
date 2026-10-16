@@ -25,6 +25,18 @@ export interface UseProductsQueryParams {
  * - placeholderData: keepPreviousData → khi đổi filter/page, grid giữ nguyên
  *   dữ liệu cũ trong lúc fetch (KHÔNG nháy skeleton toàn grid → mượt hơn).
  */
+/**
+ * Toàn bộ sản phẩm thật (BE cap limit=100) — nguồn để dựng lựa chọn bộ lọc
+ * (màu len, số đếm danh mục). Không phụ thuộc filter/trang hiện tại nên chọn
+ * 1 màu không làm các màu khác biến mất.
+ */
+export function useProductCatalogQuery() {
+  return useQuery<PaginatedResponse<Product>>({
+    queryKey: ["products", "catalog"],
+    queryFn: () => fetchProducts({ limit: 100 }),
+  });
+}
+
 export function useProductsQuery(params: UseProductsQueryParams) {
   return useQuery<PaginatedResponse<Product>>({
     queryKey: ["products", "list", params],

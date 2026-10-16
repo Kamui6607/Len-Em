@@ -3,8 +3,9 @@ import { formatPrice } from "../../lib/formatPrice";
 
 import { useSearchParams } from "react-router";
 import { useDebounce } from "./useDebounce";
-import { useProductsQuery } from "./useProductsQuery";
-import { getDynamicFilters, products as catalogProducts } from "../../app/data/products";
+import { useProductCatalogQuery, useProductsQuery } from "./useProductsQuery";
+import { getValidHex, isDefaultVariant } from "../components/ProductVariantSelector";
+import { getDynamicFilters } from "../../app/data/products";
 import type { Product } from "../../app/data/products";
 import type { PaginatedResponse } from "../types/api.types";
 
@@ -113,10 +114,34 @@ export function useProducts() {
 
     const { data: productsPage, isPending, isError } = useProductsQuery(queryParams);
 
+  // Toàn bộ sản phẩm THẬT từ BE — trước đây lấy từ mock (app/data/products)
+  // nên tên màu không khớp variant thật và BE (lọc theo đúng tên màu) trả 0.
+  const { data: catalogPage } = useProductCatalogQuery();
+  const catalogProducts = useMemo(() => catalogPage?.data ?? [], [catalogPage]);
+
     // Build filter options from the full catalog, not the current paginated
   // result. Selecting a category must not make other filter groups disappear.
   const dynamicFilters: DynamicFilters = useMemo(() => {
     const extracted = getDynamicFilters(catalogProducts);
+
+    // Màu len: mọi variant thật có màu (bỏ "Mặc định" / hex lỗi), mọi danh mục.
+    // Giữ NGUYÊN tên màu — BE so khớp chính xác theo tên (?colors=Tên,Tên).
+    const colorMap = new Map<string, { hex: string; productIds: Set<string> }>();
+    catalogProducts.forEach((product) => {
+      product.variants?.forEach((variant) => {
+        const hex = getValidHex(variant.hexCode);
+        if (isDefaultVariant(variant) || !hex) return;
+        const name = variant.color.trim();
+        const entry = colorMap.get(name) ?? { hex, productIds: new Set<string>() };
+        entry.productIds.add(product.id);
+        colorMap.set(name, entry);
+      });
+    });
+    const colors = Array.from(colorMap, ([name, { hex, productIds }]) => ({
+      name,
+      hex,
+      count: productIds.size,
+    })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "vi"));
         const categoryCounts = new Map<string, number>();
 
     catalogProducts.forEach((product) => {
@@ -144,12 +169,12 @@ export function useProducts() {
           label: categoryLabels[value] ?? value,
           count: categoryCounts.get(value) ?? 0,
         })),
-      colors: extracted.colors,
+      colors,
       materials: extracted.materials,
       weights: extracted.weights,
       difficulties: extracted.difficulties,
     };
-  }, []);
+  }, [catalogProducts]);
 
     const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -157,7 +182,7 @@ export function useProducts() {
       product.tags.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet);
-  }, []);
+  }, [catalogProducts]);
 
   // isLoading (giữ nguyên interface) = isPending: CHỈ skeleton ở lần tải đầu
   // (chưa có dữ liệu nào). Khi đổi filter/page, keepPreviousData giữ dữ liệu

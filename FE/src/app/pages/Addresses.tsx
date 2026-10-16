@@ -694,7 +694,7 @@ export function Addresses() {
         ) : addresses.length === 0 ? (
           !showForm && (
             <div className="craft-empty craft-rise">
-              <img src="/mascot.png" alt="" aria-hidden="true" className="adr-empty-mascot" draggable={false} />
+              <img src="/mascot-sheep.png" alt="" aria-hidden="true" className="adr-empty-mascot" draggable={false} />
               <p className="craft-empty-title">Chưa có địa chỉ nào</p>
               <p className="craft-empty-desc">Thêm địa chỉ giao hàng để thuận tiện khi đặt hàng.</p>
               <button type="button" onClick={openCreate} className="craft-btn">

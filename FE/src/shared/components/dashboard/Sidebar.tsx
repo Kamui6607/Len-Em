@@ -18,6 +18,7 @@ import { UserMenu } from "../UserMenu";
 import { ThemeToggle } from "../ThemeToggle";
 import { cn } from "../ui/utils";
 import { YarnBallIcon } from "../../../features/shop/shopMeta";
+import { Wordmark } from "../brand/Wordmark";
 
 export interface NavItem {
   path?: string;
@@ -107,7 +108,7 @@ function SidebarContent({
           <YarnBallIcon size={20} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <p className="dash-side-name">Len&amp;em</p>
+          <Wordmark className="h-6" label="Len&em" />
           <p className="dash-side-title">{title}</p>
         </div>
         {onClose && (

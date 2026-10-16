@@ -476,9 +476,9 @@
 .cart-btn.is-primary {
   color: var(--primary-foreground);
   background: var(--cta-gradient, var(--primary));
-  box-shadow: var(--cta-shadow, 0 6px 18px rgba(91, 61, 245, 0.3));
+  box-shadow: var(--cta-shadow, 0 6px 18px rgba(var(--brand-rgb), 0.3));
 }
-.cart-btn.is-primary:hover { box-shadow: var(--cta-shadow-hover, 0 8px 22px rgba(91, 61, 245, 0.35)); }
+.cart-btn.is-primary:hover { box-shadow: var(--cta-shadow-hover, 0 8px 22px rgba(var(--brand-rgb), 0.35)); }
 .cart-btn.is-ghost {
   color: var(--primary);
   border: 1.5px solid color-mix(in srgb, var(--primary) 45%, var(--border));

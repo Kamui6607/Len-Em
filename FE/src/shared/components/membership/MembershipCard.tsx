@@ -7,6 +7,7 @@ import { formatPrice } from "../../../lib/formatPrice";
 import { ProgressBar } from "./ProgressBar";
 import "../../../styles/craft.css";
 import "../../../styles/membership.css";
+import { Wordmark } from "../brand/Wordmark";
 
 interface MembershipCardProps {
   compact?: boolean;
@@ -49,7 +50,8 @@ export function MembershipCard({
       <div className="mb-card-body">
         <div className="mb-card-top">
           <span className="mb-card-brand">
-            Len&amp;em<small>club</small>
+            <Wordmark mono className="h-[22px]" label="Len&em" />
+            <small>club</small>
           </span>
           <span className="mb-rank-chip">
             <span aria-hidden="true">{config.icon}</span>

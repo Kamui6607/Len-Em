@@ -129,7 +129,7 @@ export function ForgotPasswordPage() {
         </figure>
 
         <img
-          src="/mascot.png"
+          src="/mascot-sheep.png"
           alt=""
           aria-hidden="true"
           className="auth-mascot"
@@ -154,7 +154,7 @@ export function ForgotPasswordPage() {
             {!sent ? (
               <motion.div key="request" {...swap}>
                 <img
-                  src="/mascot.png"
+                  src="/mascot-sheep.png"
                   alt=""
                   aria-hidden="true"
                   className="auth-mobile-mascot"

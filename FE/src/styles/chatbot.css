@@ -43,8 +43,8 @@
   30%           { transform: translateY(-5px); opacity: 1; }
 }
 @keyframes chatbot-send-ripple {
-  0%   { box-shadow: 0 0 0 0 rgba(91, 61, 245, 0.45); }
-  100% { box-shadow: 0 0 0 14px rgba(91, 61, 245, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(var(--brand-rgb), 0.45); }
+  100% { box-shadow: 0 0 0 14px rgba(var(--brand-rgb), 0); }
 }
 @keyframes chatbot-send-ready {
   0%   { transform: scale(0.85); }

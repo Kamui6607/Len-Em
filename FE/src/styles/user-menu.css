@@ -389,7 +389,7 @@
   border: 1px solid var(--border);
   border-bottom: 0;
   background: var(--card);
-  box-shadow: 0 -18px 48px -12px rgba(24, 16, 60, 0.28);
+  box-shadow: 0 -18px 48px -12px rgba(57, 48, 81, 0.28);
 }
 
 /* ── Thẻ hồ sơ (cùng tay nắm là vùng kéo để đóng) ── */

@@ -132,7 +132,7 @@ a.nav-icon-btn:hover {
 }
 .dark .order-filter-btn.active {
   background: var(--primary);
-  box-shadow: 0 2px 8px rgba(124, 99, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.3);
   border-color: var(--primary);
 }
 
@@ -366,28 +366,28 @@ a.nav-icon-btn:hover {
    ============================================================ */
 .admin-panel-glow {
   box-shadow:
-    0 0 0 1px rgba(220, 211, 242, 0.6),
-    0 2px 8px rgba(91, 61, 245, 0.04),
-    0 4px 16px rgba(91, 61, 245, 0.04);
+    0 0 0 1px rgba(243, 211, 221, 0.6),
+    0 2px 8px rgba(var(--brand-rgb), 0.04),
+    0 4px 16px rgba(var(--brand-rgb), 0.04);
   transition: box-shadow 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
 }
 .admin-panel-glow:hover {
   box-shadow:
-    0 0 0 1px rgba(220, 211, 242, 0.9),
-    0 4px 16px rgba(91, 61, 245, 0.06),
-    0 8px 32px rgba(91, 61, 245, 0.08);
+    0 0 0 1px rgba(243, 211, 221, 0.9),
+    0 4px 16px rgba(var(--brand-rgb), 0.06),
+    0 8px 32px rgba(var(--brand-rgb), 0.08);
 }
 
 .dark .admin-panel-glow {
   box-shadow:
-    0 0 0 1px rgba(124, 99, 255, 0.16),
-    0 0 28px -8px rgba(124, 99, 255, 0.40),
+    0 0 0 1px rgba(var(--brand-rgb), 0.16),
+    0 0 28px -8px rgba(var(--brand-rgb), 0.40),
     var(--shadow-card);
 }
 .dark .admin-panel-glow:hover {
   box-shadow:
-    0 0 0 1px rgba(124, 99, 255, 0.26),
-    0 0 28px -4px rgba(124, 99, 255, 0.45),
+    0 0 0 1px rgba(var(--brand-rgb), 0.26),
+    0 0 28px -4px rgba(var(--brand-rgb), 0.45),
     var(--shadow-card-hover);
 }
 
@@ -397,18 +397,18 @@ a.nav-icon-btn:hover {
 .navbar-float {
   box-shadow:
     0 1px 2px rgba(24, 24, 27, 0.04),
-    0 10px 30px rgba(91, 61, 245, 0.10),
-    0 22px 50px rgba(91, 61, 245, 0.08),
+    0 10px 30px rgba(var(--brand-rgb), 0.10),
+    0 22px 50px rgba(var(--brand-rgb), 0.08),
     0 0 0 1px rgba(255, 255, 255, 0.55) inset;
 }
 
 .dark .navbar-float {
   box-shadow:
-    0 0 0 1px rgba(140, 123, 255, 0.28),
+    0 0 0 1px rgba(var(--brand-rgb), 0.28),
     0 10px 30px rgba(0, 0, 0, 0.55),
-    0 0 40px rgba(140, 123, 255, 0.30),
-    0 0 90px rgba(140, 123, 255, 0.14),
-    0 0 0 1px rgba(140, 123, 255, 0.16) inset;
+    0 0 40px rgba(var(--brand-rgb), 0.30),
+    0 0 90px rgba(var(--brand-rgb), 0.14),
+    0 0 0 1px rgba(var(--brand-rgb), 0.16) inset;
 }
 
 /* Dark mode glass panels */
@@ -416,21 +416,21 @@ a.nav-icon-btn:hover {
 .dark .glass-panel-solid,
 .dark .admin-dialog-content {
   box-shadow:
-    0 0 0 1px rgba(124, 99, 255, 0.16),
-    0 0 28px -8px rgba(124, 99, 255, 0.40),
+    0 0 0 1px rgba(var(--brand-rgb), 0.16),
+    0 0 28px -8px rgba(var(--brand-rgb), 0.40),
     var(--shadow-card);
 }
 
 .dark .admin-table {
-  box-shadow: inset 0 0 0 1px rgba(124, 99, 255, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), 0.10);
 }
 
 /* Inputs / selects / filter triggers glow on hover + focus */
 .dark .input:hover, .dark .select:hover, .dark .admin-filter-trigger:hover {
-  box-shadow: 0 0 0 1px rgba(124, 99, 255, 0.28), 0 0 18px rgba(124, 99, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.28), 0 0 18px rgba(var(--brand-rgb), 0.28);
 }
 .dark .input:focus, .dark .select:focus, .dark .admin-filter-trigger.is-open {
-  box-shadow: 0 0 0 1px rgba(124, 99, 255, 0.45), 0 0 24px rgba(124, 99, 255, 0.35), var(--input-focus-shadow);
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.45), 0 0 24px rgba(var(--brand-rgb), 0.35), var(--input-focus-shadow);
 }
 
 .admin-filter-trigger {
@@ -1017,7 +1017,7 @@ select.input {
 
 select.input:hover {
   border-color: var(--input-hover-border);
-  box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.1);
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
 }
@@ -1025,7 +1025,7 @@ select.input:hover {
 select.input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.15), 0 0 0 1px var(--primary);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--primary);
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
 }
@@ -1134,7 +1134,7 @@ select.input[class*="bg-none"],
 .dropdown-item:hover {
   background: var(--surface-secondary);
   transform: translateX(4px);
-  box-shadow: 0 2px 8px rgba(91, 61, 245, 0.1);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.1);
 }
 
 .dropdown-item:hover::before {
@@ -1142,10 +1142,10 @@ select.input[class*="bg-none"],
 }
 
 .dropdown-item.selected {
-  background: linear-gradient(135deg, rgba(91, 61, 245, 0.12), rgba(232, 222, 255, 0.12));
+  background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.12), rgba(247, 207, 217, 0.12));
   color: var(--primary);
   font-weight: 500;
-  box-shadow: inset 0 0 0 1px rgba(91, 61, 245, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), 0.2);
 }
 
 .dropdown-item.selected::before {
@@ -1154,8 +1154,8 @@ select.input[class*="bg-none"],
 }
 
 .dropdown-item.selected:hover {
-  background: linear-gradient(135deg, rgba(91, 61, 245, 0.18), rgba(232, 222, 255, 0.18));
-  box-shadow: inset 0 0 0 1px rgba(91, 61, 245, 0.3), 0 2px 12px rgba(91, 61, 245, 0.15);
+  background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.18), rgba(247, 207, 217, 0.18));
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), 0.3), 0 2px 12px rgba(var(--brand-rgb), 0.15);
 }
 
 .dropdown-item .check-icon {
@@ -1399,7 +1399,7 @@ select.input[class*="bg-none"],
 }
 .dark .btn-secondary:hover,
 .dark .btn-modal-cancel:hover {
-  box-shadow: 0 0 16px rgba(140, 123, 255, 0.22);
+  box-shadow: 0 0 16px rgba(var(--brand-rgb), 0.22);
 }
 
 /* Destructive — dùng tông error-text sẵn có trong token, không lệch hệ màu */
@@ -1459,7 +1459,7 @@ select.input[class*="bg-none"],
   transform: translateY(0);
 }
 .dark .btn-icon:hover {
-  box-shadow: 0 0 14px rgba(140, 123, 255, 0.3);
+  box-shadow: 0 0 14px rgba(var(--brand-rgb), 0.3);
 }
 
 /* ----------------------------------------------------------------
@@ -1495,10 +1495,10 @@ select.input[class*="bg-none"],
   box-shadow: var(--input-focus-shadow);
 }
 .dark .input:hover {
-  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.22), 0 0 16px rgba(140, 123, 255, 0.16);
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.22), 0 0 16px rgba(var(--brand-rgb), 0.16);
 }
 .dark .input:focus {
-  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.4), 0 0 22px rgba(140, 123, 255, 0.28), var(--input-focus-shadow);
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4), 0 0 22px rgba(var(--brand-rgb), 0.28), var(--input-focus-shadow);
 }
 
 /* Search icon inputs: canh icon + input đồng bộ chiều cao, không cần đổi markup */
@@ -1537,7 +1537,7 @@ select.input[class*="bg-none"],
   color: var(--primary);
 }
 .dark .chip-filter.active {
-  box-shadow: 0 0 12px rgba(140, 123, 255, 0.3);
+  box-shadow: 0 0 12px rgba(var(--brand-rgb), 0.3);
 }
 
 /* ----------------------------------------------------------------
@@ -1561,7 +1561,7 @@ select.input[class*="bg-none"],
   box-shadow: var(--focus-ring);
 }
 .dark .admin-table thead th button:hover {
-  box-shadow: 0 0 10px rgba(140, 123, 255, 0.22);
+  box-shadow: 0 0 10px rgba(var(--brand-rgb), 0.22);
 }
 
 /* ----------------------------------------------------------------
@@ -1623,9 +1623,9 @@ select.input[class*="bg-none"],
 }
 .dark .admin-stat-card:hover {
   box-shadow:
-    0 0 0 1px rgba(140, 123, 255, 0.28),
+    0 0 0 1px rgba(var(--brand-rgb), 0.28),
     0 12px 34px rgba(0, 0, 0, 0.45),
-    0 0 34px rgba(140, 123, 255, 0.28);
+    0 0 34px rgba(var(--brand-rgb), 0.28);
 }
 
 .admin-stat-icon {
@@ -1661,7 +1661,7 @@ select.input[class*="bg-none"],
   animation: admin-shimmer 1.4s infinite;
 }
 .dark .admin-skeleton::after {
-  background: linear-gradient(90deg, transparent, rgba(140, 123, 255, 0.22), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--brand-rgb), 0.22), transparent);
 }
 @keyframes admin-shimmer {
   100% { transform: translateX(100%); }
@@ -1677,7 +1677,7 @@ select.input[class*="bg-none"],
   transform: rotate(-6deg) scale(1.05);
 }
 .dark .admin-panel-glow:hover .admin-section-icon {
-  box-shadow: 0 0 16px rgba(140, 123, 255, 0.35);
+  box-shadow: 0 0 16px rgba(var(--brand-rgb), 0.35);
 }
 
 /* ----------------------------------------------------------------
@@ -1697,7 +1697,7 @@ select.input[class*="bg-none"],
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 .dark .admin-activity-dot {
-  box-shadow: 0 0 0 3px rgba(140, 123, 255, 0.16), 0 0 8px rgba(140, 123, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.16), 0 0 8px rgba(var(--brand-rgb), 0.6);
 }
 
 /* ----------------------------------------------------------------
@@ -1717,7 +1717,7 @@ select.input[class*="bg-none"],
   transform: scaleY(1.4);
 }
 .dark .admin-breakdown-track {
-  box-shadow: 0 0 14px rgba(140, 123, 255, 0.14);
+  box-shadow: 0 0 14px rgba(var(--brand-rgb), 0.14);
   border-radius: 9999px;
 }
 
@@ -1762,7 +1762,7 @@ select.input[class*="bg-none"],
   border-left-color: var(--primary);
 }
 .dark .admin-table tbody tr:hover {
-  box-shadow: inset 3px 0 0 var(--primary), 0 0 18px -6px rgba(140, 123, 255, 0.35);
+  box-shadow: inset 3px 0 0 var(--primary), 0 0 18px -6px rgba(var(--brand-rgb), 0.35);
 }
 
 /* Sticky header — thêm bóng đổ tinh tế phân tách khi cuộn bảng ngang/dọc */
@@ -1770,7 +1770,7 @@ select.input[class*="bg-none"],
   box-shadow: 0 1px 0 var(--table-border);
 }
 .dark .admin-table thead th {
-  box-shadow: 0 1px 0 var(--table-border), 0 8px 16px -12px rgba(140, 123, 255, 0.4);
+  box-shadow: 0 1px 0 var(--table-border), 0 8px 16px -12px rgba(var(--brand-rgb), 0.4);
 }
 
 /* Cột đầu tiên (thường chứa avatar/ảnh/tiêu đề) — làm nổi nhẹ font-weight cho dễ quét mắt */
@@ -1828,7 +1828,7 @@ svg.lucide.opacity-40 {
   color: var(--foreground-subtle);
 }
 .dark svg.lucide.opacity-40 {
-  filter: drop-shadow(0 0 14px rgba(140, 123, 255, 0.32));
+  filter: drop-shadow(0 0 14px rgba(var(--brand-rgb), 0.32));
 }
 
 /* Khối empty-state chung (tuỳ chọn thêm className="admin-empty-state") */
@@ -1842,7 +1842,7 @@ svg.lucide.opacity-40 {
   opacity: 0.4;
 }
 .dark .admin-empty-state svg {
-  filter: drop-shadow(0 0 14px rgba(140, 123, 255, 0.32));
+  filter: drop-shadow(0 0 14px rgba(var(--brand-rgb), 0.32));
 }
 .admin-empty-state p:first-of-type {
   font-weight: 600;
@@ -1912,7 +1912,7 @@ svg.lucide.opacity-40 {
   opacity: 0.9;
 }
 .dark .admin-dialog-content::before {
-  box-shadow: 0 0 14px rgba(140, 123, 255, 0.65);
+  box-shadow: 0 0 14px rgba(var(--brand-rgb), 0.65);
 }
 
 /* ----------------------------------------------------------------
@@ -1988,7 +1988,7 @@ svg.lucide.opacity-40 {
    glow ở dark cho các con số quan trọng khi nằm trong dialog.
    ---------------------------------------------------------------- */
 .dark .admin-dialog-body .text-primary {
-  text-shadow: 0 0 18px rgba(140, 123, 255, 0.35);
+  text-shadow: 0 0 18px rgba(var(--brand-rgb), 0.35);
 }
 
 /* Reduced motion — tôn trọng người dùng tắt hiệu ứng */
@@ -2019,7 +2019,7 @@ svg.lucide.opacity-40 {
   transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease-out);
 }
 .dark .border-primary.bg-primary {
-  box-shadow: 0 0 10px rgba(140, 123, 255, 0.55);
+  box-shadow: 0 0 10px rgba(var(--brand-rgb), 0.55);
 }
 
 /* ----------------------------------------------------------------
@@ -2031,7 +2031,7 @@ svg.lucide.opacity-40 {
   position: relative;
 }
 .dark .bg-primary\/10.text-primary {
-  box-shadow: inset 0 0 0 1px rgba(140, 123, 255, 0.28), 0 0 16px -6px rgba(140, 123, 255, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), 0.28), 0 0 16px -6px rgba(var(--brand-rgb), 0.4);
 }
 
 /* Hàng chưa chọn — hover mượt hơn (áp cho mọi nút picker item) */
@@ -2063,7 +2063,7 @@ label:has(> input[type="file"]):hover {
   background: var(--chip-active-bg) !important;
 }
 .dark label:has(> input[type="file"]):hover {
-  box-shadow: 0 0 20px rgba(140, 123, 255, 0.28);
+  box-shadow: 0 0 20px rgba(var(--brand-rgb), 0.28);
 }
 
 /* Input file trần (không bọc label riêng) — polish nút "Choose file" */
@@ -2088,7 +2088,7 @@ input[type="file"].input:hover::file-selector-button {
   background: var(--chip-active-bg);
 }
 .dark input[type="file"].input::file-selector-button {
-  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.2);
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.2);
 }
 
 /* ----------------------------------------------------------------
@@ -2157,10 +2157,10 @@ aside.lg\:sticky {
   font-weight: 500;
 }
 .admin-filter-trigger.is-open {
-  box-shadow: 0 0 0 3px rgba(91, 61, 245, 0.10);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.10);
 }
 .dark .admin-filter-trigger.is-open {
-  box-shadow: 0 0 0 1px rgba(140, 123, 255, 0.4), 0 0 20px rgba(140, 123, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4), 0 0 20px rgba(var(--brand-rgb), 0.28);
 }
 
 /* ----------------------------------------------------------------
@@ -2242,4 +2242,56 @@ aside.lg\:sticky {
 @keyframes admin-shimmer-fade {
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
+}
+
+/* ============================================================
+   WORDMARK "len&em" (ảnh /logo-wordmark.png) — <Wordmark />
+   ============================================================ */
+.brand-wordmark {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  user-select: none;
+}
+/* Dark: chữ tím đậm chìm trên nền tối → làm sáng lên */
+.dark .brand-wordmark {
+  filter: brightness(1.55) saturate(0.95) drop-shadow(0 0 8px rgba(155, 120, 230, 0.25));
+}
+/* Bản đơn sắc: tô theo currentColor qua mask */
+.brand-wordmark-mono {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: url("/logo-wordmark.png") center / contain no-repeat;
+  mask: url("/logo-wordmark.png") center / contain no-repeat;
+}
+
+/* ============================================================
+   LOGO CỪU (/cuu.png) — dùng chung cho Navigation, footer, trang auth.
+   Đặt class "group" lên link chứa logo để có hiệu ứng hover.
+   ============================================================ */
+/* Logo không khung: bóng mềm cho có chiều sâu, nghiêng + nảy nhẹ khi hover */
+.brand-mark {
+  flex-shrink: 0;
+  object-fit: contain;
+  transform-origin: 40% 70%;
+  filter: drop-shadow(0 3px 6px rgba(232, 110, 160, 0.22));
+  transition: transform 0.35s var(--ease-spring), filter 0.35s var(--ease-out);
+}
+.group:hover .brand-mark {
+  transform: rotate(-8deg) scale(1.06);
+  filter: drop-shadow(0 6px 12px rgba(232, 110, 160, 0.34));
+}
+.group:active .brand-mark { transform: scale(0.95); }
+/* Dark: nét hồng của logo cừu đã nổi trên nền tối — chỉ thêm quầng hồng nhẹ */
+.dark .brand-mark {
+  filter: drop-shadow(0 0 10px rgba(240, 130, 175, 0.35));
+}
+.dark .group:hover .brand-mark {
+  filter: drop-shadow(0 0 16px rgba(240, 130, 175, 0.55));
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark { transition: none; }
+  .group:hover .brand-mark,
+  .group:active .brand-mark { transform: none; }
 }

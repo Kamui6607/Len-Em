@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
 type Theme = "light" | "dark";
@@ -17,6 +17,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return (saved as Theme) || "light";
   });
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
@@ -25,9 +27,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove("dark");
     }
+    root.style.colorScheme = theme;
+    localStorage.setItem("lenEm_theme", theme);
+    // The inline script in index.html already applied the theme before paint;
+    // animating on mount would fade from light to dark.
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     // Add theme-transition class for smooth theme-aware transitions
     body.classList.add("theme-transition");
-    localStorage.setItem("lenEm_theme", theme);
     // Remove transition class after animation completes to prevent side effects
     const timer = setTimeout(() => {
       body.classList.remove("theme-transition");

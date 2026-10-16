@@ -232,12 +232,9 @@
   gap: 12px;
 }
 .mb-card-brand {
-  font-family: var(--font-heading);
-  font-style: italic;
-  font-weight: 700;
-  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: flex-end;
   line-height: 1;
-  letter-spacing: -0.01em;
 }
 .mb-card-brand small {
   margin-left: 4px;

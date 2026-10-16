@@ -13,7 +13,7 @@ export default defineConfig({
       // Không tự inject script đăng ký - tự đăng ký trong main.tsx
       // có kiểm tra để BỎ QUA khi đang chạy bên trong app Tauri (desktop/mobile)
       injectRegister: false,
-      includeAssets: ['icons/apple-touch-icon.png'],
+      includeAssets: ['icons/apple-touch-icon.png', 'favicon.ico', 'favicon.png'],
       manifest: {
         name: 'Len&Em',
         short_name: 'Len&Em',

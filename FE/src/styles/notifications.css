@@ -417,7 +417,7 @@
 /* ── Empty state ── */
 .ntf-empty .craft-empty-title { margin-top: 8px; }
 .ntf-empty-mascot {
-  width: 120px;
+  width: 92px;
   height: auto;
   animation: ntf-bob 5s ease-in-out infinite;
 }

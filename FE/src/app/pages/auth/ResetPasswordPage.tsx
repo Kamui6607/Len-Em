@@ -4,6 +4,7 @@ import { Lock, ArrowLeft, CircleCheck as CheckCircle2, Loader as Loader2, Sparkl
 import { toast } from "sonner";
 import { authService } from "../../../shared/api/authService";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
+import { Wordmark } from "../../../shared/components/brand/Wordmark";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -149,36 +150,9 @@ export function ResetPasswordPage() {
         }}>
           <div style={{ width: "100%", maxWidth: 420 }}>
             <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-                <div style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
-                  background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "'Playfair Display', serif",
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: "var(--primary)",
-                  transition: "transform 0.2s",
-                }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.05)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-                >
-                  L
-                </div>
-                <span style={{
-                  fontFamily: "'Playfair Display', serif",
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: "var(--foreground)",
-                  letterSpacing: "-0.3px",
-                }}>
-                  Len&Em
-                </span>
+              <Link to="/" aria-label="Len&Em" className="group" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+                <img src="/cuu.png" alt="" width={53} height={44} className="brand-mark h-11 w-auto" draggable={false} />
+                <Wordmark className="h-8" />
               </Link>
             </div>
 
@@ -262,31 +236,9 @@ export function ResetPasswordPage() {
           overflow: "hidden",
         }}>
           <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-            <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 40, textDecoration: "none" }}>
-              <div style={{
-                width: 44,
-                height: 44,
-                borderRadius: 14,
-                background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 20,
-                fontWeight: 700,
-                color: "var(--primary)",
-              }}>
-                L
-              </div>
-              <span style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 22,
-                fontWeight: 700,
-                color: "var(--foreground)",
-              }}>
-                Len&Em
-              </span>
+            <Link to="/" aria-label="Len&Em" className="group" style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 40, textDecoration: "none" }}>
+              <img src="/cuu.png" alt="" width={53} height={44} className="brand-mark h-11 w-auto" draggable={false} />
+              <Wordmark className="h-8" />
             </Link>
 
             <div style={{
@@ -368,36 +320,9 @@ export function ResetPasswordPage() {
       }}>
         <div style={{ width: "100%", maxWidth: 420 }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-              <div style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 22,
-                fontWeight: 700,
-                color: "var(--primary)",
-                transition: "transform 0.2s",
-              }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.05)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-              >
-                L
-              </div>
-              <span style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 24,
-                fontWeight: 700,
-                color: "var(--foreground)",
-                letterSpacing: "-0.3px",
-              }}>
-                Len&Em
-              </span>
+            <Link to="/" aria-label="Len&Em" className="group" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+              <img src="/cuu.png" alt="" width={53} height={44} className="brand-mark h-11 w-auto" draggable={false} />
+              <Wordmark className="h-8" />
             </Link>
           </div>
 

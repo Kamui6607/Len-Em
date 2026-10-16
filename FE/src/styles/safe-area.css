@@ -54,6 +54,14 @@
   .has-tabbar {
     padding-bottom: calc(var(--float-row-bottom) + var(--fab-size) + 12px);
   }
+  /* Khi trang kết thúc bằng footer: footer tự chừa chỗ đó bên trong nó,
+     để vùng dưới thanh tab mang nền footer thay vì một dải trống. */
+  .has-tabbar:has(.lenem-footer) {
+    padding-bottom: 0;
+  }
+  .has-tabbar .lenem-footer {
+    padding-bottom: calc(var(--float-row-bottom) + var(--fab-size) + 12px);
+  }
 }
 
 /* 100vh trên mobile tính cả thanh địa chỉ → dùng dvh (chiều cao thực tế) */

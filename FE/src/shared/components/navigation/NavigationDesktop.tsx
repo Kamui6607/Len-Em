@@ -74,7 +74,7 @@ export function NavigationDesktop(props: NavigationDesktopProps) {
           style={{ borderRadius: 999 }}
         >
           <motion.div layout="position" transition={morph} className="navx-brand">
-            <Brand tagline={props.t("nav.tagline")} markOnly={compact} compact={compact} />
+            <Brand markOnly={compact} compact={compact} />
           </motion.div>
 
           {compact && <span className="navx-sep" aria-hidden="true" />}
@@ -205,9 +205,14 @@ export function NavigationDesktop(props: NavigationDesktopProps) {
             </span>
 
             {props.showAuthPlaceholder && (
-              <div className="ml-1 flex items-center gap-1.5">
-                <div className="h-[38px] w-[84px] animate-pulse rounded-full bg-[var(--chip-bg)]" />
-                <div className="h-[38px] w-[104px] animate-pulse rounded-full bg-[var(--chip-bg)]" />
+              // Loading only happens when a session token exists, so mirror the
+              // signed-in control (Start on landing pages, avatar elsewhere).
+              <div className="ml-1 flex items-center" aria-hidden="true">
+                {isLanding ? (
+                  <div className="h-[38px] w-[92px] animate-pulse rounded-full bg-[var(--chip-bg)]" />
+                ) : (
+                  <div className="size-[44px] animate-pulse rounded-full bg-[var(--chip-bg)]" />
+                )}
               </div>
             )}
 
