@@ -388,6 +388,55 @@
   animation: os-shimmer 1.4s linear infinite;
 }
 
+/* ── Vừa khít 1 màn hình (desktop, 2 cột) — không cần cuộn trang ──
+   Khoảng cách / kích thước co theo chiều cao viewport (dvh); phiếu đơn
+   dài (nhiều sản phẩm) tự cuộn bên trong thay vì đẩy trang dài ra. */
+@media (min-width: 900px) {
+  .os-page {
+    --os-pad-y: clamp(12px, 3dvh, 40px);
+    height: 100dvh;
+    min-height: 0;
+    padding: var(--os-pad-y) 24px;
+  }
+  .os-wrap {
+    max-height: 100%;
+  }
+  .os-gift svg {
+    width: clamp(80px, 20dvh, 180px);
+    height: auto;
+  }
+  .os-chip {
+    margin-bottom: clamp(6px, 1.4dvh, 14px);
+  }
+  .os-title {
+    font-size: clamp(1.5rem, min(4.4vw, 5.2dvh), 2.8rem) !important;
+  }
+  .os-stitch {
+    margin: clamp(6px, 1.4dvh, 14px) 0;
+  }
+  .os-code {
+    margin-top: clamp(8px, 2dvh, 20px);
+  }
+  .os-thread {
+    margin-top: clamp(8px, 2.2dvh, 22px);
+    padding: clamp(8px, 1.6dvh, 16px) 10px clamp(6px, 1.2dvh, 12px);
+  }
+  .os-ctas {
+    margin-top: clamp(10px, 2.4dvh, 24px);
+  }
+  .os-ticket {
+    max-height: calc(100dvh - 2 * var(--os-pad-y));
+    overflow-y: auto;
+    padding: clamp(18px, 3dvh, 30px) 24px clamp(14px, 2.4dvh, 24px);
+  }
+  .os-ticket-head {
+    margin-bottom: clamp(8px, 1.6dvh, 16px);
+  }
+  .os-divider {
+    margin: clamp(8px, 1.6dvh, 16px) 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .os-hero,
   .os-gift,

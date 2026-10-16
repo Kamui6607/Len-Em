@@ -241,6 +241,35 @@ export interface GetOrderResponse {
   order: Order;
 }
 
+/**
+ * Lấy order đã cập nhật từ response PATCH /orders/:id/status (hoặc /cancel-request).
+ * BE có thể trả `{ order }`, `{ data: { order } }` hoặc `{ data: order }`; null khi không có.
+ */
+export function pickOrderFromResponse(body: unknown): Order | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as { order?: unknown; data?: unknown };
+  const nested = b.data && typeof b.data === "object" ? (b.data as { order?: unknown }) : undefined;
+  const candidate = b.order ?? nested?.order ?? b.data;
+  if (candidate && typeof candidate === "object" && "_id" in candidate && "orderStatus" in candidate) {
+    return candidate as Order;
+  }
+  return null;
+}
+
+/** "14:05 16/10/2026" — ngày thanh toán (payment.paidAt) do BE trả về. */
+export function formatPaidAt(paidAt?: string): string {
+  if (!paidAt) return "";
+  const date = new Date(paidAt);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 export function normalizeOrder(order: Order): Order {
   return {
     ...order,

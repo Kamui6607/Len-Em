@@ -7,16 +7,69 @@ import { Input } from "../../../shared/components/ui/input";
 import { Label } from "../../../shared/components/ui/label";
 import { Switch } from "../../../shared/components/ui/switch";
 import { Badge } from "../../../shared/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../shared/components/ui/select";
 import { lessonService } from "../../../shared/api/lessonService";
 import { productService, type Product } from "../../../shared/api/productService";
 import { kitService, type Kit } from "../../../shared/api/kitService";
-import type { LessonFormData } from "../../../features/learn/types/learn.types";
+import type { LessonFormData, LessonLinkedProduct } from "../../../features/learn/types/learn.types";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { AdminBackHeader } from "../../../shared/components/admin/AdminBackHeader";
 import {
   AdminFormSkeleton,
   AdminPickerSkeleton,
 } from "../../../shared/components/skeletons/AdminSkeleton";
+
+const NOTE_MAX_LENGTH = 500;
+
+/** productId trong response lesson có thể là string hoặc object sản phẩm đã populate. */
+function normalizeProductId(productId: LessonLinkedProduct["productId"]): string {
+  return typeof productId === "string" ? productId : productId?._id ?? "";
+}
+
+/** Giá trị Select cho lựa chọn "Không chọn variant" (Radix Select không cho value rỗng). */
+const NO_VARIANT = "__none__";
+
+interface VariantOption {
+  id: string;
+  color: string;
+  hexCode?: string;
+  image?: string;
+}
+
+/**
+ * Id variant khác tên trường tùy nguồn: GET /products trả `_idVariants`,
+ * dữ liệu populate trong lesson/course trả `_id`.
+ */
+function toVariantOptions(
+  variants: { _id?: string; _idVariants?: string; color: string; hexCode?: string; image?: string }[] | undefined,
+): VariantOption[] {
+  return (variants ?? [])
+    .map((v) => ({ id: v._idVariants ?? v._id ?? "", color: v.color, hexCode: v.hexCode, image: v.image }))
+    .filter((v) => v.id);
+}
+
+function VariantSwatch({ variant }: { variant: VariantOption }) {
+  if (variant.image) {
+    return <img src={variant.image} alt="" className="size-4 flex-shrink-0 rounded-sm object-cover" />;
+  }
+  return (
+    <span
+      className="size-4 flex-shrink-0 rounded-sm border"
+      style={{ background: variant.hexCode || "transparent" }}
+    />
+  );
+}
+
+function formatTimestamp(totalSeconds: number) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
 
 export function LessonFormPage() {
   const navigate = useNavigate();
@@ -32,6 +85,8 @@ export function LessonFormPage() {
   const [kitsLoading, setKitsLoading] = useState(true);
   const [productSearch, setProductSearch] = useState("");
   const [kitSearch, setKitSearch] = useState("");
+  // Tên + variants lấy từ dữ liệu populate — dùng khi sản phẩm không nằm trong 100 sản phẩm đã tải
+  const [linkedInfo, setLinkedInfo] = useState<Record<string, { name: string; variants: VariantOption[] }>>({});
 
   const [form, setForm] = useState<LessonFormData>({
     title: "",
@@ -61,12 +116,28 @@ export function LessonFormPage() {
         setLoading(true);
         const res = await lessonService.getById(lessonId);
         const lesson = res.data.data.lesson;
+        const info: Record<string, { name: string; variants: VariantOption[] }> = {};
+        const linkedProduct = (lesson.linkedProduct ?? [])
+          .map((lp) => {
+            const productId = normalizeProductId(lp.productId);
+            if (typeof lp.productId === "object" && lp.productId) {
+              info[productId] = { name: lp.productId.name, variants: toVariantOptions(lp.productId.variants) };
+            }
+            return {
+              productId,
+              variantId: lp.variantId,
+              timestamp: lp.timestamp ?? 0,
+              note: lp.note ?? "",
+            };
+          })
+          .filter((lp) => lp.productId);
+        setLinkedInfo(info);
         setForm({
           title: lesson.title,
           order: lesson.order,
           videoUrl: lesson.videoUrl,
           duration: lesson.duration,
-          linkedProduct: lesson.linkedProduct ?? [],
+          linkedProduct,
           linkedCombo: lesson.linkedCombo ?? [],
           isPreview: lesson.isPreview,
         });
@@ -90,6 +161,24 @@ export function LessonFormPage() {
       toast.error(t("admin.lessons.form.videoUrlRequired"));
       return;
     }
+    // duration tính bằng phút, timestamp tính bằng giây
+    const maxTimestamp = form.duration * 60;
+    for (const lp of form.linkedProduct) {
+      if (!Number.isFinite(lp.timestamp) || lp.timestamp < 0 || lp.timestamp > maxTimestamp) {
+        toast.error(t("admin.lessons.form.timestampInvalid", { max: maxTimestamp }));
+        return;
+      }
+      if (lp.note.length > NOTE_MAX_LENGTH) {
+        toast.error(t("admin.lessons.form.noteTooLong", { max: NOTE_MAX_LENGTH }));
+        return;
+      }
+    }
+    const linkedProduct = form.linkedProduct.map((lp) => ({
+      productId: lp.productId,
+      ...(lp.variantId ? { variantId: lp.variantId } : {}),
+      timestamp: lp.timestamp,
+      note: lp.note.trim(),
+    }));
 
     try {
       setSaving(true);
@@ -99,7 +188,7 @@ export function LessonFormPage() {
           order: form.order,
           videoUrl: form.videoUrl,
           duration: form.duration,
-          linkedProduct: form.linkedProduct,
+          linkedProduct,
           linkedCombo: form.linkedCombo,
           isPreview: form.isPreview,
         });
@@ -110,15 +199,16 @@ export function LessonFormPage() {
           order: form.order,
           videoUrl: form.videoUrl,
           duration: form.duration,
-          linkedProduct: form.linkedProduct,
+          linkedProduct,
           linkedCombo: form.linkedCombo,
           isPreview: form.isPreview,
         });
         toast.success(t("admin.lessons.form.createdSuccess"));
       }
       navigate("/admin/lessons");
-    } catch {
-      toast.error(isEditing ? t("admin.lessons.form.failedUpdate") : t("admin.lessons.form.failedCreate"));
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(message || (isEditing ? t("admin.lessons.form.failedUpdate") : t("admin.lessons.form.failedCreate")));
     } finally {
       setSaving(false);
     }
@@ -129,7 +219,17 @@ export function LessonFormPage() {
       ...prev,
       linkedProduct: prev.linkedProduct.some((p) => p.productId === productId)
         ? prev.linkedProduct.filter((p) => p.productId !== productId)
-        : [...prev.linkedProduct, { productId }],
+        : [...prev.linkedProduct, { productId, timestamp: 0, note: "" }],
+    }));
+  };
+
+  const updateLinkedProduct = (
+    productId: string,
+    patch: { variantId?: string | undefined; timestamp?: number; note?: string },
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      linkedProduct: prev.linkedProduct.map((p) => (p.productId === productId ? { ...p, ...patch } : p)),
     }));
   };
 
@@ -224,6 +324,83 @@ export function LessonFormPage() {
                   {t("admin.lessons.form.hint")}
                 </p>
               </div>
+
+              {form.linkedProduct.length > 0 && (
+                <div className="space-y-3">
+                  <Label>{t("admin.lessons.form.productTimestamps")}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.lessons.form.timestampHint", { max: form.duration * 60 })}
+                  </p>
+                  {form.linkedProduct.map((lp) => {
+                    const listed = allProducts.find((p) => p._id === lp.productId);
+                    const name = listed?.name ?? linkedInfo[lp.productId]?.name ?? lp.productId;
+                    const variants = listed ? toVariantOptions(listed.variants) : linkedInfo[lp.productId]?.variants ?? [];
+                    // variantId cũ không còn trong danh sách vẫn phải hiện được trên dropdown
+                    const options =
+                      lp.variantId && !variants.some((v) => v.id === lp.variantId)
+                        ? [...variants, { id: lp.variantId, color: lp.variantId }]
+                        : variants;
+                    const invalid = lp.timestamp < 0 || lp.timestamp > form.duration * 60;
+                    return (
+                      <div key={lp.productId} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[140px_1fr]">
+                        <p className="truncate text-sm font-medium sm:col-span-2">{name}</p>
+                        <div className="sm:col-span-2">
+                          <Label htmlFor={`variant-${lp.productId}`} className="text-xs">
+                            {t("admin.lessons.form.variantLabel")}
+                          </Label>
+                          <Select
+                            value={lp.variantId ?? NO_VARIANT}
+                            onValueChange={(value) =>
+                              updateLinkedProduct(lp.productId, { variantId: value === NO_VARIANT ? undefined : value })
+                            }
+                          >
+                            <SelectTrigger id={`variant-${lp.productId}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NO_VARIANT}>{t("admin.lessons.form.noVariant")}</SelectItem>
+                              {options.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  <span className="flex items-center gap-2">
+                                    <VariantSwatch variant={v} />
+                                    {v.color}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor={`ts-${lp.productId}`} className="text-xs">
+                            {t("admin.lessons.form.timestampLabel")} ({formatTimestamp(lp.timestamp)})
+                          </Label>
+                          <Input
+                            id={`ts-${lp.productId}`}
+                            type="number"
+                            min={0}
+                            max={form.duration * 60}
+                            value={lp.timestamp}
+                            aria-invalid={invalid}
+                            onChange={(e) => updateLinkedProduct(lp.productId, { timestamp: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`note-${lp.productId}`} className="text-xs">
+                            {t("admin.lessons.form.noteLabel")}
+                          </Label>
+                          <Input
+                            id={`note-${lp.productId}`}
+                            value={lp.note}
+                            maxLength={NOTE_MAX_LENGTH}
+                            placeholder={t("admin.lessons.form.placeholder.note")}
+                            onChange={(e) => updateLinkedProduct(lp.productId, { note: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <button type="submit" className="btn-modal-primary" disabled={saving}>
                 <Save className="size-4" />

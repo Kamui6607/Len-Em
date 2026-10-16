@@ -8,6 +8,8 @@ import { Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { orderService } from "../../../features/orders/services/order.service";
 import { formatPrice } from "../../../lib/formatPrice";
+import { extractApiErrorMessage } from "../../../lib/apiError";
+import { invalidateProductCaches } from "../../../lib/queryClient";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_COLORS,
@@ -16,7 +18,7 @@ import {
   VALID_TRANSITIONS,
 } from "../../../constants/orderStatus";
 import type { Order, OrderStatus, PaymentStatus } from "../../../features/orders/types/order.types";
-import { normalizeOrder } from "../../../features/orders/types/order.types";
+import { formatPaidAt, normalizeOrder } from "../../../features/orders/types/order.types";
 
 const ORDER_STATUSES: OrderStatus[] = [
   "PENDING",
@@ -44,6 +46,8 @@ export function ManageOrders() {
   // Selected order for detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  // Chặn bấm đổi trạng thái / huỷ lặp khi request đang chạy
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -70,17 +74,23 @@ export function ManageOrders() {
   }, [loadOrders]);
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    if (statusUpdating) return;
+    setStatusUpdating(true);
     try {
       await orderService.updateOrderStatus(orderId, { orderStatus: newStatus });
       toast.success(`Đã cập nhật trạng thái thành "${ORDER_STATUS_LABELS[newStatus]}"`);
+      // Huỷ đơn → BE hoàn stock, làm mới cache sản phẩm
+      if (newStatus === "CANCELLED") void invalidateProductCaches();
       // Refresh list and detail if open
       loadOrders();
       if (selectedOrder?._id === orderId) {
         const { data } = await orderService.getOrderById(orderId);
         setSelectedOrder(data.order ?? null);
       }
-    } catch {
-      toast.error("Cập nhật trạng thái thất bại");
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err) || "Cập nhật trạng thái thất bại");
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -357,7 +367,8 @@ export function ManageOrders() {
                       <button
                         key={status}
                         onClick={() => handleStatusChange(selectedOrder._id, status)}
-                        className={`text-sm px-4 py-1.5 rounded-full font-medium transition-colors ${
+                        disabled={statusUpdating}
+                        className={`text-sm px-4 py-1.5 rounded-full font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none ${
                           status === "CANCELLED"
                             ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
                             : "bg-primary/10 text-primary hover:bg-primary/20"
@@ -451,6 +462,12 @@ export function ManageOrders() {
                         selectedOrder.payment?.status}
                     </span>
                   </p>
+                  {selectedOrder.payment?.paidAt && (
+                    <p>
+                      <span className="text-muted-foreground">Ngày thanh toán: </span>
+                      {formatPaidAt(selectedOrder.payment.paidAt)}
+                    </p>
+                  )}
                   {selectedOrder.payment?.transactionNo && (
                     <p>
                       <span className="text-muted-foreground">Mã GD: </span>

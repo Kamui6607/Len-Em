@@ -14,6 +14,8 @@ import { useAuthStore } from "../../../shared/store/auth.store";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { EmptyHoopIllustration } from "./CartPage";
 import { useMembershipStore } from "../../../features/membership/store/membership.store";
+import { useConfirmReceived } from "../../../features/orders/useConfirmReceived";
+import { ConfirmReceivedModal } from "../../../shared/components/order/ConfirmReceivedModal";
 import "../../../styles/purchased.css";
 
 export function OrderDetail() {
@@ -21,6 +23,16 @@ export function OrderDetail() {
   const { t } = useLanguage();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const { confirmReceived, markingId } = useConfirmReceived();
+
+  const handleConfirmReceived = async () => {
+    if (!order) return;
+    const updated = await confirmReceived(order);
+    if (!updated) return;
+    setOrder(updated);
+    setReceiveOpen(false);
+  };
 
   // Re-fetch the user profile when opening an order — after a payment
   // the backend webhook may have just granted course purchases.
@@ -124,7 +136,17 @@ export function OrderDetail() {
           isAdminView={false}
           onCancel={handleCancel}
           onRetryPayment={handleRetryPayment}
+          onMarkReceived={() => setReceiveOpen(true)}
+          markingReceived={markingId === order._id}
         />
+        {receiveOpen && (
+          <ConfirmReceivedModal
+            order={order}
+            submitting={markingId === order._id}
+            onConfirm={handleConfirmReceived}
+            onClose={() => setReceiveOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

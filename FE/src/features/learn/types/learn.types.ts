@@ -78,12 +78,52 @@ export interface Lesson {
   videoUrl: string;
   duration: number;
   order: number;
-  linkedProduct: { productId: string }[];
+  linkedProduct: LessonLinkedProduct[];
   linkedCombo: { comboId: string }[];
   isPreview: boolean;
   createdAt: string;
   updatedAt: string;
   linkedProducts?: LinkedProduct[];
+}
+
+/**
+ * Sản phẩm đã populate trong linkedProduct của lesson (GET /lessons, /lessons/:id,
+ * /courses/:id). Id variant có thể là `_id` hoặc `_idVariants` tuỳ endpoint.
+ */
+export interface ProductSummary {
+  _id: string;
+  name: string;
+  category: string;
+  image: string;
+  variants: {
+    _id?: string;
+    _idVariants?: string;
+    color: string;
+    hexCode: string;
+    price: number;
+    stock: number;
+    image?: string;
+  }[];
+  averageRating?: number;
+  totalRatings?: number;
+  isActive?: boolean;
+}
+
+/** Phần tử linkedProduct trong response lesson — productId đã được populate. */
+export interface LessonLinkedProduct {
+  productId: string | ProductSummary;
+  variantId?: string;
+  /** Mốc thời gian trong video, tính bằng giây. */
+  timestamp: number;
+  note: string;
+}
+
+/** Phần tử linkedProduct gửi lên POST/PUT /lessons — productId luôn là ObjectId string. */
+export interface LessonLinkedProductInput {
+  productId: string;
+  variantId?: string;
+  timestamp?: number;
+  note?: string;
 }
 
 export interface LinkedProduct {
@@ -136,7 +176,7 @@ export interface CreateLessonRequest {
   order: number;
   videoUrl: string;
   duration: number;
-  linkedProduct?: { productId: string }[];
+  linkedProduct?: LessonLinkedProductInput[];
   linkedCombo?: { comboId: string }[];
   isPreview?: boolean;
 }
@@ -146,7 +186,7 @@ export interface UpdateLessonRequest {
   order?: number;
   videoUrl?: string;
   duration?: number;
-  linkedProduct?: { productId: string }[];
+  linkedProduct?: LessonLinkedProductInput[];
   linkedCombo?: { comboId: string }[];
   isPreview?: boolean;
 }
@@ -169,7 +209,7 @@ export interface LessonFormData {
   order: number;
   videoUrl: string;
   duration: number;
-  linkedProduct: { productId: string }[];
+  linkedProduct: { productId: string; variantId?: string; timestamp: number; note: string }[];
   linkedCombo: { comboId: string }[];
   isPreview: boolean;
 }

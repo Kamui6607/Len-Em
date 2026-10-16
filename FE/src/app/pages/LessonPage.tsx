@@ -45,6 +45,7 @@ import type {
   CourseProgress,
   Lesson,
   MaterialCombo,
+  ProductSummary,
 } from "../../features/learn/types/learn.types";
 import "../../styles/craft.css";
 import "../../styles/course.css";
@@ -72,12 +73,36 @@ function extractId(ref: unknown): string | null {
   if (typeof ref === "string") return ref;
   if (typeof ref === "object") {
     const obj = ref as Record<string, unknown>;
+    // linkedProduct.productId đã được BE populate thành object sản phẩm
+    if (obj.productId && typeof obj.productId === "object") return extractId(obj.productId);
     const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
     if (typeof id === "string" && id.length > 0) return id;
     if (obj._id && typeof obj._id === "string") return obj._id;
     if (obj.id && typeof obj.id === "string") return obj.id;
   }
   return null;
+}
+
+/**
+ * Đổi sản phẩm đã populate trong linkedProduct sang Product. Id variant ở response
+ * lesson có thể là `_id` thay vì `_idVariants` nên chuẩn hoá về `_idVariants`.
+ */
+function populatedToProduct(p: ProductSummary): Product {
+  return {
+    _id: p._id,
+    name: p.name,
+    description: "",
+    category: p.category,
+    image: p.image,
+    tags: [],
+    isActive: p.isActive ?? true,
+    createdAt: "",
+    updatedAt: "",
+    variants: (p.variants ?? []).map(({ _id, _idVariants, ...variant }) => ({
+      ...variant,
+      _idVariants: _idVariants ?? _id ?? "",
+    })),
+  };
 }
 
 interface MaterialItem {
@@ -426,8 +451,21 @@ export function LessonPage() {
     setApiProducts([]);
     if (!lesson?.linkedProduct || lesson.linkedProduct.length === 0) return;
     const fetchProducts = async () => {
-      const productIds = lesson.linkedProduct!.map((lp) => extractId(lp)).filter((id): id is string => id !== null);
-      if (productIds.length === 0) return;
+      // Sản phẩm đã populate thì dùng luôn, chỉ gọi getById cho phần tử còn là string id
+      const populated: Product[] = [];
+      const productIds: string[] = [];
+      for (const lp of lesson.linkedProduct!) {
+        if (lp.productId && typeof lp.productId === "object") {
+          populated.push(populatedToProduct(lp.productId));
+        } else {
+          const id = extractId(lp);
+          if (id) productIds.push(id);
+        }
+      }
+      if (productIds.length === 0) {
+        setApiProducts(populated);
+        return;
+      }
       const fetchedProducts = (
         await Promise.all(
           productIds.map((id) =>
@@ -438,7 +476,7 @@ export function LessonPage() {
           ),
         )
       ).filter((p): p is Product => p !== null && p !== undefined);
-      setApiProducts(fetchedProducts);
+      setApiProducts([...populated, ...fetchedProducts]);
     };
     fetchProducts();
   }, [lesson?.linkedProduct]);

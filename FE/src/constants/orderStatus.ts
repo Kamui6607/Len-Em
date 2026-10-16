@@ -6,6 +6,7 @@ export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
   | "PREPARING"
+  | "OUT_OF_STOCK"
   | "SHIPPING"
   | "DELIVERED"
   | "CANCELLED"
@@ -18,6 +19,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
   PREPARING: "Đang chuẩn bị",
+  OUT_OF_STOCK: "Hết hàng",
   SHIPPING: "Đang giao hàng",
   DELIVERED: "Đã giao hàng",
   CANCELLED: "Đã hủy",
@@ -36,6 +38,7 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   PENDING: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   CONFIRMED: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   PREPARING: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+  OUT_OF_STOCK: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   SHIPPING: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
   DELIVERED: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
@@ -82,6 +85,7 @@ export function getOrderStatusBadgeClass(status: string): string {
     case "SHIPPING":
       return "badge-blue";
     case "PENDING":
+    case "OUT_OF_STOCK":
       return "badge-orange";
     case "CANCELLED":
     case "REJECTED":
@@ -99,12 +103,26 @@ export const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ["CONFIRMED", "CANCELLED", "REJECTED"],
   CONFIRMED: ["PREPARING", "CANCELLED"],
   PREPARING: ["SHIPPING", "CANCELLED"],
+  OUT_OF_STOCK: ["CANCELLED"],
   SHIPPING: ["DELIVERED"],
   DELIVERED: [],
   CANCELLED: [],
   REJECTED: [],
   PROCESSED: [],
 };
+
+/**
+ * Trạng thái admin được chuyển sang CANCELLED — khớp BE (PATCH /orders/:id/status
+ * trả 400 "Cannot cancel an order in X status" với trạng thái khác).
+ */
+export const ADMIN_CANCELLABLE_STATUSES: readonly OrderStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "PREPARING",
+  "OUT_OF_STOCK",
+];
+
+export const canAdminCancel = (status: OrderStatus) => ADMIN_CANCELLABLE_STATUSES.includes(status);
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   COD: "Tiền mặt (COD)",

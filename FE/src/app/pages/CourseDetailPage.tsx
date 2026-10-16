@@ -79,6 +79,8 @@ function extractId(ref: unknown): string | null {
   if (typeof ref === "string") return ref;
   if (typeof ref === "object") {
     const obj = ref as Record<string, unknown>;
+    // linkedProduct.productId đã được BE populate thành object sản phẩm
+    if (obj.productId && typeof obj.productId === "object") return extractId(obj.productId);
     const id = obj.comboId || obj.kitId || obj.productId || obj._id || obj.id;
     if (typeof id === "string" && id.length > 0) return id;
     if (obj._id && typeof obj._id === "string") return obj._id;
@@ -321,6 +323,7 @@ export function CourseDetailPage() {
           districtName: "",
           wardName: "",
         },
+        // Khoá học bắt buộc trả trước — BE từ chối đơn COD có khoá học.
         paymentMethod: "SEPAY",
         itemsPrice: price,
         shippingFee: 0,

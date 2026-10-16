@@ -26,6 +26,7 @@ import { orderService } from "../../../features/orders/services/order.service";
 import type { Order } from "../../../features/orders/types/order.types";
 import { normalizeOrder } from "../../../features/orders/types/order.types";
 import { formatPrice } from "../../../lib/formatPrice";
+import { extractApiErrorMessage } from "../../../lib/apiError";
 import { shortId, toText } from "../../../lib/displayText";
 import { useAdmin } from "../../../shared/contexts/AdminContext";
 import { useAuth } from "../../../shared/hooks/useAuth";
@@ -134,8 +135,8 @@ export function StaffPendingOrders() {
       setTotal((prev) => Math.max(0, prev - 1));
       if (orders.length === 1 && page > 1) setPage((p) => p - 1);
       else void fetchOrders(page, true);
-    } catch {
-      toast.error("Không xác nhận được đơn. Vui lòng thử lại.");
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err) || "Không xác nhận được đơn. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }

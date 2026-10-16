@@ -19,3 +19,10 @@ export const queryClient = new QueryClient({
     },
   },
 });
+/**
+ * Huỷ đơn (hoặc duyệt yêu cầu huỷ) làm BE hoàn stock — đánh dấu cache sản phẩm
+ * cũ để danh sách / chi tiết sản phẩm tải lại stock mới.
+ */
+export function invalidateProductCaches() {
+  return queryClient.invalidateQueries({ queryKey: ["products"] });
+}

@@ -10,6 +10,7 @@
 import { useState, useEffect } from "react";
 import {
   Package,
+  PackageCheck,
   PackageOpen,
   MapPin,
   CreditCard,
@@ -33,7 +34,7 @@ import {
   VALID_TRANSITIONS,
 } from "../../../constants/orderStatus";
 import type { Order, OrderItem, OrderStatus } from "../../../features/orders/types/order.types";
-import { normalizeOrder, isCourseItem } from "../../../features/orders/types/order.types";
+import { formatPaidAt, normalizeOrder, isCourseItem } from "../../../features/orders/types/order.types";
 import { ReportButton } from "../ReportButton";
 import { OrderThread } from "./OrderThread";
 import { kitService } from "../../api/kitService";
@@ -49,6 +50,9 @@ interface OrderDetailCardProps {
   onCancel?: (orderId: string, reason: string) => Promise<void>;
   onReport?: (orderId: string) => void;
   onRetryPayment?: (orderId: string) => Promise<void>;
+  /** Khách bấm "Đã nhận hàng" (SHIPPING) — trang cha mở hộp xác nhận. */
+  onMarkReceived?: () => void;
+  markingReceived?: boolean;
 }
 
 /** Order items grouped by kit — items without kitId stay as standalone items */
@@ -84,6 +88,8 @@ export function OrderDetailCard({
   onStatusChange,
   onCancel,
   onRetryPayment,
+  onMarkReceived,
+  markingReceived = false,
 }: OrderDetailCardProps) {
   const normalized = normalizeOrder(order);
   const { addReview, hasReviewed } = useReviews();
@@ -348,6 +354,17 @@ export function OrderDetailCard({
                 {retrying ? "..." : "Thanh toán lại"}
               </button>
             )}
+            {!isAdminView && onMarkReceived && normalized.orderStatus === "SHIPPING" && (
+              <button
+                type="button"
+                onClick={onMarkReceived}
+                disabled={markingReceived}
+                className="purchased-action-btn is-soft"
+              >
+                <PackageCheck className="w-3.5 h-3.5" />
+                Đã nhận hàng
+              </button>
+            )}
             {canCancel && (
               <button
                 onClick={() => setShowCancelModal(true)}
@@ -508,6 +525,12 @@ export function OrderDetailCard({
                   normalized.payment?.status}
               </span>
             </div>
+            {normalized.payment?.paidAt && (
+              <div className="order-detail-row">
+                <span>Ngày thanh toán</span>
+                <span>{formatPaidAt(normalized.payment.paidAt)}</span>
+              </div>
+            )}
             {normalized.payment?.transactionNo && (
               <div className="order-detail-row">
                 <span>Mã giao dịch</span>

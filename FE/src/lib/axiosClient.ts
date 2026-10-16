@@ -244,6 +244,11 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     if (url.includes("/membership/")) {
       return Promise.reject(error);
     }
+    // Đổi trạng thái đơn / duyệt yêu cầu huỷ: màn hình gọi API tự toast đúng
+    // message của BE (vd "Cannot cancel an order in SHIPPING status") → tránh toast đôi.
+    if (/\/orders\/[^/]+\/(status|cancel-request)$/.test(url)) {
+      return Promise.reject(error);
+    }
     const mapped: Record<number, string> = {
       400: "Invalid input. Please check your data.",
       403: "You don't have permission to do that.",

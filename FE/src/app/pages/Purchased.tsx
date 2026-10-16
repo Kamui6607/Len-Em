@@ -21,7 +21,8 @@ import { formatExpectedDelivery, isAwaitingDelivery } from "../../lib/orderDeliv
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
 import { useReviews } from "../../shared/contexts/ReviewContext";
-import { useNotifications } from "../../shared/contexts/NotificationContext";
+import { useConfirmReceived } from "../../features/orders/useConfirmReceived";
+import { ConfirmReceivedModal } from "../../shared/components/order/ConfirmReceivedModal";
 import { ReportButton } from "../../shared/components/ReportButton";
 import { Link, useNavigate } from "react-router";
 import { orderService } from "../../features/orders/services/order.service";
@@ -42,7 +43,6 @@ export function Purchased() {
   const { t } = useLanguage();
   const { user, refreshProfile } = useAuth();
   const { addReview, hasReviewed } = useReviews();
-  const { addNotification } = useNotifications();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -55,6 +55,9 @@ export function Purchased() {
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  // Đơn đang chờ khách xác nhận "Đã nhận hàng" (mở hộp xác nhận)
+  const [receiveTarget, setReceiveTarget] = useState<Order | null>(null);
+  const { confirmReceived, markingId } = useConfirmReceived();
   const [cancelModal, setCancelModal] = useState<{
     orderId: string;
     reason: string;
@@ -287,33 +290,12 @@ export function Purchased() {
     }
   };
 
-  const markAsDone = async (orderId: string) => {
-    try {
-      await orderService.updateOrderStatus(orderId, { orderStatus: "DELIVERED" });
-      setOrders((prev) =>
-        prev.map((o) =>
-          o._id === orderId ? { ...o, orderStatus: "DELIVERED" as const } : o,
-        ),
-      );
-      const doneOrder = orders.find((o) => o._id === orderId);
-      if (doneOrder) {
-        doneOrder.items.forEach((item) => {
-          addNotification({
-            type: "review_request",
-            title: t("purchased.notificationTitle"),
-            message: t("purchased.notificationMessage", {
-              productName: item.productName,
-              orderId,
-            }),
-            targetId: orderId,
-            targetPath: "/purchased",
-          });
-        });
-      }
-      toast.success(t("purchased.toastMarkDoneSuccess"));
-    } catch {
-      toast.error(t("purchased.toastMarkDoneError"));
-    }
+  const handleConfirmReceived = async () => {
+    if (!receiveTarget) return;
+    const updated = await confirmReceived(receiveTarget);
+    if (!updated) return;
+    setOrders((prev) => prev.map((o) => (o._id === updated._id ? updated : o)));
+    setReceiveTarget(null);
   };
 
   /** Map order status -> icon + màu vòng tròn (dùng token success/warning/error/info sẵn có) */
@@ -598,8 +580,9 @@ export function Purchased() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            markAsDone(order._id);
+                            setReceiveTarget(order);
                           }}
+                          disabled={markingId === order._id}
                           className="purchased-action-btn is-soft"
                         >
                           <PackageCheck className="w-3.5 h-3.5" />
@@ -649,6 +632,15 @@ export function Purchased() {
           </div>
         )}
       </div>
+
+      {receiveTarget && (
+        <ConfirmReceivedModal
+          order={receiveTarget}
+          submitting={markingId === receiveTarget._id}
+          onConfirm={handleConfirmReceived}
+          onClose={() => setReceiveTarget(null)}
+        />
+      )}
 
       {/* Cancel Modal */}
       {cancelModal && (

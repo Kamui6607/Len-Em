@@ -51,6 +51,7 @@ import {
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { DatePicker } from "../../shared/components/ui/DatePicker";
 import { isoToUsDisplayDate } from "../../lib/dateInput";
+import { resolveAvatarUrl } from "../../lib/avatarUrl";
 import {
   AddressSelector,
   isPickComplete,
@@ -217,8 +218,15 @@ export function Profile({ embedded = false }: ProfileProps) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  // Kích thước gốc của ảnh đang cắt (0 khi ảnh chưa load xong)
+  const [avatarNatural, setAvatarNatural] = useState({ w: 0, h: 0 });
   const avatarImgRef = useRef<HTMLImageElement | null>(null);
   const CROP_SIZE = 280;
+  // Ảnh xuất ra nét hơn khung cắt trên màn hình
+  const AVATAR_OUTPUT_SIZE = 512;
+  // Ở zoom = 1 ảnh vừa phủ kín khung tròn (cạnh ngắn = CROP_SIZE)
+  const avatarBaseScale =
+    avatarNatural.w && avatarNatural.h ? CROP_SIZE / Math.min(avatarNatural.w, avatarNatural.h) : 1;
 
   const isDashboardUser = user?.roleId === "admin" || user?.roleId === "staff";
 
@@ -310,6 +318,7 @@ export function Profile({ embedded = false }: ProfileProps) {
       const reader = new FileReader();
       reader.onload = () => {
         setAvatarSrc(reader.result as string);
+        setAvatarNatural({ w: 0, h: 0 });
         setAvatarZoom(1);
         setAvatarOffset({ x: 0, y: 0 });
         setAvatarModalOpen(true);
@@ -324,36 +333,55 @@ export function Profile({ embedded = false }: ProfileProps) {
   const handleAvatarCancel = useCallback(() => {
     setAvatarModalOpen(false);
     setAvatarSrc(null);
+    setAvatarNatural({ w: 0, h: 0 });
     setAvatarZoom(1);
     setAvatarOffset({ x: 0, y: 0 });
   }, []);
 
+  /** Giữ ảnh luôn phủ kín khung tròn — không kéo lộ khoảng trống. */
+  const clampAvatarOffset = useCallback(
+    (offset: { x: number; y: number }, zoom: number) => {
+      const maxX = Math.max(0, (avatarNatural.w * avatarBaseScale * zoom - CROP_SIZE) / 2);
+      const maxY = Math.max(0, (avatarNatural.h * avatarBaseScale * zoom - CROP_SIZE) / 2);
+      return {
+        x: Math.min(maxX, Math.max(-maxX, offset.x)),
+        y: Math.min(maxY, Math.max(-maxY, offset.y)),
+      };
+    },
+    [avatarNatural, avatarBaseScale],
+  );
+
   const handleAvatarConfirm = useCallback(async () => {
-    if (!avatarSrc || !user || !avatarImgRef.current) return;
+    if (!avatarSrc || !user || !avatarImgRef.current || !avatarNatural.w) return;
 
     setUploadingAvatar(true);
     try {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) {
+        setUploadingAvatar(false);
+        return;
+      }
 
-      const img = avatarImgRef.current;
-      const naturalSize = img.naturalWidth;
-      const displayedSizeVal = img.width;
-      const scale = naturalSize / displayedSizeVal;
+      canvas.width = AVATAR_OUTPUT_SIZE;
+      canvas.height = AVATAR_OUTPUT_SIZE;
 
-      canvas.width = CROP_SIZE;
-      canvas.height = CROP_SIZE;
+      // Số px màn hình ứng với 1 px ảnh gốc. Tâm ảnh nằm ở tâm khung + offset,
+      // nên góc trên-trái khung cắt (theo px gốc) = tâm ảnh - (nửa khung + offset) / scale.
+      const scale = avatarBaseScale * avatarZoom;
+      const sSize = CROP_SIZE / scale;
+      const sx = avatarNatural.w / 2 - (CROP_SIZE / 2 + avatarOffset.x) / scale;
+      const sy = avatarNatural.h / 2 - (CROP_SIZE / 2 + avatarOffset.y) / scale;
 
-      const sx = (CROP_SIZE / 2 - avatarOffset.x) * scale / avatarZoom;
-      const sy = (CROP_SIZE / 2 - avatarOffset.y) * scale / avatarZoom;
-      const sSize = CROP_SIZE * scale / avatarZoom;
-
-      ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, CROP_SIZE, CROP_SIZE);
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(avatarImgRef.current, sx, sy, sSize, sSize, 0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
 
       canvas.toBlob(
         async (blob) => {
-          if (!blob) return;
+          if (!blob) {
+            setUploadingAvatar(false);
+            return;
+          }
           const cropFile = new File([blob], "avatar.png", { type: "image/png" });
 
           try {
@@ -361,7 +389,7 @@ export function Profile({ embedded = false }: ProfileProps) {
               user.userId,
               cropFile
             );
-            const avatarUrl = res.data.updatedUser.avatar.url;
+            const avatarUrl = resolveAvatarUrl(res.data.updatedUser.avatar);
             setUser({ ...user, avatar: avatarUrl });
             toast.success(t("profile.toastAvatarSuccess"));
             handleAvatarCancel();
@@ -377,29 +405,24 @@ export function Profile({ embedded = false }: ProfileProps) {
     } catch {
       setUploadingAvatar(false);
     }
-  }, [avatarSrc, avatarOffset, avatarZoom, user, setUser, t, handleAvatarCancel]);
-
-  const displayedSize = useCallback(() => {
-    if (!avatarImgRef.current) return { width: 0, height: 0 };
-    const natural = avatarImgRef.current.naturalWidth;
-    const zoomed = natural * avatarZoom;
-    return { width: zoomed, height: zoomed };
-  }, [avatarZoom]);
+  }, [avatarSrc, avatarNatural, avatarBaseScale, avatarOffset, avatarZoom, user, setUser, t, handleAvatarCancel]);
 
   const handleAvatarImgLoad = useCallback(() => {
-    if (!avatarImgRef.current) return;
     const img = avatarImgRef.current;
-    const containerSize = CROP_SIZE;
-    const naturalSize = img.naturalWidth;
-    const initialDisplaySize = naturalSize;
-    const scale = containerSize / initialDisplaySize;
-    const newZoom = scale;
-    setAvatarZoom(newZoom);
+    if (!img) return;
+    setAvatarNatural({ w: img.naturalWidth, h: img.naturalHeight });
+    setAvatarZoom(1);
+    setAvatarOffset({ x: 0, y: 0 });
   }, []);
 
-  const handleZoomChange = useCallback((z: number) => {
-    setAvatarZoom(z);
-  }, []);
+  const handleZoomChange = useCallback(
+    (z: number) => {
+      setAvatarZoom(z);
+      // Thu nhỏ có thể làm lộ mép ảnh → kéo offset về trong giới hạn mới
+      setAvatarOffset((prev) => clampAvatarOffset(prev, z));
+    },
+    [clampAvatarOffset],
+  );
 
   const onAvatarPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -413,12 +436,11 @@ export function Profile({ embedded = false }: ProfileProps) {
   const onAvatarPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!isDragging) return;
-      setAvatarOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
+      setAvatarOffset(
+        clampAvatarOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }, avatarZoom),
+      );
     },
-    [isDragging, dragStart]
+    [isDragging, dragStart, avatarZoom, clampAvatarOffset]
   );
 
   const onAvatarPointerUp = useCallback(() => {
@@ -1072,7 +1094,9 @@ export function Profile({ embedded = false }: ProfileProps) {
                   draggable={false}
                   className="absolute top-1/2 left-1/2 max-w-none pointer-events-none"
                   style={{
-                    ...displayedSize(),
+                    width: avatarNatural.w * avatarBaseScale || undefined,
+                    height: avatarNatural.h * avatarBaseScale || undefined,
+                    visibility: avatarNatural.w ? "visible" : "hidden",
                     transform: `translate(-50%, -50%) translate(${avatarOffset.x}px, ${avatarOffset.y}px) scale(${avatarZoom})`,
                   }}
                 />

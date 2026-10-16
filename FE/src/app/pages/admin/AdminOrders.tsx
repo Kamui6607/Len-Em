@@ -34,8 +34,10 @@ import type {
   Order,
   OrderStatus,
 } from "../../../features/orders/types/order.types";
-import { normalizeOrder } from "../../../features/orders/types/order.types";
-import { PAYMENT_METHOD_LABELS, VALID_TRANSITIONS } from "../../../constants/orderStatus";
+import { formatPaidAt, normalizeOrder, pickOrderFromResponse } from "../../../features/orders/types/order.types";
+import { ORDER_STATUS_LABELS, PAYMENT_METHOD_LABELS, canAdminCancel } from "../../../constants/orderStatus";
+import { extractApiErrorMessage } from "../../../lib/apiError";
+import { invalidateProductCaches } from "../../../lib/queryClient";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import {
   AdminSearchInput,
@@ -90,11 +92,19 @@ const PAYMENT_OPTIONS: { value: PaymentFilter; label: string }[] = [
 
 const PAGE_SIZES = [20, 50, 100];
 
-const canCancel = (order: Order) => VALID_TRANSITIONS[order.orderStatus]?.includes("CANCELLED") ?? false;
+/** BE chỉ cho huỷ ở PENDING / CONFIRMED / PREPARING / OUT_OF_STOCK. */
+const canCancel = (order: Order) => canAdminCancel(order.orderStatus);
 
-/** A PENDING order can only be confirmed once it's paid. */
+/** Khách đã gửi yêu cầu huỷ, đang chờ admin duyệt. */
+const hasPendingCancelRequest = (order: Order) =>
+  Boolean(order.isCancelRequested) && order.orderStatus === "PENDING";
+
+/** COD thu tiền khi giao — BE chỉ set PAID lúc DELIVERED, nên không chờ thanh toán để xác nhận. */
+const isCashOnDelivery = (order: Order) => ["COD", "CASH"].includes(toText(order.payment?.method));
+
+/** A PENDING online-paid order can only be confirmed once it's paid. */
 const isAwaitingPayment = (order: Order) =>
-  order.orderStatus === "PENDING" && order.payment?.status !== "PAID";
+  order.orderStatus === "PENDING" && !isCashOnDelivery(order) && order.payment?.status !== "PAID";
 
 /** Why a PENDING order can't be confirmed yet (null = allowed). */
 function getConfirmBlocker(order: Order): string | null {
@@ -251,10 +261,26 @@ export function AdminOrders() {
       ids.map((id) => orderService.updateOrderStatus(id, { orderStatus: to })),
     );
     const done = new Set(ids.filter((_, i) => results[i].status === "fulfilled"));
+    // Order BE trả về sau khi cập nhật — vd DELIVERED với COD: BE tự set payment PAID + paidAt,
+    // nên lấy nguyên order từ response thay vì tự đoán payment ở FE.
+    const updated = new Map<string, Order>();
+    results.forEach((r, i) => {
+      if (r.status !== "fulfilled") return;
+      const order = pickOrderFromResponse(r.value.data);
+      if (order) updated.set(ids[i], normalizeOrder(order));
+    });
     setUpdatingIds((prev) => new Set([...prev].filter((id) => !ids.includes(id))));
     if (done.size > 0) {
-      setOrders((prev) => prev.map((o) => (done.has(o._id) ? { ...o, orderStatus: to } : o)));
-      setSelectedOrder((prev) => (prev && done.has(prev._id) ? { ...prev, orderStatus: to } : prev));
+      setOrders((prev) => prev.map((o) => updated.get(o._id) ?? (done.has(o._id) ? { ...o, orderStatus: to } : o)));
+      setSelectedOrder((prev) =>
+        prev && done.has(prev._id) ? updated.get(prev._id) ?? { ...prev, orderStatus: to } : prev,
+      );
+      // Response không kèm order → refetch để lấy payment mới từ BE
+      const missing = [...done].filter((id) => !updated.has(id));
+      if (missing.length > 0) {
+        loadOrders(true);
+        if (selectedOrder && missing.includes(selectedOrder._id)) void handleViewDetail(selectedOrder._id);
+      }
       setSelected((prev) => new Set([...prev].filter((id) => !done.has(id))));
       if (to === "CONFIRMED") {
         done.forEach((id) =>
@@ -267,11 +293,13 @@ export function AdminOrders() {
         );
       }
       // On a status tab the orders have now left this list — refetch quietly.
-      if (filter !== "all") loadOrders(true);
+      // Huỷ đơn: BE hoàn stock → luôn refetch đơn + làm mới cache sản phẩm.
+      if ((filter !== "all" || to === "CANCELLED") && missing.length === 0) loadOrders(true);
+      if (to === "CANCELLED") void invalidateProductCaches();
       loadCounts();
     }
     const rejected = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
-    const error = (rejected?.reason as { response?: { data?: { message?: string } } } | undefined)?.response?.data?.message;
+    const error = rejected ? extractApiErrorMessage(rejected.reason) || undefined : undefined;
     return { ok: done.size, error };
   };
 
@@ -380,14 +408,50 @@ export function AdminOrders() {
     if (failed) toast.error(`${failed} đơn xác nhận thất bại`, { description: error });
   };
 
+  const cancellingRef = useRef(false);
   const handleCancelConfirmed = async () => {
-    if (!cancelTargets) return;
+    // Chặn gửi huỷ hai lần (double click trước khi nút kịp disable)
+    if (!cancelTargets || cancellingRef.current) return;
+    cancellingRef.current = true;
     const targets = cancelTargets;
-    const { ok, error } = await updateStatuses(targets, "CANCELLED");
-    const failed = targets.length - ok;
-    if (ok) toast.success(`Đã huỷ ${ok} đơn`);
-    if (failed) toast.error(`${failed} đơn huỷ thất bại`, { description: error });
-    setCancelTargets(null);
+    try {
+      const { ok, error } = await updateStatuses(targets, "CANCELLED");
+      const failed = targets.length - ok;
+      if (ok) toast.success(`Đã huỷ ${ok} đơn`);
+      if (failed) {
+        // 1 đơn: hiện thẳng message BE (vd "Cannot cancel an order in SHIPPING status")
+        if (targets.length === 1) toast.error(error ?? "Không huỷ được đơn");
+        else toast.error(`${failed} đơn huỷ thất bại`, { description: error });
+      }
+      setCancelTargets(null);
+    } finally {
+      cancellingRef.current = false;
+    }
+  };
+
+  /** Admin duyệt / từ chối yêu cầu huỷ của khách — duyệt thì BE huỷ đơn và hoàn stock. */
+  const handleCancelRequest = async (order: Order, decision: "APPROVED" | "REJECTED") => {
+    if (updatingIds.has(order._id)) return;
+    setUpdatingIds((prev) => new Set([...prev, order._id]));
+    try {
+      const { data } = await orderService.cancelRequest(order._id, { decision });
+      toast.success(
+        decision === "APPROVED"
+          ? `Đã duyệt huỷ đơn #${shortId(order._id)}`
+          : `Đã từ chối yêu cầu huỷ đơn #${shortId(order._id)}`,
+      );
+      if (data?.order) {
+        const updated = normalizeOrder(data.order);
+        setSelectedOrder((prev) => (prev && prev._id === order._id ? updated : prev));
+      }
+      if (decision === "APPROVED") void invalidateProductCaches();
+      loadOrders(true);
+      loadCounts();
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err) || "Không xử lý được yêu cầu huỷ");
+    } finally {
+      setUpdatingIds((prev) => new Set([...prev].filter((id) => id !== order._id)));
+    }
   };
 
   // ── Cells ──
@@ -478,10 +542,33 @@ export function AdminOrders() {
           >
             <Copy /> Sao chép mã đơn
           </DropdownMenu.Item>
+          {hasPendingCancelRequest(order) && (
+            <>
+              <DropdownMenu.Separator className="adm-omenu-sep" />
+              <DropdownMenu.Item
+                className="adm-omenu-item is-danger"
+                disabled={updatingIds.has(order._id)}
+                onSelect={() => handleCancelRequest(order, "APPROVED")}
+              >
+                <Check /> Duyệt yêu cầu huỷ
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="adm-omenu-item"
+                disabled={updatingIds.has(order._id)}
+                onSelect={() => handleCancelRequest(order, "REJECTED")}
+              >
+                <X /> Từ chối yêu cầu huỷ
+              </DropdownMenu.Item>
+            </>
+          )}
           {canCancel(order) && (
             <>
               <DropdownMenu.Separator className="adm-omenu-sep" />
-              <DropdownMenu.Item className="adm-omenu-item is-danger" onSelect={() => setCancelTargets([order])}>
+              <DropdownMenu.Item
+                className="adm-omenu-item is-danger"
+                disabled={updatingIds.has(order._id)}
+                onSelect={() => setCancelTargets([order])}
+              >
                 <Ban /> Huỷ đơn
               </DropdownMenu.Item>
             </>
@@ -566,7 +653,7 @@ export function AdminOrders() {
 
         <div role="cell" className="adm-otd c-status">
           <span className="adm-ostatus" data-status={order.orderStatus}>
-            {STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
+            {STATUS_LABELS[order.orderStatus] ?? ORDER_STATUS_LABELS[order.orderStatus] ?? order.orderStatus}
           </span>
           {order.isCancelRequested && <span className="adm-oflag">Khách yêu cầu huỷ</span>}
         </div>
@@ -888,7 +975,7 @@ export function AdminOrders() {
           badges={
             <>
               <span className="adm-ostatus" data-status={selectedOrder.orderStatus}>
-                {STATUS_LABELS[selectedOrder.orderStatus] ?? selectedOrder.orderStatus}
+                {STATUS_LABELS[selectedOrder.orderStatus] ?? ORDER_STATUS_LABELS[selectedOrder.orderStatus] ?? selectedOrder.orderStatus}
               </span>
               <span className={`adm-opaid ${selectedOrder.payment.status === "PAID" ? "is-paid" : ""}`}>
                 {selectedOrder.payment.status === "PAID" ? "Đã thanh toán" : "Chưa thanh toán"}
@@ -927,6 +1014,11 @@ export function AdminOrders() {
                   <AdminDetailItem label="Mã giao dịch" mono>
                     {selectedOrder.payment.transactionNo}
                   </AdminDetailItem>
+                  {selectedOrder.payment.paidAt && (
+                    <AdminDetailItem label="Ngày thanh toán">
+                      {formatPaidAt(selectedOrder.payment.paidAt)}
+                    </AdminDetailItem>
+                  )}
                 </AdminDetailGrid>
 
                 <AdminDialogSection icon={MapPin}>Địa chỉ giao hàng</AdminDialogSection>
