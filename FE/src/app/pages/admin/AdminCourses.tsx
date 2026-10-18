@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { BookOpen, CheckCircle2, Clock, Edit, Eye, FileEdit, GraduationCap, Layers, RefreshCw, Trash2 } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock, Edit, Eye, FileEdit, GraduationCap, Layers, RefreshCw, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CreateButton } from "../../../shared/components/admin/CreateButton";
 import { courseService } from "../../../shared/api/courseService";
 import type { Course, CourseLevel } from "../../../features/learn/types/learn.types";
+import { getCourseRating } from "../../../features/learn/utils/courseRating";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 import { useDebouncedSearch } from "../../../shared/hooks/useDebouncedSearch";
 import { AdminPageHeader } from "../../../shared/components/admin/AdminPageHeader";
@@ -114,6 +115,7 @@ export function AdminCourses() {
     if (field === "level") return LEVEL_ORDER.indexOf(course.level);
     if (field === "content") return course.totalLessons;
     if (field === "price") return course.price ?? 0;
+    if (field === "rating") return getCourseRating(course);
     if (field === "status") return course.isPublished ? 1 : 0;
     return null;
   });
@@ -128,6 +130,17 @@ export function AdminCourses() {
 
   const priceCell = (price?: number) =>
     (price ?? 0) > 0 ? <AdminMoney value={price ?? 0} /> : <span className="adm-gprimary">{t("admin.grid.free")}</span>;
+
+  const ratingCell = (course: Course) =>
+    (course.totalRatings ?? 0) > 0 ? (
+      <span className="inline-flex items-center gap-1 adm-gnum-plain">
+        <Star className="size-3.5 fill-[var(--rating-star)] text-[var(--rating-star)]" />
+        {getCourseRating(course).toFixed(1)}
+        <span className="adm-gsecondary">({course.totalRatings})</span>
+      </span>
+    ) : (
+      <span className="adm-gsecondary">{t("admin.courses.noRatings")}</span>
+    );
 
   const columns: AdminGridColumn<Course>[] = [
     {
@@ -178,6 +191,15 @@ export function AdminCourses() {
       align: "right",
       sortable: true,
       render: (course) => priceCell(course.price),
+    },
+    {
+      key: "rating",
+      header: t("admin.courses.rating"),
+      width: "120px",
+      minWidth: 120,
+      align: "right",
+      sortable: true,
+      render: (course) => ratingCell(course),
     },
     {
       key: "status",
@@ -357,6 +379,7 @@ export function AdminCourses() {
                 </span>
               </AdminDetailItem>
               <AdminDetailItem label={t("admin.courses.price")}>{priceCell(viewingCourse.price)}</AdminDetailItem>
+              <AdminDetailItem label={t("admin.courses.rating")}>{ratingCell(viewingCourse)}</AdminDetailItem>
               <AdminDetailItem label={t("admin.courses.tags")}>
                 {viewingCourse.tags && viewingCourse.tags.length > 0 ? (
                   <div className="adm-chips">

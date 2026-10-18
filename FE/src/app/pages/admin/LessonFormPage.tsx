@@ -32,6 +32,13 @@ function normalizeProductId(productId: LessonLinkedProduct["productId"]): string
   return typeof productId === "string" ? productId : productId?._id ?? "";
 }
 
+/**
+ * BE validate productId/comboId bằng Joi hex(24). Sản phẩm đã bị xóa thì populate
+ * trả null và BE format thành chuỗi rác ("[object Object]") → bỏ đi khi load.
+ */
+const isObjectId = (value: unknown): value is string =>
+  typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
+
 /** Giá trị Select cho lựa chọn "Không chọn variant" (Radix Select không cho value rỗng). */
 const NO_VARIANT = "__none__";
 
@@ -130,7 +137,7 @@ export function LessonFormPage() {
               note: lp.note ?? "",
             };
           })
-          .filter((lp) => lp.productId);
+          .filter((lp) => isObjectId(lp.productId));
         setLinkedInfo(info);
         setForm({
           title: lesson.title,
@@ -138,7 +145,9 @@ export function LessonFormPage() {
           videoUrl: lesson.videoUrl,
           duration: lesson.duration,
           linkedProduct,
-          linkedCombo: lesson.linkedCombo ?? [],
+          linkedCombo: (lesson.linkedCombo ?? [])
+            .filter((c) => isObjectId(c.comboId))
+            .map((c) => ({ comboId: c.comboId })),
           isPreview: lesson.isPreview,
         });
       } catch {
@@ -161,8 +170,21 @@ export function LessonFormPage() {
       toast.error(t("admin.lessons.form.videoUrlRequired"));
       return;
     }
-    // duration tính bằng phút, timestamp tính bằng giây
-    const maxTimestamp = form.duration * 60;
+    if (!/^https?:\/\/\S+$/i.test(form.videoUrl.trim())) {
+      toast.error(t("admin.lessons.form.videoUrlInvalid"));
+      return;
+    }
+    if (!Number.isInteger(form.order) || form.order < 1) {
+      toast.error(t("admin.lessons.form.orderInvalid"));
+      return;
+    }
+    if (!Number.isFinite(form.duration) || form.duration < 0) {
+      toast.error(t("admin.lessons.form.durationInvalid"));
+      return;
+    }
+    // duration tính bằng phút, timestamp tính bằng giây. Giống BE: duration = 0
+    // (chưa rõ thời lượng) thì không giới hạn mốc trên.
+    const maxTimestamp = form.duration > 0 ? form.duration * 60 : Infinity;
     for (const lp of form.linkedProduct) {
       if (!Number.isFinite(lp.timestamp) || lp.timestamp < 0 || lp.timestamp > maxTimestamp) {
         toast.error(t("admin.lessons.form.timestampInvalid", { max: maxTimestamp }));
@@ -184,9 +206,9 @@ export function LessonFormPage() {
       setSaving(true);
       if (isEditing && lessonId) {
         await lessonService.update(lessonId, {
-          title: form.title,
+          title: form.title.trim(),
           order: form.order,
-          videoUrl: form.videoUrl,
+          videoUrl: form.videoUrl.trim(),
           duration: form.duration,
           linkedProduct,
           linkedCombo: form.linkedCombo,
@@ -195,9 +217,9 @@ export function LessonFormPage() {
         toast.success(t("admin.lessons.form.updatedSuccess"));
       } else {
         await lessonService.create({
-          title: form.title,
+          title: form.title.trim(),
           order: form.order,
-          videoUrl: form.videoUrl,
+          videoUrl: form.videoUrl.trim(),
           duration: form.duration,
           linkedProduct,
           linkedCombo: form.linkedCombo,
@@ -207,8 +229,10 @@ export function LessonFormPage() {
       }
       navigate("/admin/lessons");
     } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(message || (isEditing ? t("admin.lessons.form.failedUpdate") : t("admin.lessons.form.failedCreate")));
+      // Lỗi có response đã được axiosClient toast bằng message của BE → tránh toast đôi.
+      if (!(err as { response?: unknown })?.response) {
+        toast.error(isEditing ? t("admin.lessons.form.failedUpdate") : t("admin.lessons.form.failedCreate"));
+      }
     } finally {
       setSaving(false);
     }
@@ -329,7 +353,9 @@ export function LessonFormPage() {
                 <div className="space-y-3">
                   <Label>{t("admin.lessons.form.productTimestamps")}</Label>
                   <p className="text-xs text-muted-foreground">
-                    {t("admin.lessons.form.timestampHint", { max: form.duration * 60 })}
+                    {form.duration > 0
+                      ? t("admin.lessons.form.timestampHint", { max: form.duration * 60 })
+                      : t("admin.lessons.form.timestampHintNoDuration")}
                   </p>
                   {form.linkedProduct.map((lp) => {
                     const listed = allProducts.find((p) => p._id === lp.productId);
@@ -340,7 +366,7 @@ export function LessonFormPage() {
                       lp.variantId && !variants.some((v) => v.id === lp.variantId)
                         ? [...variants, { id: lp.variantId, color: lp.variantId }]
                         : variants;
-                    const invalid = lp.timestamp < 0 || lp.timestamp > form.duration * 60;
+                    const invalid = lp.timestamp < 0 || (form.duration > 0 && lp.timestamp > form.duration * 60);
                     return (
                       <div key={lp.productId} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[140px_1fr]">
                         <p className="truncate text-sm font-medium sm:col-span-2">{name}</p>
@@ -378,7 +404,7 @@ export function LessonFormPage() {
                             id={`ts-${lp.productId}`}
                             type="number"
                             min={0}
-                            max={form.duration * 60}
+                            max={form.duration > 0 ? form.duration * 60 : undefined}
                             value={lp.timestamp}
                             aria-invalid={invalid}
                             onChange={(e) => updateLinkedProduct(lp.productId, { timestamp: Number(e.target.value) })}

@@ -27,8 +27,17 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../../shared/components/ui/avatar";
 import { Checkbox } from "../../shared/components/ui/checkbox";
 import { Label } from "../../shared/components/ui/label";
-import { freeVideos } from "../../features/learn/data/learn.mock";
 import { courseService } from "../../shared/api/courseService";
+import { videoService, type Video } from "../../shared/api/videoService";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../../shared/components/ui/dialog";
+import { getYouTubeVideoId } from "../../features/learn/utils/youtube";
+import { getCourseRating } from "../../features/learn/utils/courseRating";
+import { resolveAvatarUrl } from "../../lib/avatarUrl";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import type { Course, CourseLevel } from "../../features/learn/types/learn.types";
@@ -52,6 +61,24 @@ const LEVEL_ICON: Record<CourseLevel, LucideIcon> = {
   pro: TreeDeciduous,
 };
 
+/** Số video miễn phí (community) lấy về cho trang Learn. */
+const FREE_VIDEO_LIMIT = 12;
+
+function formatVideoDuration(totalSeconds?: number): string | null {
+  if (!totalSeconds || totalSeconds <= 0) return null;
+  const s = Math.round(totalSeconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function uploaderInfo(video: Video): { name: string; avatar?: string } {
+  const uploader = video.uploader;
+  if (!uploader || typeof uploader === "string") return { name: "Len Em" };
+  return {
+    name: uploader.fullName || uploader.username || "Len Em",
+    avatar: resolveAvatarUrl(uploader.avatar),
+  };
+}
+
 type ActiveFilterChip = { type: "level" | "tag"; value: string; label: string };
 
 export function LearnPage() {
@@ -64,9 +91,16 @@ export function LearnPage() {
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   // CourseId đang gửi đánh giá sao — disable sao của card đó trong lúc chờ.
   const [ratingCourseId, setRatingCourseId] = useState<string | null>(null);
+  // Điểm người dùng vừa chấm trong phiên này (BE không trả lại điểm riêng của từng người).
+  const [myCourseScores, setMyCourseScores] = useState<Record<string, number>>({});
   const [selectedLevels, setSelectedLevels] = useState<CourseLevel[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  // Video miễn phí = video "community" tạo ở /admin/videos. GET /videos yêu cầu
+  // đăng nhập → khách, lỗi API hoặc không có video thì ẩn hẳn mục này.
+  const [freeVideos, setFreeVideos] = useState<Video[]>([]);
+  const [playingVideo, setPlayingVideo] = useState<Video | null>(null);
+  const [ratingVideo, setRatingVideo] = useState(false);
   
   // Get search query from URL
   const searchQuery = searchParams.get("search") || "";
@@ -94,6 +128,62 @@ export function LearnPage() {
     };
     fetchCourses();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setFreeVideos([]);
+      return;
+    }
+    let cancelled = false;
+    videoService
+      .getAll({ type: "community", limit: FREE_VIDEO_LIMIT, sort: "newest" })
+      .then((res) => {
+        if (!cancelled) setFreeVideos(res.data.data?.videos ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setFreeVideos([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const currentUserId = user?.userId || user?.id || "";
+
+  /** Điểm người đang xem đã chấm cho video (0 = chưa chấm). */
+  const myVideoScore = (video: Video) =>
+    video.ratings?.find((r) => (r.user ?? r.userId) === currentUserId)?.score ?? 0;
+
+  /**
+   * Rate video — POST /videos/{id}/rate { score: 1–5 }; chấm lại sẽ ghi đè.
+   * BE trả averageRating + totalRatings mới → cập nhật cả card lẫn popup.
+   */
+  const handleRateVideo = async (video: Video, score: number) => {
+    setRatingVideo(true);
+    try {
+      const res = await videoService.rate(video._id, score);
+      const result = res.data.data;
+      const others = (video.ratings ?? []).filter((r) => (r.user ?? r.userId) !== currentUserId);
+      const updated: Video = {
+        ...video,
+        averageRating: result?.averageRating ?? video.averageRating,
+        ratings: [...others, { user: currentUserId, score }],
+      };
+      setFreeVideos((prev) => prev.map((v) => (v._id === video._id ? updated : v)));
+      setPlayingVideo((prev) => (prev?._id === video._id ? updated : prev));
+      toast.success(t("learnPage.rateSuccess"));
+    } catch {
+      // Lỗi API đã được axios interceptor toast sẵn.
+    } finally {
+      setRatingVideo(false);
+    }
+  };
+
+  const openVideo = (video: Video) => {
+    setPlayingVideo(video);
+    // GET /videos/{id} tăng lượt xem ở BE — không cần chờ kết quả.
+    videoService.getById(video._id).catch(() => {});
+  };
 
   const tags = useMemo(
     () => Array.from(new Set(courses.flatMap((course) => course.tags))).sort(),
@@ -216,8 +306,8 @@ export function LearnPage() {
 
   /**
    * Rate (sao) khóa học — POST /courses/{id}/rate { rating: 1–5 }.
-   * Chưa đăng nhập → về /auth/login. Sau khi rate thành công thì GET lại
-   * course để hiển thị điểm trung bình mới nhất (BE tính lại average).
+   * Chưa đăng nhập → về /auth/login. Response trả course đã tính lại
+   * averageRating + totalRatings → cập nhật thẳng vào card.
    */
   const handleRate = useCallback(
     async (courseId: string, score: number) => {
@@ -227,20 +317,22 @@ export function LearnPage() {
       }
       setRatingCourseId(courseId);
       try {
-        await courseService.rate(courseId, score);
-        try {
-          const res = await courseService.getById(courseId);
-          const updated = res.data.data?.course;
-          if (updated) {
-            setCourses((prev) =>
-              prev.map((course) =>
-                course._id === courseId ? { ...course, rating: updated.rating } : course,
-              ),
-            );
-          }
-        } catch {
-          // Không lấy lại được điểm mới — hiển thị điểm đã có, không báo lỗi.
+        const res = await courseService.rate(courseId, score);
+        const updated = res.data.data?.course;
+        if (updated) {
+          setCourses((prev) =>
+            prev.map((course) =>
+              course._id === courseId
+                ? {
+                    ...course,
+                    averageRating: updated.averageRating,
+                    totalRatings: updated.totalRatings,
+                  }
+                : course,
+            ),
+          );
         }
+        setMyCourseScores((prev) => ({ ...prev, [courseId]: score }));
         toast.success(t("learnPage.rateSuccess"));
       } catch {
         // Lỗi API (401/400/404...) đã được axios interceptor toast sẵn.
@@ -308,7 +400,7 @@ export function LearnPage() {
           <div className="learn-rating" title={t("learnPage.rateHint")}>
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((star) => {
-                const filled = star <= Math.round(course.rating ?? 0);
+                const filled = star <= (myCourseScores[course._id] ?? Math.round(getCourseRating(course)));
                 return (
                   <button
                     key={star}
@@ -332,7 +424,12 @@ export function LearnPage() {
               })}
             </div>
             <span className="learn-rating-score">
-              {Number(course.rating ?? 0).toFixed(1)}
+              {getCourseRating(course).toFixed(1)}
+              {(course.totalRatings ?? 0) > 0 && (
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  ({course.totalRatings})
+                </span>
+              )}
             </span>
           </div>
 
@@ -444,15 +541,17 @@ export function LearnPage() {
                   <p className="craft-stat-label">{t("learnPage.courses")}</p>
                 </div>
               </div>
-              <div className="craft-stat">
-                <span className="craft-stat-icon">
-                  <PlayCircle className="size-4" />
-                </span>
-                <div>
-                  <p className="craft-stat-num">{freeVideos.length}</p>
-                  <p className="craft-stat-label">{t("learnPage.freeVideos")}</p>
+              {freeVideos.length > 0 && (
+                <div className="craft-stat">
+                  <span className="craft-stat-icon">
+                    <PlayCircle className="size-4" />
+                  </span>
+                  <div>
+                    <p className="craft-stat-num">{freeVideos.length}</p>
+                    <p className="craft-stat-label">{t("learnPage.freeVideos")}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </section>
@@ -579,74 +678,176 @@ export function LearnPage() {
               </>
             )}
 
-            {/* ── Free Videos ── */}
-            <section>
-              <SectionHead
-                icon={<PlayCircle className="size-5" />}
-                title={t("learnPage.freeVideos")}
-                sub={`${freeVideos.length} ${t("learnPage.shortTutorials")}`}
-              />
+            {/* ── Free Videos (từ /admin/videos, type community) ── */}
+            {freeVideos.length > 0 && (
+              <section>
+                <SectionHead
+                  icon={<PlayCircle className="size-5" />}
+                  title={t("learnPage.freeVideos")}
+                  sub={`${freeVideos.length} ${t("learnPage.shortTutorials")}`}
+                />
 
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {freeVideos.map((video) => {
-                  const LevelIcon = LEVEL_ICON[video.level];
-                  return (
-                    <div
-                      key={video.id}
-                      className="learn-video group"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        if (!isAuthenticated) {
-                          navigate("/auth/login");
-                        }
-                      }}
-                    >
-                      <div className="learn-video-media">
-                        <img src={video.thumbnail} alt={video.title} loading="lazy" />
-                        <span className="learn-video-play">
-                          <Play className="size-4 fill-current" />
-                        </span>
-                        <span className={cn("learn-level", levelStyles[video.level])}>
-                          <LevelIcon className="size-3" />
-                          {levelLabels[video.level]}
-                        </span>
-                        <span className="learn-video-duration">
-                          <Clock className="size-3" />
-                          {video.duration} {t("learnPage.min")}
-                        </span>
-                      </div>
-                      <div className="p-4">
-                        <h4 className="learn-video-title">{video.title}</h4>
-                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                          {video.description}
-                        </p>
-                        <div className="learn-video-foot">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <Avatar className="size-6">
-                              <AvatarImage src={video.creator.avatar} alt={video.creator.name} />
-                              <AvatarFallback className="text-[10px]">
-                                {video.creator.name.slice(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="truncate text-xs text-muted-foreground">
-                              {video.creator.name}
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {freeVideos.map((video) => {
+                    const youTubeId = getYouTubeVideoId(video.url);
+                    const thumbnail =
+                      video.thumbnail?.url ||
+                      (youTubeId ? `https://img.youtube.com/vi/${youTubeId}/hqdefault.jpg` : null);
+                    const duration = formatVideoDuration(video.duration);
+                    const category =
+                      video.category && typeof video.category === "object" ? video.category.name : null;
+                    const creator = uploaderInfo(video);
+                    return (
+                      <div
+                        key={video._id}
+                        className="learn-video group"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openVideo(video)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openVideo(video);
+                          }
+                        }}
+                      >
+                        <div className="learn-video-media">
+                          {thumbnail ? (
+                            <img src={thumbnail} alt={video.title} loading="lazy" />
+                          ) : (
+                            // Video upload lên Cloudinary không có thumbnail → dùng khung hình đầu.
+                            <video src={video.url} preload="metadata" muted playsInline />
+                          )}
+                          <span className="learn-video-play">
+                            <Play className="size-4 fill-current" />
+                          </span>
+                          {category && (
+                            <span className="learn-level is-beginner">
+                              <Tag className="size-3" />
+                              {category}
+                            </span>
+                          )}
+                          {duration && (
+                            <span className="learn-video-duration">
+                              <Clock className="size-3" />
+                              {duration}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h4 className="learn-video-title">{video.title}</h4>
+                          {video.description && (
+                            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                              {video.description}
+                            </p>
+                          )}
+                          <div className="learn-video-foot">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Avatar className="size-6">
+                                <AvatarImage src={creator.avatar} alt={creator.name} />
+                                <AvatarFallback className="text-[10px]">
+                                  {creator.name.slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="truncate text-xs text-muted-foreground">
+                                {creator.name}
+                              </span>
+                            </div>
+                            <span className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Star className="size-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
+                                {Number(video.averageRating ?? 0).toFixed(1)}
+                                {(video.ratings?.length ?? 0) > 0 && ` (${video.ratings!.length})`}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Eye className="size-3" />
+                                {(video.viewCount ?? 0).toLocaleString()}
+                              </span>
                             </span>
                           </div>
-                          <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
-                            <Eye className="size-3" />
-                            {video.viewCount.toLocaleString()} {t("learnPage.views")}
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </main>
         </div>
       </div>
+
+      {/* ── Free video player ── */}
+      <Dialog open={playingVideo !== null} onOpenChange={(open) => !open && setPlayingVideo(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          {playingVideo && (
+            <>
+              <DialogTitle>{playingVideo.title}</DialogTitle>
+              <DialogDescription className={playingVideo.description ? undefined : "sr-only"}>
+                {playingVideo.description || playingVideo.title}
+              </DialogDescription>
+              {getYouTubeVideoId(playingVideo.url) ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${getYouTubeVideoId(playingVideo.url)}?rel=0&autoplay=1`}
+                  title={playingVideo.title}
+                  className="aspect-video w-full rounded-xl"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  src={playingVideo.url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="aspect-video w-full rounded-xl bg-black"
+                />
+              )}
+              {/* Rate (sao) — điểm trung bình + cho phép chấm 1–5, tô theo điểm của mình */}
+              <div className="learn-rating" title={t("learnPage.rateVideoHint")}>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const mine = myVideoScore(playingVideo);
+                      const filled = star <= (mine || Math.round(playingVideo.averageRating ?? 0));
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          disabled={ratingVideo}
+                          aria-label={`${star}/5`}
+                          onClick={() => void handleRateVideo(playingVideo, star)}
+                          className={`transition-transform ${
+                            ratingVideo ? "cursor-wait opacity-60" : "hover:scale-125"
+                          }`}
+                        >
+                          <Star
+                            className={`size-5 ${
+                              filled
+                                ? "fill-[var(--rating-star)] text-[var(--rating-star)]"
+                                : "text-muted-foreground/30"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {myVideoScore(playingVideo) > 0
+                      ? t("learnPage.yourRating", { score: myVideoScore(playingVideo) })
+                      : t("learnPage.rateVideoHint")}
+                  </span>
+                </div>
+                <span className="learn-rating-score">
+                  {Number(playingVideo.averageRating ?? 0).toFixed(1)}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    ({playingVideo.ratings?.length ?? 0})
+                  </span>
+                </span>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Mobile filter drawer ── */}
       <AnimatePresence>

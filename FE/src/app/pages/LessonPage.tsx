@@ -33,6 +33,7 @@ import { productService, type Product } from "../../shared/api/productService";
 import { materialCombos } from "../../features/learn/data/learn.mock";
 import { useLearnStore } from "../../features/learn/store/learn.store";
 import { canWatchLesson } from "../../features/learn/utils/lessonAccess";
+import { getYouTubeVideoId } from "../../features/learn/utils/youtube";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useAddToCart, type AddResult } from "../../features/cart/useAddToCart";
@@ -54,15 +55,6 @@ import "../../styles/course.css";
 const MANUAL_COMPLETE_RATIO = 0.8;
 /** Hết thời gian này mà YouTube IFrame API chưa sẵn sàng → dùng iframe thường. */
 const YT_LOAD_TIMEOUT_MS = 8000;
-
-/** Extract YouTube video ID from various YouTube URL formats. */
-function getYouTubeVideoId(url: string): string | null {
-  if (!url) return null;
-  const match = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-  );
-  return match ? match[1] : null;
-}
 
 /**
  * Extract ID from various reference formats.

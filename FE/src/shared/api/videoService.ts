@@ -25,11 +25,13 @@ const VIDEOS_BASE = "/videos";
 /** Video category known to the BE (extendable — the API types it as plain string). */
 export type VideoType = "community" | "premium";
 
+/** Phần tử `ratings` của video — BE lưu người chấm ở `user` (ObjectId). */
 export interface VideoRating {
-  _id: string;
-  userId: string;
+  _id?: string;
+  user?: string;
+  userId?: string;
   score: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 /**
@@ -43,16 +45,29 @@ export interface Video {
   description?: string;
   type: VideoType | string;
   url: string;
-  category?: string;
+  thumbnail?: { url?: string | null; publicId?: string | null } | null;
+  /** Thời lượng tính bằng giây (0 = không rõ). */
+  duration?: number;
+  /** Category ObjectId — GET populate thành { _id, name, slug }. */
+  category?: string | { _id: string; name?: string; slug?: string } | null;
   tags?: string[];
   attachedProducts?: Array<string | { _id: string; name?: string }>;
   attachedKits?: Array<string | { _id: string; name?: string }>;
   viewCount?: number;
+  /** BE lưu điểm trung bình ở `averageRating`; `rating` giữ cho dữ liệu cũ. */
+  averageRating?: number;
   rating?: number;
   ratings?: VideoRating[];
   uploader?:
     | string
-    | { _id?: string; id?: string; userId?: string; fullName?: string; username?: string };
+    | {
+        _id?: string;
+        id?: string;
+        userId?: string;
+        fullName?: string;
+        username?: string;
+        avatar?: string | { url?: string; publicId?: string } | null;
+      };
   createdBy?:
     | string
     | { _id?: string; id?: string; userId?: string; fullName?: string; username?: string };
@@ -85,6 +100,8 @@ export interface CreateVideoRequest {
   description?: string;
   type: VideoType | string;
   url: string;
+  duration?: number;
+  /** Category ObjectId (24 hex) — BE cast sang ObjectId, chuỗi tự do sẽ lỗi. */
   category?: string;
   tags?: string[];
   attachedProducts?: string[];
@@ -139,7 +156,10 @@ export const videoService = {
 
   /** POST /videos/{id}/rate — Rate a video 1–5 stars (re-rating overrides) */
   rate: (id: string, score: number) =>
-    axiosClient.post<ApiResponse<{ message?: string }>>(`${VIDEOS_BASE}/${id}/rate`, { score }),
+    axiosClient.post<ApiResponse<{ averageRating: number; totalRatings: number }>>(
+      `${VIDEOS_BASE}/${id}/rate`,
+      { score },
+    ),
 
   /** PATCH /videos/admin-update/{id} — Admin update a video */
   adminUpdate: (id: string, data: UpdateVideoRequest) =>

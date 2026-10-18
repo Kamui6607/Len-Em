@@ -26,6 +26,7 @@ import {
 } from "../../../shared/api/videoService";
 import { productService, type Product } from "../../../shared/api/productService";
 import { kitService, type Kit } from "../../../shared/api/kitService";
+import { categoryService, type Category } from "../../../shared/api/categoryService";
 import { useLanguage } from "../../../shared/contexts/LanguageContext";
 
 /** Client-side guard mirroring the BE's 500MB upload limit. */
@@ -36,9 +37,28 @@ const typeOptions: { value: VideoType; label: string }[] = [
   { value: "premium", label: "Premium" },
 ];
 
+/** Giá trị Select cho "Không chọn danh mục" (Radix Select không cho value rỗng). */
+const NO_CATEGORY = "__none__";
+
 /** GET may return attached ids as plain strings OR populated objects. */
 const toIds = (items?: Array<string | { _id: string }>): string[] =>
   (items ?? []).map((item) => (typeof item === "string" ? item : item._id));
+
+/** Đọc thời lượng (giây) từ metadata file video; 0 nếu trình duyệt không đọc được. */
+function readVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    const done = (seconds: number) => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds) : 0);
+    };
+    video.onloadedmetadata = () => done(video.duration);
+    video.onerror = () => done(0);
+    video.src = url;
+  });
+}
 
 export function VideoFormPage() {
   const navigate = useNavigate();
@@ -55,6 +75,9 @@ export function VideoFormPage() {
   const [kitsLoading, setKitsLoading] = useState(true);
   const [productSearch, setProductSearch] = useState("");
   const [kitSearch, setKitSearch] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  // Danh mục đã populate của video đang sửa — vẫn hiện được dù không còn trong danh sách
+  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [tagInput, setTagInput] = useState("");
 
@@ -82,6 +105,10 @@ export function VideoFormPage() {
         .then((res) => setAllKits(res.data.data?.kits ?? []))
         .catch(() => {})
         .finally(() => setKitsLoading(false)),
+      categoryService
+        .getAll()
+        .then((res) => setCategories(res.data.data?.categories ?? []))
+        .catch(() => {}),
     ]);
   }, []);
 
@@ -94,12 +121,18 @@ export function VideoFormPage() {
         const res = await videoService.getById(videoId);
         const video = res.data.data?.video;
         if (!video) throw new Error("not found");
+        const category = video.category;
+        setCurrentCategory(
+          category && typeof category === "object"
+            ? { _id: category._id, name: category.name ?? category._id }
+            : null,
+        );
         setForm({
           title: video.title,
           description: video.description ?? "",
           type: (video.type as VideoType) || "community",
           url: video.url,
-          category: video.category ?? "",
+          category: (typeof category === "object" ? category?._id : category) ?? "",
           tags: video.tags ?? [],
           attachedProducts: toIds(video.attachedProducts),
           attachedKits: toIds(video.attachedKits),
@@ -156,6 +189,7 @@ export function VideoFormPage() {
       // Create: upload file trước (POST /videos/upload → Cloudinary url) rồi tạo entry.
       if (!isEditing) {
         let url = form.url.trim();
+        let duration = 0;
         if (videoFile) {
           if (videoFile.size > MAX_VIDEO_SIZE) {
             toast.error(t("admin.videos.form.fileTooLarge"));
@@ -164,6 +198,7 @@ export function VideoFormPage() {
           }
           setUploading(true);
           try {
+            duration = await readVideoDuration(videoFile);
             const uploadRes = await videoService.uploadVideo(videoFile);
             url = uploadRes.data.data?.url ?? "";
           } finally {
@@ -175,13 +210,20 @@ export function VideoFormPage() {
           setSaving(false);
           return;
         }
+        if (!/^https?:\/\/\S+$/i.test(url)) {
+          toast.error(t("admin.videos.form.urlInvalid"));
+          setSaving(false);
+          return;
+        }
 
         const payload: CreateVideoRequest = {
           title: form.title,
           description: form.description,
           type: form.type,
           url,
-          category: form.category,
+          ...(duration > 0 ? { duration } : {}),
+          // BE cast category sang ObjectId → chỉ gửi khi đã chọn danh mục thật.
+          ...(form.category ? { category: form.category } : {}),
           tags: form.tags,
           attachedProducts: form.attachedProducts,
           attachedKits: form.attachedKits,
@@ -200,10 +242,13 @@ export function VideoFormPage() {
         toast.success(t("admin.videos.form.updatedSuccess"));
       }
       navigate("/admin/videos");
-    } catch {
-      toast.error(
-        isEditing ? t("admin.videos.form.failedUpdate") : t("admin.videos.form.failedCreate"),
-      );
+    } catch (err) {
+      // Lỗi có response đã được axiosClient toast bằng message của BE → tránh toast đôi.
+      if (!(err as { response?: unknown })?.response) {
+        toast.error(
+          isEditing ? t("admin.videos.form.failedUpdate") : t("admin.videos.form.failedCreate"),
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -219,6 +264,10 @@ export function VideoFormPage() {
   const filteredKits = allKits.filter((kit) =>
     kit.name.toLowerCase().includes(kitSearch.toLowerCase()),
   );
+  const categoryOptions =
+    currentCategory && !categories.some((c) => c._id === currentCategory._id)
+      ? [...categories, currentCategory]
+      : categories;
 
   return (
     <div className="space-y-6">
@@ -334,15 +383,25 @@ export function VideoFormPage() {
 
               <div>
                 <Label htmlFor="category">{t("admin.videos.category")}</Label>
-                <Input
-                  id="category"
-                  value={form.category}
-                  disabled={isEditing}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, category: e.target.value }))
+                <Select
+                  value={form.category || NO_CATEGORY}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, category: value === NO_CATEGORY ? "" : value }))
                   }
-                  placeholder={t("admin.videos.form.placeholder.category")}
-                />
+                  disabled={isEditing}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_CATEGORY}>{t("admin.videos.form.noCategory")}</SelectItem>
+                    {categoryOptions.map((category) => (
+                      <SelectItem key={category._id} value={category._id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

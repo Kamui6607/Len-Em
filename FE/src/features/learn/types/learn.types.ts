@@ -19,7 +19,11 @@ export interface Course {
   creatorId: string;
   totalDuration: number;
   totalLessons: number;
-  rating: number;
+  /** Điểm trung bình BE trả về (POST /courses/{id}/rate tính lại). */
+  averageRating?: number;
+  totalRatings?: number;
+  /** Trường cũ (mock) — dữ liệu thật dùng averageRating. */
+  rating?: number;
   enrolledCount: number;
   isPublished: boolean;
   createdAt: string;
@@ -53,21 +57,6 @@ export interface CourseListResponse {
     total: number;
     totalPages: number;
   };
-}
-
-export interface FreeVideo {
-  id: string;
-  title: string;
-  description: string;
-  videoUrl: string;
-  duration: number;
-  level: CourseLevel;
-  thumbnail: string;
-  creator: { id: string; name: string; avatar: string };
-  linkedProducts?: LinkedProduct[];
-  tags: string[];
-  viewCount: number;
-  createdAt: string;
 }
 
 export interface Lesson {
@@ -155,6 +144,7 @@ export interface CreateCourseRequest {
   linkedLessons?: string[];
   tags?: string[];
   linkedCombo?: string[];
+  linkedProduct?: string[];
   isPublished?: boolean;
 }
 
@@ -168,6 +158,7 @@ export interface UpdateCourseRequest {
   linkedLessons?: string[];
   tags?: string[];
   linkedCombo?: string[];
+  linkedProduct?: string[];
   isPublished?: boolean;
 }
 
@@ -200,7 +191,6 @@ export interface CourseFormData {
   price: number;
   tags: string[];
   linkedLessons: string[];
-  linkedCombo: string[];
   isPublished: boolean;
 }
 

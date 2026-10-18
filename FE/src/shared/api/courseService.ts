@@ -73,8 +73,9 @@ export const courseService = {
     ),
 
   /** POST /courses/{id}/rate â€” Rate a course (authenticated) */
+  // BE trả về course đã tính lại averageRating + totalRatings.
   rate: (courseId: string, rating: number) =>
-    axiosClient.post<ApiResponse<{ message: string }>>(`${COURSES_BASE}/${courseId}/rate`, { rating }),
+    axiosClient.post<ApiResponse<{ course: Course }>>(`${COURSES_BASE}/${courseId}/rate`, { rating }),
 
   /** POST /courses/{id}/lessons/{lessonId} â€” Link a lesson to a course (Admin & Staff) */
   linkLesson: (courseId: string, lessonId: string) =>

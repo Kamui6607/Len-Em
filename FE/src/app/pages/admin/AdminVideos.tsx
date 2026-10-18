@@ -192,7 +192,7 @@ export function AdminVideos() {
     if (field === "type") return toText(video.type);
     if (field === "category") return toText(video.category);
     if (field === "views") return toNumber(video.viewCount) ?? 0;
-    if (field === "rating") return toNumber(video.rating) ?? 0;
+    if (field === "rating") return toNumber(video.averageRating ?? video.rating) ?? 0;
     return null;
   });
   const rows = applySort(videos);
@@ -251,7 +251,7 @@ export function AdminVideos() {
       align: "right",
       sortable: true,
       render: (video) => {
-        const rating = toNumber(video.rating);
+        const rating = toNumber(video.averageRating ?? video.rating);
         return rating != null ? (
           <span className="adm-gnum inline-flex items-center gap-1">
             <Star className="size-3.5 text-[var(--warning-text)]" fill="currentColor" />
@@ -449,7 +449,7 @@ export function AdminVideos() {
                 {viewingVideo.attachedKits?.length ?? 0}
               </AdminDetailItem>
               <AdminDetailItem label={t("admin.videos.rating")}>
-                {toNumber(viewingVideo.rating) != null ? `${toNumber(viewingVideo.rating)!.toFixed(1)} / 5` : null}
+                {toNumber(viewingVideo.averageRating ?? viewingVideo.rating) != null ? `${toNumber(viewingVideo.averageRating ?? viewingVideo.rating)!.toFixed(1)} / 5` : null}
               </AdminDetailItem>
             </AdminDetailGrid>
 

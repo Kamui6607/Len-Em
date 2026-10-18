@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Save, Check, Search } from "lucide-react";
+import { Save, Check, Search, Package, Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../../../shared/components/ui/badge";
 import { Button } from "../../../shared/components/ui/button";
@@ -19,7 +19,6 @@ import { Switch } from "../../../shared/components/ui/switch";
 import { courseService } from "../../../shared/api/courseService";
 import { lessonService } from "../../../shared/api/lessonService";
 import { kitService, type Kit } from "../../../shared/api/kitService";
-import { formatPrice } from "../../../lib/formatPrice";
 import type {
   CourseLevel,
   CourseFormData,
@@ -50,6 +49,14 @@ const toIdStrings = (
     .map((item) => (typeof item === "string" ? item : item?._id ?? item?.id ?? ""))
     .filter((id): id is string => Boolean(id));
 
+interface DerivedMaterial {
+  id: string;
+  name: string;
+  image?: string;
+  /** Số bài học (đã chọn) dùng nguyên liệu này. */
+  lessonCount: number;
+}
+
 export function CourseFormPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
@@ -60,11 +67,11 @@ export function CourseFormPage() {
   const [saving, setSaving] = useState(false);
   const [allLessons, setAllLessons] = useState<Lesson[]>([]);
   const [lessonsLoading, setLessonsLoading] = useState(false);
+  // GET /lessons lỗi → không suy ra được nguyên liệu, khi lưu giữ nguyên giá trị cũ của course.
+  const [lessonsFailed, setLessonsFailed] = useState(false);
   const [lessonSearch, setLessonSearch] = useState("");
-  // Combos (kits) để chọn linkedCombo — POST/PUT /courses nhận mảng combo id.
+  // Kits chỉ để tra tên combo — combo của course lấy từ các bài học liên kết.
   const [allCombos, setAllCombos] = useState<Kit[]>([]);
-  const [combosLoading, setCombosLoading] = useState(false);
-  const [comboSearch, setComboSearch] = useState("");
   const [form, setForm] = useState<CourseFormData>({
     title: "",
     description: "",
@@ -73,7 +80,6 @@ export function CourseFormPage() {
     price: 0,
     tags: [],
     linkedLessons: [],
-    linkedCombo: [],
     isPublished: false,
   });
   const [tagInput, setTagInput] = useState("");
@@ -100,7 +106,7 @@ export function CourseFormPage() {
         const res = await lessonService.getAll();
         setAllLessons(res.data.data.lessons ?? []);
       } catch {
-        // silently fail
+        setLessonsFailed(true);
       } finally {
         setLessonsLoading(false);
       }
@@ -108,20 +114,12 @@ export function CourseFormPage() {
     fetchLessons();
   }, []);
 
-  // Fetch combos (kits) — danh sách chọn linkedCombo trong form.
+  // Kits — chỉ dùng tra tên combo hiển thị trong phần nguyên liệu.
   useEffect(() => {
-    const fetchCombos = async () => {
-      setCombosLoading(true);
-      try {
-        const res = await kitService.getAll({ limit: 100 });
-        setAllCombos(res.data.data?.kits ?? []);
-      } catch {
-        // BE chưa có combo → picker hiện "Không có combo".
-      } finally {
-        setCombosLoading(false);
-      }
-    };
-    fetchCombos();
+    kitService
+      .getAll({ limit: 100 })
+      .then((res) => setAllCombos(res.data.data?.kits ?? []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -140,12 +138,6 @@ export function CourseFormPage() {
           tags: course.tags || [],
           // GET /courses/{id} trả linkedLessons đã populate (object lesson) → chuẩn về id string
           linkedLessons: toIdStrings(course.linkedLessons),
-          // linkedCombo có thể là string[], { comboId } hoặc kit đã populate (_id)
-          linkedCombo: ((course.linkedCombo ?? []) as unknown as Array<
-            string | { comboId?: string; _id?: string }
-          >)
-            .map((c) => (typeof c === "string" ? c : c.comboId ?? c._id ?? ""))
-            .filter(Boolean),
           isPublished: course.isPublished,
         });
       } catch {
@@ -178,33 +170,62 @@ export function CourseFormPage() {
     }));
   };
 
-  const toggleCombo = (comboId: string) => {
-    setForm((prev) => ({
-      ...prev,
-      linkedCombo: prev.linkedCombo.includes(comboId)
-        ? prev.linkedCombo.filter((id) => id !== comboId)
-        : [...prev.linkedCombo, comboId],
-    }));
-  };
-
   /**
-   * Đối chiếu price sau khi lưu bằng GET /courses/{id} (giá thật từ BE).
-   * Trả về false nếu BE không lưu giá; true nếu không kiểm tra được
-   * (tránh báo lỗi false-positive khi GET lỗi mạng).
+   * Nguyên liệu của course = hợp (không trùng) product + combo của các bài học đã
+   * chọn. Mỗi lesson đã gắn sẵn nguyên liệu riêng nên course không chọn lại.
    */
-  const priceSaved = async (id: string, expected: number): Promise<boolean> => {
-    try {
-      const res = await courseService.getById(id);
-      return (res.data.data?.course?.price ?? 0) === expected;
-    } catch {
-      return true;
+  const materials = useMemo(() => {
+    const products = new Map<string, DerivedMaterial>();
+    const combos = new Map<string, DerivedMaterial>();
+    const selected = new Set(form.linkedLessons);
+    for (const lesson of allLessons) {
+      if (!selected.has(lesson._id)) continue;
+      const seenProducts = new Set<string>();
+      for (const lp of lesson.linkedProduct ?? []) {
+        const ref = lp.productId;
+        const id = typeof ref === "string" ? ref : ref?._id;
+        if (!id || seenProducts.has(id)) continue;
+        seenProducts.add(id);
+        const existing = products.get(id);
+        if (existing) existing.lessonCount += 1;
+        else
+          products.set(id, {
+            id,
+            name: typeof ref === "object" && ref ? ref.name : id,
+            image: typeof ref === "object" && ref ? ref.image : undefined,
+            lessonCount: 1,
+          });
+      }
+      const seenCombos = new Set<string>();
+      for (const lc of lesson.linkedCombo ?? []) {
+        const id = lc.comboId;
+        if (!id || seenCombos.has(id)) continue;
+        seenCombos.add(id);
+        const existing = combos.get(id);
+        if (existing) existing.lessonCount += 1;
+        else {
+          const kit = allCombos.find((k) => k._id === id);
+          combos.set(id, { id, name: kit?.name ?? id, image: kit?.thumbnail, lessonCount: 1 });
+        }
+      }
     }
-  };
+    return { products: [...products.values()], combos: [...combos.values()] };
+  }, [form.linkedLessons, allLessons, allCombos]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
       toast.error(t("admin.courses.form.titleRequired"));
+      return;
+    }
+    // Model Course ở BE bắt buộc description và thumbnail — thiếu thì Mongoose
+    // ném ValidationError (500) dù Joi cho qua.
+    if (!form.description.trim()) {
+      toast.error(t("admin.courses.form.descriptionRequired"));
+      return;
+    }
+    if (!thumbnailFile && !form.thumbnail) {
+      toast.error(t("admin.courses.form.thumbnailRequired"));
       return;
     }
 
@@ -214,48 +235,39 @@ export function CourseFormPage() {
       // linkedLessons, tags, linkedCombo, isPublished, price); `thumbnail` — file ảnh
       // đính kèm riêng trong multipart/form-data.
       const data = {
-        title: form.title,
-        description: form.description,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        // Có file mới → BE tự gán thumbnail từ file upload.
         thumbnail: thumbnailFile ? undefined : form.thumbnail,
         level: form.level,
         price: form.price,
         tags: form.tags,
         linkedLessons: toIdStrings(form.linkedLessons),
-        linkedCombo: form.linkedCombo,
+        // Suy ra từ bài học; GET /lessons lỗi thì không gửi để khỏi xóa nhầm dữ liệu cũ.
+        ...(lessonsFailed
+          ? {}
+          : {
+              linkedProduct: materials.products.map((p) => p.id),
+              linkedCombo: materials.combos.map((c) => c.id),
+            }),
         isPublished: form.isPublished,
       };
       if (isEditing && courseId) {
         await courseService.update(courseId, data, thumbnailFile ?? undefined);
-        if (await priceSaved(courseId, form.price)) {
-          toast.success(t("admin.courses.form.updatedSuccess"));
-        } else {
-          toast.error(t("admin.courses.form.priceSaveFailed"));
-        }
+        toast.success(t("admin.courses.form.updatedSuccess"));
       } else {
-        const res = await courseService.create(data, thumbnailFile ?? undefined);
-        const createdId = res.data.data?.course?._id;
-        // POST /courses không có price trong schema API → set lại giá ngay sau
-        // khi tạo (PUT multipart) để khóa học Premium không rơi về miễn phí.
-        let priceOk = true;
-        if (createdId && form.price > 0) {
-          try {
-            await courseService.update(createdId, data);
-          } catch {
-            priceOk = false;
-          }
-          priceOk = priceOk && (await priceSaved(createdId, form.price));
-        }
-        if (priceOk) {
-          toast.success(t("admin.courses.form.createdSuccess"));
-        } else {
-          toast.error(t("admin.courses.form.priceSaveFailed"));
-        }
+        // createCourseSchema của BE đã nhận `price` → không cần PUT lại sau khi tạo.
+        await courseService.create(data, thumbnailFile ?? undefined);
+        toast.success(t("admin.courses.form.createdSuccess"));
       }
       navigate("/admin/courses");
-    } catch {
-      toast.error(
-        isEditing ? t("admin.courses.form.failedUpdate") : t("admin.courses.form.failedCreate"),
-      );
+    } catch (err) {
+      // Lỗi có response đã được axiosClient toast bằng message của BE → tránh toast đôi.
+      if (!(err as { response?: unknown })?.response) {
+        toast.error(
+          isEditing ? t("admin.courses.form.failedUpdate") : t("admin.courses.form.failedCreate"),
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -271,9 +283,6 @@ export function CourseFormPage() {
     lesson.title.toLowerCase().includes(lessonSearch.toLowerCase()),
   );
 
-  const filteredCombos = allCombos.filter((combo) =>
-    combo.name.toLowerCase().includes(comboSearch.toLowerCase()),
-  );
 
   return (
     <div className="space-y-6">
@@ -544,75 +553,62 @@ export function CourseFormPage() {
             </CardContent>
           </Card>
 
-          {/* Linked Combos — chọn combo (kit) link vào khóa học */}
+          {/* Nguyên liệu — tự tổng hợp từ các bài học liên kết (chỉ đọc) */}
           <Card>
             <CardContent className="space-y-4 p-6">
               <div className="flex items-center justify-between">
-                <Label>{t("admin.courses.form.linkedCombos")}</Label>
-                <Badge variant="outline">{form.linkedCombo.length}</Badge>
+                <Label>{t("admin.courses.form.materialsFromLessons")}</Label>
+                <Badge variant="outline">
+                  {materials.products.length + materials.combos.length}
+                </Badge>
               </div>
-              <div className="relative w-full">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <Search className="h-4 w-4 text-muted-foreground/60" />
+              <p className="text-xs text-muted-foreground">
+                {t("admin.courses.form.materialsHint")}
+              </p>
+              {lessonsLoading ? (
+                <AdminPickerSkeleton rows={3} />
+              ) : lessonsFailed ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  {t("admin.courses.form.materialsUnavailable")}
+                </p>
+              ) : materials.products.length + materials.combos.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  {form.linkedLessons.length === 0
+                    ? t("admin.courses.form.materialsSelectLessons")
+                    : t("admin.courses.form.materialsEmpty")}
+                </p>
+              ) : (
+                <div className="max-h-[300px] overflow-y-auto space-y-3">
+                  {[
+                    { key: "products", icon: Package, label: t("admin.courses.form.materialsProducts"), items: materials.products },
+                    { key: "combos", icon: Boxes, label: t("admin.courses.form.materialsCombos"), items: materials.combos },
+                  ]
+                    .filter((group) => group.items.length > 0)
+                    .map(({ key, icon: Icon, label, items }) => (
+                      <div key={key} className="space-y-1">
+                        <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          <Icon className="size-3.5" />
+                          {label} ({items.length})
+                        </p>
+                        {items.map((item) => (
+                          <div key={item.id} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm">
+                            {item.image ? (
+                              <img src={item.image} alt="" className="size-8 flex-shrink-0 rounded-md object-cover" />
+                            ) : (
+                              <span className="size-8 flex-shrink-0 rounded-md bg-[var(--surface-secondary)]" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-medium text-xs">{item.name}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {t("admin.courses.form.materialsUsedIn", { count: item.lessonCount })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                 </div>
-                <input
-                  type="text"
-                  value={comboSearch}
-                  onChange={(e) => setComboSearch(e.target.value)}
-                  placeholder={t("admin.courses.form.searchCombosPlaceholder")}
-                  className="input w-full !rounded-xl !pl-10 !py-2.5 text-sm"
-                  style={{
-                    background: "var(--input-bg)",
-                    borderColor: "var(--border)",
-                  }}
-                />
-              </div>
-              <div
-                className="max-h-[300px] overflow-y-auto space-y-1"
-                style={{ minHeight: "100px" }}
-              >
-                {combosLoading ? (
-                  <AdminPickerSkeleton rows={4} />
-                ) : filteredCombos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    {comboSearch
-                      ? t("admin.courses.form.noCombosMatch")
-                      : t("admin.courses.form.noCombosAvailable")}
-                  </p>
-                ) : (
-                  filteredCombos.map((combo) => {
-                    const selected = form.linkedCombo.includes(combo._id);
-                    return (
-                      <button
-                        key={combo._id}
-                        type="button"
-                        onClick={() => toggleCombo(combo._id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
-                          selected
-                            ? "bg-primary/10 text-primary"
-                            : "hover:bg-[var(--surface-secondary)] text-foreground"
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                            selected ? "border-primary bg-primary" : "border-border"
-                          }`}
-                        >
-                          {selected && (
-                            <Check className="w-3 h-3 text-primary-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium text-xs">{combo.name}</p>
-                          <p className="text-[10px] text-muted-foreground capitalize">
-                            {combo.level} • {formatPrice(combo.price)}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              )}
             </CardContent>
           </Card>
         </aside>

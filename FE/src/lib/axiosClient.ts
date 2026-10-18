@@ -244,6 +244,13 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     if (url.includes("/membership/")) {
       return Promise.reject(error);
     }
+    // GET /videos (danh sách): /learn ẩn mục "Video miễn phí" khi lỗi, còn
+    // /admin/videos tự toast loadError → không cần toast toàn cục.
+    // GET /categories chỉ là nguồn cho dropdown, lỗi thì form vẫn dùng được.
+    const method = error.config?.method?.toLowerCase();
+    if (method === "get" && (/^\/?videos(\?|$)/.test(url) || /^\/?categories(\?|$)/.test(url))) {
+      return Promise.reject(error);
+    }
     // Đổi trạng thái đơn / duyệt yêu cầu huỷ: màn hình gọi API tự toast đúng
     // message của BE (vd "Cannot cancel an order in SHIPPING status") → tránh toast đôi.
     if (/\/orders\/[^/]+\/(status|cancel-request)$/.test(url)) {

@@ -63,6 +63,7 @@ import { YarnBallIcon } from "../../features/shop/shopMeta";
 import "../../styles/craft.css";
 import "../../styles/course.css";
 import { useAddToCart } from "../../features/cart/useAddToCart";
+import { getCourseRating } from "../../features/learn/utils/courseRating";
 
 const LEVEL_ICON: Record<CourseLevel, LucideIcon> = {
   beginner: Sprout,
@@ -432,7 +433,7 @@ export function CourseDetailPage() {
   if (!course) return <Navigate to="/learn" replace />;
 
   const LevelIcon = LEVEL_ICON[course.level] ?? Sprout;
-  const rating = Number(course.rating ?? 0);
+  const rating = getCourseRating(course);
   const progressPct = lessons.length ? Math.round((completedCount / lessons.length) * 100) : 0;
   const role = user?.roleId;
 
