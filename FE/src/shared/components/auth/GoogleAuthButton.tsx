@@ -245,7 +245,6 @@ function GsiButton({
           size="large"
           shape="pill"
           text={text}
-          locale="en"
           width={width}
           logo_alignment="center"
           click_listener={onClick}

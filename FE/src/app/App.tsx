@@ -88,7 +88,11 @@ export default function App() {
   );
 
   return isGoogleConfigured ? (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{app}</GoogleOAuthProvider>
+    // locale="en" — the Google button text must match GoogleAuthButton's
+    // loading placeholder ("Sign up with Google" / "Continue with Google").
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID} locale="en">
+      {app}
+    </GoogleOAuthProvider>
   ) : (
     app
   );
