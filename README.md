@@ -1,358 +1,266 @@
 <div align="center">
-  <img src="FE/public/yarn-shop-2-removebg-preview.svg" alt="Len&Em Logo" width="130" height="130" />
-  
-  <h1 align="center" style="font-size: 2.5rem; font-weight: 700; margin-top: 0.5rem; background: linear-gradient(135deg, #f472b6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-    🧶 Len&Em
-  </h1>
 
-  <p align="center" style="font-size: 1.1rem; max-width: 640px; margin: 0 auto;">
-    <strong>Learn it. Shop it. Make it — all in one place.</strong><br />
-    Len&Em is a full-stack crochet universe: a real online store for yarn, hooks & kits,
-    a structured learning academy, and a community where makers share their creations —
-    wrapped in one fast, real-time, installable app.
-  </p>
+<img src="FE/public/yarn-shop-2-removebg-preview.vng.svg" alt="Len&Em logo" width="120" height="120" />
 
-  <br />
+# Len&Em
 
-  <!-- Badges -->
-  <p>
-    <a href="https://react.dev" target="_blank">
-      <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React 18" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-    </a>
-    <a href="https://tailwindcss.com/" target="_blank">
-      <img src="https://img.shields.io/badge/Tailwind_CSS-4.3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
-    </a>
-    <a href="https://vitejs.dev/" target="_blank">
-      <img src="https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-    </a>
-    <br />
-    <a href="https://tanstack.com/query/latest" target="_blank">
-      <img src="https://img.shields.io/badge/TanStack_Query-5-FF4154?style=for-the-badge&logo=reactquery&logoColor=white" alt="TanStack Query" />
-    </a>
-    <a href="https://zustand.docs.pmnd.rs/" target="_blank">
-      <img src="https://img.shields.io/badge/Zustand-5-433E38?style=for-the-badge&logo=react&logoColor=white" alt="Zustand" />
-    </a>
-    <a href="https://socket.io/" target="_blank">
-      <img src="https://img.shields.io/badge/Socket.IO-4-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO" />
-    </a>
-    <a href="https://threejs.org/" target="_blank">
-      <img src="https://img.shields.io/badge/Three.js-r169-000000?style=for-the-badge&logo=three.js&logoColor=white" alt="Three.js" />
-    </a>
-  </p>
+**Learn it. Shop it. Make it.**
 
-  <p>
-    <a href="#-features">Features</a> •
-    <a href="#-how-it-works">How It Works</a> •
-    <a href="#-tech-stack">Tech Stack</a> •
-    <a href="#-getting-started">Getting Started</a> •
-    <a href="#-project-structure">Structure</a> •
-    <a href="#-deployment">Deployment</a> •
-    <a href="#-contributing">Contributing</a>
-  </p>
+A crochet store, a learning academy and a maker community — in one fast, real-time, installable app.
 
-  <br />
-  <hr />
-  <br />
+<a href="https://len-em.vercel.app"><img src="https://img.shields.io/badge/Live_demo-len--em.vercel.app-E8618C?style=for-the-badge" alt="Live demo" /></a>
+<a href="https://github.com/Kamui6607/Len-Em/releases"><img src="https://img.shields.io/badge/Download-Desktop_%26_Android-6E56CF?style=for-the-badge" alt="Download apps" /></a>
+
+<img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white" alt="React" />
+<img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+<img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+<img src="https://img.shields.io/badge/Tailwind-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+<img src="https://img.shields.io/badge/Socket.IO-4-010101?style=flat-square&logo=socket.io&logoColor=white" alt="Socket.IO" />
+<img src="https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
+<img src="https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white" alt="Tauri" />
+
+[Features](#-features) · [Architecture](#-architecture) · [Tech stack](#-tech-stack) · [Getting started](#-getting-started) · [Project structure](#-project-structure) · [Deployment](#-deployment)
+
 </div>
 
----
+<br />
 
-## 🌟 Why Len&Em?
+## 🧶 At a glance
 
-Most craft shops stop at a product page. **Len&Em is a complete ecosystem**, built with the care of a production-grade platform:
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🛍️ Shop</h3>
+      Yarn, hooks and ready-to-go kits with color variants and live stock. Real GHN shipping fees, an address book with map pins, and checkout by <b>SePay VietQR</b> or <b>COD</b>.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🎓 Learn</h3>
+      Free video lessons, structured courses from beginner to advanced, lesson-by-lesson progress, and premium courses unlocked with one QR payment.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🎨 Create</h3>
+      A DIY feed where makers post their work, tag the materials they used, and support each other's creations.
+    </td>
+  </tr>
+</table>
 
-| | |
-|---|---|
-| 🛍️ **A real store** | Product variants & colors, curated kit bundles, live stock, GHN shipping, VNPAY / MoMo / COD checkout |
-| 🎓 **A real academy** | Structured crochet courses, lesson-by-lesson progress tracking, and premium "Buy Now" courses |
-| 🎨 **A real community** | A living DIY feed where makers share creations and cheer each other on |
-| ⚡ **Real-time everywhere** | Orders, statuses & notifications pushed live over Socket.IO |
-| 📱 **Runs anywhere** | Responsive web, installable PWA, plus Tauri desktop & Android apps |
-| 🔐 **Built like a product** | JWT + Google sign-in, RBAC dashboards for User / Creator / Staff / Admin |
-
----
+<br />
 
 ## ✨ Features
 
-### 🛍️ E-Commerce
-| Feature | Description |
-|---------|-------------|
-| **Product Catalog** | Browse yarn, tools, and kits with advanced filtering & search |
-| **Kit Bundles** | Pre-packaged combo kits with discounted pricing |
-| **Shopping Cart** | Full-featured cart with quantity management & kit savings |
-| **Checkout** | Address management, GHN shipping integration, multiple payment methods |
-| **Order Tracking** | Real-time order status with history & detail views |
-| **Wishlist** | ❤️ Save items for later — wishlist with "Add all to cart" |
+<details open>
+<summary><b>🛍️ E-commerce</b></summary>
+<br />
 
-### 🎓 Learning Platform
-| Feature | Description |
-|---------|-------------|
-| **Crochet Courses** | Structured courses sorted by skill level (Beginner → Advanced) |
-| **Video Lessons** | Free quick tutorials with no login required |
-| **Course Enrollment** | Enroll & track progress through lessons |
-| **Premium Courses** | Love a paid course? One "Buy Now" with VNPAY — access unlocks after payment |
-| **Material Tagging** | Every course tags exact yarn, tools & kits used |
+- **Catalog** — products, color variants and kit bundles with filters, search and sorting
+- **Cart & wishlist** — kit savings, "add all to cart" from favorites
+- **Checkout** — saved address book (pick province/district/ward *or* pin on a map), live GHN shipping quote
+- **Payments** — SePay VietQR shown in-page with automatic confirmation, or cash on delivery
+- **Orders** — real-time status updates, order history, cancellation and refund requests
+</details>
 
-### 🎨 Community (DIY)
-| Feature | Description |
-|---------|-------------|
-| **DIY Feed** | Community-shared crochet projects & creations |
-| **Create Posts** | Share your own projects with photos & descriptions |
-| **Support DIY** | Upvote & support fellow makers' creations |
+<details>
+<summary><b>🎓 Learning</b></summary>
+<br />
 
-### 👤 User System
-| Feature | Description |
-|---------|-------------|
-| **Authentication** | JWT-based login/register with password reset & OTP |
-| **Google Sign-In** | One-tap Google OAuth login & registration |
-| **Role-based Access** | User, Creator, Staff, Admin — each with tailored dashboards |
-| **Profile Management** | Edit profile, manage addresses, view purchase history |
-| **Membership Ranks** | Tiered loyalty system with perks & rewards |
+- Free quick-tutorial videos — no account needed
+- Courses grouped by skill level with per-lesson progress tracking
+- Premium courses unlocked after a SePay payment
+- Every course links the exact yarn, tools and kits it uses
+</details>
 
-### 🔧 Admin Panel
-| Feature | Description |
-|---------|-------------|
-| **Dashboard** | Analytics overview with charts & KPIs |
-| **User Management** | Manage users, roles, permissions |
-| **Product Management** | CRUD for products, kits, inventory |
-| **Order Management** | View & manage all orders, refunds |
-| **Content Management** | Courses, lessons, DIY posts moderation |
-| **Reports** | Sales, membership, and order reports |
+<details>
+<summary><b>🎨 Community</b></summary>
+<br />
 
-### 🎯 Additional
-| Feature | Description |
-|---------|-------------|
-| **🌐 Localization** | Vietnamese-first UI with a translation-ready `LanguageContext` |
-| **🌙 Dark Mode** | Theme toggle with smooth transitions |
-| **🤖 ChatBot** | AI-powered customer support assistant |
-| **🔔 Real-time** | Live order & notification updates via Socket.IO |
-| **📱 Responsive** | Mobile-first design with floating bottom nav & pull-to-refresh |
-| **📲 PWA & Desktop** | Installable PWA + Tauri apps for Windows, macOS, Linux & Android |
-| **🎬 Animations** | 3D scenes (Three.js) & scroll-triggered motion effects |
-| **🗺️ Map Picker** | Leaflet-based address picker for checkout |
+- DIY feed with photo posts and material tags
+- Support / upvote fellow makers
+- Admin moderation keeps the feed on-topic
+</details>
 
----
+<details>
+<summary><b>👤 Accounts & membership</b></summary>
+<br />
 
-## 🎬 How It Works
+- Email/password and Google sign-in, OTP password reset
+- Step-by-step sign-up that flags a duplicate email, username or phone on the step where it's entered
+- Escalating lockout after repeated failed logins (5 min, then doubling), with a warning before it kicks in
+- Membership tiers and loyalty coins that can be spent at checkout
+</details>
 
-### 🛍️ As a shopper
-> Discover yarns, hooks & ready-to-go kits → filter by color, price & tags → pick your
-> exact variant → fill the cart → pin your address on a live map → GHN calculates real
-> shipping fees → pay with **VNPAY, MoMo or COD** → watch your order travel through
-> every stage with real-time notifications.
+<details>
+<summary><b>🔧 Staff & admin</b></summary>
+<br />
 
-### 🎓 As a learner
-> Start with **free video lessons** — no account needed → enroll in structured courses →
-> fall in love with a premium course? One **"Buy Now"** and it's yours → every completed
-> lesson is saved to your progress → finish strong with a certificate.
+- Role-based dashboards for **User · Creator · Staff · Admin**
+- Analytics with charts and KPIs
+- Manage products, kits, courses, lessons, videos, users and roles
+- Orders, refunds and reports, activity log, broadcast notifications
+</details>
 
-### 🎨 As a maker
-> Post your latest creation with photos & material tags → publish it to the community
-> feed → get support from fellow makers → curated by admins to keep the feed inspiring.
+<details>
+<summary><b>⚡ Everywhere else</b></summary>
+<br />
 
-### ⚙️ Under the hood
+- 🔔 Live notifications and messaging over Socket.IO
+- 🤖 AI chatbot for product and crochet questions
+- 🌙 Light and dark themes
+- 📱 Mobile-first layout with bottom navigation and pull-to-refresh
+- 📲 Installable PWA, plus Tauri apps for Windows, macOS, Linux and Android
+- 🎬 Three.js scenes and scroll-driven motion
+</details>
+
+<br />
+
+## 🏗 Architecture
 
 ```mermaid
 flowchart LR
-    U(("🧶 You")) -->|HTTPS| APP["Len&Em App — React SPA + PWA"]
-    APP -->|REST API| API["Node.js + Express Backend"]
-    APP <-.->|Socket.IO| RT["Live Updates"]
+    U(("🧶 User")) --> APP["Len&Em app<br/>React SPA · PWA · Tauri"]
+    APP -->|REST /api/v1| API["Node.js + Express"]
+    APP <-.->|Socket.IO| API
     API --> DB[("MongoDB")]
-    API --> PAY["Payments — VNPAY / MoMo / COD"]
-    API --> SHIP["Shipping — GHN"]
-    RT -->|orders & notifications| U
+    API --> CACHE[("Redis")]
+    API --> PAY["SePay VietQR"]
+    API --> SHIP["GHN shipping"]
+    API --> AI["Gemini AI"]
 ```
 
----
+This repository holds the **frontend**. The backend is a separate Node.js/Express service deployed on Render; in development, Vite proxies `/api`, `/socket.io` and `/notifications` to it.
 
-## 🛠️ Tech Stack
+<br />
 
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **React 18** | UI library with functional components & hooks |
-| **TypeScript 5.8** | Type-safe development experience |
-| **Vite 8** | Fast build tool & dev server with HMR |
-| **Tailwind CSS 4** | Utility-first CSS framework |
-| **TanStack Query 5** | Server state management & caching |
-| **Zustand 5** | Lightweight client state management |
-| **React Router 7** | Client-side routing & navigation |
-| **React Hook Form** | Performant form management |
-| **Yup** | Schema validation |
-| **Axios** | HTTP client with interceptors |
-| **Socket.IO Client** | Real-time bidirectional communication |
-| **Three.js / React Three Fiber** | 3D animations & backgrounds |
-| **Motion** | Animation library (formerly Framer Motion) |
-| **Recharts** | Charts & data visualization |
-| **Leaflet** | Interactive maps for address picking |
-| **Lucide React** | Consistent icon library |
-| **Radix UI** | Accessible, unstyled UI primitives |
-| **Sonner** | Toast notifications |
-| **date-fns** | Date formatting & manipulation |
-| **vite-plugin-pwa** | PWA support — manifest, service worker, offline app shell |
-| **Tauri 2** | Desktop (Windows/macOS/Linux) & Android packaging |
+## 🛠 Tech stack
 
-### Backend (separate repository)
-- **Node.js + Express** — RESTful API
-- **MongoDB + Mongoose** — NoSQL database
-- **JWT** — Authentication & authorization
-- **Socket.IO** — Real-time events
-- **GHN API** — Shipping integration
+| Area | Tools |
+|---|---|
+| **Core** | React 18 · TypeScript 5.8 · Vite 8 · React Router 7 |
+| **Styling** | Tailwind CSS 4 · Radix UI primitives · Lucide icons · Motion |
+| **Data** | TanStack Query 5 · Zustand 5 · Axios · Socket.IO client |
+| **Forms** | React Hook Form · Yup |
+| **Visuals** | Three.js / React Three Fiber · Recharts · Leaflet |
+| **Platforms** | vite-plugin-pwa · Tauri 2 (desktop & Android) |
+| **Backend** | Node.js · Express · MongoDB / Mongoose · Redis · JWT |
 
----
+<br />
 
-## 🚀 Getting Started
+## 🚀 Getting started
 
-### Prerequisites
-- **Node.js** >= 20.19 (22 LTS recommended — required by Vite 8)
-- **npm** >= 9.x
-
-### Run it locally
+**Requirements:** Node.js ≥ 20.19 (22 LTS recommended) and npm ≥ 9.
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/Kamui6607/Len-Em.git
 cd Len-Em/FE
-
-# 2. Install dependencies
 npm install
-
-# 3. Start the development server
 npm run dev
 ```
 
-Open **http://localhost:5173** and start stitching! 🧶
-The Vite dev server proxies `/api/*` and `/socket.io/*` to the backend, so the full experience works out of the box.
+Open **http://localhost:5173**. The dev server proxies API and socket traffic to the hosted backend, so no `.env` is needed to start.
 
-### Available Scripts
+<details>
+<summary><b>Environment variables</b></summary>
+<br />
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with HMR |
-| `npm run build` | Type-check & build for production |
-| `npm run preview` | Preview production build locally |
-| `npm run lint` | Run ESLint across the codebase |
-| `npm run tauri` | Run / build the Tauri desktop & Android apps |
+Create `FE/.env` only if you need to override the defaults:
 
----
+| Variable | Purpose |
+|---|---|
+| `VITE_API_BASE_URL` | Backend base URL for production builds (leave empty in dev to use the proxy) |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID for "Sign in with Google" |
+</details>
 
-## 📁 Project Structure
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the dev server with HMR |
+| `npm run build` | Type-check and build for production |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm run tauri` | Run or build the desktop / Android app |
 
-```
-src/
-├── main.tsx               # Entry point — imports global styles & renders <App/>
-├── app/                   # App-level composition (pages + 1 data file)
-│   ├── App.tsx            # Root component: QueryClientProvider + context provider tree + router
-│   ├── data/              # Static catalog mock data (products, helpers)
-│   └── pages/             # Feature pages, grouped by role/domain
-│       ├── admin/         # Admin dashboard & management (products, orders, users, roles, ...)
-│       ├── auth/          # Login, Register, Forgot/Reset Password
-│       ├── creator/       # Creator dashboard & content management
-│       ├── manage/        # Order management (staff/manage view)
-│       ├── membership/    # Membership & loyalty
-│       ├── shop/          # Cart, Checkout, My Orders, Order Detail, Order Success
-│       ├── staff/         # Staff dashboard & reports
-│       ├── supportDIY/    # Support DIY creation
-│       └── *.tsx          # Home, Shop, ProductDetail, kits, learn, DIY, etc.
-├── features/              # Domain modules — each owns its service + types (and store/data if needed)
-│   ├── creator/           # Creator mock data
-│   ├── diy/               # DIY (services, types)
-│   ├── learn/             # Learn (data, store, types)
-│   ├── membership/        # Membership (data, store, types)
-│   ├── orderReport/       # Order report (services, types)
-│   ├── orders/            # Orders (services, types)  ← canonical order service
-│   ├── shop/              # Shop product service (adapter + fetch)
-│   ├── supportDIY/        # Support DIY (services, types)
-│   └── users/             # Users (services)
-├── lib/                   # Framework/tool wrappers (axiosClient, queryClient, formatPrice, authUtils, roleGuard)
-├── locales/               # i18n dictionary (vi.json) — Vietnamese-first, translation-ready
-├── routes/                # Route definitions & AppRouter
-├── shared/                # Cross-cutting code reused across features
-│   ├── api/               # API services (auth, kit, course, lesson, product, ghn, ...)
-│   ├── components/        # Reusable UI & layout components
-│   │   ├── admin/         # Admin-specific shared components
-│   │   ├── auth/          # Auth guards (RequireAuth, RequireRole)
-│   │   ├── dashboard/     # Dashboard shell & sidebars
-│   │   ├── filters/       # Filter/search/sort controls
-│   │   ├── layout/        # Store layout, navigation shell
-│   │   ├── map/           # Leaflet map picker
-│   │   ├── membership/    # Membership UI components
-│   │   ├── mobile/        # Mobile-specific (BottomNav, ScrollToTop)
-│   │   ├── motion/        # Animation components (Reveal, ScrollProgress, ...)
-│   │   ├── order/         # Order UI components
-│   │   ├── search/        # Search controls
-│   │   ├── skeletons/     # Loading skeletons
-│   │   └── ui/            # Low-level primitives (shadcn/ui-style) — button, card, dialog, ...
-│   ├── contexts/          # React contexts (Cart, Favorites, Theme, Language, Admin, ...)
-│   ├── hooks/             # Custom React hooks
-│   ├── store/             # Zustand stores (auth; feature stores live under features/)
-│   └── types/             # Shared TypeScript types (auth, product, catalog, order, api, ...)
-├── constants/             # App-wide constants
-└── styles/                # Global styles, theme, fonts, page-specific css
-```
+> **Tip:** if the browser shows `504 (Outdated Optimize Dep)`, stop the dev server, run `npm run dev -- --force`, then hard-reload the page.
 
-Outside `src/`:
+<br />
+
+## 📁 Project structure
 
 ```
 FE/
-├── src-tauri/             # Tauri 2 shell — desktop (Windows/macOS/Linux) & Android
-├── public/                # Static assets & PWA icons
-├── vercel.json            # SPA rewrite for Vercel
-└── vite.config.ts         # Dev proxy, PWA manifest & smart chunk-splitting
+├── src/
+│   ├── app/          # App shell and pages, grouped by domain (shop, auth, admin, staff, creator…)
+│   ├── features/     # Domain modules — services, types and stores per feature
+│   ├── shared/       # Reusable API clients, components, contexts, hooks, stores, types
+│   ├── lib/          # Axios client, query client, error parsing and small helpers
+│   ├── routes/       # Route table and guards
+│   ├── locales/      # Vietnamese strings (vi.json)
+│   └── styles/       # Theme tokens and page styles
+├── public/           # Static assets and PWA icons
+├── src-tauri/        # Tauri 2 shell for desktop and Android
+└── vite.config.ts    # Dev proxy, PWA manifest, chunk splitting
 ```
 
----
+<details>
+<summary>Full <code>src/</code> tree</summary>
+
+```
+src/
+├── main.tsx               # Entry point
+├── app/
+│   ├── App.tsx            # Providers + router
+│   └── pages/
+│       ├── admin/         # Admin dashboard & management
+│       ├── auth/          # Login, register, forgot/reset password
+│       ├── creator/       # Creator dashboard
+│       ├── manage/        # Staff order management
+│       ├── membership/    # Membership & coins
+│       ├── shop/          # Cart, checkout, orders
+│       ├── staff/         # Staff dashboard & reports
+│       ├── supportDIY/    # Support DIY
+│       └── *.tsx          # Home, Shop, ProductDetail, Learn, DIY, Addresses, Profile…
+├── features/              # creator · diy · learn · membership · orderReport · orders · shop · supportDIY · users
+├── lib/                   # axiosClient, queryClient, apiError, loginError, formatPrice, authUtils…
+├── locales/               # vi.json
+├── routes/                # AppRouter
+├── shared/
+│   ├── api/               # auth, address, product, kit, course, lesson, ghn, shipping, chatbot…
+│   ├── components/        # address · admin · auth · dashboard · filters · layout · map · mobile · motion · order · ui…
+│   ├── contexts/          # Cart, Favorites, Theme, Language, Notification, Admin…
+│   ├── hooks/
+│   ├── store/             # Zustand (auth)
+│   └── types/
+├── constants/
+└── styles/
+```
+</details>
+
+<br />
 
 ## 🚢 Deployment
 
 | Target | How |
-|--------|-----|
-| **Web (PWA)** | Production build is served as a static SPA — `vercel.json` rewrites every route to `index.html`. |
-| **Desktop & Android** | GitHub Actions builds Tauri installers + APK and attaches them to a GitHub Release on every `app-v*` tag. |
+|---|---|
+| **Web / PWA** | Static SPA on Vercel — `vercel.json` rewrites every route to `index.html` |
+| **Desktop & Android** | Pushing an `app-v*` tag runs GitHub Actions, which builds the Tauri installers and APK and attaches them to a GitHub Release |
+| **Backend** | Separate repository, deployed on Render |
 
-> 🔐 **Security & privacy:** all sensitive configuration lives in gitignored environment files provisioned at deploy time — no credentials, keys, or private endpoints are stored in this repository.
+Secrets live in git-ignored env files and hosting settings — none are committed to this repository.
 
----
+<br />
 
 ## 🤝 Contributing
 
-1. **Fork** the repository
-2. **Create a feature branch**: `git checkout -b feat/your-feature`
-3. **Commit** your changes: `git commit -m 'feat: add some feature'`
-4. **Push** to the branch: `git push origin feat/your-feature`
-5. **Open a Pull Request**
+1. Create a branch: `git checkout -b feat/your-feature`
+2. Commit using [Conventional Commits](https://www.conventionalcommits.org/) — `feat:`, `fix:`, `refactor:`, `style:`, `docs:`, `chore:`
+3. Run `npm run lint` and `npm run build`
+4. Open a pull request
 
-### Commit Convention
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` — A new feature
-- `fix:` — A bug fix
-- `refactor:` — Code refactoring
-- `style:` — Formatting, missing semicolons, etc.
-- `docs:` — Documentation only changes
-- `chore:` — Build process or tooling changes
-
----
+<br />
 
 ## 📄 License
 
-This project is developed for educational purposes as part of the **EXE101** course at **FPT University**.
+Built for educational purposes as part of the **EXE101** course at **FPT University**.
 
----
+<br />
 
 <div align="center">
-  <br />
-  <p>
-    Made with ❤️ and 🧶 by the Len&Em Team
-  </p>
-  <p>
-    <a href="https://github.com/Kamui6607/Len-Em" target="_blank">
-      <img src="https://img.shields.io/badge/GitHub-Len_Em-181717?style=for-the-badge&logo=github" alt="GitHub" />
-    </a>
-  </p>
-  <br />
+  <sub>Made with ❤️ and 🧶 by the Len&Em team</sub>
 </div>

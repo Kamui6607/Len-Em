@@ -10,7 +10,7 @@
 // (auto-creates the account when the email has never been seen), so the
 // same button is reused on LoginPage and RegisterPage.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { Loader as Loader2 } from "lucide-react";
@@ -84,16 +84,176 @@ const GAUTH_STYLE = `
   @keyframes gauth-spin {
     to { transform: rotate(360deg); }
   }
-  /* Google's official <GoogleLogin /> iframe — center it in the form column.
-     GSI caps the button at 400px wide, so we can't stretch it edge-to-edge
-     like the custom button, but size="large" keeps the height close (40px). */
+  /* Google's official <GoogleLogin /> iframe sits in a fixed 44px slot so
+     nothing below it jumps while it loads. Until the iframe is ready, a
+     look-alike placeholder (same size, colours and text as the GSI button
+     for the current theme) fills the slot; the real button fades in on top.
+     color-scheme: light — the page runs with color-scheme: dark in dark
+     mode, and an iframe whose scheme differs from its embedder gets an
+     opaque white backdrop (the white box around the pill). */
   .gauth-gsi {
+    position: relative;
     display: flex;
+    align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 44px;
+    height: 44px;
+    color-scheme: light;
+  }
+  .gauth-gsi-frame {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .gauth-gsi-frame[data-ready="true"] { opacity: 1; }
+  .gauth-ph {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    max-width: 100%;
+    border-radius: 9999px;
+    font-family: "Google Sans", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
+    transition: opacity 0.25s ease;
+    /* GSI theme="outline" */
+    background: #fff;
+    border: 1px solid #dadce0;
+    color: #3c4043;
+  }
+  .gauth-ph[data-theme="dark"] {
+    /* GSI theme="filled_black" */
+    background: #131314;
+    border-color: #8e918f;
+    color: #e3e3e3;
+  }
+  .gauth-ph[data-hidden="true"] { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .gauth-gsi-frame, .gauth-ph { transition: none; }
   }
 `;
+
+/** GSI button widths are clamped to this range (px). */
+const GSI_MIN_WIDTH = 200;
+const GSI_MAX_WIDTH = 400;
+/** Show the real button anyway if the iframe never reports `load`. */
+const GSI_READY_FALLBACK_MS = 4000;
+
+const GSI_TEXT = {
+  signup_with: "Sign up with Google",
+  continue_with: "Continue with Google",
+} as const;
+
+type GsiText = keyof typeof GSI_TEXT;
+
+/** Look-alike of the GSI pill — shown while the iframe loads and while submitting. */
+function GooglePlaceholder({
+  width,
+  isDark,
+  hidden = false,
+  children,
+}: {
+  width: number;
+  isDark: boolean;
+  hidden?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="gauth-ph"
+      data-theme={isDark ? "dark" : "light"}
+      data-hidden={hidden}
+      aria-hidden={hidden || undefined}
+      style={{ width }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The real GSI button. Keyed by theme from the parent, so a theme switch
+ * remounts it and the placeholder covers the swap instead of a blank flash.
+ */
+function GsiButton({
+  width,
+  isDark,
+  text,
+  onSuccess,
+  onError,
+  onClick,
+}: {
+  width: number;
+  isDark: boolean;
+  text: GsiText;
+  onSuccess: (response: CredentialResponse) => void;
+  onError: () => void;
+  onClick: () => void;
+}) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
+
+  // GSI injects its iframe asynchronously — reveal the button once it loaded.
+  useEffect(() => {
+    const host = frameRef.current;
+    if (!host) return;
+    const fallback = window.setTimeout(() => setReady(true), GSI_READY_FALLBACK_MS);
+    const markReady = () => requestAnimationFrame(() => setReady(true));
+    let iframe: HTMLIFrameElement | null = null;
+
+    const watch = () => {
+      const found = host.querySelector("iframe");
+      if (!found || found === iframe) return;
+      iframe?.removeEventListener("load", markReady);
+      iframe = found;
+      iframe.addEventListener("load", markReady);
+    };
+    watch();
+    const observer = new MutationObserver(watch);
+    observer.observe(host, { childList: true, subtree: true });
+
+    return () => {
+      window.clearTimeout(fallback);
+      observer.disconnect();
+      iframe?.removeEventListener("load", markReady);
+    };
+  }, []);
+
+  return (
+    <>
+      <GooglePlaceholder width={width} isDark={isDark} hidden={ready}>
+        <GoogleIcon />
+        {GSI_TEXT[text]}
+      </GooglePlaceholder>
+      <div ref={frameRef} className="gauth-gsi-frame" data-ready={ready}>
+        <GoogleLogin
+          onSuccess={onSuccess}
+          onError={onError}
+          type="standard"
+          theme={isDark ? "filled_black" : "outline"}
+          size="large"
+          shape="pill"
+          text={text}
+          locale="en"
+          width={width}
+          logo_alignment="center"
+          click_listener={onClick}
+        />
+      </div>
+    </>
+  );
+}
 
 export interface GoogleAuthButtonProps {
   /** Button text — e.g. "Continue with Google" / "Sign up with Google" */
@@ -141,10 +301,19 @@ function GoogleAuthButtonInner({
   const googleLogin = useAuthStore((s) => s.googleLogin);
   const { isDark } = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const slotRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(GSI_MAX_WIDTH);
+
+  // GSI renders at a fixed pixel width — fit it to the form column once, on
+  // mount (re-measuring on resize would re-render the iframe and flicker).
+  useLayoutEffect(() => {
+    const available = slotRef.current?.clientWidth;
+    if (available) setWidth(Math.round(Math.min(GSI_MAX_WIDTH, Math.max(GSI_MIN_WIDTH, available))));
+  }, []);
 
   // Map our free-text label to one of the button texts Google allows
   // ('continue_with' | 'signup_with' | 'signin_with' | 'signin').
-  const googleButtonText = /sign\s*up/i.test(label) ? "signup_with" : "continue_with";
+  const googleButtonText: GsiText = /sign\s*up/i.test(label) ? "signup_with" : "continue_with";
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     // <GoogleLogin /> returns the Google ID token (a JWT) in `credential`.
@@ -230,34 +399,29 @@ function GoogleAuthButtonInner({
   return (
     <>
       <style>{GAUTH_STYLE}</style>
-      {isSubmitting ? (
-        // While exchanging the ID token with the backend, swap in our own
-        // disabled loading button (the GSI iframe can't be disabled).
-        <button type="button" className="gauth-btn" disabled>
-          <Loader2
-            size={17}
-            style={{ animation: "gauth-spin 0.8s linear infinite" }}
-          />
-          Connecting…
-        </button>
-      ) : (
-        <div className="gauth-gsi">
-          {/* Official Google button — returns the ID token (JWT) via
-              onSuccess.credential, which the backend's verifyIdToken()
-              accepts. Never use useGoogleLogin()'s access_token here. */}
-          <GoogleLogin
+      <div ref={slotRef} className="gauth-gsi">
+        {isSubmitting ? (
+          // While exchanging the ID token with the backend, show the same pill
+          // with a spinner (the GSI iframe can't be disabled).
+          <GooglePlaceholder width={width} isDark={isDark}>
+            <Loader2 size={17} style={{ animation: "gauth-spin 0.8s linear infinite" }} />
+            Connecting…
+          </GooglePlaceholder>
+        ) : (
+          // Official Google button — returns the ID token (JWT) via
+          // onSuccess.credential, which the backend's verifyIdToken()
+          // accepts. Never use useGoogleLogin()'s access_token here.
+          <GsiButton
+            key={isDark ? "dark" : "light"}
+            width={width}
+            isDark={isDark}
+            text={googleButtonText}
             onSuccess={handleGoogleSuccess}
             onError={handleGoogleError}
-            type="standard"
-            theme={isDark ? "filled_black" : "outline"}
-            size="large"
-            shape="pill"
-            text={googleButtonText}
-            logo_alignment="center"
-            click_listener={handleButtonClick}
+            onClick={handleButtonClick}
           />
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 }
