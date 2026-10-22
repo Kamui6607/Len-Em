@@ -1,7 +1,8 @@
 // ============================================================
 // Checkout Page — route /order
 // Form nhập shippingAddress + chọn paymentMethod + tóm tắt giỏ hàng
-// With GHN integration for address dropdowns and shipping fee calculation
+// Địa chỉ lấy từ sổ địa chỉ (/addresses), mặc định chọn sẵn địa chỉ mặc định;
+// "Giao tới địa chỉ khác" mở AddressSelector (tuỳ chọn lưu vào sổ địa chỉ).
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,7 +19,7 @@ import {
   Loader as Loader2,
   Lock,
   MapPin,
-  Pencil,
+  Plus,
   QrCode,
   ShieldCheck,
   Truck,
@@ -36,6 +37,15 @@ import {
   isPickComplete,
   type AddressPick,
 } from "../../../shared/components/address/AddressSelector";
+import {
+  addressToPick,
+  formatAddressArea,
+  hasGhnIds,
+  pickToAddressFields,
+} from "../../../shared/components/address/addressBook";
+import { addressApi } from "../../../shared/api/addressService";
+import { useSavedAddresses } from "../../../shared/hooks/useSavedAddresses";
+import type { Address } from "../../../shared/types/address.types";
 import { formatPrice } from "../../../lib/formatPrice";
 import { ColorSwatch } from "../../../shared/components/ui/ColorSwatch";
 import { EmptyCartState } from "./CartPage";
@@ -69,6 +79,8 @@ const shippingSchema = yup.object({
 });
 
 type ShippingFormData = yup.InferType<typeof shippingSchema>;
+
+const CUSTOM_ADDRESS = "custom";
 
 /** Hạn mức thu hộ GHN mặc định — BE gửi giá trị thật qua /orders/shipping-fee (maxCodAmount). */
 const DEFAULT_MAX_COD = 300000;
@@ -116,34 +128,19 @@ export function Checkout() {
   // here so the customer can reopen the QR instead of placing a duplicate order.
   const [pendingSepay, setPendingSepay] = useState<SepayQrInfo | null>(null);
 
-  // Địa chỉ giao hàng (tỉnh/huyện/xã ± toạ độ) — do AddressSelector quản lý,
-  // điền sẵn từ user.addressLocation. Đổi ở đây chỉ áp dụng cho đơn này.
+  // ── Địa chỉ giao hàng: một địa chỉ trong sổ địa chỉ, hoặc CUSTOM_ADDRESS ──
+  const {
+    addresses: savedAddresses,
+    loading: addressesLoading,
+  } = useSavedAddresses(Boolean(user));
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  // Chế độ "địa chỉ khác": khu vực do AddressSelector quản lý, chỉ áp dụng cho đơn này
   const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
-
-  // Địa chỉ đã lưu trong hồ sơ: đủ tỉnh/huyện/xã + dòng chi tiết thì mặc định
-  // giao tới đó — không bắt chọn lại (và không phải qua bản đồ). "Đổi địa chỉ"
-  // mở AddressSelector, chỉ áp dụng cho đơn này, không sửa hồ sơ.
-  const [addressSource, setAddressSource] = useState<"profile" | "custom">("profile");
-  const profileLocation = user?.addressLocation;
-  const profilePick = useMemo<AddressPick | null>(() => {
-    const loc = profileLocation;
-    if (!loc?.provinceName?.trim() || !loc.districtName?.trim() || !loc.wardName?.trim()) return null;
-    const hasCoords = typeof loc.lat === "number" && typeof loc.lng === "number";
-    return {
-      mode: hasCoords ? "map" : "dropdown",
-      provinceName: loc.provinceName.trim(),
-      districtName: loc.districtName.trim(),
-      wardName: loc.wardName.trim(),
-      provinceId: loc.provinceId ?? null,
-      districtId: loc.districtId ?? null,
-      wardCode: loc.wardCode ?? null,
-      lat: hasCoords ? loc.lat! : null,
-      lng: hasCoords ? loc.lng! : null,
-    };
-  }, [profileLocation]);
-  const profileAddressReady = Boolean(profilePick && user?.address?.trim());
-  const usingProfileAddress = profileAddressReady && addressSource === "profile";
-  const activePick = usingProfileAddress ? profilePick : addressPick;
+  const [saveToBook, setSaveToBook] = useState(true);
+  const selectedAddress = savedAddresses.find((a) => a._id === selectedAddressId) ?? null;
+  const usingCustomAddress = selectedAddressId === CUSTOM_ADDRESS;
+  const savedPick = useMemo(() => (selectedAddress ? addressToPick(selectedAddress) : null), [selectedAddress]);
+  const activePick = selectedAddress ? savedPick : usingCustomAddress ? addressPick : null;
 
   const subtotal = totalPrice;
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
@@ -178,16 +175,39 @@ export function Checkout() {
     },
   });
 
-  // Pre-fill form with current user data
+  // Pre-fill người nhận từ hồ sơ (địa chỉ đã lưu sẽ ghi đè khi được chọn)
   useEffect(() => {
     if (user) {
       reset({
         fullName: user.fullName || "",
         phone: user.phone || "",
-        address: user.address || "",
+        address: "",
       });
     }
   }, [user, reset]);
+
+  const selectSavedAddress = useCallback(
+    (address: Address) => {
+      setSelectedAddressId(address._id);
+      setValue("fullName", address.fullName, { shouldValidate: true });
+      setValue("phone", address.phone, { shouldValidate: true });
+      setValue("address", address.address, { shouldValidate: true });
+    },
+    [setValue],
+  );
+  const selectCustomAddress = () => {
+    setSelectedAddressId(CUSTOM_ADDRESS);
+    setAddressPick(null);
+    setValue("address", "");
+  };
+
+  // Sổ địa chỉ tải xong → chọn sẵn địa chỉ mặc định (chưa có địa chỉ nào → nhập mới)
+  useEffect(() => {
+    if (addressesLoading || selectedAddressId !== null) return;
+    const preferred = savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0];
+    if (preferred) selectSavedAddress(preferred);
+    else setSelectedAddressId(CUSTOM_ADDRESS);
+  }, [addressesLoading, savedAddresses, selectedAddressId, selectSavedAddress]);
 
   // ── Shared shipping fee calculator ──
   // Sends items + address names (+ optional lat/lng) to POST /orders/shipping-fee.
@@ -296,17 +316,6 @@ export function Checkout() {
     }
   };
 
-  const switchToProfileAddress = () => {
-    setAddressPick(null);
-    setAddressSource("profile");
-    // The profile card always ships to the saved detail line.
-    setValue("address", user?.address || "", { shouldValidate: true });
-  };
-  const switchToCustomAddress = () => {
-    setAddressPick(null);
-    setAddressSource("custom");
-  };
-
   // ── Tính phí ship khi địa chỉ đủ tỉnh/huyện/xã ──
   // Chế độ dropdown: gửi tên GHN. Chế độ map: gửi tên từ bản đồ + lat/lng.
   // Địa chỉ chưa đủ (hoặc vừa đổi chế độ) → bỏ request cũ và xoá phí cũ.
@@ -403,6 +412,18 @@ export function Checkout() {
 
       const response = await orderService.createOrder(payload);
       const result = response.data;
+      // "Địa chỉ khác" + tích "Lưu vào sổ địa chỉ" → lưu lại cho lần sau (không chặn đơn)
+      if (usingCustomAddress && saveToBook && hasGhnIds(activePick)) {
+        void addressApi
+          .createAddress({
+            fullName: data.fullName.trim(),
+            phone: data.phone.trim(),
+            address: data.address.trim(),
+            ...pickToAddressFields(activePick),
+            isDefault: savedAddresses.length === 0,
+          })
+          .catch(() => undefined);
+      }
       // The "Đặt hàng thành công" toast comes from the realtime notification
       // (OrderToastHost) — only tell it how this order is paid (COD line).
       if (result.order?._id) rememberPlacedOrder(result.order._id, paymentMethod);
@@ -638,73 +659,94 @@ export function Checkout() {
                   )}
                 </div>
 
-                {usingProfileAddress ? (
-                  /* Mặc định: địa chỉ trong hồ sơ — đặt hàng luôn, không cần chọn lại */
-                  <div className="co-saved">
-                    <span className="co-saved-icon" aria-hidden="true">
-                      <MapPin className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="co-saved-line">{user?.address}</p>
-                      <p className="co-saved-sub">
-                        {[profilePick?.wardName, profilePick?.districtName, profilePick?.provinceName]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </p>
-                      <p className="co-saved-tag">Địa chỉ trong hồ sơ</p>
-                    </div>
-                    <button type="button" className="co-saved-change" onClick={switchToCustomAddress}>
-                      <Pencil className="size-3.5" />
-                      Đổi địa chỉ
-                    </button>
-                  </div>
+                {addressesLoading ? (
+                  <div className="co-addr-skeleton" aria-busy="true" />
                 ) : (
                   <div className="grid gap-4">
-                    {profileAddressReady ? (
-                      <button type="button" className="co-saved-back" onClick={switchToProfileAddress}>
-                        <MapPin className="size-3.5" />
-                        Dùng địa chỉ trong hồ sơ
-                      </button>
-                    ) : (
-                      <p className="co-hint !mt-0">
-                        Lưu địa chỉ vào{" "}
-                        <Link to="/profile" className="font-semibold text-[var(--primary)] hover:underline">
-                          hồ sơ
-                        </Link>{" "}
-                        để lần sau đặt hàng nhanh hơn, không cần chọn lại.
-                      </p>
+                    {savedAddresses.length > 0 && (
+                      <div className="co-addr-list" role="radiogroup" aria-labelledby="co-address">
+                        {savedAddresses.map((address) => (
+                          <button
+                            key={address._id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selectedAddressId === address._id}
+                            className="co-addr-opt"
+                            onClick={() => selectSavedAddress(address)}
+                          >
+                            <span className="co-radio" aria-hidden="true" />
+                            <span className="min-w-0 flex-1">
+                              <span className="co-addr-name">
+                                {address.fullName}
+                                <span className="co-addr-phone">{address.phone}</span>
+                                {address.isDefault && <span className="co-addr-tag">Mặc định</span>}
+                              </span>
+                              <span className="co-addr-line">{address.address}</span>
+                              <span className="co-addr-area">{formatAddressArea(address)}</span>
+                            </span>
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={usingCustomAddress}
+                          className="co-addr-opt is-new"
+                          onClick={selectCustomAddress}
+                        >
+                          <span className="co-radio" aria-hidden="true" />
+                          <Plus className="size-4" />
+                          Giao tới địa chỉ khác
+                        </button>
+                      </div>
                     )}
 
-                    <AddressSelector
-                      key={`${user?.userId ?? "guest"}:${JSON.stringify(user?.addressLocation ?? null)}`}
-                      idPrefix="co"
-                      initialValue={user?.addressLocation}
-                      initialStreet={user?.address}
-                      onChange={setAddressPick}
-                      mapHint="Chạm vào bản đồ để chọn vị trí giao hàng."
-                      required
-                    />
+                    {usingCustomAddress && (
+                      <div className="grid gap-4">
+                        <AddressSelector
+                          key={`${user?.userId ?? "guest"}:custom`}
+                          idPrefix="co"
+                          onChange={setAddressPick}
+                          onStreetSuggest={(street) => setValue("address", street, { shouldValidate: true })}
+                          mapHint="Chạm vào bản đồ để chọn vị trí giao hàng."
+                          required
+                        />
 
-                    <div>
-                      <label htmlFor="co-street" className="co-label">
-                        Địa chỉ chi tiết<span className="co-req">*</span>
-                      </label>
-                      <input
-                        id="co-street"
-                        {...register("address")}
-                        placeholder="Ví dụ: 123 Nguyễn Văn Linh, toà nhà A"
-                        autoComplete="street-address"
-                        aria-invalid={!!errors.address}
-                        className={fieldClass(!!errors.address)}
-                      />
-                      {errors.address ? (
-                        <p className="co-error">{errors.address.message}</p>
-                      ) : (
-                        <p className="co-hint">
-                          Số nhà, tên đường, toà nhà — không cần nhập lại phường/xã, quận/huyện, tỉnh/thành.
-                        </p>
-                      )}
-                    </div>
+                        <div>
+                          <label htmlFor="co-street" className="co-label">
+                            Địa chỉ chi tiết<span className="co-req">*</span>
+                          </label>
+                          <input
+                            id="co-street"
+                            {...register("address")}
+                            placeholder="Ví dụ: 123 Nguyễn Văn Linh, toà nhà A"
+                            autoComplete="street-address"
+                            aria-invalid={!!errors.address}
+                            className={fieldClass(!!errors.address)}
+                          />
+                          {errors.address ? (
+                            <p className="co-error">{errors.address.message}</p>
+                          ) : (
+                            <p className="co-hint">
+                              Số nhà, tên đường, toà nhà — không cần nhập lại phường/xã, quận/huyện, tỉnh/thành.
+                            </p>
+                          )}
+                        </div>
+
+                        <label className="co-addr-save">
+                          <input
+                            type="checkbox"
+                            checked={saveToBook}
+                            onChange={(e) => setSaveToBook(e.target.checked)}
+                          />
+                          Lưu vào sổ địa chỉ để lần sau đặt nhanh hơn
+                        </label>
+                      </div>
+                    )}
+
+                    <Link to="/addresses" className="co-saved-back">
+                      <MapPin className="size-3.5" />
+                      Quản lý sổ địa chỉ
+                    </Link>
                   </div>
                 )}
               </section>

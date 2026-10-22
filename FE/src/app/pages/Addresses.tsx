@@ -1,7 +1,7 @@
 // ============================================================
 // Address Management Page — route /addresses
-// Manage shipping addresses with GHN cascading dropdowns
-// With map pin integration for lat/lng
+// Sổ địa chỉ — nguồn địa chỉ cho đăng ký, hồ sơ và đặt hàng.
+// Khu vực: chọn tỉnh/quận/phường (GHN) HOẶC ghim bản đồ; luôn kèm địa chỉ chi tiết.
 // Giao diện theo ngôn ngữ "craft" (xem craft.css + addresses.css)
 // ============================================================
 
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   BookUser,
   Check,
+  List,
   Map as MapIcon,
   MapPin,
   MapPinned,
@@ -24,10 +25,14 @@ import {
   X,
 } from "lucide-react";
 import { addressApi } from "../../shared/api/addressService";
-import { ghnApi } from "../../shared/api/ghnService";
-import { MapPicker } from "../../shared/components/map/MapPicker";
-import type { Address, CreateAddressRequest, ReverseGeocodeResult } from "../../shared/types/address.types";
-import type { GHNProvince, GHNDistrict, GHNWard } from "../../shared/types/ghn.types";
+import { AddressSelector, type AddressMode, type AddressPick } from "../../shared/components/address/AddressSelector";
+import {
+  addressToLocation,
+  formatAddressArea,
+  pickAreaError,
+  pickToAddressFields,
+} from "../../shared/components/address/addressBook";
+import type { Address, AddressLocation, CreateAddressRequest } from "../../shared/types/address.types";
 import "../../styles/craft.css";
 import "../../styles/checkout.css";
 import "../../styles/addresses.css";
@@ -116,9 +121,7 @@ function AddressCard({
 
       <div className="adr-card-body">
         <p className="adr-card-line">{address.address}</p>
-        <p className="adr-card-area">
-          {address.wardName}, {address.districtName}, {address.provinceName}
-        </p>
+        <p className="adr-card-area">{formatAddressArea(address)}</p>
         {hasPin && (
           <span className="craft-tag adr-pin-tag">
             <MapPinned className="size-3" />
@@ -152,20 +155,15 @@ export function Addresses() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [areaError, setAreaError] = useState(false);
 
-  const [provinces, setProvinces] = useState<GHNProvince[]>([]);
-  const [districts, setDistricts] = useState<GHNDistrict[]>([]);
-  const [wards, setWards] = useState<GHNWard[]>([]);
-
-  const [selectedProvince, setSelectedProvince] = useState<GHNProvince | null>(null);
-  const [selectedDistrict, setSelectedDistrict] = useState<GHNDistrict | null>(null);
-  const [selectedWard, setSelectedWard] = useState<GHNWard | null>(null);
-
-  // Map state
-  const [showMap, setShowMap] = useState(false);
-  const [mapLat, setMapLat] = useState<number | undefined>(undefined);
-  const [mapLng, setMapLng] = useState<number | undefined>(undefined);
+  // Khu vực: chọn tỉnh/quận/phường HOẶC ghim bản đồ — AddressSelector báo lên.
+  const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
+  const [initialLocation, setInitialLocation] = useState<AddressLocation | null>(null);
+  const [areaError, setAreaError] = useState<string | null>(null);
+  // Tăng mỗi lần mở form → AddressSelector mount lại với giá trị điền sẵn mới.
+  const [formSession, setFormSession] = useState(0);
+  // Nút "Thêm" nào được bấm → AddressSelector mở sẵn chế độ đó.
+  const [createMode, setCreateMode] = useState<AddressMode>("dropdown");
 
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -173,6 +171,8 @@ export function Addresses() {
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<AddressFormData>({
     defaultValues: {
@@ -183,9 +183,7 @@ export function Addresses() {
     },
   });
 
-  // Load provinces on mount
   useEffect(() => {
-    loadProvinces();
     loadAddresses();
   }, []);
 
@@ -195,15 +193,6 @@ export function Addresses() {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [showForm, editingId]);
-
-  const loadProvinces = async () => {
-    try {
-      const response = await ghnApi.getProvinces();
-      setProvinces(response.data.data.provinces);
-    } catch {
-      toast.error("Không thể tải danh sách tỉnh/thành phố");
-    }
-  };
 
   const loadAddresses = async () => {
     try {
@@ -218,110 +207,16 @@ export function Addresses() {
     }
   };
 
-  const fetchDistricts = async (provinceId: number) => {
-    try {
-      const response = await ghnApi.getDistricts(provinceId);
-      const list = response.data.data.districts;
-      setDistricts(list);
-      return list;
-    } catch {
-      toast.error("Không thể tải danh sách quận/huyện");
-      return [];
-    }
-  };
-
-  const fetchWards = async (districtId: number) => {
-    try {
-      const response = await ghnApi.getWards(districtId);
-      const list = response.data.data.wards;
-      setWards(list);
-      return list;
-    } catch {
-      toast.error("Không thể tải danh sách phường/xã");
-      return [];
-    }
-  };
-
-  // User đổi tỉnh → xóa quận/phường, tải lại quận
-  const handleProvinceChange = (province: GHNProvince | null) => {
-    setSelectedProvince(province);
-    setSelectedDistrict(null);
-    setSelectedWard(null);
-    setDistricts([]);
-    setWards([]);
-    setAreaError(false);
-    if (province) fetchDistricts(province.provinceId);
-  };
-
-  // User đổi quận → xóa phường, tải lại phường
-  const handleDistrictChange = (district: GHNDistrict | null) => {
-    setSelectedDistrict(district);
-    setSelectedWard(null);
-    setWards([]);
-    setAreaError(false);
-    if (district) fetchWards(district.districtId);
-  };
-
-  /** Điền sẵn tỉnh → quận → phường theo id (dùng khi sửa địa chỉ / chọn trên bản đồ). */
-  const applyArea = async (provinceId?: number, districtId?: number, wardCode?: string) => {
-    const province = provinces.find((p) => p.provinceId === provinceId);
-    if (!province) return false;
-    setSelectedProvince(province);
-    setSelectedDistrict(null);
-    setSelectedWard(null);
-    setWards([]);
-    setAreaError(false);
-
-    const districtList = await fetchDistricts(province.provinceId);
-    const district = districtList.find((d) => d.districtId === districtId);
-    if (!district) return true;
-    setSelectedDistrict(district);
-
-    const wardList = await fetchWards(district.districtId);
-    const ward = wardList.find((w) => w.wardCode === wardCode);
-    if (ward) setSelectedWard(ward);
-    return true;
-  };
-
-  // Handle map location selection
-  const handleLocationSelect = async (result: ReverseGeocodeResult) => {
-    setMapLat(result.lat);
-    setMapLng(result.lng);
-
-    // Only call /ghn/map-address if we have at least province name
-    const province = result.provinceName?.trim();
-    const district = result.districtName?.trim();
-    const ward = result.wardName?.trim();
-    if (!province && !district && !ward) return;
-
-    try {
-      const mapRes = await ghnApi.mapAddress({
-        provinceName: province || "",
-        districtName: district || "",
-        wardName: ward || "",
-      });
-      const match = mapRes.data.data.match;
-      if (match.success && match.provinceId) {
-        await applyArea(match.provinceId, match.districtId, match.wardCode);
-      }
-    } catch (error) {
-      console.error("Map address mapping failed:", error);
-      // Fallback: try fuzzy match on province name
-      if (province) {
-        const needle = province.toLowerCase();
-        const matchedProvince = provinces.find(
-          (p) =>
-            p.provinceName.toLowerCase().includes(needle) || needle.includes(p.provinceName.toLowerCase())
-        );
-        if (matchedProvince) handleProvinceChange(matchedProvince);
-      }
-    }
+  const handlePickChange = (pick: AddressPick) => {
+    setAddressPick(pick);
+    setAreaError(null);
   };
 
   const onSubmit = async (data: AddressFormData) => {
-    if (!selectedProvince || !selectedDistrict || !selectedWard) {
-      setAreaError(true);
-      toast.error("Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã");
+    const areaProblem = pickAreaError(addressPick);
+    if (areaProblem || !addressPick) {
+      setAreaError(areaProblem);
+      toast.error(areaProblem);
       return;
     }
 
@@ -331,15 +226,8 @@ export function Addresses() {
         fullName: data.fullName.trim(),
         phone: data.phone.trim(),
         address: data.address.trim(),
-        wardCode: selectedWard.wardCode,
-        wardName: selectedWard.wardName,
-        districtId: selectedDistrict.districtId,
-        districtName: selectedDistrict.districtName,
-        provinceId: selectedProvince.provinceId,
-        provinceName: selectedProvince.provinceName,
+        ...pickToAddressFields(addressPick),
         isDefault: data.isDefault,
-        // Include lat/lng from map if available
-        ...(mapLat !== undefined && mapLng !== undefined ? { lat: mapLat, lng: mapLng } : {}),
       };
 
       if (editingId) {
@@ -359,27 +247,47 @@ export function Addresses() {
     }
   };
 
-  const openCreate = () => {
-    resetForm();
-    // Địa chỉ đầu tiên luôn là mặc định
-    reset({ fullName: "", phone: "", address: "", isDefault: addresses.length === 0 });
+  const openForm = (values: AddressFormData, location: AddressLocation | null, id: string | null) => {
+    reset(values);
+    setEditingId(id);
+    setInitialLocation(location);
+    setAddressPick(null);
+    setAreaError(null);
+    setFormSession((n) => n + 1);
     setShowForm(true);
   };
 
-  const handleEdit = (address: Address) => {
-    setEditingId(address._id);
-    setShowForm(true);
-    setShowMap(false);
-    setMapLat(address.lat ?? undefined);
-    setMapLng(address.lng ?? undefined);
-    reset({
-      fullName: address.fullName,
-      phone: address.phone,
-      address: address.address,
-      isDefault: address.isDefault,
-    });
-    applyArea(address.provinceId, address.districtId, address.wardCode);
+  // Địa chỉ đầu tiên luôn là mặc định
+  const openCreate = (mode: AddressMode) => {
+    setCreateMode(mode);
+    openForm({ fullName: "", phone: "", address: "", isDefault: addresses.length === 0 }, null, null);
   };
+
+  // Hai lối thêm địa chỉ — dùng ở đầu trang và ở trạng thái trống
+  const addButtons = (
+    <div className="adr-add-actions">
+      <button type="button" onClick={() => openCreate("dropdown")} className="craft-btn">
+        <List className="size-4" />
+        Chọn khu vực
+      </button>
+      <button type="button" onClick={() => openCreate("map")} className="craft-btn-ghost">
+        <MapIcon className="size-4" />
+        Ghim trên bản đồ
+      </button>
+    </div>
+  );
+
+  const handleEdit = (address: Address) =>
+    openForm(
+      {
+        fullName: address.fullName,
+        phone: address.phone,
+        address: address.address,
+        isDefault: address.isDefault,
+      },
+      addressToLocation(address),
+      address._id,
+    );
 
   const handleDelete = async (addressId: string) => {
     try {
@@ -406,21 +314,14 @@ export function Addresses() {
     reset({ fullName: "", phone: "", address: "", isDefault: false });
     setShowForm(false);
     setEditingId(null);
-    setAreaError(false);
-    setSelectedProvince(null);
-    setSelectedDistrict(null);
-    setSelectedWard(null);
-    setDistricts([]);
-    setWards([]);
-    setShowMap(false);
-    setMapLat(undefined);
-    setMapLng(undefined);
+    setInitialLocation(null);
+    setAddressPick(null);
+    setAreaError(null);
   };
 
   // Mặc định lên đầu
   const sortedAddresses = [...addresses].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
   const pinnedCount = addresses.filter((a) => a.lat !== undefined && a.lat !== null).length;
-  const hasPin = mapLat !== undefined && mapLng !== undefined;
 
   return (
     <div className="adr-page">
@@ -459,12 +360,7 @@ export function Addresses() {
               )}
             </div>
 
-            {!showForm && !loading && addresses.length > 0 && (
-              <button type="button" onClick={openCreate} className="craft-btn">
-                <Plus className="size-4" />
-                Thêm địa chỉ
-              </button>
-            )}
+            {!showForm && !loading && addresses.length > 0 && addButtons}
           </div>
         </section>
 
@@ -540,78 +436,26 @@ export function Addresses() {
                   </div>
                 </fieldset>
 
-                {/* Khu vực */}
+                {/* Địa chỉ: chọn khu vực HOẶC ghim bản đồ — cả hai đều cần địa chỉ chi tiết */}
                 <fieldset className="adr-fieldset">
                   <legend className="adr-legend">
                     <MapPin className="size-3.5" />
-                    Khu vực
+                    Địa chỉ nhận hàng
                   </legend>
-                  <div className="co-grid cols-3">
-                    <div>
-                      <label htmlFor="adr-province" className="co-label">
-                        Tỉnh/Thành phố<span className="co-req">*</span>
-                      </label>
-                      <select
-                        id="adr-province"
-                        value={selectedProvince?.provinceId || ""}
-                        onChange={(e) =>
-                          handleProvinceChange(provinces.find((p) => p.provinceId === Number(e.target.value)) || null)
-                        }
-                        className={`co-select${areaError && !selectedProvince ? " is-invalid" : ""}`}
-                      >
-                        <option value="">Chọn tỉnh/thành phố</option>
-                        {provinces.map((province) => (
-                          <option key={province.provinceId} value={province.provinceId}>
-                            {province.provinceName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="adr-district" className="co-label">
-                        Quận/Huyện<span className="co-req">*</span>
-                      </label>
-                      <select
-                        id="adr-district"
-                        value={selectedDistrict?.districtId || ""}
-                        onChange={(e) =>
-                          handleDistrictChange(districts.find((d) => d.districtId === Number(e.target.value)) || null)
-                        }
-                        disabled={!selectedProvince}
-                        className={`co-select${areaError && selectedProvince && !selectedDistrict ? " is-invalid" : ""}`}
-                      >
-                        <option value="">Chọn quận/huyện</option>
-                        {districts.map((district) => (
-                          <option key={district.districtId} value={district.districtId}>
-                            {district.districtName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="adr-ward" className="co-label">
-                        Phường/Xã<span className="co-req">*</span>
-                      </label>
-                      <select
-                        id="adr-ward"
-                        value={selectedWard?.wardCode || ""}
-                        onChange={(e) => {
-                          setSelectedWard(wards.find((w) => w.wardCode === e.target.value) || null);
-                          setAreaError(false);
-                        }}
-                        disabled={!selectedDistrict}
-                        className={`co-select${areaError && selectedDistrict && !selectedWard ? " is-invalid" : ""}`}
-                      >
-                        <option value="">Chọn phường/xã</option>
-                        {wards.map((ward) => (
-                          <option key={ward.wardCode} value={ward.wardCode}>
-                            {ward.wardName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  {areaError && <p className="co-error">Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện, phường/xã</p>}
+                  <AddressSelector
+                    key={formSession}
+                    idPrefix="adr"
+                    initialValue={initialLocation}
+                    initialMode={createMode}
+                    initialStreet={initialLocation ? getValues("address") : undefined}
+                    onChange={handlePickChange}
+                    onStreetSuggest={(street) => {
+                      if (!getValues("address").trim()) setValue("address", street, { shouldValidate: true });
+                    }}
+                    mapHint="Chạm vào bản đồ để ghim nơi nhận hàng — khu vực sẽ được tự xác định."
+                    required
+                  />
+                  {areaError && <p className="co-error">{areaError}</p>}
 
                   <div className="mt-3.5">
                     <label htmlFor="adr-line" className="co-label">
@@ -622,44 +466,17 @@ export function Addresses() {
                       {...register("address", {
                         validate: (v) => v.trim().length > 0 || "Vui lòng nhập số nhà, tên đường",
                       })}
-                      placeholder="Số nhà, tên đường"
+                      placeholder="Số nhà, tên đường, toà nhà"
                       autoComplete="street-address"
                       className={`co-input${errors.address ? " is-invalid" : ""}`}
                     />
-                    {errors.address && <p className="co-error">{errors.address.message}</p>}
+                    {errors.address ? (
+                      <p className="co-error">{errors.address.message}</p>
+                    ) : (
+                      <p className="co-hint">Không cần nhập lại phường/xã, quận/huyện, tỉnh/thành.</p>
+                    )}
                   </div>
                 </fieldset>
-
-                {/* Bản đồ */}
-                <div className="adr-map-block" data-open={showMap}>
-                  <button
-                    type="button"
-                    onClick={() => setShowMap(!showMap)}
-                    className="adr-map-toggle"
-                    aria-expanded={showMap}
-                  >
-                    <span className="adr-map-toggle-icon">
-                      <MapIcon className="size-4" />
-                    </span>
-                    <span className="flex-1 text-left">
-                      <span className="adr-map-toggle-title">
-                        {showMap ? "Ẩn bản đồ" : "Ghim vị trí trên bản đồ"}
-                      </span>
-                      <span className="adr-map-toggle-sub">
-                        {hasPin
-                          ? `Đã ghim · ${mapLat!.toFixed(4)}, ${mapLng!.toFixed(4)}`
-                          : "Không bắt buộc — giúp shipper tìm đúng nhà và tự điền khu vực"}
-                      </span>
-                    </span>
-                    {hasPin && <Check className="size-4 text-primary" />}
-                  </button>
-
-                  {showMap && (
-                    <div className="adr-map">
-                      <MapPicker initialLat={mapLat} initialLng={mapLng} onLocationSelect={handleLocationSelect} />
-                    </div>
-                  )}
-                </div>
 
                 {/* Mặc định */}
                 <label className="adr-default">
@@ -697,10 +514,7 @@ export function Addresses() {
               <img src="/mascot-sheep.png" alt="" aria-hidden="true" className="adr-empty-mascot" draggable={false} />
               <p className="craft-empty-title">Chưa có địa chỉ nào</p>
               <p className="craft-empty-desc">Thêm địa chỉ giao hàng để thuận tiện khi đặt hàng.</p>
-              <button type="button" onClick={openCreate} className="craft-btn">
-                <Plus className="size-4" />
-                Thêm địa chỉ đầu tiên
-              </button>
+              {addButtons}
             </div>
           )
         ) : (

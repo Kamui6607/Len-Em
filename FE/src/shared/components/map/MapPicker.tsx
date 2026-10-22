@@ -356,6 +356,11 @@ export function MapPicker({
           background: #e5e7eb;
           font: inherit;
         }
+        /* font: inherit above would otherwise blow the attribution up to body size */
+        .checkout-map .leaflet-control-attribution {
+          font-size: 10px;
+          line-height: 1.4;
+        }
         .checkout-map .leaflet-tile,
         .checkout-map .leaflet-tile-container img {
           max-width: none !important;

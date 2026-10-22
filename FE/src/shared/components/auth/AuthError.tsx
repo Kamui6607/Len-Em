@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from "motion/react";
-import { CircleAlert as AlertCircle } from "lucide-react";
+import { CircleAlert as AlertCircle, TriangleAlert } from "lucide-react";
 import "../../../styles/auth.css";
 
-/** Error banner for the auth pages — slides open with a small shake. */
-export function AuthError({ error }: { error: string }) {
+/** Error banner for the auth pages — slides open with a small shake.
+ *  `tone="warning"` (amber) is for "almost locked out" notices. */
+export function AuthError({ error, tone = "error" }: { error: string; tone?: "error" | "warning" }) {
+  const Icon = tone === "warning" ? TriangleAlert : AlertCircle;
   return (
     <AnimatePresence initial={false}>
       {error && (
@@ -16,8 +18,8 @@ export function AuthError({ error }: { error: string }) {
           transition={{ duration: 0.35 }}
           className="overflow-hidden"
         >
-          <div className="auth-error">
-            <AlertCircle size={16} className="mt-px shrink-0" />
+          <div className={`auth-error${tone === "warning" ? " is-warning" : ""}`}>
+            <Icon size={16} className="mt-px shrink-0" />
             <span>{error}</span>
           </div>
         </motion.div>

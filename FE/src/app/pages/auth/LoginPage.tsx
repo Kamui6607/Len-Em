@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { GoogleAuthButton } from "../../../shared/components/auth/GoogleAuthButton";
 import { AuthError } from "../../../shared/components/auth/AuthError";
+import { describeLoginError, type LoginErrorView } from "../../../lib/loginError";
 import { AuthBrand } from "../../../shared/components/auth/AuthBrand";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
 import "../../../styles/auth.css";
@@ -47,10 +48,12 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [errorTone, setErrorTone] = useState<LoginErrorView["tone"]>("error");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setErrorTone("error");
     const id = email.trim();
     const isEmail = id.includes("@");
     const credentials = isEmail
@@ -65,10 +68,9 @@ export function LoginPage() {
       else navigate("/shop");
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(
-        axiosError?.response?.data?.message ||
-          "Invalid credentials. Please try again.",
-      );
+      const view = describeLoginError(axiosError?.response?.data?.message);
+      setError(view.text);
+      setErrorTone(view.tone);
     }
   };
 
@@ -160,103 +162,111 @@ export function LoginPage() {
             />
           </div>
 
-          <AuthError error={error} />
+          {/* Mobile: form nằm trong card, linh vật ngồi trên mép card */}
+          <div className="fit-card">
+            <AuthError error={error} tone={errorTone} />
 
-          <form onSubmit={handleSubmit} className="fit-form">
-            <div className="fit-fields">
-              <div className="auth-field">
-                <div className="auth-label-row">
-                  <label htmlFor="login-id" className="auth-label">
-                    Email or username
-                  </label>
+            <form onSubmit={handleSubmit} className="fit-form">
+              <div className="fit-fields">
+                <div className="auth-field">
+                  <div className="auth-label-row">
+                    <label htmlFor="login-id" className="auth-label">
+                      Email or username
+                    </label>
+                  </div>
+                  <div className="auth-input-wrap">
+                    <Mail size={17} className="auth-input-icon" />
+                    <input
+                      id="login-id"
+                      type="text"
+                      className="auth-input"
+                      placeholder="you@gmail.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="username"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                    />
+                  </div>
                 </div>
-                <div className="auth-input-wrap">
-                  <Mail size={17} className="auth-input-icon" />
+
+                <div className="auth-field">
+                  <div className="auth-label-row">
+                    <label htmlFor="login-password" className="auth-label">
+                      Password
+                    </label>
+                    <Link to="/auth/forgot-password" className="auth-link">
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="auth-input-wrap">
+                    <Lock size={17} className="auth-input-icon" />
+                    <input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      className="auth-input has-toggle"
+                      placeholder="Your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="auth-input-toggle"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                <label className="auth-check">
                   <input
-                    id="login-id"
-                    type="text"
-                    className="auth-input"
-                    placeholder="you@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                </div>
+                  Keep me signed in
+                </label>
               </div>
 
-              <div className="auth-field">
-                <div className="auth-label-row">
-                  <label htmlFor="login-password" className="auth-label">
-                    Password
-                  </label>
-                  <Link to="/auth/forgot-password" className="auth-link">
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="auth-input-wrap">
-                  <Lock size={17} className="auth-input-icon" />
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    className="auth-input has-toggle"
-                    placeholder="Your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    className="auth-input-toggle"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    aria-pressed={showPassword}
-                  >
-                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                  </button>
-                </div>
-              </div>
+              <div className="fit-actions">
+                <button type="submit" className="auth-submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={18} className="auth-spin" />
+                      Signing in…
+                    </>
+                  ) : (
+                    <>
+                      Sign in <ArrowRight size={18} className="auth-arrow" />
+                    </>
+                  )}
+                </button>
 
-              <label className="auth-check">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                <div className="auth-divider">or continue with</div>
+
+                {/* Its buttons are type="button", so they never submit this form */}
+                <GoogleAuthButton
+                  onError={(message) => {
+                    setError(message);
+                    setErrorTone("error");
+                  }}
                 />
-                Keep me signed in
-              </label>
-            </div>
 
-            <div className="fit-actions">
-              <button type="submit" className="auth-submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 size={18} className="auth-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  <>
-                    Sign in <ArrowRight size={18} className="auth-arrow" />
-                  </>
-                )}
-              </button>
-
-              <div className="auth-divider">or continue with</div>
-
-              {/* Its buttons are type="button", so they never submit this form */}
-              <GoogleAuthButton onError={setError} />
-
-              <p className="fit-register">
-                New to Len&amp;Em?
-                <Link to="/auth/register">
-                  Create an account <ArrowRight size={14} />
-                </Link>
-              </p>
-            </div>
-          </form>
+                <p className="fit-register">
+                  New to Len&amp;Em?
+                  <Link to="/auth/register">
+                    Create an account <ArrowRight size={14} />
+                  </Link>
+                </p>
+              </div>
+            </form>
+          </div>
         </div>
 
         <p className="fit-foot">

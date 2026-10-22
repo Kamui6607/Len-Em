@@ -1,6 +1,6 @@
 // ============================================================
 // AddressSelector — chọn khu vực Tỉnh/Quận/Phường, dùng chung cho
-// Checkout (/order) và form "Chỉnh sửa hồ sơ".
+// Checkout (/order), Sổ địa chỉ (/addresses) và bước địa chỉ khi đăng ký.
 //   - "dropdown": 3 dropdown GHN (getProvinces/getDistricts/getWards) → đủ ID + tên
 //   - "map":      MapPicker → tên + toạ độ; thử /ghn/map-address để lấy thêm ID
 // Component tự quản lý state, chỉ báo ra ngoài một AddressPick đã chuẩn hoá.
@@ -8,7 +8,6 @@
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
 import { List, Map as MapIcon, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { ghnApi } from "../../api/ghnService";
@@ -116,6 +115,8 @@ interface AddressSelectorProps {
   idPrefix: string;
   /** Giá trị điền sẵn, chỉ đọc lúc mount (đổi `key` để điền lại). */
   initialValue?: AddressLocation | null;
+  /** Chế độ mở sẵn khi không có `initialValue` (mặc định: dropdown). */
+  initialMode?: AddressMode;
   /** Dòng địa chỉ chi tiết đã có — chỉ để hiển thị trong thẻ kết quả của bản đồ. */
   initialStreet?: string;
   onChange: (pick: AddressPick) => void;
@@ -131,6 +132,7 @@ interface AddressSelectorProps {
 export function AddressSelector({
   idPrefix,
   initialValue,
+  initialMode = "dropdown",
   initialStreet,
   onChange,
   onStreetSuggest,
@@ -143,7 +145,9 @@ export function AddressSelector({
   // Toàn bộ giá trị ban đầu chụp một lần lúc mount.
   const [initial] = useState(() => initialValue ?? null);
 
-  const [mode, setMode] = useState<AddressMode>(hasCoords(initial) ? "map" : "dropdown");
+  const [mode, setMode] = useState<AddressMode>(
+    hasCoords(initial) ? "map" : initial ? "dropdown" : initialMode,
+  );
 
   const [provinces, setProvinces] = useState<GHNProvince[]>([]);
   const [districts, setDistricts] = useState<GHNDistrict[]>([]);
@@ -229,12 +233,12 @@ export function AddressSelector({
       const stale = () => !aliveRef.current || dReq !== districtReqRef.current || wReq !== wardReqRef.current;
 
       const p = findByIdOrName(provinceList, target.provinceId, (x) => x.provinceId, target.provinceName, (x) => x.provinceName);
-      if (!p) return false;
+      if (!p) return null;
       const districtList = await fetchDistricts(p.provinceId);
-      if (stale()) return false;
+      if (stale()) return null;
       const d = findByIdOrName(districtList, target.districtId, (x) => x.districtId, target.districtName, (x) => x.districtName);
       const wardList = d ? await fetchWards(d.districtId) : [];
-      if (stale()) return false;
+      if (stale()) return null;
       const w = d
         ? findByIdOrName(wardList, target.wardCode, (x) => x.wardCode, target.wardName, (x) => x.wardName)
         : undefined;
@@ -244,7 +248,7 @@ export function AddressSelector({
       setDistrict(d ?? null);
       setWards(wardList);
       setWard(w ?? null);
-      return Boolean(d && w);
+      return d && w ? { province: p, district: d, ward: w } : null;
     },
     [fetchDistricts, fetchWards],
   );
@@ -263,7 +267,7 @@ export function AddressSelector({
         return;
       }
       if (!initial || hasCoords(initial)) {
-        if (initial) await applyChain(list, initial).catch(() => false);
+        if (initial) await applyChain(list, initial).catch(() => null);
         return;
       }
       // Chỉ thôi dùng giá trị đã lưu khi cả 3 cấp đã được chọn lại đầy đủ.
@@ -271,7 +275,7 @@ export function AddressSelector({
       // đã lưu cho tới khi người dùng tự chọn → lưu hồ sơ không vô tình xoá nó.
       const resolved = await applyChain(list, initial).catch(() => {
         toast.error(t("addressSelector.loadDistrictsError"));
-        return false;
+        return null;
       });
       if (resolved && aliveRef.current) setPrefilling(false);
     })();
@@ -348,9 +352,22 @@ export function AddressSelector({
         districtId: match.districtId ?? null,
         wardCode: match.wardCode ?? null,
       });
-      // Tiện thể điền luôn dropdown để chuyển sang chế độ "Chọn địa chỉ" là thấy.
+      // Tiện thể điền luôn dropdown để chuyển sang chế độ "Chọn khu vực" là thấy.
       setPrefilling(false);
-      await applyChain(provinces, match);
+      const chain = await applyChain(provinces, match);
+      // Khớp đủ 3 cấp → dùng tên chuẩn GHN thay cho tên của geocoder (hay lệch).
+      if (chain && aliveRef.current && req === mapReqRef.current) {
+        setSpot((prev) =>
+          prev && prev.lat === result.lat && prev.lng === result.lng
+            ? {
+                ...prev,
+                provinceName: chain.province.provinceName,
+                districtName: chain.district.districtName,
+                wardName: chain.ward.wardName,
+              }
+            : prev,
+        );
+      }
     } catch (error) {
       console.error("Map address mapping failed:", error);
       if (!aliveRef.current || req !== mapReqRef.current) return;
@@ -418,7 +435,15 @@ export function AddressSelector({
 
   return (
     <div className="grid gap-4">
-      <div className="co-seg !mb-0" role="group" aria-label={t("addressSelector.modeGroupLabel")}>
+      {/* Miếng vá trượt bằng CSS (--seg-i) — không dùng layoutId của motion vì nó
+          làm AnimatePresence của trang cha (các bước đăng ký) kẹt ở pha exit. */}
+      <div
+        className="co-seg !mb-0"
+        role="group"
+        aria-label={t("addressSelector.modeGroupLabel")}
+        style={{ "--seg-i": mode === "map" ? 1 : 0 } as React.CSSProperties}
+      >
+        <span className="co-seg-patch seg-slider" aria-hidden="true" />
         {(
           [
             { value: "dropdown", text: t("addressSelector.modeDropdown"), Icon: List },
@@ -432,13 +457,6 @@ export function AddressSelector({
             className="co-seg-btn"
             onClick={() => setMode(value)}
           >
-            {mode === value && (
-              <motion.span
-                layoutId={`${idPrefix}-seg-patch`}
-                className="co-seg-patch"
-                transition={{ type: "spring", stiffness: 420, damping: 34 }}
-              />
-            )}
             <Icon className="size-4" />
             {text}
           </button>

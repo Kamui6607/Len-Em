@@ -383,6 +383,89 @@
   .co-saved-change { grid-column: 2; justify-self: start; margin-top: 10px; }
 }
 
+/* Sổ địa chỉ — chọn một địa chỉ đã lưu hoặc "Giao tới địa chỉ khác" */
+.co-addr-list { display: grid; gap: 10px; }
+.co-addr-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  text-align: left;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.co-addr-opt:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+.co-addr-opt[aria-checked="true"] {
+  border: 1.5px dashed var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+.co-addr-opt .co-radio { margin: 2px 0 0; }
+.co-addr-opt[aria-checked="true"] .co-radio { border-color: var(--primary); }
+.co-addr-opt[aria-checked="true"] .co-radio::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  animation: co-pop 0.25s var(--ease-out);
+}
+.co-addr-opt.is-new {
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.co-addr-opt.is-new .co-radio { margin-top: 0; }
+.co-addr-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+.co-addr-phone { font-weight: 500; color: var(--foreground-muted); }
+.co-addr-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.co-addr-line,
+.co-addr-area {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.85rem;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.co-addr-area { margin-top: 1px; color: var(--foreground-muted); }
+.co-addr-skeleton {
+  height: 92px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--muted) 70%, transparent);
+  animation: co-addr-pulse 1.4s ease-in-out infinite;
+}
+@keyframes co-addr-pulse { 50% { opacity: 0.55; } }
+.co-addr-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--foreground-muted);
+  cursor: pointer;
+}
+.co-addr-save input { width: 18px; height: 18px; accent-color: var(--primary); }
+@media (prefers-reduced-motion: reduce) {
+  .co-addr-skeleton { animation: none; }
+}
+
 /* ── Phương thức thanh toán ── */
 .co-pay {
   display: grid;
@@ -718,3 +801,18 @@
 .co-pay-opt:disabled { cursor: not-allowed; opacity: 0.6; }
 .co-pay-opt:disabled:hover { border-color: var(--border); }
 .co-pay-opt[aria-checked="true"]:disabled { opacity: 1; }
+
+/* Miếng vá trượt dùng chung (.seg-slider): một phần tử cho cả nhóm, vị trí theo
+   --seg-i (chỉ số nút đang chọn) và --seg-n (số nút). Không dùng layoutId của motion. */
+.co-seg { position: relative; isolation: isolate; --seg-n: 2; --seg-pad: 4px; }
+.co-seg > .seg-slider {
+  inset: var(--seg-pad) auto var(--seg-pad) var(--seg-pad);
+  z-index: 0;
+  width: calc((100% - 2 * var(--seg-pad) - (var(--seg-n) - 1) * 4px) / var(--seg-n));
+  transform: translateX(calc(var(--seg-i, 0) * (100% + 4px)));
+  transition: transform 0.35s var(--ease-out);
+}
+.co-seg > button { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .co-seg > .seg-slider { transition: none; }
+}

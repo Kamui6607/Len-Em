@@ -406,6 +406,12 @@
   line-height: 1.45;
   color: var(--destructive);
 }
+.auth-error.is-warning {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-weight: 600;
+}
 
 .auth-submit {
   position: relative;
@@ -898,3 +904,18 @@
   color: var(--foreground-muted);
 }
 .auth-legal a { color: var(--primary); font-weight: 600; }
+
+/* Miếng vá trượt dùng chung (.seg-slider): một phần tử cho cả nhóm, vị trí theo
+   --seg-i (chỉ số nút đang chọn) và --seg-n (số nút). Không dùng layoutId của motion. */
+.auth-seg { position: relative; isolation: isolate; --seg-n: 3; --seg-pad: 4px; }
+.auth-seg > .seg-slider {
+  inset: var(--seg-pad) auto var(--seg-pad) var(--seg-pad);
+  z-index: 0;
+  width: calc((100% - 2 * var(--seg-pad) - (var(--seg-n) - 1) * 4px) / var(--seg-n));
+  transform: translateX(calc(var(--seg-i, 0) * (100% + 4px)));
+  transition: transform 0.35s var(--ease-out);
+}
+.auth-seg > button { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .auth-seg > .seg-slider { transition: none; }
+}

@@ -222,12 +222,14 @@ function handleAxiosError(error: AxiosError): Promise<never> {
     }
     // Sign-up / admin create-user forms print the backend validation errors
     // inline next to the offending field, so keep the global toast out of the
-    // way to avoid double-reporting the same problem. ForgotPasswordPage does
+    // way to avoid double-reporting the same problem (the signup wizard's
+    // duplicate pre-check fails silently). ForgotPasswordPage does
     // the same: it shows the backend's own message (e.g. "User not found")
     // in its own toast, so /mail/forgot-password/send is skipped too.
     if (
       url.includes("/auth/signup") ||
       url.includes("/auth/register") ||
+      url.includes("/auth/check-availability") ||
       url.includes("/mail/forgot-password/send")
     ) {
       return Promise.reject(error);

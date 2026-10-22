@@ -13,23 +13,39 @@ import {
   Phone,
   AtSign,
   MapPin,
+  MapPinned,
   Check,
+  CircleDashed,
 } from "lucide-react";
 import { useAuthStore } from "../../../shared/store/auth.store";
 import { toast } from "sonner";
+import { authService } from "../../../shared/api/authService";
 import { parseApiError } from "../../../lib/apiError";
 import { GoogleAuthButton } from "../../../shared/components/auth/GoogleAuthButton";
 import { AuthBrand } from "../../../shared/components/auth/AuthBrand";
 import { AuthError } from "../../../shared/components/auth/AuthError";
 import { AnimatedBackgroundAuth } from "../../../shared/components/motion/AnimatedBackgroundAuth";
+import {
+  AddressSelector,
+  pickToLocation,
+  type AddressPick,
+} from "../../../shared/components/address/AddressSelector";
+import {
+  formatAddressArea,
+  formatFullAddress,
+  pickAreaError,
+  pickToAddressFields,
+} from "../../../shared/components/address/addressBook";
+import { savePendingAddress } from "../../../lib/pendingAddress";
 import "../../../styles/auth.css";
 import "../../../styles/auth-fit.css";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const STEPS: { label: string; story: string; storyDesc: string }[] = [
   { label: "Account", story: "Tạo tài khoản", storyDesc: "Tên, username và email của bạn" },
-  { label: "Contact", story: "Thông tin liên hệ", storyDesc: "Số điện thoại & địa chỉ nhận kit" },
+  { label: "Contact", story: "Thông tin liên hệ", storyDesc: "Số điện thoại, giới tính & ngày sinh" },
+  { label: "Address", story: "Địa chỉ nhận kit", storyDesc: "Lưu vào sổ địa chỉ, dùng cho mọi đơn hàng" },
   { label: "Password", story: "Đặt mật khẩu", storyDesc: "Giữ tài khoản và đơn hàng an toàn" },
 ];
 
@@ -39,11 +55,12 @@ const FIELD_STEP: Record<string, Step> = {
   username: 1,
   email: 1,
   phone: 2,
-  address: 2,
   gender: 2,
   dateOfBirth: 2,
-  password: 3,
-  confirmPassword: 3,
+  address: 3,
+  area: 3,
+  password: 4,
+  confirmPassword: 4,
 };
 
 /** Mirrors the checks in validatePassword() — shown live as a checklist. */
@@ -63,8 +80,9 @@ const genders = [
 
 const heads: Record<Step, { eyebrow: string; title: [string, string]; sub: string }> = {
   1: { eyebrow: "Create account", title: ["Join", "Len&Em"], sub: "Start with the basics — it takes a minute." },
-  2: { eyebrow: "Nice to meet you", title: ["Where to", "ship?"], sub: "So we can deliver your orders." },
-  3: { eyebrow: "Last step", title: ["Keep it", "safe"], sub: "Choose a strong password you'll remember." },
+  2: { eyebrow: "Nice to meet you", title: ["About", "you"], sub: "So we can reach you about your orders." },
+  3: { eyebrow: "Địa chỉ nhận hàng", title: ["Giao", "về đâu?"], sub: "Lưu vào sổ địa chỉ — dùng cho mọi đơn hàng." },
+  4: { eyebrow: "Last step", title: ["Keep it", "safe"], sub: "Choose a strong password you'll remember." },
 };
 
 const swap = {
@@ -171,6 +189,8 @@ export function RegisterPage() {
   const [dobMonth, setDobMonth] = useState("");
   const [dobDay, setDobDay] = useState("");
   const [dobYear, setDobYear] = useState("");
+  // Khu vực nhận hàng (chọn khu vực HOẶC ghim bản đồ) — form.address là dòng chi tiết.
+  const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
 
   const getDobString = () => {
     if (!dobMonth || !dobDay || !dobYear) return "";
@@ -208,13 +228,20 @@ export function RegisterPage() {
     if (!form.phone.trim()) errors.phone = "Please enter your phone number.";
     else if (!/^0[0-9]{9}$/.test(normalizePhone(form.phone)))
       errors.phone = "Phone must be 10 digits and start with 0 (e.g. 0912345678).";
-    if (!form.address.trim()) errors.address = "Please enter your address.";
     if (form.dateOfBirth) {
       const dobRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
       if (!dobRegex.test(form.dateOfBirth)) {
         errors.dateOfBirth = "Please enter a valid date (MM/DD/YYYY).";
       }
     }
+    return errors;
+  };
+
+  const validateAddress = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    const areaProblem = pickAreaError(addressPick);
+    if (areaProblem) errors.area = areaProblem;
+    if (!form.address.trim()) errors.address = "Vui lòng nhập số nhà, tên đường.";
     return errors;
   };
 
@@ -244,15 +271,61 @@ export function RegisterPage() {
     setStep(next);
   };
 
+  /**
+   * Asks the backend whether the step's unique fields are already taken, so a
+   * duplicate is reported on its own step instead of after the last one.
+   * Fails open: if the check is unavailable, signup still catches it at submit.
+   */
+  const checkTaken = async (
+    fields: { email?: string; username?: string; phone?: string },
+  ): Promise<Record<string, string>> => {
+    try {
+      const res = await authService.checkAvailability(fields);
+      const d = res.data?.data ?? {};
+      const errors: Record<string, string> = {};
+      if (fields.username && d.usernameExists) errors.username = "This username is already taken.";
+      if (fields.email && d.emailExists) errors.email = "This email is already registered.";
+      if (fields.phone && d.phoneExists) errors.phone = "This phone number is already registered.";
+      return errors;
+    } catch (err) {
+      // A 409 means the backend answered "taken" through the error path.
+      const { status, fieldErrors } = parseApiError(err);
+      if (status === 409) {
+        return Object.fromEntries(
+          Object.entries(fieldErrors).filter(([k]) => k in fields),
+        );
+      }
+      return {};
+    }
+  };
+
+  const [checking, setChecking] = useState(false);
+
   const advance =
-    (validate: () => Record<string, string>, next: Step) =>
-    (e: React.FormEvent) => {
+    (
+      validate: () => Record<string, string>,
+      next: Step,
+      unique?: () => { email?: string; username?: string; phone?: string },
+    ) =>
+    async (e: React.FormEvent) => {
       e.preventDefault();
+      if (checking) return;
       const errors = validate();
       if (Object.keys(errors).length > 0) {
         setFe(errors);
         setError("Please fix the errors below.");
         return;
+      }
+      if (unique) {
+        setChecking(true);
+        const taken = await checkTaken(unique());
+        setChecking(false);
+        const first = Object.keys(taken)[0];
+        if (first) {
+          setFe(taken);
+          setError(taken[first]);
+          return;
+        }
       }
       goTo(next);
     };
@@ -265,20 +338,35 @@ export function RegisterPage() {
       setError("Please fix the errors below.");
       return;
     }
+    const addressErrors = validateAddress();
+    if (!addressPick || Object.keys(addressErrors).length > 0) {
+      setFe(addressErrors);
+      setError("Please fix the errors below.");
+      setStep(3);
+      return;
+    }
     setFe({});
     setError("");
+    const phone = normalizePhone(form.phone);
+    const area = pickToAddressFields(addressPick);
+    const street = form.address.trim();
     try {
       await register({
         fullName: form.fullName,
         username: form.username,
         email: form.email,
-        phone: normalizePhone(form.phone),
+        phone,
         password: form.password,
-        address: form.address,
+        address: formatFullAddress({ address: street, ...area }),
         gender: form.gender as "MALE" | "FEMALE" | "OTHER",
         dateOfBirth: getDobString(),
       });
-      toast.success("Account created! Please sign in.");
+      // Chưa có token → địa chỉ được tạo vào sổ địa chỉ ở lần đăng nhập đầu.
+      savePendingAddress(
+        { username: form.username, email: form.email },
+        { fullName: form.fullName.trim(), phone, address: street, ...area, isDefault: true },
+      );
+      toast.success("Account created! Sign in — your address is ready in your address book.");
       navigate("/auth/login");
     } catch (err: unknown) {
       const { status, message, fieldErrors } = parseApiError(err);
@@ -315,6 +403,22 @@ export function RegisterPage() {
       setError(message || "Registration failed. Please try again.");
     }
   };
+
+  // Dòng tóm tắt khu vực ở bước địa chỉ (thay cho thẻ kết quả của bản đồ)
+  const areaOk = !pickAreaError(addressPick);
+  const areaState = areaOk
+    ? "ok"
+    : addressPick?.mode === "map" && addressPick.lat !== null
+      ? "pending"
+      : "empty";
+  const areaText =
+    areaOk && addressPick
+      ? formatAddressArea(addressPick)
+      : areaState === "pending"
+        ? "Đang xác định khu vực của vị trí đã ghim… (lâu quá thì ghim lại nhé)"
+        : addressPick?.mode === "map"
+          ? "Chạm vào bản đồ để ghim nơi nhận hàng"
+          : "Chọn đủ tỉnh/thành, quận/huyện và phường/xã";
 
   const passed = passwordRules.filter((r) => r.test(form.password)).length;
   const strengthColor =
@@ -409,12 +513,13 @@ export function RegisterPage() {
         </div>
 
         <div className={`fit-center is-wide${error ? " has-error" : ""}`}>
-          <div className="auth-progress" aria-label={`Step ${step} of 3`}>
+          <div className="auth-progress" aria-label={`Step ${step} of ${STEPS.length}`}>
             {STEPS.map((s, i) => (
               <span
                 key={s.label}
                 className="auth-progress-item"
                 data-active={i + 1 <= step}
+                data-current={i + 1 === step}
               >
                 {i + 1} · {s.label}
               </span>
@@ -441,251 +546,335 @@ export function RegisterPage() {
                 />
               </div>
 
-              <AuthError error={error} />
+              <div className="fit-card">
+                <AuthError error={error} />
 
-              {/* ── Step 1: account ── */}
-              {step === 1 && (
-                <form onSubmit={advance(validateAccount, 2)} noValidate>
-                  <div className="fit-grid-landscape">
-                    <Field id="reg-fullname" label="Full name" icon={UserIcon} k="fullName" placeholder="Nguyen Van A" autoComplete="name" form={form} fe={fe} upd={upd} />
-                    <Field id="reg-username" label="Username" icon={AtSign} k="username" placeholder="your_username" autoComplete="username" form={form} fe={fe} upd={upd} />
-                  </div>
-                  <Field id="reg-email" label="Email" icon={Mail} k="email" type="email" placeholder="you@gmail.com" autoComplete="email" form={form} fe={fe} upd={upd} />
+                {/* ── Step 1: account ── */}
+                {step === 1 && (
+                  <form
+                    onSubmit={advance(validateAccount, 2, () => ({
+                      username: form.username.trim(),
+                      email: form.email.trim(),
+                    }))}
+                    noValidate
+                  >
+                    <div className="fit-grid-landscape">
+                      <Field id="reg-fullname" label="Full name" icon={UserIcon} k="fullName" placeholder="Nguyen Van A" autoComplete="name" form={form} fe={fe} upd={upd} />
+                      <Field id="reg-username" label="Username" icon={AtSign} k="username" placeholder="your_username" autoComplete="username" form={form} fe={fe} upd={upd} />
+                    </div>
+                    <Field id="reg-email" label="Email" icon={Mail} k="email" type="email" placeholder="you@gmail.com" autoComplete="email" form={form} fe={fe} upd={upd} />
 
-                  <div className="fit-inline-actions">
-                    <button type="submit" className="auth-submit">
-                      Continue <ArrowRight size={18} className="auth-arrow" />
-                    </button>
-                    <div className="auth-divider">or sign up with</div>
-                    {/* Its buttons are type="button", so they never submit this form */}
-                    <GoogleAuthButton label="Sign up with Google" onError={setError} />
-                  </div>
-                </form>
-              )}
+                    <div className="fit-inline-actions">
+                      <button type="submit" className="auth-submit" disabled={checking}>
+                        {checking ? (
+                          <>
+                            <Loader2 size={18} className="auth-spin" />
+                            Checking…
+                          </>
+                        ) : (
+                          <>
+                            Continue <ArrowRight size={18} className="auth-arrow" />
+                          </>
+                        )}
+                      </button>
+                      <div className="auth-divider">or sign up with</div>
+                      {/* Its buttons are type="button", so they never submit this form */}
+                      <GoogleAuthButton label="Sign up with Google" onError={setError} />
+                    </div>
+                  </form>
+                )}
 
-              {/* ── Step 2: contact ── */}
-              {step === 2 && (
-                <form onSubmit={advance(validateContact, 3)} noValidate>
-                  <div className="fit-grid-landscape">
+                {/* ── Step 2: contact ── */}
+                {step === 2 && (
+                  <form
+                    onSubmit={advance(validateContact, 3, () => ({ phone: normalizePhone(form.phone) }))}
+                    noValidate
+                  >
                     <Field id="reg-phone" label="Phone" icon={Phone} k="phone" type="tel" placeholder="0912345678" autoComplete="tel" form={form} fe={fe} upd={upd} />
-                    <Field id="reg-address" label="Address" icon={MapPin} k="address" placeholder="123 Main Street, District 1" autoComplete="street-address" form={form} fe={fe} upd={upd} />
-                  </div>
 
-                  <div className="fit-grid-landscape">
-                    <div className="auth-field">
-                      <div className="auth-label-row">
-                        <span className="auth-label" id="reg-gender-label">
-                          Gender<span className="auth-opt">(optional)</span>
-                        </span>
-                      </div>
-                      <div className="auth-seg" role="group" aria-labelledby="reg-gender-label">
-                        {genders.map((g) => {
-                          const active = form.gender === g.value;
-                          return (
-                            <button
-                              key={g.value}
-                              type="button"
-                              aria-pressed={active}
-                              className="auth-seg-btn"
-                              onClick={() => {
-                                setForm((f) => ({ ...f, gender: g.value }));
-                                setFe((prev) => ({ ...prev, gender: "" }));
-                                setError("");
-                              }}
-                            >
-                              {active && (
-                                <motion.span
-                                  layoutId="reg-gender-patch"
-                                  className="auth-seg-patch"
-                                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                                />
-                              )}
-                              <span>{g.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="auth-field">
-                      <div className="auth-label-row">
-                        <span className="auth-label" id="reg-dob-label">
-                          Date of birth<span className="auth-opt">(optional)</span>
-                        </span>
-                      </div>
-                      <div className="auth-dob" role="group" aria-labelledby="reg-dob-label">
-                        <select
-                          aria-label="Month"
-                          value={dobMonth}
-                          onChange={(e) => { setDobMonth(e.target.value); clearDobError(); }}
-                          className={`auth-select${!dobMonth ? " is-empty" : ""}${fe.dateOfBirth ? " is-invalid" : ""}`}
-                        >
-                          <option value="">MM</option>
-                          {Array.from({ length: 12 }, (_, i) => (
-                            <option key={i + 1} value={String(i + 1)}>{pad(i + 1)}</option>
-                          ))}
-                        </select>
-                        <select
-                          aria-label="Day"
-                          value={dobDay}
-                          onChange={(e) => { setDobDay(e.target.value); clearDobError(); }}
-                          className={`auth-select${!dobDay ? " is-empty" : ""}${fe.dateOfBirth ? " is-invalid" : ""}`}
-                        >
-                          <option value="">DD</option>
-                          {Array.from({ length: 31 }, (_, i) => (
-                            <option key={i + 1} value={String(i + 1)}>{pad(i + 1)}</option>
-                          ))}
-                        </select>
-                        <select
-                          aria-label="Year"
-                          value={dobYear}
-                          onChange={(e) => { setDobYear(e.target.value); clearDobError(); }}
-                          className={`auth-select${!dobYear ? " is-empty" : ""}${fe.dateOfBirth ? " is-invalid" : ""}`}
-                        >
-                          <option value="">YYYY</option>
-                          {Array.from({ length: 100 }, (_, i) => (
-                            <option key={i} value={String(currentYear - i)}>{currentYear - i}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {fe.dateOfBirth && <div className="auth-field-msg">{fe.dateOfBirth}</div>}
-                    </div>
-                  </div>
-
-                  <div className="auth-btn-row">
-                    {backButton(1)}
-                    <button type="submit" className="auth-submit">
-                      Continue <ArrowRight size={18} className="auth-arrow" />
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* ── Step 3: password ── */}
-              {step === 3 && (
-                <form onSubmit={handleSubmit} noValidate>
-                  {/* Hidden username helps password managers save the pair */}
-                  <input type="text" name="username" autoComplete="username" value={form.username} readOnly hidden />
-
-                  <div className="fit-grid-landscape">
-                    <div className="auth-field">
-                      <div className="auth-label-row">
-                        <label htmlFor="reg-password" className="auth-label">
-                          Password<span className="auth-req" aria-hidden="true">*</span>
-                        </label>
-                      </div>
-                      <div className="auth-input-wrap">
-                        <Lock size={17} className="auth-input-icon" />
-                        <input
-                          id="reg-password"
-                          type={showPw ? "text" : "password"}
-                          placeholder="Create a strong password"
-                          value={form.password}
-                          onChange={upd("password")}
-                          required
-                          autoComplete="new-password"
-                          aria-invalid={!!fe.password}
-                          aria-describedby="reg-password-rules"
-                          className={`auth-input has-toggle${fe.password ? " is-invalid" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          className="auth-input-toggle"
-                          onClick={() => setShowPw((v) => !v)}
-                          aria-label={showPw ? "Hide password" : "Show password"}
-                          aria-pressed={showPw}
-                        >
-                          {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
-                        </button>
-                      </div>
-                      {fe.password && <div className="auth-field-msg">{fe.password}</div>}
-                      <div className="auth-strength" aria-hidden="true">
-                        {passwordRules.map((r, i) => (
-                          <span
-                            key={r.label}
-                            style={{ background: i < passed ? strengthColor : undefined }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="auth-field">
-                      <div className="auth-label-row">
-                        <label htmlFor="reg-confirm" className="auth-label">
-                          Confirm password<span className="auth-req" aria-hidden="true">*</span>
-                        </label>
-                      </div>
-                      <div className="auth-input-wrap">
-                        <Lock size={17} className="auth-input-icon" />
-                        <input
-                          id="reg-confirm"
-                          type={showCp ? "text" : "password"}
-                          placeholder="Repeat your password"
-                          value={form.confirmPassword}
-                          onChange={upd("confirmPassword")}
-                          required
-                          autoComplete="new-password"
-                          aria-invalid={!!fe.confirmPassword}
-                          className={`auth-input has-toggle${fe.confirmPassword ? " is-invalid" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          className="auth-input-toggle"
-                          onClick={() => setShowCp((v) => !v)}
-                          aria-label={showCp ? "Hide password" : "Show password"}
-                          aria-pressed={showCp}
-                        >
-                          {showCp ? <EyeOff size={17} /> : <Eye size={17} />}
-                        </button>
-                      </div>
-                      {fe.confirmPassword ? (
-                        <div className="auth-field-msg">{fe.confirmPassword}</div>
-                      ) : (
-                        form.confirmPassword.length > 0 && (
-                          <div className={`auth-field-msg ${confirmMatches ? "is-ok" : "is-muted"}`}>
-                            {confirmMatches ? "✓ Passwords match" : "Passwords don't match yet"}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <ul className="auth-rules mb-3" id="reg-password-rules">
-                    {passwordRules.map((r) => {
-                      const ok = r.test(form.password);
-                      return (
-                        <li key={r.label} className="auth-rule" data-ok={ok}>
-                          <span className="auth-rule-dot">
-                            <Check size={10} strokeWidth={3.5} />
+                    <div className="fit-grid-landscape">
+                      <div className="auth-field">
+                        <div className="auth-label-row">
+                          <span className="auth-label" id="reg-gender-label">
+                            Gender<span className="auth-opt">(optional)</span>
                           </span>
-                          {r.label}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        </div>
+                        <div
+                          className="auth-seg"
+                          role="group"
+                          aria-labelledby="reg-gender-label"
+                          style={{ "--seg-i": Math.max(0, genders.findIndex((g) => g.value === form.gender)) } as React.CSSProperties}
+                        >
+                          {/* Miếng vá trượt bằng CSS — layoutId của motion làm kẹt AnimatePresence giữa các bước */}
+                          <span className="auth-seg-patch seg-slider" aria-hidden="true" />
+                          {genders.map((g) => {
+                            const active = form.gender === g.value;
+                            return (
+                              <button
+                                key={g.value}
+                                type="button"
+                                aria-pressed={active}
+                                className="auth-seg-btn"
+                                onClick={() => {
+                                  setForm((f) => ({ ...f, gender: g.value }));
+                                  setFe((prev) => ({ ...prev, gender: "" }));
+                                  setError("");
+                                }}
+                              >
+                                <span>{g.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                  <div className="auth-btn-row">
-                    {backButton(2)}
-                    <button type="submit" className="auth-submit" disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <Loader2 size={18} className="auth-spin" />
-                          Creating…
-                        </>
-                      ) : (
-                        <>
-                          Create account <ArrowRight size={18} className="auth-arrow" />
-                        </>
-                      )}
-                    </button>
-                  </div>
+                      <div className="auth-field">
+                        <div className="auth-label-row">
+                          <span className="auth-label" id="reg-dob-label">
+                            Date of birth<span className="auth-opt">(optional)</span>
+                          </span>
+                        </div>
+                        <div className="auth-dob" role="group" aria-labelledby="reg-dob-label">
+                          <select
+                            aria-label="Month"
+                            value={dobMonth}
+                            onChange={(e) => { setDobMonth(e.target.value); clearDobError(); }}
+                            className={`auth-select${!dobMonth ? " is-empty" : ""}${fe.dateOfBirth ? " is-invalid" : ""}`}
+                          >
+                            <option value="">MM</option>
+                            {Array.from({ length: 12 }, (_, i) => (
+                              <option key={i + 1} value={String(i + 1)}>{pad(i + 1)}</option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="Day"
+                            value={dobDay}
+                            onChange={(e) => { setDobDay(e.target.value); clearDobError(); }}
+                            className={`auth-select${!dobDay ? " is-empty" : ""}${fe.dateOfBirth ? " is-invalid" : ""}`}
+                          >
+                            <option value="">DD</option>
+                            {Array.from({ length: 31 }, (_, i) => (
+                              <option key={i + 1} value={String(i + 1)}>{pad(i + 1)}</option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="Year"
+                            value={dobYear}
+                            onChange={(e) => { setDobYear(e.target.value); clearDobError(); }}
+                            className={`auth-select${!dobYear ? " is-empty" : ""}${fe.dateOfBirth ? " is-invalid" : ""}`}
+                          >
+                            <option value="">YYYY</option>
+                            {Array.from({ length: 100 }, (_, i) => (
+                              <option key={i} value={String(currentYear - i)}>{currentYear - i}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {fe.dateOfBirth && <div className="auth-field-msg">{fe.dateOfBirth}</div>}
+                      </div>
+                    </div>
 
-                  <p className="auth-legal">
-                    By creating an account you agree to our{" "}
-                    <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
-                  </p>
-                </form>
-              )}
+                    <div className="auth-btn-row">
+                      {backButton(1)}
+                      <button type="submit" className="auth-submit" disabled={checking}>
+                        {checking ? (
+                          <>
+                            <Loader2 size={18} className="auth-spin" />
+                            Checking…
+                          </>
+                        ) : (
+                          <>
+                            Continue <ArrowRight size={18} className="auth-arrow" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* ── Step 3: address — chọn khu vực HOẶC ghim bản đồ, luôn kèm địa chỉ chi tiết ── */}
+                {step === 3 && (
+                  <form onSubmit={advance(validateAddress, 4)} noValidate>
+                    <section className="fit-addr-block" aria-labelledby="reg-addr-title">
+                      <div className="fit-addr-head">
+                        <span className="fit-addr-icon" aria-hidden="true">
+                          <MapPinned size={17} />
+                        </span>
+                        <div className="min-w-0">
+                          <p id="reg-addr-title" className="fit-addr-title">
+                            Khu vực nhận hàng<span className="auth-req" aria-hidden="true">*</span>
+                          </p>
+                          <p className="fit-addr-sub">Chọn theo danh sách, hoặc ghim thẳng trên bản đồ</p>
+                        </div>
+                      </div>
+
+                      <div className="fit-address">
+                        <AddressSelector
+                          idPrefix="reg-addr"
+                          // Quay lại bước này → điền lại lựa chọn trước đó
+                          initialValue={addressPick ? pickToLocation(addressPick) : null}
+                          initialStreet={form.address}
+                          onChange={(pick) => {
+                            setAddressPick(pick);
+                            setFe((prev) => (prev.area ? { ...prev, area: "" } : prev));
+                          }}
+                          onStreetSuggest={(street) =>
+                            setForm((f) => (f.address.trim() ? f : { ...f, address: street }))
+                          }
+                          labelClassName="auth-label fit-address-label"
+                          required
+                        />
+                      </div>
+
+                      <p className="fit-addr-summary" data-state={areaState} aria-live="polite">
+                        {areaState === "ok" ? (
+                          <Check size={15} strokeWidth={3} />
+                        ) : areaState === "pending" ? (
+                          <Loader2 size={15} className="auth-spin" />
+                        ) : (
+                          <CircleDashed size={15} />
+                        )}
+                        <span>{areaText}</span>
+                      </p>
+                      {fe.area && <div className="auth-field-msg">{fe.area}</div>}
+                    </section>
+
+                    <Field id="reg-address" label="Địa chỉ chi tiết" icon={MapPin} k="address" placeholder="Số nhà, tên đường, toà nhà" autoComplete="street-address" form={form} fe={fe} upd={upd} />
+
+                    <div className="auth-btn-row">
+                      {backButton(2)}
+                      <button type="submit" className="auth-submit">
+                        Continue <ArrowRight size={18} className="auth-arrow" />
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* ── Step 4: password ── */}
+                {step === 4 && (
+                  <form onSubmit={handleSubmit} noValidate>
+                    {/* Hidden username helps password managers save the pair */}
+                    <input type="text" name="username" autoComplete="username" value={form.username} readOnly hidden />
+
+                    <div className="fit-grid-landscape">
+                      <div className="auth-field">
+                        <div className="auth-label-row">
+                          <label htmlFor="reg-password" className="auth-label">
+                            Password<span className="auth-req" aria-hidden="true">*</span>
+                          </label>
+                        </div>
+                        <div className="auth-input-wrap">
+                          <Lock size={17} className="auth-input-icon" />
+                          <input
+                            id="reg-password"
+                            type={showPw ? "text" : "password"}
+                            placeholder="Create a strong password"
+                            value={form.password}
+                            onChange={upd("password")}
+                            required
+                            autoComplete="new-password"
+                            aria-invalid={!!fe.password}
+                            aria-describedby="reg-password-rules"
+                            className={`auth-input has-toggle${fe.password ? " is-invalid" : ""}`}
+                          />
+                          <button
+                            type="button"
+                            className="auth-input-toggle"
+                            onClick={() => setShowPw((v) => !v)}
+                            aria-label={showPw ? "Hide password" : "Show password"}
+                            aria-pressed={showPw}
+                          >
+                            {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
+                        </div>
+                        {fe.password && <div className="auth-field-msg">{fe.password}</div>}
+                        <div className="auth-strength" aria-hidden="true">
+                          {passwordRules.map((r, i) => (
+                            <span
+                              key={r.label}
+                              style={{ background: i < passed ? strengthColor : undefined }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="auth-field">
+                        <div className="auth-label-row">
+                          <label htmlFor="reg-confirm" className="auth-label">
+                            Confirm password<span className="auth-req" aria-hidden="true">*</span>
+                          </label>
+                        </div>
+                        <div className="auth-input-wrap">
+                          <Lock size={17} className="auth-input-icon" />
+                          <input
+                            id="reg-confirm"
+                            type={showCp ? "text" : "password"}
+                            placeholder="Repeat your password"
+                            value={form.confirmPassword}
+                            onChange={upd("confirmPassword")}
+                            required
+                            autoComplete="new-password"
+                            aria-invalid={!!fe.confirmPassword}
+                            className={`auth-input has-toggle${fe.confirmPassword ? " is-invalid" : ""}`}
+                          />
+                          <button
+                            type="button"
+                            className="auth-input-toggle"
+                            onClick={() => setShowCp((v) => !v)}
+                            aria-label={showCp ? "Hide password" : "Show password"}
+                            aria-pressed={showCp}
+                          >
+                            {showCp ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
+                        </div>
+                        {fe.confirmPassword ? (
+                          <div className="auth-field-msg">{fe.confirmPassword}</div>
+                        ) : (
+                          form.confirmPassword.length > 0 && (
+                            <div className={`auth-field-msg ${confirmMatches ? "is-ok" : "is-muted"}`}>
+                              {confirmMatches ? "✓ Passwords match" : "Passwords don't match yet"}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    <ul className="auth-rules mb-3" id="reg-password-rules">
+                      {passwordRules.map((r) => {
+                        const ok = r.test(form.password);
+                        return (
+                          <li key={r.label} className="auth-rule" data-ok={ok}>
+                            <span className="auth-rule-dot">
+                              <Check size={10} strokeWidth={3.5} />
+                            </span>
+                            {r.label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    <div className="auth-btn-row">
+                      {backButton(3)}
+                      <button type="submit" className="auth-submit" disabled={isLoading}>
+                        {isLoading ? (
+                          <>
+                            <Loader2 size={18} className="auth-spin" />
+                            Creating…
+                          </>
+                        ) : (
+                          <>
+                            Create account <ArrowRight size={18} className="auth-arrow" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <p className="auth-legal">
+                      By creating an account you agree to our{" "}
+                      <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+                    </p>
+                  </form>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
 

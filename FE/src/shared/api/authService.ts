@@ -39,6 +39,16 @@ export const authService = {
       timeout: AUTH_TIMEOUT,
     }),
 
+  /** GET /auth/check-availability?email=&username=&phone=
+   *  → { status, data: { emailExists?, usernameExists?, phoneExists? } }
+   *  Lets the signup wizard flag duplicates on the step that owns the field
+   *  instead of only at the final submit. Only the passed fields are checked. */
+  checkAvailability: (params: { email?: string; username?: string; phone?: string }) =>
+    axiosClient.get<ApiResponse<{ emailExists?: boolean; usernameExists?: boolean; phoneExists?: boolean }>>(
+      `${AUTH_BASE}/check-availability`,
+      { params, timeout: AUTH_TIMEOUT },
+    ),
+
   /** POST /auth/register  â†’ { status, data: { userId, username, email, subscription } } (Admin only) */
   adminRegister: (data: RegisterRequest & { roleId: string }) =>
     axiosClient.post<ApiResponse<RegisterResponseData>>(`${AUTH_BASE}/register`, data),

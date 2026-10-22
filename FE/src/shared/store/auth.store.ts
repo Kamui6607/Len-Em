@@ -8,6 +8,7 @@ import { markVoluntaryLogout, tokenStorage } from "../../lib/axiosClient";
 import { isAuthenticated as hasValidToken } from "../../lib/authUtils";
 import type { AuthState, LoginRequest, RegisterRequest, User } from "../types/auth.types";
 import { normalizeApiUserProfile } from "../types/auth.types";
+import { flushPendingAddress } from "../../lib/pendingAddress";
 
 let _initialized = false;
 
@@ -87,6 +88,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+      // Địa chỉ nhập lúc đăng ký → tạo vào sổ địa chỉ ở lần đăng nhập đầu
+      void flushPendingAddress(user);
     } catch (err) {
       set({ isLoading: false });
       throw err;
@@ -121,6 +124,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+      // Địa chỉ nhập lúc đăng ký → tạo vào sổ địa chỉ ở lần đăng nhập đầu
+      void flushPendingAddress(user);
     } catch (err) {
       set({ isLoading: false });
       throw err;

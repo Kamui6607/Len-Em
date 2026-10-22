@@ -52,14 +52,8 @@ import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { DatePicker } from "../../shared/components/ui/DatePicker";
 import { isoToUsDisplayDate } from "../../lib/dateInput";
 import { resolveAvatarUrl } from "../../lib/avatarUrl";
-import {
-  AddressSelector,
-  isPickComplete,
-  isPickStarted,
-  pickToLocation,
-  sameLocation,
-  type AddressPick,
-} from "../../shared/components/address/AddressSelector";
+import { formatFullAddress as formatSavedAddress } from "../../shared/components/address/addressBook";
+import { useSavedAddresses } from "../../shared/hooks/useSavedAddresses";
 import type { User } from "../../shared/types/auth.types";
 import "../../styles/craft.css";
 import "../../styles/profile.css";
@@ -187,14 +181,11 @@ export function Profile({ embedded = false }: ProfileProps) {
   const [editForm, setEditForm] = useState({
     fullName: "",
     phone: "",
-    address: "",
     gender: "OTHER" as "MALE" | "FEMALE" | "OTHER",
     dateOfBirth: "",
   });
-  // Khu vực tỉnh/huyện/xã (± toạ độ) đang chọn trong modal — AddressSelector báo lên.
-  const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
-  // Tăng mỗi lần mở modal → AddressSelector mount lại và điền sẵn từ user mới nhất.
-  const [editSession, setEditSession] = useState(0);
+  // Địa chỉ hiển thị = địa chỉ mặc định trong sổ địa chỉ (/addresses)
+  const { defaultAddress, loading: addressesLoading } = useSavedAddresses(Boolean(user));
 
   // ── Change Password Modal ──
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -236,12 +227,9 @@ export function Profile({ embedded = false }: ProfileProps) {
     setEditForm({
       fullName: user.fullName || "",
       phone: user.phone || "",
-      address: user.address || "",
       gender: user.gender || "OTHER",
       dateOfBirth: formatDateForInput(user.dateOfBirth),
     });
-    setAddressPick(null);
-    setEditSession((n) => n + 1);
     setEditOpen(true);
   }, [user]);
 
@@ -249,25 +237,12 @@ export function Profile({ embedded = false }: ProfileProps) {
   const handleEditSubmit = useCallback(async () => {
     if (!user) return;
 
-    // Đã bắt đầu chọn khu vực thì phải đủ cả 3 cấp; bỏ trống cả 3 = xoá khu vực.
-    if (addressPick && isPickStarted(addressPick) && !isPickComplete(addressPick)) {
-      toast.error(t("profile.toastAddressIncomplete"));
-      return;
-    }
-
     setSaving(true);
     try {
       const payload: UpdateUserRequest = {};
       if (editForm.fullName !== user.fullName)
         payload.fullName = editForm.fullName;
       if (editForm.phone !== user.phone) payload.phone = editForm.phone;
-      if (editForm.address !== user.address) payload.address = editForm.address;
-      if (addressPick) {
-        const nextLocation = pickToLocation(addressPick);
-        if (!sameLocation(nextLocation, user.addressLocation)) {
-          payload.addressLocation = nextLocation;
-        }
-      }
       if (editForm.gender !== user.gender) payload.gender = editForm.gender;
       if (editForm.dateOfBirth !== formatDateForInput(user.dateOfBirth)) {
         // The API receives MM/DD/YYYY — the exact order the signup form sends
@@ -298,7 +273,7 @@ export function Profile({ embedded = false }: ProfileProps) {
     } finally {
       setSaving(false);
     }
-  }, [user, editForm, addressPick, setUser, t]);
+  }, [user, editForm, setUser, t]);
 
   // ── Avatar crop logic ──
   const handleAvatarClick = useCallback(() => {
@@ -521,7 +496,12 @@ export function Profile({ embedded = false }: ProfileProps) {
     FEMALE: t("profile.femaleOption"),
     OTHER: t("profile.otherOption"),
   };
-  const fullAddress = formatFullAddress(user);
+  // Sổ địa chỉ trống (tài khoản cũ) → dùng tạm địa chỉ lưu trên hồ sơ
+  const fullAddress = defaultAddress
+    ? formatSavedAddress(defaultAddress)
+    : addressesLoading
+      ? ""
+      : formatFullAddress(user);
   const dob = formatDateForDisplay(user.dateOfBirth);
 
   const infoRows: { icon: LucideIcon; label: string; value: string; wide?: boolean }[] = [
@@ -536,7 +516,7 @@ export function Profile({ embedded = false }: ProfileProps) {
   const completeness = [
     Boolean(user.avatar),
     Boolean(user.phone?.trim()),
-    Boolean(user.address?.trim() && user.addressLocation?.wardName),
+    Boolean(defaultAddress || (user.address?.trim() && user.addressLocation?.wardName)),
     Boolean(dob),
   ];
   const completePercent = Math.round((completeness.filter(Boolean).length / completeness.length) * 100);
@@ -850,42 +830,23 @@ export function Profile({ embedded = false }: ProfileProps) {
               />
             </div>
 
-            {/* Address — khu vực (dropdown GHN / bản đồ) + dòng chi tiết */}
-            <fieldset className="min-w-0 space-y-3 sm:col-span-2">
-              <legend className={`${fieldLabelClass} mb-1.5`}>
-                {t("profile.addressLabel")}
-              </legend>
-              <AddressSelector
-                key={editSession}
-                idPrefix="profile-address"
-                initialValue={user.addressLocation}
-                initialStreet={user.address}
-                onChange={setAddressPick}
-                onStreetSuggest={(street) =>
-                  setEditForm((f) => (f.address.trim() ? f : { ...f, address: street }))
-                }
-                labelClassName={`${fieldLabelClass} mb-1.5 block`}
-              />
-              <div className="space-y-1.5">
-                <label htmlFor="profile-address-detail" className={fieldLabelClass}>
-                  {t("profile.addressDetailLabel")}
-                </label>
-                <input
-                  id="profile-address-detail"
-                  type="text"
-                  value={editForm.address}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, address: e.target.value }))
-                  }
-                  className={fieldInputClass}
-                  placeholder={t("profile.addressDetailPlaceholder")}
-                  autoComplete="street-address"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("profile.addressDetailHint")}
-                </p>
-              </div>
-            </fieldset>
+            {/* Address — quản lý ở Sổ địa chỉ, dùng chung cho mọi đơn hàng */}
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <span className={fieldLabelClass}>{t("profile.addressLabel")}</span>
+              <Link
+                to="/addresses"
+                onClick={() => setEditOpen(false)}
+                className={`${fieldInputClass} flex items-center justify-between gap-3 text-left`}
+              >
+                <span className="min-w-0 truncate">
+                  {fullAddress || t("profile.addressBookEmpty")}
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-primary">
+                  {t("profile.addressBookManage")}
+                </span>
+              </Link>
+              <p className="text-xs text-muted-foreground">{t("profile.addressBookHint")}</p>
+            </div>
           </div>
 
           <DialogFooter className="pf-modal-foot gap-2">

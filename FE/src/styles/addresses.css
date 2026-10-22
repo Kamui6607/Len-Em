@@ -36,6 +36,14 @@
 .adr-hero .craft-stitch { margin: 12px 0 12px; }
 .adr-hero .craft-stats { margin-top: 18px; }
 
+/* Hai lối thêm địa chỉ: chọn khu vực / ghim bản đồ */
+.adr-add-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
 /* ── Form panel ── */
 .adr-panel {
   scroll-margin-top: 96px;
