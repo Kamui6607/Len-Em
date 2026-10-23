@@ -172,13 +172,26 @@
   border-top: 1px solid var(--border);
 }
 
-/* Dải chip bộ lọc đang bật */
+/* Thanh bộ lọc đang áp dụng — .filter-active-wrap chỉ để animate
+   height/margin (overflow: hidden), panel bên trong giữ padding cố định
+   nên mở/đóng chỉ một nhịp. Khoảng cách 2rem với section bên dưới do
+   animation marginBottom đảm nhận. */
+.filter-active-wrap {
+  overflow: hidden;
+  /* Trình duyệt hỗ trợ: cắt nới ra để không mất box-shadow của panel */
+  overflow: clip;
+  overflow-clip-margin: 12px;
+}
 .filter-active-strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-bottom: -24px;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
 }
 .filter-active-label {
   margin-right: 2px;
@@ -202,6 +215,7 @@
   opacity: 0.85;
 }
 .filter-active-clear {
+  margin-left: auto;
   padding: 0 4px;
   font-size: 0.78rem;
   font-weight: 500;

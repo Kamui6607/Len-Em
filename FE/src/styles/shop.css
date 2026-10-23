@@ -343,6 +343,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 10px;
   padding-top: 10px;
   background-image: linear-gradient(to right, var(--border) 55%, transparent 45%);
   background-size: 8px 1.5px;

@@ -38,6 +38,7 @@ import { useLearnStore } from "../../features/learn/store/learn.store";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useAddToCart } from "../../features/cart/useAddToCart";
 import { firstAvailableVariant, toCartPayload } from "../../features/cart/VariantPickerDialog";
+import { kitToCartPayload } from "../../features/cart/kitPayload";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
@@ -200,7 +201,7 @@ function PriceFilter({
 export function Shop() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { addProducts } = useAddToCart();
+  const { addProducts, addKit } = useAddToCart();
   const { isFavoriteKit, toggleFavoriteKit } = useFavorites();
   const { t } = useLanguage();
 
@@ -265,6 +266,24 @@ export function Shop() {
   const clearKitFilters = () => {
     setKitLevel("all");
     setKitMaxPrice(0);
+  };
+
+  // Danh sách có thể chưa populate sản phẩm trong combo → lấy chi tiết trước khi thêm.
+  const handleAddKit = async (kit: Kit) => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    let full = kit;
+    if ((kit.products || []).some((p) => typeof p.productId !== "object" || !p.productId)) {
+      try {
+        full = (await kitService.getById(kit._id)).data.data?.kit ?? kit;
+      } catch {
+        toast.error("Không thêm được combo vào giỏ");
+        return;
+      }
+    }
+    addKit(kitToCartPayload(full));
   };
 
   // Fetch toàn bộ combo một lần khi vào tab — Level/price lọc phía client cho
@@ -950,11 +969,6 @@ export function Shop() {
                               e.preventDefault();
                               e.stopPropagation();
                               toggleFavoriteKit(kit._id);
-                              toast.success(
-                                isFavorite
-                                  ? t("shop.removedFromFavorites")
-                                  : "Đã thêm vào yêu thích",
-                              );
                             }}
                             className={cn("pc-fav", isFavorite && "is-active")}
                             aria-label={isFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
@@ -1005,6 +1019,24 @@ export function Shop() {
                               {t("shop.viewDetails")}
                               <ArrowRight size={14} />
                             </span>
+                            <motion.button
+                              type="button"
+                              className="card-add-btn pc-add"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                void handleAddKit(kit);
+                              }}
+                              aria-label={`Thêm ${kit.name} vào giỏ`}
+                              whileTap={{ scale: 0.97 }}
+                              transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
+                            >
+                              <span className="card-add-btn__icon" aria-hidden="true">
+                                <ShoppingBag size={15} strokeWidth={2.2} />
+                              </span>
+                              <span className="card-add-btn__label">Thêm vào giỏ</span>
+                              <span className="card-add-btn__shine" aria-hidden="true" />
+                            </motion.button>
                           </div>
                         </div>
                       </Link>

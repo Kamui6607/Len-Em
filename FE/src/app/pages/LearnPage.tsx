@@ -593,38 +593,54 @@ export function LearnPage() {
             )}
           </aside>
 
-          <main className="min-w-0 space-y-14">
-            <AnimatePresence>
+          <main className="min-w-0">
+            {/* Lớp ngoài chỉ lo animation (height + khoảng cách dưới) để mở/đóng
+                một nhịp duy nhất; panel bên trong giữ padding/viền cố định.
+                Nằm ngoài space-y-14 để margin của section bên dưới không nhảy. */}
+            <AnimatePresence initial={false}>
               {activeChips.length > 0 && (
                 <motion.div
-                  className="filter-active-strip"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
+                  key="filter-strip"
+                  className="filter-active-wrap"
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginBottom: 32 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <span className="filter-active-label">{t("learnPage.filters")}:</span>
-                  {activeChips.map((chip) => (
+                  <div className="filter-active-strip">
+                    <span className="filter-active-label">{t("learnPage.filters")}:</span>
+                    <AnimatePresence initial={false} mode="popLayout">
+                      {activeChips.map((chip) => (
+                        <motion.button
+                          type="button"
+                          layout="position"
+                          key={`${chip.type}-${chip.value}`}
+                          className="filter-active-chip"
+                          onClick={() => removeChip(chip)}
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.85 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          {chip.label}
+                          <X className="size-3" />
+                        </motion.button>
+                      ))}
+                    </AnimatePresence>
                     <motion.button
                       type="button"
-                      key={`${chip.type}-${chip.value}`}
-                      className="filter-active-chip"
-                      onClick={() => removeChip(chip)}
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.85 }}
-                      transition={{ duration: 0.15 }}
+                      layout="position"
+                      className="filter-active-clear"
+                      onClick={resetFilters}
                     >
-                      {chip.label}
-                      <X className="size-3" />
+                      {t("learnPage.resetAll")}
                     </motion.button>
-                  ))}
-                  <button type="button" className="filter-active-clear" onClick={resetFilters}>
-                    {t("learnPage.resetAll")}
-                  </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
+
+            <div className="space-y-14">
 
             {loading ? (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -772,6 +788,7 @@ export function LearnPage() {
                 </div>
               </section>
             )}
+            </div>
           </main>
         </div>
       </div>

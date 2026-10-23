@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Heart, Package, ShoppingBag, ShoppingCart, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
@@ -87,11 +88,24 @@ function KitCard({ kit, onUnfavorite, onAdd }: { kit: Kit; onUnfavorite: () => v
           {kit.name}
         </Link>
         <p className="wl-kit-meta">{t("love.productsIncluded", { count: (kit.products || []).length })}</p>
-        <p className="wl-kit-price">{formatPrice(kit.price)}</p>
-        <button type="button" className="wl-btn is-soft is-block" onClick={onAdd}>
-          <ShoppingCart size={15} aria-hidden="true" />
-          {t("love.addToCart")}
-        </button>
+        {/* Chân thẻ giống ProductCard: giá + nút "Thêm vào giỏ" */}
+        <div className="pc-foot">
+          <div className="pc-price">{formatPrice(kit.price)}</div>
+          <motion.button
+            type="button"
+            className="card-add-btn pc-add"
+            onClick={onAdd}
+            aria-label={`${t("love.addToCart")}: ${kit.name}`}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
+          >
+            <span className="card-add-btn__icon" aria-hidden="true">
+              <ShoppingBag size={15} strokeWidth={2.2} />
+            </span>
+            <span className="card-add-btn__label">{t("love.addToCart")}</span>
+            <span className="card-add-btn__shine" aria-hidden="true" />
+          </motion.button>
+        </div>
       </div>
     </article>
   );
@@ -102,7 +116,7 @@ function KitCard({ kit, onUnfavorite, onAdd }: { kit: Kit; onUnfavorite: () => v
 export function Love() {
   const { t } = useLanguage();
   const { favorites, favoriteKits, toggleFavorite, toggleFavoriteKit, clearAllFavorites } = useFavorites();
-  const { addKit, addProducts } = useAddToCart();
+  const { addKit, addBundle } = useAddToCart();
 
   const productCache = useRef(new Map<string, Product | null>());
   const kitCache = useRef(new Map<string, Kit | null>());
@@ -140,8 +154,8 @@ export function Love() {
   const kits = favoriteKits.map((id) => kitCache.current.get(id)).filter((k): k is Kit => !!k);
   const total = products.length + kits.length;
 
-  // Only products with a purchasable variant can go to the cart in one tap.
-  const addable = useMemo(
+  // Products need a purchasable variant; combos always go in as a whole.
+  const addableProducts = useMemo(
     () =>
       products.flatMap((product) => {
         const variant = product.variants?.find((v) => v.stock > 0) ?? product.variants?.[0];
@@ -161,6 +175,13 @@ export function Love() {
       }),
     [products],
   );
+  const addableCount = addableProducts.length + kits.length;
+
+  const handleAddAll = () =>
+    addBundle({
+      products: addableProducts.map((product) => ({ product, quantity: 1 })),
+      kits: kits.map(kitToCartPayload),
+    });
 
   const showProducts = filter !== "combos" && products.length > 0;
   const showKits = filter !== "products" && kits.length > 0;
@@ -242,14 +263,10 @@ export function Love() {
             </h1>
           </div>
           <div className="wl-actions">
-            {addable.length > 0 && (
-              <button
-                type="button"
-                className="wl-btn is-primary"
-                onClick={() => addProducts(addable, t("love.addedAllToCart", { count: addable.length }))}
-              >
+            {addableCount > 0 && (
+              <button type="button" className="wl-btn is-primary" onClick={handleAddAll}>
                 <ShoppingCart size={16} aria-hidden="true" />
-                {t("love.addAllToCart", { count: addable.length })}
+                {t("love.addAllToCart", { count: addableCount })}
               </button>
             )}
             <button type="button" className="wl-clear" onClick={handleClearAll}>

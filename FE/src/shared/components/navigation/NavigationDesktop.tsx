@@ -175,16 +175,14 @@ export function NavigationDesktop(props: NavigationDesktopProps) {
 
             {props.showFullActions && (
               <>
-                <span className="navx-compact-hide">
-                  <Link
-                    to="/love"
-                    aria-label="Favorites"
-                    className={cn("nav-icon", focusRingClass)}
-                  >
-                    <Heart className="size-[19px]" />
-                    {props.favoriteCount > 0 && <Counter>{props.favoriteCount}</Counter>}
-                  </Link>
-                </span>
+                <Link
+                  to="/love"
+                  aria-label="Favorites"
+                  className={cn("nav-icon", focusRingClass)}
+                >
+                  <Heart className="size-[19px]" />
+                  {props.favoriteCount > 0 && <Counter>{props.favoriteCount}</Counter>}
+                </Link>
                 <Link
                   to="/cart"
                   aria-label="Cart"
