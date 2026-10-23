@@ -82,9 +82,6 @@ type ShippingFormData = yup.InferType<typeof shippingSchema>;
 
 const CUSTOM_ADDRESS = "custom";
 
-/** Hạn mức thu hộ GHN mặc định — BE gửi giá trị thật qua /orders/shipping-fee (maxCodAmount). */
-const DEFAULT_MAX_COD = 300000;
-
 const PAYMENT_METHODS = [
   {
     value: "COD" as const,
@@ -144,7 +141,6 @@ export function Checkout() {
 
   const subtotal = totalPrice;
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [maxCod, setMaxCod] = useState(DEFAULT_MAX_COD);
   // BE tính giới hạn coin trên tiền hàng (không gồm ship): ≥ ngưỡng tối thiểu,
   // ≤ 20% tiền hàng, ≤ số dư. Giỏ đổi làm vượt giới hạn → bỏ coin.
   const maxCoin = Math.floor(Math.min(coinBalance, calculateMaxCoinUsage(subtotal)));
@@ -152,13 +148,6 @@ export function Checkout() {
     if (coinDiscount > maxCoin) setCoinDiscount(0);
   }, [coinDiscount, maxCoin]);
   const grandTotal = Math.max(0, subtotal + (deliveryFee ?? 0) - coinDiscount);
-  // BE so sánh totalPrice (hàng + phí ship) với hạn mức COD của GHN.
-  const codBlocked = subtotal + (deliveryFee ?? 0) > maxCod;
-
-  // Đơn vượt hạn mức → COD không dùng được, tự chuyển sang SePay.
-  useEffect(() => {
-    if (codBlocked && paymentMethod === "COD") setPaymentMethod("SEPAY");
-  }, [codBlocked, paymentMethod]);
 
   const {
     register,
@@ -267,7 +256,6 @@ export function Checkout() {
       // Backend returns { subtotal, shippingFee, total }
       console.log("[Checkout] Shipping fee response:", data);
       setDeliveryFee(data.shippingFee ?? 0);
-      if (data.maxCodAmount) setMaxCod(data.maxCodAmount);
     } catch (error) {
       if (isStale()) return;
       console.error("[Checkout] Failed to calculate shipping fee:", error);
@@ -764,14 +752,13 @@ export function Checkout() {
                   {PAYMENT_METHODS.map((method) => {
                     const Icon = method.icon;
                     const selected = paymentMethod === method.value;
-                    const unavailable = method.value === "COD" && codBlocked;
                     return (
                       <button
                         key={method.value}
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        disabled={!!pendingSepay || unavailable}
+                        disabled={!!pendingSepay}
                         onClick={() => setPaymentMethod(method.value)}
                         className="co-pay-opt"
                       >
@@ -780,11 +767,7 @@ export function Checkout() {
                         </span>
                         <span className="min-w-0">
                           <span className="co-pay-name block">{method.label}</span>
-                          <span className="co-pay-desc block">
-                            {unavailable
-                              ? `Chỉ áp dụng cho đơn tối đa ${formatPrice(maxCod)}`
-                              : method.description}
-                          </span>
+                          <span className="co-pay-desc block">{method.description}</span>
                         </span>
                         <span className="co-radio" aria-hidden="true" />
                       </button>

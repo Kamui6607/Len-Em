@@ -225,8 +225,6 @@ export interface ShippingFeePreviewResponse {
   subtotal: number;
   shippingFee: number;
   total: number;
-  /** GHN COD cap — COD is refused for orders whose total exceeds it. */
-  maxCodAmount?: number;
 }
 
 export interface OrderApiResponse<T> {

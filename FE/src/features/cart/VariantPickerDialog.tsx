@@ -39,11 +39,6 @@ export async function resolveProduct(id: string): Promise<Product | null> {
   }
 }
 
-/** Có thật sự phải chọn không: ≥ 2 biến thể (1 biến thể "Mặc định" thì không). */
-export function needsVariantChoice(product: Pick<Product, "variants">): boolean {
-  return (product.variants?.length ?? 0) > 1;
-}
-
 /** Biến thể mặc định hợp lý: biến thể còn hàng đầu tiên (không phải variants[0] đã hết). */
 export function firstAvailableVariant<T extends { stock: number }>(variants: T[] | undefined): T | undefined {
   return variants?.find((v) => v.stock > 0) ?? variants?.[0];
@@ -140,6 +135,8 @@ export function VariantPickerDialog({
   const unchanged = mode === "change" && variant?.id === initialVariantId;
   const image = variant?.images?.[0] || product?.image;
   const isColor = variants.some((v) => !isDefaultVariant(v));
+  // 1 biến thể → không có gì để chọn, hộp chỉ còn bước chỉnh số lượng.
+  const singleVariant = variants.length <= 1;
 
   const confirm = () => {
     if (!product || !variant || soldOut || unchanged) return;
@@ -176,7 +173,9 @@ export function VariantPickerDialog({
                     {hint ??
                       (mode === "change"
                         ? `Đổi ${isColor ? "màu" : "phân loại"} cho sản phẩm trong giỏ`
-                        : `Chọn ${isColor ? "màu len" : "phân loại"} bạn muốn`)}
+                        : singleVariant
+                          ? "Chọn số lượng bạn muốn"
+                          : `Chọn ${isColor ? "màu len" : "phân loại"} bạn muốn`)}
                   </DialogDescription>
                   {variant && (
                     <p className="vp-price">

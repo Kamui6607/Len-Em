@@ -13,12 +13,7 @@ import { getCategoryMeta } from "../../features/shop/shopMeta";
 import { getValidHex, isDefaultVariant } from "./ProductVariantSelector";
 import "../../styles/product-card.css";
 import { useAddToCart } from "../../features/cart/useAddToCart";
-import {
-  VariantPickerDialog,
-  firstAvailableVariant,
-  needsVariantChoice,
-  toCartPayload,
-} from "../../features/cart/VariantPickerDialog";
+import { VariantPickerDialog, toCartPayload } from "../../features/cart/VariantPickerDialog";
 
 interface ProductCardProps {
   product: Product;
@@ -38,7 +33,7 @@ export const ProductCard = memo(function ProductCard({
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAuthenticated } = useAuth();
   const { addProduct } = useAddToCart();
-  // Nhiều màu / phân loại → hỏi khách chọn (trước đây luôn lấy variants[0]).
+  // Hộp chọn màu / phân loại + số lượng trước khi thêm vào giỏ.
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerVariantId, setPickerVariantId] = useState<string | undefined>();
 
@@ -86,18 +81,11 @@ export const ProductCard = memo(function ProductCard({
       setPickerOpen(true);
     });
 
+  // Luôn mở hộp chọn (kể cả 1 biến thể) để khách chỉnh số lượng trước khi thêm.
   const handleAddClick = (event: React.MouseEvent) => {
     event.preventDefault();
-    if (needsVariantChoice(product)) {
-      // Đang lọc đúng 1 màu của sản phẩm → mở hộp chọn với màu đó chọn sẵn
-      openPicker(matchedVariants.length === 1 ? matchedVariants[0].id : undefined);
-      return;
-    }
-    // Chỉ 1 biến thể → thêm luôn, không cần hỏi.
-    requireAuth(() => {
-      const variant = firstAvailableVariant(product.variants);
-      if (variant) addProduct(toCartPayload(product, variant));
-    });
+    // Đang lọc đúng 1 màu của sản phẩm → mở hộp chọn với màu đó chọn sẵn
+    openPicker(matchedVariants.length === 1 ? matchedVariants[0].id : undefined);
   };
 
   const handleProductClick = (event: React.MouseEvent) => {
