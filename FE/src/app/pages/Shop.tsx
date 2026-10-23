@@ -38,7 +38,7 @@ import { useLearnStore } from "../../features/learn/store/learn.store";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useAddToCart } from "../../features/cart/useAddToCart";
 import { firstAvailableVariant, toCartPayload } from "../../features/cart/VariantPickerDialog";
-import { kitToCartPayload } from "../../features/cart/kitPayload";
+import { isKitIncomplete, kitToCartPayload } from "../../features/cart/kitPayload";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { formatPrice } from "../../lib/formatPrice";
@@ -282,6 +282,10 @@ export function Shop() {
         toast.error("Không thêm được combo vào giỏ");
         return;
       }
+    }
+    if (isKitIncomplete(full)) {
+      toast.error("Combo đang thiếu sản phẩm, chưa thể thêm vào giỏ hàng");
+      return;
     }
     addKit(kitToCartPayload(full));
   };
@@ -943,6 +947,7 @@ export function Shop() {
                     const isFavorite = isFavoriteKit(kit._id);
                     const level = SHOP_LEVELS[kit.level as ShopLevel];
                     const LevelIcon = level?.Icon;
+                    const incomplete = isKitIncomplete(kit);
 
                     return (
                       <Link
@@ -1027,14 +1032,17 @@ export function Shop() {
                                 e.stopPropagation();
                                 void handleAddKit(kit);
                               }}
-                              aria-label={`Thêm ${kit.name} vào giỏ`}
-                              whileTap={{ scale: 0.97 }}
+                              disabled={incomplete}
+                              aria-label={incomplete ? `${kit.name} đang thiếu sản phẩm` : `Thêm ${kit.name} vào giỏ`}
+                              whileTap={!incomplete ? { scale: 0.97 } : undefined}
                               transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
                             >
                               <span className="card-add-btn__icon" aria-hidden="true">
                                 <ShoppingBag size={15} strokeWidth={2.2} />
                               </span>
-                              <span className="card-add-btn__label">Thêm vào giỏ</span>
+                              <span className="card-add-btn__label">
+                                {incomplete ? "Thiếu sản phẩm" : "Thêm vào giỏ"}
+                              </span>
                               <span className="card-add-btn__shine" aria-hidden="true" />
                             </motion.button>
                           </div>

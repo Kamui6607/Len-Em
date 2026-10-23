@@ -115,7 +115,12 @@ export function useAddToCart() {
   );
 
   const addKit = useCallback(
-    (kit: AddKitToCartPayload, { silent = false }: AddOptions = {}): AddResult => {
+    (kit: AddKitToCartPayload, { silent = false }: AddOptions = {}): AddResult | null => {
+      // Combo thiếu sản phẩm (chưa có món / món đã bị xoá) → không thêm vào giỏ.
+      if (!kit.products.length || kit.products.some((p) => !p.productId)) {
+        if (!silent) cartToast.error("Combo đang thiếu sản phẩm", "Combo này tạm thời chưa thể thêm vào giỏ hàng.");
+        return null;
+      }
       const had = cartKits.find((k) => k.kitId === kit.kitId)?.quantity ?? 0;
       const quantity = kit.quantity || 1;
       addKitToCart(kit);
@@ -181,7 +186,7 @@ export function useAddToCart() {
           title: title ?? `Đã thêm ${added.length} món vào giỏ hàng`,
           message:
             added.length < results.length
-              ? `${results.length - added.length} món hết hàng nên chưa được thêm.`
+              ? `${results.length - added.length} món hết hàng hoặc combo thiếu sản phẩm nên chưa được thêm.`
               : capped
                 ? "Một vài món chỉ thêm được theo số lượng còn trong kho."
                 : undefined,

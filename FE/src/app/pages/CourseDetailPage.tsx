@@ -63,6 +63,7 @@ import { YarnBallIcon } from "../../features/shop/shopMeta";
 import "../../styles/craft.css";
 import "../../styles/course.css";
 import { useAddToCart } from "../../features/cart/useAddToCart";
+import { kitToCartPayload } from "../../features/cart/kitPayload";
 import { getCourseRating } from "../../features/learn/utils/courseRating";
 
 const LEVEL_ICON: Record<CourseLevel, LucideIcon> = {
@@ -454,23 +455,7 @@ export function CourseDetailPage() {
       goToLogin();
       return;
     }
-    addKit({
-      kitId: kit._id,
-      name: kit.name,
-      thumbnail: kit.thumbnail,
-      price: kit.price,
-      products: (kit.products || []).map((kitProduct) => {
-        const product = kitProduct.productId;
-        const variant = product?.variants?.[0];
-        return {
-          productId: product._id,
-          variantId: kitProduct.variantId,
-          name: product.name,
-          image: variant?.image || product.image,
-          price: variant?.price || 0,
-        };
-      }),
-    });
+    addKit(kitToCartPayload(kit));
   };
 
   const handleAddProductToCart = (product: Product) => {

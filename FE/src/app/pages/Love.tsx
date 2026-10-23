@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { useFavorites } from "../../shared/contexts/FavoritesContext";
 import { useLanguage } from "../../shared/contexts/LanguageContext";
 import { useAddToCart } from "../../features/cart/useAddToCart";
-import { kitToCartPayload } from "../../features/cart/kitPayload";
+import { isKitIncomplete, kitToCartPayload } from "../../features/cart/kitPayload";
 import { SHOP_LEVELS, type ShopLevel } from "../../features/shop/shopMeta";
 import { products as mockProducts } from "../data/products";
 import { fetchProductById } from "../../features/shop/services/product.service";
@@ -51,6 +51,7 @@ function KitCard({ kit, onUnfavorite, onAdd }: { kit: Kit; onUnfavorite: () => v
   const { t } = useLanguage();
   const level = SHOP_LEVELS[kit.level as ShopLevel];
   const fallback = `https://picsum.photos/seed/${kit._id}/400/400`;
+  const incomplete = isKitIncomplete(kit);
 
   return (
     <article className="wl-kit">
@@ -95,14 +96,15 @@ function KitCard({ kit, onUnfavorite, onAdd }: { kit: Kit; onUnfavorite: () => v
             type="button"
             className="card-add-btn pc-add"
             onClick={onAdd}
-            aria-label={`${t("love.addToCart")}: ${kit.name}`}
-            whileTap={{ scale: 0.97 }}
+            disabled={incomplete}
+            aria-label={incomplete ? `${kit.name} đang thiếu sản phẩm` : `${t("love.addToCart")}: ${kit.name}`}
+            whileTap={!incomplete ? { scale: 0.97 } : undefined}
             transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
           >
             <span className="card-add-btn__icon" aria-hidden="true">
               <ShoppingBag size={15} strokeWidth={2.2} />
             </span>
-            <span className="card-add-btn__label">{t("love.addToCart")}</span>
+            <span className="card-add-btn__label">{incomplete ? "Thiếu sản phẩm" : t("love.addToCart")}</span>
             <span className="card-add-btn__shine" aria-hidden="true" />
           </motion.button>
         </div>
@@ -154,7 +156,7 @@ export function Love() {
   const kits = favoriteKits.map((id) => kitCache.current.get(id)).filter((k): k is Kit => !!k);
   const total = products.length + kits.length;
 
-  // Products need a purchasable variant; combos always go in as a whole.
+  // Products need a purchasable variant; combos go in as a whole, unless one is missing products.
   const addableProducts = useMemo(
     () =>
       products.flatMap((product) => {
@@ -175,12 +177,13 @@ export function Love() {
       }),
     [products],
   );
-  const addableCount = addableProducts.length + kits.length;
+  const addableKits = kits.filter((kit) => !isKitIncomplete(kit));
+  const addableCount = addableProducts.length + addableKits.length;
 
   const handleAddAll = () =>
     addBundle({
       products: addableProducts.map((product) => ({ product, quantity: 1 })),
-      kits: kits.map(kitToCartPayload),
+      kits: addableKits.map(kitToCartPayload),
     });
 
   const showProducts = filter !== "combos" && products.length > 0;

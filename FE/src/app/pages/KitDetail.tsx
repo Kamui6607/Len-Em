@@ -36,6 +36,7 @@ import "../../styles/craft.css";
 import "../../styles/product-detail.css";
 import "../../styles/kit-detail.css";
 import { useAddToCart } from "../../features/cart/useAddToCart";
+import { isKitIncomplete, kitToCartPayload } from "../../features/cart/kitPayload";
 
 /** Số món hiện sẵn trong hộp — phần còn lại mở bằng "Xem thêm". */
 const VISIBLE_ITEMS = 4;
@@ -260,28 +261,8 @@ export function KitDetail() {
       if (!isAuthenticated) navigate("/auth/login");
       return;
     }
-
-    // Use kit.products which has the correct structure
-    const products = kit.products.map((kitProduct) => {
-      const product = kitProduct.productId;
-      const selectedVariant = getKitVariant(kitProduct);
-
-      return {
-        productId: product._id,
-        variantId: kitProduct.variantId,
-        name: product.name,
-        image: selectedVariant?.image || product.image,
-        price: selectedVariant?.price || 0,
-      };
-    });
-
-    addKit({
-      kitId: kit._id,
-      name: kit.name,
-      thumbnail: kit.thumbnail,
-      price: kit.price,
-      products,
-    });
+    if (isKitIncomplete(kit)) return;
+    addKit(kitToCartPayload(kit));
   };
 
   if (loading) {
@@ -319,22 +300,31 @@ export function KitDetail() {
     );
   }
 
-  const items = kit.products || [];
+  // Món đã bị xoá (productId null) không hiển thị được — chỉ liệt kê món còn lại.
+  const items = (kit.products || []).filter((kitProduct) => kitProduct.productId);
   const itemCount = items.length;
   const visibleItems = showAllProducts ? items : items.slice(0, VISIBLE_ITEMS);
   const hiddenCount = itemCount - VISIBLE_ITEMS;
   const savings = retailTotal - kit.price;
   const showSavings = savings > 0 && retailTotal > 0;
   const soldOut = kit.stock === 0;
+  const incomplete = isKitIncomplete(kit);
+  const blocked = soldOut || incomplete;
 
   const addButton = (floating: boolean) => (
     <motion.button
       type="button"
       onClick={handleAddAllToCart}
-      disabled={soldOut}
+      disabled={blocked}
       className={cn("card-add-btn pd-add", floating && "pd-float-add")}
-      aria-label={soldOut ? `${kit.name} đã hết hàng` : `Thêm combo ${kit.name} vào giỏ, ${formatPrice(kit.price)}`}
-      whileTap={!soldOut ? { scale: 0.97 } : undefined}
+      aria-label={
+        soldOut
+          ? `${kit.name} đã hết hàng`
+          : incomplete
+            ? `${kit.name} đang thiếu sản phẩm`
+            : `Thêm combo ${kit.name} vào giỏ, ${formatPrice(kit.price)}`
+      }
+      whileTap={!blocked ? { scale: 0.97 } : undefined}
       transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.6 }}
     >
       <span className="card-add-btn__icon" aria-hidden="true">
@@ -342,6 +332,8 @@ export function KitDetail() {
       </span>
       {soldOut ? (
         <span className="card-add-btn__label">Hết hàng</span>
+      ) : incomplete ? (
+        <span className="card-add-btn__label">Combo thiếu sản phẩm</span>
       ) : (
         <span className="card-add-btn__label pd-add-label" aria-hidden="true">
           <span className="pd-add-label-long">Thêm combo vào giỏ · {formatPrice(kit.price)}</span>
@@ -465,6 +457,12 @@ export function KitDetail() {
                 </ul>
               ) : (
                 <p className="kd-box-empty">Combo này chưa có sản phẩm nào.</p>
+              )}
+
+              {incomplete && itemCount > 0 && (
+                <p className="kd-box-empty">
+                  Một vài sản phẩm trong combo đã ngừng bán nên combo tạm thời chưa thể thêm vào giỏ.
+                </p>
               )}
 
               {hiddenCount > 0 && (

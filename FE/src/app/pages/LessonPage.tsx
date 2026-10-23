@@ -37,6 +37,7 @@ import { getYouTubeVideoId } from "../../features/learn/utils/youtube";
 import { formatPrice } from "../../lib/formatPrice";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useAddToCart, type AddResult } from "../../features/cart/useAddToCart";
+import { kitToCartPayload } from "../../features/cart/kitPayload";
 import { useCartToastStore } from "../../features/cart/cartToastStore";
 import { cn } from "../../shared/components/ui/utils";
 import { products } from "../data/products";
@@ -548,23 +549,7 @@ export function LessonPage() {
       return null;
     }
     if (item.type === "kit" && item.kitData) {
-      return addKit({
-        kitId: item.kitData._id,
-        name: item.kitData.name,
-        thumbnail: item.kitData.thumbnail,
-        price: item.kitData.price,
-        products: (item.kitData.products || []).map((kitProduct) => {
-          const product = kitProduct.productId;
-          const variant = product?.variants?.[0];
-          return {
-            productId: product._id,
-            variantId: kitProduct.variantId,
-            name: product.name,
-            image: variant?.image || product.image,
-            price: variant?.price || 0,
-          };
-        }),
-      }, { silent });
+      return addKit(kitToCartPayload(item.kitData), { silent });
     } else if (item.type === "product" && item.productData) {
       const variant = item.productData.variants[0];
       return addProduct({
