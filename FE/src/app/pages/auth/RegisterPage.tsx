@@ -201,7 +201,7 @@ export function RegisterPage() {
   const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
   const [isGooglePrefilled, setIsGooglePrefilled] = useState(false);
 
-  const handleGoogleRegister = async (credentialResponse: CredentialResponse) => {
+  const handleGoogleRegister = (credentialResponse: CredentialResponse) => {
     const idToken = credentialResponse.credential;
     if (!idToken) {
       setError("Không nhận được thông tin xác thực từ Google.");
@@ -218,15 +218,9 @@ export function RegisterPage() {
         return;
       }
 
-      // Kiểm tra xem email Google này đã được đăng ký tài khoản chưa
-      const availability = await authService.checkAvailability({ email: googleEmail });
-      if (availability.data?.data?.emailExists) {
-        setError(`Email ${googleEmail} đã được đăng ký tài khoản. Vui lòng chuyển sang trang Đăng nhập.`);
-        toast.error(`Email ${googleEmail} đã có tài khoản. Vui lòng đăng nhập.`);
-        return;
-      }
-
       // Pre-fill Tên và Email từ Google, kèm gợi ý username hợp lệ
+      // (Việc kiểm tra email trùng sẽ được thực hiện tự động ở bước "Continue"
+      // thông qua checkAvailability — cùng wizard như đăng ký thủ công)
       const suggestedUsername = googleEmail
         .split("@")[0]
         .replace(/[^a-zA-Z0-9_]/g, "")
