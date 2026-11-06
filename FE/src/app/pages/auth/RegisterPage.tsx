@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
+import { jwtDecode } from "jwt-decode";
+import type { CredentialResponse } from "@react-oauth/google";
 import {
   Mail,
   Lock,
@@ -116,6 +118,8 @@ function Field({
   upd,
   optional,
   autoComplete,
+  readOnly,
+  badge,
 }: {
   id: string;
   label: string;
@@ -128,6 +132,8 @@ function Field({
   upd: (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => void;
   optional?: boolean;
   autoComplete?: string;
+  readOnly?: boolean;
+  badge?: React.ReactNode;
 }) {
   const error = fe[k];
   return (
@@ -141,6 +147,7 @@ function Field({
             <span className="auth-req" aria-hidden="true">*</span>
           )}
         </label>
+        {badge}
       </div>
       <div className="auth-input-wrap">
         <Icon size={17} className="auth-input-icon" />
@@ -152,9 +159,10 @@ function Field({
           onChange={upd(k)}
           required={!optional}
           autoComplete={autoComplete}
+          readOnly={readOnly}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-err` : undefined}
-          className={`auth-input${error ? " is-invalid" : ""}`}
+          className={`auth-input${error ? " is-invalid" : ""}${readOnly ? " opacity-85 cursor-not-allowed bg-black/5 dark:bg-white/5" : ""}`}
         />
       </div>
       {error && (
@@ -191,6 +199,55 @@ export function RegisterPage() {
   const [dobYear, setDobYear] = useState("");
   // Khu vực nhận hàng (chọn khu vực HOẶC ghim bản đồ) — form.address là dòng chi tiết.
   const [addressPick, setAddressPick] = useState<AddressPick | null>(null);
+  const [isGooglePrefilled, setIsGooglePrefilled] = useState(false);
+
+  const handleGoogleRegister = async (credentialResponse: CredentialResponse) => {
+    const idToken = credentialResponse.credential;
+    if (!idToken) {
+      setError("Không nhận được thông tin xác thực từ Google.");
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode<{ email?: string; name?: string }>(idToken);
+      const googleEmail = (decoded.email || "").trim().toLowerCase();
+      const googleName = (decoded.name || "").trim();
+
+      if (!googleEmail) {
+        setError("Tài khoản Google không cung cấp email hợp lệ.");
+        return;
+      }
+
+      // Kiểm tra xem email Google này đã được đăng ký tài khoản chưa
+      const availability = await authService.checkAvailability({ email: googleEmail });
+      if (availability.data?.data?.emailExists) {
+        setError(`Email ${googleEmail} đã được đăng ký tài khoản. Vui lòng chuyển sang trang Đăng nhập.`);
+        toast.error(`Email ${googleEmail} đã có tài khoản. Vui lòng đăng nhập.`);
+        return;
+      }
+
+      // Pre-fill Tên và Email từ Google, kèm gợi ý username hợp lệ
+      const suggestedUsername = googleEmail
+        .split("@")[0]
+        .replace(/[^a-zA-Z0-9_]/g, "")
+        .slice(0, 30);
+
+      setForm((prev) => ({
+        ...prev,
+        fullName: googleName || prev.fullName,
+        email: googleEmail,
+        username: prev.username || (suggestedUsername.length >= 3 ? suggestedUsername : prev.username),
+      }));
+
+      setIsGooglePrefilled(true);
+      setFe((prev) => ({ ...prev, fullName: "", email: "" }));
+      setError("");
+      toast.success("Đã lấy Họ tên và Email từ Google. Vui lòng điền tiếp các thông tin đăng ký còn lại.");
+    } catch (err) {
+      console.error("Lỗi đọc Google token:", err);
+      setError("Không thể lấy thông tin từ Google. Vui lòng thử lại.");
+    }
+  };
 
   const getDobString = () => {
     if (!dobMonth || !dobDay || !dobYear) return "";
@@ -559,10 +616,46 @@ export function RegisterPage() {
                     noValidate
                   >
                     <div className="fit-grid-landscape">
-                      <Field id="reg-fullname" label="Full name" icon={UserIcon} k="fullName" placeholder="Nguyen Van A" autoComplete="name" form={form} fe={fe} upd={upd} />
+                      <Field
+                        id="reg-fullname"
+                        label="Full name"
+                        icon={UserIcon}
+                        k="fullName"
+                        placeholder="Nguyen Van A"
+                        autoComplete="name"
+                        form={form}
+                        fe={fe}
+                        upd={upd}
+                        badge={
+                          isGooglePrefilled ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
+                              <Check size={13} /> Lấy từ Google
+                            </span>
+                          ) : undefined
+                        }
+                      />
                       <Field id="reg-username" label="Username" icon={AtSign} k="username" placeholder="your_username" autoComplete="username" form={form} fe={fe} upd={upd} />
                     </div>
-                    <Field id="reg-email" label="Email" icon={Mail} k="email" type="email" placeholder="you@gmail.com" autoComplete="email" form={form} fe={fe} upd={upd} />
+                    <Field
+                      id="reg-email"
+                      label="Email"
+                      icon={Mail}
+                      k="email"
+                      type="email"
+                      placeholder="you@gmail.com"
+                      autoComplete="email"
+                      form={form}
+                      fe={fe}
+                      upd={upd}
+                      readOnly={isGooglePrefilled}
+                      badge={
+                        isGooglePrefilled ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
+                            <Check size={13} /> Lấy từ Google
+                          </span>
+                        ) : undefined
+                      }
+                    />
 
                     <div className="fit-inline-actions">
                       <button type="submit" className="auth-submit" disabled={checking}>
@@ -577,9 +670,36 @@ export function RegisterPage() {
                           </>
                         )}
                       </button>
-                      <div className="auth-divider">or sign up with</div>
-                      {/* Its buttons are type="button", so they never submit this form */}
-                      <GoogleAuthButton label="Sign up with Google" onError={setError} />
+
+                      {isGooglePrefilled ? (
+                        <div className="mt-3 flex items-center justify-between p-2.5 rounded-xl border border-primary/25 bg-primary/5 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-primary">Google:</span>
+                            <span className="truncate max-w-[200px] text-foreground font-medium">{form.email}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsGooglePrefilled(false);
+                              setForm((prev) => ({ ...prev, email: "", fullName: "" }));
+                              setError("");
+                            }}
+                            className="text-muted-foreground hover:text-destructive underline text-xs cursor-pointer ml-2"
+                          >
+                            Hủy liên kết
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="auth-divider">or sign up with</div>
+                          {/* Its buttons are type="button", so they never submit this form */}
+                          <GoogleAuthButton
+                            label="Sign up with Google"
+                            onError={setError}
+                            onSuccess={handleGoogleRegister}
+                          />
+                        </>
+                      )}
                     </div>
                   </form>
                 )}

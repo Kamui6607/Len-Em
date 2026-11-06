@@ -30,6 +30,13 @@ export function describeLoginError(message: string | undefined): LoginErrorView 
   const raw = (message ?? "").trim();
   if (!raw) return { text: "Đăng nhập thất bại. Vui lòng thử lại.", tone: "error" };
 
+  if (/chưa được đăng ký/i.test(raw) || /not registered/i.test(raw) || /doesnt exist/i.test(raw)) {
+    return {
+      text: "Tài khoản Google này chưa được đăng ký trong hệ thống. Vui lòng đăng ký trước.",
+      tone: "error",
+    };
+  }
+
   const isPassword = /invalid password/i.test(raw);
   const prefix = isPassword ? WRONG_PASSWORD : WRONG_ID;
 

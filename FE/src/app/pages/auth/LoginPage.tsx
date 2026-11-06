@@ -253,8 +253,9 @@ export function LoginPage() {
                 {/* Its buttons are type="button", so they never submit this form */}
                 <GoogleAuthButton
                   onError={(message) => {
-                    setError(message);
-                    setErrorTone("error");
+                    const view = describeLoginError(message);
+                    setError(view.text);
+                    setErrorTone(view.tone);
                   }}
                 />
 

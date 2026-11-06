@@ -259,6 +259,8 @@ export interface GoogleAuthButtonProps {
   label?: string;
   /** Optional callback so the hosting page can render its own error banner */
   onError?: (message: string) => void;
+  /** Optional custom handler when Google returns credentials. When provided, standard login and redirects are skipped. */
+  onSuccess?: (credentialResponse: CredentialResponse) => void | Promise<void>;
 }
 
 /**
@@ -295,6 +297,7 @@ function GoogleAuthButtonDisabled({ label = "Continue with Google" }: GoogleAuth
 function GoogleAuthButtonInner({
   label = "Continue with Google",
   onError,
+  onSuccess,
 }: GoogleAuthButtonProps) {
   const navigate = useNavigate();
   const googleLogin = useAuthStore((s) => s.googleLogin);
@@ -316,8 +319,6 @@ function GoogleAuthButtonInner({
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     // <GoogleLogin /> returns the Google ID token (a JWT) in `credential`.
-    // The backend verifies it with verifyIdToken(), which accepts ID tokens
-    // ONLY — sending an access_token here is what caused the 401s.
     const idToken = credentialResponse.credential;
     if (!idToken) {
       console.error("Google sign-in returned no ID token", credentialResponse);
@@ -327,9 +328,12 @@ function GoogleAuthButtonInner({
 
     setIsSubmitting(true);
     try {
-      // Send the Google ID token to the backend — it verifies the JWT and
-      // returns { accessToken, refreshToken, user, subscription } just
-      // like POST /auth/login does.
+      if (onSuccess) {
+        await onSuccess(credentialResponse);
+        return;
+      }
+
+      // Default flow: exchange ID token with backend and login
       await googleLogin(idToken);
 
       // Same role-based redirect as the regular login form
@@ -350,13 +354,9 @@ function GoogleAuthButtonInner({
         err,
       );
 
-      // Friendly, actionable messages for the two common failure modes:
-      // 1) free-tier backend cold start exceeding the request timeout
-      // 2) backend rejecting the Google token (401 — usually a backend
-      //    Google Client ID mismatch, not a FE problem)
       let message =
         axiosError?.response?.data?.message ||
-        "Google sign-in failed. Please try again.";
+        (err instanceof Error ? err.message : "Google sign-in failed. Please try again.");
       if (
         axiosError?.code === "ECONNABORTED" ||
         /timeout/i.test(axiosError?.message ?? "")
