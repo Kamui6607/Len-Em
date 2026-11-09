@@ -2625,7 +2625,12 @@
     "viewDetails": "Xem chi tiết",
     "weight": "Trọng lượng",
     "yarn": "Sợi len",
-    "yarnDesc": "Đa dạng chất liệu và màu sắc"
+    "yarnDesc": "Đa dạng chất liệu và màu sắc",
+    "sortOldest": "Cũ nhất",
+    "sortPriceAsc": "Giá tăng dần",
+    "sortPriceDesc": "Giá giảm dần",
+    "sortNameAsc": "Tên A → Z",
+    "sortNameDesc": "Tên Z → A"
   },
   "supportDIY": {
     "adminSubtitle": "Quản lý tất cả yêu cầu hỗ trợ DIY từ người dùng",

@@ -179,10 +179,41 @@ export const productService = {
       `${PRODUCTS_BASE}/${productId}`
     ),
 
-  /** POST /products/{productId}/rate â€” Rate a product with a score 1â€“5 */
-  rateProduct: (productId: string, score: number) =>
+    /** POST /products/{productId}/variants/{variantId}/rate — Rate a product variant with a score 1–5 */
+  rateProduct: (productId: string, variantId: string, score: number) =>
     axiosClient.post<ApiResponse<{ product: Product }>>(
-      `${PRODUCTS_BASE}/${productId}/rate`,
+      `${PRODUCTS_BASE}/${productId}/variants/${variantId}/rate`,
       { score }
     ),
+
+  /**
+   * Helper to resolve variantId for an order item if missing.
+   * Matches by color, hexCode, or price, or falls back to first variant.
+   */
+  resolveVariantId: async (item: {
+    productId: string;
+    variantId?: string;
+    color?: string;
+    hexCode?: string;
+    price?: number;
+  }): Promise<string | undefined> => {
+    if (item.variantId) return item.variantId;
+    try {
+      const res = await productService.getById(item.productId);
+      const product = res.data?.data?.product;
+      if (product && product.variants && product.variants.length > 0) {
+        const matched =
+          product.variants.find((v) => {
+            if (item.color && v.color && v.color.toLowerCase() === item.color.toLowerCase()) return true;
+            if (item.hexCode && v.hexCode && v.hexCode.toLowerCase() === item.hexCode.toLowerCase()) return true;
+            if (item.price !== undefined && v.price === item.price) return true;
+            return false;
+          }) || product.variants[0];
+        return matched?._idVariants || (matched as any)?._id || (matched as any)?.id;
+      }
+    } catch (e) {
+      console.warn("Failed to resolve variantId for product:", item.productId, e);
+    }
+    return undefined;
+  },
 };

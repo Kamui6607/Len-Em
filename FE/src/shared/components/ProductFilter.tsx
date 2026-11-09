@@ -26,11 +26,13 @@ interface ProductFilterProps {
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "popular", label: "Most Popular" },
-  { value: "newest", label: "Newest" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "rating", label: "Best Rating" },
+  { value: "oldest", label: "Cũ nhất" },
+  { value: "newest", label: "Mới nhất" },
+  { value: "popular", label: "Phổ biến nhất" },
+  { value: "price-asc", label: "Giá tăng dần" },
+  { value: "price-desc", label: "Giá giảm dần" },
+  { value: "name_asc", label: "Tên A → Z" },
+  { value: "name_desc", label: "Tên Z → A" },
 ];
 
 const categories = [

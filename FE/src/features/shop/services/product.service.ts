@@ -29,20 +29,13 @@ export interface FetchProductsParams {
   maxPrice?: number;
 }
 
-/**
- * Map frontend sort value to backend sort value.
- * Backend only supports: newest, rating
- * price-asc and price-desc are NOT supported (return 400).
- * "popular" is not supported — fallback to no sort param.
- * "oldest" is not supported — fallback to no sort param (backend default).
- */
-function mapSort(sort: string | undefined): string | undefined {
-  if (!sort) return undefined;
-  // Only pass through sort values the backend actually supports
-  const validSorts = ["newest", "rating"];
-  if (validSorts.includes(sort)) return sort;
-  // "popular", "price-asc", "price-desc", "oldest" are not supported by the backend
-  return undefined;
+const VALID_SORTS = [
+  "newest", "oldest", "name_asc", "name_desc",
+  "popular", "price-asc", "price-desc",
+];
+
+function normalizeSort(sort?: string) {
+  if (sort && VALID_SORTS.includes(sort)) return sort;
 }
 
 /**
@@ -55,13 +48,13 @@ export async function fetchProducts(
   // Build query params for the backend
   const queryParams: Record<string, string | number | boolean> = {};
 
-    if (params.category && params.category !== "all") {
+  if (params.category && params.category !== "all") {
     queryParams.category = params.category;
   }
   if (params.search) queryParams.search = params.search;
   
   // Map frontend sort to backend sort string
-  const mappedSort = mapSort(params.sort);
+  const mappedSort = normalizeSort(params.sort);
   if (mappedSort) queryParams.sort = mappedSort;
   
   if (params.page) queryParams.page = params.page;
@@ -69,7 +62,7 @@ export async function fetchProducts(
 
   // Server-side filtering — pass through to backend
   if (params.colors) queryParams.colors = params.colors;
-    if (params.minPrice !== undefined) queryParams.minPrice = params.minPrice;
+  if (params.minPrice !== undefined) queryParams.minPrice = params.minPrice;
   if (params.maxPrice !== undefined) queryParams.maxPrice = params.maxPrice;
 
   // ── Substring search (FE-side) ──────────────────────────────
@@ -135,4 +128,5 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 // Export
 // ============================================================
 
+export { VALID_SORTS, normalizeSort };
 export type { Product };

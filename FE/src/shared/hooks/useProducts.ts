@@ -9,7 +9,7 @@ import { getDynamicFilters } from "../../app/data/products";
 import type { Product } from "../../app/data/products";
 import type { PaginatedResponse } from "../types/api.types";
 
-export type SortOption = "popular" | "newest" | "oldest" | "price-asc" | "price-desc" | "rating";
+export type SortOption = "newest" | "oldest" | "name_asc" | "name_desc" | "popular" | "price-asc" | "price-desc";
 
 export interface FilterState {
   search: string;
@@ -47,7 +47,7 @@ export function useProducts() {
     material: searchParams.get("material")?.split(",").filter(Boolean) || [],
     weight: searchParams.get("weight")?.split(",").filter(Boolean) || [],
     difficulty: searchParams.get("difficulty")?.split(",").filter(Boolean) || [],
-    sort: (searchParams.get("sort") as SortOption) || "popular",
+    sort: (searchParams.get("sort") as SortOption) || "oldest",
     minPrice: Number(searchParams.get("minPrice")) || 0,
     maxPrice: Number(searchParams.get("maxPrice")) || 0,
     page: Number(searchParams.get("page")) || 1,
@@ -221,7 +221,7 @@ export function useProducts() {
       filters.material.length > 0 ||
       filters.weight.length > 0 ||
       filters.difficulty.length > 0 ||
-      filters.sort !== "popular" ||
+      filters.sort !== "oldest" ||
       filters.minPrice > 0 ||
       filters.maxPrice > 0
     );

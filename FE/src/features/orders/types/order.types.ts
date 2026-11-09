@@ -53,6 +53,7 @@ export interface OrderItem {
     image?: string;
   };
   productId: string;
+  variantId?: string;
   /** Course ID when this line item is a digital course purchase ("itemType": "Course"). */
   course?: string;
   /** Line-item kind — "Course" for premium course purchases. */
@@ -279,14 +280,25 @@ export function normalizeOrder(order: Order): Order {
       ...order.payment,
       status: order.payment.status,
     },
-    items: order.items.map((item) => ({
-      ...item,
-      productId: item.productId || item.product?._id || item._id || "",
-      course: item.course,
-      itemType: item.itemType,
-      productName: item.productName || item.name || item.product?.name || "Product",
-      image: item.image || item.product?.image,
-      kitId: item.kitId,
-    })),
+    items: (order.items || []).map((item) => {
+      const anyItem = item as any;
+      const variantId =
+        item.variantId ||
+        anyItem.variant?._id ||
+        anyItem.variant ||
+        anyItem._idVariants ||
+        undefined;
+
+      return {
+        ...item,
+        productId: item.productId || item.product?._id || item._id || "",
+        variantId,
+        course: item.course,
+        itemType: item.itemType,
+        productName: item.productName || item.name || item.product?.name || "Product",
+        image: item.image || item.product?.image,
+        kitId: item.kitId,
+      };
+    }),
   };
 }

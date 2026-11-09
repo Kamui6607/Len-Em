@@ -57,10 +57,17 @@ import { EmptyHoopIllustration } from "./shop/CartPage";
 /** Colors shown before "+N màu khác". */
 const COLOR_PREVIEW = 10;
 
-const SORT_OPTIONS = [
-  { value: "popular", label: "Phổ biến nhất" },
-  { value: "newest", label: "Mới nhất" },
+const sortOptions = [
+  { value: "oldest",     label: "Cũ nhất" },
+  { value: "newest",     label: "Mới nhất" },
+  { value: "popular",    label: "Phổ biến nhất" },
+  { value: "price-asc",  label: "Giá tăng dần" },
+  { value: "price-desc", label: "Giá giảm dần" },
+  { value: "name_asc",   label: "Tên A → Z" },
+  { value: "name_desc",  label: "Tên Z → A" },
 ];
+
+
 
 // Builds a compact page list with ellipses so pagination never sprawls
 // across the screen once a catalog has more than a handful of pages.
@@ -713,7 +720,7 @@ export function Shop() {
                 onChange={(e) => updateFilter("sort", e.target.value)}
                 aria-label="Sắp xếp"
               >
-                {SORT_OPTIONS.map((opt) => (
+                {sortOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

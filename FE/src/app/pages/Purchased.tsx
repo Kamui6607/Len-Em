@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../lib/formatPrice";
+import { queryClient } from "../../lib/queryClient";
 import { formatExpectedDelivery, isAwaitingDelivery } from "../../lib/orderDelivery";
 import { useAuth } from "../../shared/hooks/useAuth";
 import { useCart } from "../../shared/contexts/CartContext";
@@ -42,7 +43,7 @@ const PAGE_SIZE = 10;
 export function Purchased() {
   const { t } = useLanguage();
   const { user, refreshProfile } = useAuth();
-  const { addReview, hasReviewed } = useReviews();
+  const { addReview, hasReviewed, getReview } = useReviews();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -52,6 +53,10 @@ export function Purchased() {
     orderId: string;
     productId: string;
     productName: string;
+    variantId?: string;
+    color?: string;
+    hexCode?: string;
+    price?: number;
   } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -147,8 +152,24 @@ export function Purchased() {
         // If item belongs to a kit, rate the kit instead
         await kitService.rate(item.kitId, rating);
       } else {
-        // Otherwise, rate the product
-        await productService.rateProduct(reviewModal.productId, rating);
+        // Otherwise, rate the product variant
+        let variantId = reviewModal.variantId || item?.variantId;
+        if (!variantId) {
+          variantId = await productService.resolveVariantId({
+            productId: reviewModal.productId,
+            color: reviewModal.color || item?.color,
+            hexCode: reviewModal.hexCode || item?.hexCode,
+            price: reviewModal.price ?? item?.price,
+          });
+        }
+        if (!variantId) {
+          toast.error("Không tìm thấy biến thể sản phẩm để đánh giá.");
+          return;
+        }
+        const res = await productService.rateProduct(reviewModal.productId, variantId, rating);
+        const updatedProduct = res.data?.data?.product ?? (res.data as any)?.product;
+        void updatedProduct;
+        void queryClient.invalidateQueries({ queryKey: ["products"] });
       }
 
       addReview({
@@ -164,8 +185,12 @@ export function Purchased() {
       setReviewModal(null);
       setComment("");
       setRating(5);
-    } catch {
-      toast.error(t("purchased.toastReviewError"));
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        t("purchased.toastReviewError");
+      toast.error(msg);
     }
   };
 
@@ -327,6 +352,7 @@ export function Purchased() {
     idx: number | string,
   ) => {
     const reviewed = hasReviewed(order._id, item.productId);
+    const userReview = getReview(order._id, item.productId);
     const lineTotal = (item.price ?? 0) * item.quantity;
 
     return (
@@ -372,6 +398,10 @@ export function Purchased() {
                       orderId: order._id,
                       productId: item.productId,
                       productName: item.productName || "Product",
+                      variantId: item.variantId,
+                      color: item.color,
+                      hexCode: item.hexCode,
+                      price: item.price,
                     });
                   }}
                   className="purchased-review-btn"
@@ -381,7 +411,7 @@ export function Purchased() {
               ) : (
                 <span className="purchased-reviewed-label">
                   <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
-                  {t("purchased.reviewedLabel")}
+                  {t("purchased.reviewedLabel")} {userReview?.rating ? `(${userReview.rating}★)` : ""}
                 </span>
               )}
             </div>

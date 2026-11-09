@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPrice } from "../../../lib/formatPrice";
+import { queryClient } from "../../../lib/queryClient";
 import {
   ORDER_STATUS_LABELS,
   getOrderStatusBadgeClass,
@@ -92,7 +93,7 @@ export function OrderDetailCard({
   markingReceived = false,
 }: OrderDetailCardProps) {
   const normalized = normalizeOrder(order);
-  const { addReview, hasReviewed } = useReviews();
+  const { addReview, hasReviewed, getReview } = useReviews();
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -103,6 +104,10 @@ export function OrderDetailCard({
   const [ratingModal, setRatingModal] = useState<{
     itemId: string;
     itemName: string;
+    variantId?: string;
+    color?: string;
+    hexCode?: string;
+    price?: number;
     kitId?: string;
   } | null>(null);
   const [rating, setRating] = useState(5);
@@ -182,7 +187,26 @@ export function OrderDetailCard({
         await kitService.rate(ratingModal.kitId, rating);
       } else {
         // Rate the product
-        await productService.rateProduct(ratingModal.itemId, rating);
+        let variantId = ratingModal.variantId;
+        if (!variantId) {
+          const item = normalized.items.find((i) => i.productId === ratingModal.itemId);
+          variantId =
+            item?.variantId ||
+            (await productService.resolveVariantId({
+              productId: ratingModal.itemId,
+              color: ratingModal.color || item?.color,
+              hexCode: ratingModal.hexCode || item?.hexCode,
+              price: ratingModal.price ?? item?.price,
+            }));
+        }
+        if (!variantId) {
+          toast.error("Không tìm thấy biến thể sản phẩm để đánh giá.");
+          return;
+        }
+        const res = await productService.rateProduct(ratingModal.itemId, variantId, rating);
+        const updatedProduct = res.data?.data?.product ?? (res.data as any)?.product;
+        void updatedProduct;
+        void queryClient.invalidateQueries({ queryKey: ["products"] });
       }
 
       // Add to review context
@@ -199,8 +223,12 @@ export function OrderDetailCard({
       toast.success("Đánh giá thành công!");
       setRatingModal(null);
       setRating(5);
-    } catch {
-      toast.error("Không thể gửi đánh giá. Vui lòng thử lại.");
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể gửi đánh giá. Vui lòng thử lại.";
+      toast.error(msg);
     } finally {
       setSubmittingRating(false);
     }
@@ -235,6 +263,7 @@ export function OrderDetailCard({
   /** 1 dòng sản phẩm — cùng bố cục với danh sách /purchased */
   const renderItem = (item: OrderItem, key: string, kitId?: string) => {
     const reviewed = hasReviewed(normalized._id, item.productId);
+    const userReview = getReview(normalized._id, item.productId);
     const rateable = canRate && !isCourseItem(item);
     const lineTotal = (item.price ?? 0) * item.quantity;
 
@@ -285,6 +314,10 @@ export function OrderDetailCard({
                     setRatingModal({
                       itemId: item.productId,
                       itemName: item.productName || "Sản phẩm",
+                      variantId: item.variantId,
+                      color: item.color,
+                      hexCode: item.hexCode,
+                      price: item.price,
                       kitId,
                     })
                   }
@@ -295,7 +328,7 @@ export function OrderDetailCard({
               ) : (
                 <span className="purchased-reviewed-label">
                   <Star className="w-3 h-3 fill-[var(--rating-star)] text-[var(--rating-star)]" />
-                  Đã đánh giá
+                  Đã đánh giá {userReview?.rating ? `(${userReview.rating}★)` : ""}
                 </span>
               )}
             </div>

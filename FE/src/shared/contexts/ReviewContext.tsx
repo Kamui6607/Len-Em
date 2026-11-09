@@ -7,6 +7,7 @@ interface ReviewContextType {
   addReview: (review: Omit<ProductReview, "id" | "createdAt">) => void;
   getReviewsForProduct: (productId: string) => ProductReview[];
   hasReviewed: (orderId: string, productId: string) => boolean;
+  getReview: (orderId: string, productId: string) => ProductReview | undefined;
 }
 
 const ReviewContext = createContext<ReviewContextType | undefined>(undefined);
@@ -38,8 +39,14 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     return reviews.some((r) => r.orderId === orderId && r.productId === productId);
   }, [reviews]);
 
+  const getReview = useCallback((orderId: string, productId: string) => {
+    return reviews.find((r) => r.orderId === orderId && r.productId === productId);
+  }, [reviews]);
+
   return (
-    <ReviewContext.Provider value={{ reviews, addReview, getReviewsForProduct, hasReviewed }}>
+    <ReviewContext.Provider
+      value={{ reviews, addReview, getReviewsForProduct, hasReviewed, getReview }}
+    >
       {children}
     </ReviewContext.Provider>
   );
