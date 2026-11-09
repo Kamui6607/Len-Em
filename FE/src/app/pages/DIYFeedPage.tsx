@@ -12,6 +12,8 @@ import {
   Flame,
   LayoutGrid,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "../../shared/components/ui/avatar";
@@ -31,6 +33,8 @@ import "../../styles/diy-feed.css";
 
 type FeedFilter = "all" | "newest" | "purchased";
 
+const PAGE_SIZE = 10;
+
 // Helper: the backend now populates `post.creatorId` with the creator object,
 // so the card can read avatar/fullName directly (no ID→creator lookup needed).
 // Falls back to undefined for legacy/mock string IDs.
@@ -40,11 +44,24 @@ function getPostCreator(post: DIYPost): DIYCreator | undefined {
     : undefined;
 }
 
+function getPaginationRange(current: number, total: number): (number | "dots")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const range: (number | "dots")[] = [1];
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+  if (left > 2) range.push("dots");
+  for (let i = left; i <= right; i++) range.push(i);
+  if (right < total - 1) range.push("dots");
+  range.push(total);
+  return range;
+}
 
 export function DIYFeedPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const { addDIY } = useAddToCart();
   const [filter, setFilter] = useState<FeedFilter>("all");
@@ -54,38 +71,60 @@ export function DIYFeedPage() {
   const [postOpen, setPostOpen] = useState(false);
   const { isDIYPostSaved, toggleDIYPostSave } = useFavorites();
 
+  const pageParam = parseInt(searchParams.get("page") || "1", 10);
+  const currentPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
+  const [heroPosts, setHeroPosts] = useState<DIYPost[]>([]);
+
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
       // Feed công khai chỉ hiển thị bài đã được admin duyệt (status = "Done").
-      // Backend DIY chỉ có 2 trạng thái: "Pending" (chờ duyệt) và "Done" —
-      // xem AdminDIYPosts (STATUS_OPTIONS, updatePostStatus). Truyền status cho
-      // BE lọc phía server; filter client-side (case-insensitive) là lớp chặn
-      // cuối đề phòng backend bỏ qua query param.
+      // Hiển thị 10 bài mỗi trang, hỗ trợ phân trang qua tham số page và limit.
       const { data } = await diyService.getAllPosts({
-        page: 1,
-        limit: 20,
+        page: currentPage,
+        limit: PAGE_SIZE,
         status: "Done",
       });
-      setPosts(
-        data.data.posts.filter(
-          (post) => (post.status || "").toLowerCase() === "done",
-        ),
+      const fetchedPosts = (data.data?.posts || []).filter(
+        (post) => (post.status || "").toLowerCase() === "done",
       );
+      setPosts(fetchedPosts);
+      setTotalPages(data.data?.totalPages || 1);
+      setTotalPosts(data.data?.total ?? fetchedPosts.length);
 
-      // Creator info is now populated by the backend on each post, so no
-      // extra per-creator requests or client-side ID mapping are needed.
+      // Cố định 3 ảnh đầu ở dây phơi Hero từ lần tải đầu tiên
+      setHeroPosts((prev) =>
+        prev.length > 0
+          ? prev
+          : fetchedPosts.filter((p) => p.images[0]).slice(0, 3),
+      );
     } catch (error) {
       console.error("DIYFeedPage - Error fetching posts:", error);
       toast.error("Failed to load posts, showing demo data");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newPage === 1) {
+        next.delete("page");
+      } else {
+        next.set("page", String(newPage));
+      }
+      return next;
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const requireAuth = (action: () => void) => {
     if (!isAuthenticated) {
@@ -136,11 +175,6 @@ export function DIYFeedPage() {
     () => approvedPosts.reduce((sum, p) => sum + (p.likeCount ?? 0), 0),
     [approvedPosts],
   );
-  // 3 bài đầu treo lên "dây phơi ảnh" trong hero
-  const heroPosts = useMemo(
-    () => approvedPosts.filter((p) => p.images[0]).slice(0, 3),
-    [approvedPosts],
-  );
 
   const filterOptions: { value: FeedFilter; label: string; icon: typeof Clock }[] = [
     { value: "all", label: t("diyFeed.all"), icon: LayoutGrid },
@@ -148,7 +182,7 @@ export function DIYFeedPage() {
     { value: "purchased", label: t("diyFeed.mostPurchased"), icon: Flame },
   ];
 
-  if (loading) {
+  if (loading && posts.length === 0) {
     return (
       <div className="min-h-screen bg-background px-4 py-10 pb-[calc(env(safe-area-inset-bottom)+80px)] md:pb-12">
         <div className="mx-auto max-w-7xl">
@@ -197,14 +231,14 @@ export function DIYFeedPage() {
                 </Link>
               </div>
 
-              {approvedPosts.length > 0 && (
+              {totalPosts > 0 && (
                 <div className="craft-stats">
                   <div className="craft-stat">
                     <span className="craft-stat-icon">
                       <PackageOpen className="size-4" />
                     </span>
                     <div>
-                      <p className="craft-stat-num">{approvedPosts.length}</p>
+                      <p className="craft-stat-num">{totalPosts}</p>
                       <p className="craft-stat-label">dự án</p>
                     </div>
                   </div>
@@ -270,8 +304,10 @@ export function DIYFeedPage() {
               <>
                 {sortedPosts.length} kết quả cho <strong>“{searchQuery}”</strong>
               </>
+            ) : totalPages > 1 ? (
+              <>{totalPosts} dự án đang chờ bạn (Trang {currentPage}/{totalPages})</>
             ) : (
-              <>{sortedPosts.length} dự án đang chờ bạn</>
+              <>{totalPosts} dự án đang chờ bạn</>
             )}
           </p>
         </div>
@@ -281,13 +317,27 @@ export function DIYFeedPage() {
             onClose={() => setPostOpen(false)}
             onSuccess={() => {
               setPostOpen(false);
+              handlePageChange(1);
               fetchPosts();
             }}
           />
         )}
 
-        {/* ── Lưới tác phẩm / empty state ── */}
-        {sortedPosts.length === 0 ? (
+        {/* ── Lưới tác phẩm / loading / empty state ── */}
+        {loading ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <div key={i} className="overflow-hidden rounded-[22px] border border-border bg-card">
+                <div className="craft-skeleton aspect-[4/5] w-full rounded-none" />
+                <div className="space-y-2.5 p-4">
+                  <div className="craft-skeleton h-3 w-2/3" />
+                  <div className="craft-skeleton h-4 w-full" />
+                  <div className="craft-skeleton h-3 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sortedPosts.length === 0 ? (
           <div className="craft-empty">
             <EmptyHoopIllustration size={160} />
             <p className="craft-empty-title">Chưa tìm thấy dự án nào</p>
@@ -316,110 +366,158 @@ export function DIYFeedPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-            {sortedPosts.map((post, index) => {
-              const creator = getPostCreator(post);
-              const saved = isDIYPostSaved(post._id);
-              return (
-                <motion.article
-                  key={post._id}
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: Math.min(index, 10) * 0.045 }}
-                  className="diy-card group"
-                >
-                  <div className="diy-card-media">
-                    <ResponsiveImage
-                      src={post.images[0]}
-                      alt={post.title}
-                      className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+          <>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+              {sortedPosts.map((post, index) => {
+                const creator = getPostCreator(post);
+                const saved = isDIYPostSaved(post._id);
+                return (
+                  <motion.article
+                    key={post._id}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: Math.min(index, 10) * 0.045 }}
+                    className="diy-card group"
+                  >
+                    <div className="diy-card-media">
+                      <ResponsiveImage
+                        src={post.images[0]}
+                        alt={post.title}
+                        className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
 
-                    <button
-                      type="button"
-                      onClick={() => requireAuth(() => savePost(post))}
-                      aria-label={saved ? "Bỏ lưu" : "Lưu công thức"}
-                      aria-pressed={saved}
-                      className={`diy-card-save ${saved ? "is-saved" : ""}`}
-                    >
-                      <Bookmark className="size-4" />
-                    </button>
-
-                    {post.purchaseCount != null && post.purchaseCount > 0 && (
-                      <span className="diy-card-sold">
-                        <Flame className="size-3" />
-                        {post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}
-                      </span>
-                    )}
-
-                    <div className="diy-card-actions">
-                      <Link
-                        to={`/diy/${post._id}`}
-                        className="diy-card-action is-light"
-                        onClick={(e) => {
-                          if (!isAuthenticated) {
-                            e.preventDefault();
-                            navigate("/auth/login");
-                          }
-                        }}
-                      >
-                        <Eye className="size-3.5" />
-                        {t("diyFeed.viewMaterial")}
-                      </Link>
                       <button
                         type="button"
-                        className="diy-card-action is-primary"
-                        onClick={() => requireAuth(() => buyDIY(post))}
+                        onClick={() => requireAuth(() => savePost(post))}
+                        aria-label={saved ? "Bỏ lưu" : "Lưu công thức"}
+                        aria-pressed={saved}
+                        className={`diy-card-save ${saved ? "is-saved" : ""}`}
                       >
-                        <ShoppingBag className="size-3.5" />
-                        {t("diyFeed.buyNow")}
+                        <Bookmark className="size-4" />
                       </button>
-                    </div>
-                  </div>
 
-                  <div className="diy-card-body">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="size-6 ring-2 ring-[var(--card)]">
-                        <AvatarImage src={creator?.avatar} alt={creator?.fullName} />
-                        <AvatarFallback className="text-[10px]">
-                          {creator?.fullName?.charAt(0) || "C"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="truncate text-xs font-medium text-muted-foreground">
-                        {creator?.fullName || t("diyFeed.creator")}
-                      </p>
-                    </div>
-
-                    <Link to={`/diy/${post._id}`} className="diy-card-title">
-                      {post.title}
-                    </Link>
-
-                    {post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {post.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="craft-tag">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="diy-card-foot">
-                      {post.price != null && post.price > 0 ? (
-                        <span className="diy-card-price">{formatPrice(post.price)}</span>
-                      ) : (
-                        <span className="diy-card-free">{t("diyFeed.free")}</span>
+                      {post.purchaseCount != null && post.purchaseCount > 0 && (
+                        <span className="diy-card-sold">
+                          <Flame className="size-3" />
+                          {post.purchaseCount.toLocaleString()} {t("diyFeed.bought")}
+                        </span>
                       )}
-                      <span className="diy-card-likes">
-                        <Heart className="size-3.5" />
-                        {post.likeCount.toLocaleString()}
-                      </span>
+
+                      <div className="diy-card-actions">
+                        <Link
+                          to={`/diy/${post._id}`}
+                          className="diy-card-action is-light"
+                          onClick={(e) => {
+                            if (!isAuthenticated) {
+                              e.preventDefault();
+                              navigate("/auth/login");
+                            }
+                          }}
+                        >
+                          <Eye className="size-3.5" />
+                          {t("diyFeed.viewMaterial")}
+                        </Link>
+                        <button
+                          type="button"
+                          className="diy-card-action is-primary"
+                          onClick={() => requireAuth(() => buyDIY(post))}
+                        >
+                          <ShoppingBag className="size-3.5" />
+                          {t("diyFeed.buyNow")}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.article>
-              );
-            })}
-          </div>
+
+                    <div className="diy-card-body">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="size-6 ring-2 ring-[var(--card)]">
+                          <AvatarImage src={creator?.avatar} alt={creator?.fullName} />
+                          <AvatarFallback className="text-[10px]">
+                            {creator?.fullName?.charAt(0) || "C"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="truncate text-xs font-medium text-muted-foreground">
+                          {creator?.fullName || t("diyFeed.creator")}
+                        </p>
+                      </div>
+
+                      <Link to={`/diy/${post._id}`} className="diy-card-title">
+                        {post.title}
+                      </Link>
+
+                      {post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {post.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="craft-tag">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="diy-card-foot">
+                        {post.price != null && post.price > 0 ? (
+                          <span className="diy-card-price">{formatPrice(post.price)}</span>
+                        ) : (
+                          <span className="diy-card-free">{t("diyFeed.free")}</span>
+                        )}
+                        <span className="diy-card-likes">
+                          <Heart className="size-3.5" />
+                          {post.likeCount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.article>
+                );
+              })}
+            </div>
+
+            {/* ── Phân trang ── */}
+            {totalPages > 1 && (
+              <nav className="diy-pagination" aria-label="Phân trang dự án DIY">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage <= 1 || loading}
+                  className="diy-page-btn"
+                  aria-label="Trang trước"
+                >
+                  <ChevronLeft className="size-4" />
+                  <span className="hidden sm:inline">Trước</span>
+                </button>
+
+                {getPaginationRange(currentPage, totalPages).map((p, idx) =>
+                  p === "dots" ? (
+                    <span key={`dots-${idx}`} className="diy-page-dots" aria-hidden="true">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handlePageChange(p)}
+                      disabled={loading}
+                      aria-current={currentPage === p ? "page" : undefined}
+                      className={`diy-page-btn ${currentPage === p ? "is-active" : ""}`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages || loading}
+                  className="diy-page-btn"
+                  aria-label="Trang sau"
+                >
+                  <span className="hidden sm:inline">Sau</span>
+                  <ChevronRight className="size-4" />
+                </button>
+              </nav>
+            )}
+          </>
         )}
       </div>
     </div>

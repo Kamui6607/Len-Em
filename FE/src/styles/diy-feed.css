@@ -333,3 +333,63 @@
     transition: none !important;
   }
 }
+
+
+/* ── Phân trang ── */
+.diy-pagination {
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.diy-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  transition: all 0.2s var(--ease-out);
+  cursor: pointer;
+}
+
+.diy-page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.diy-page-btn.is-active {
+  background: var(--cta-gradient);
+  color: var(--primary-foreground);
+  border-color: transparent;
+  box-shadow: var(--cta-shadow);
+}
+
+.diy-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.diy-page-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 42px;
+  font-weight: 700;
+  color: var(--foreground-muted);
+}
